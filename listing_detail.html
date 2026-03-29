@@ -554,6 +554,16 @@ body {
       </select>
     </div>
 
+    <div id="edit_broker_wrap" style="display:none">
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">BROKERAGE PREFERENCE</div>
+      <select id="edit_brokerage_pref" class="edit-input">
+        <option value="">— Not specified —</option>
+        <option value="yes">✅ Okay with brokerage</option>
+        <option value="prefno">🤝 Preferably no brokerage</option>
+        <option value="no">🚫 Strictly no brokerage</option>
+      </select>
+    </div>
+
     <button onclick="saveEdit()" style="width:100%;padding:15px;background:var(--teal);color:white;border:none;border-radius:12px;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">
       Save changes →
     </button>
@@ -904,6 +914,13 @@ function editListing() {
   document.getElementById('edit_food').value = listing.food_preference || '';
   document.getElementById('edit_gender').value = listing.gender_preference || '';
   document.getElementById('edit_furnishing').value = listing.furnishing || '';
+  // Show brokerage preference only for flat wanted
+  if (listing.listing_type === 'flat_wanted') {
+    document.getElementById('edit_broker_wrap').style.display = 'block';
+    document.getElementById('edit_brokerage_pref').value = listing.brokerage_preference || '';
+  } else {
+    document.getElementById('edit_broker_wrap').style.display = 'none';
+  }
   openSheet('edit');
 }
 
@@ -922,6 +939,7 @@ async function saveEdit() {
       food_preference: document.getElementById('edit_food').value || null,
       gender_preference: document.getElementById('edit_gender').value || null,
       furnishing: document.getElementById('edit_furnishing').value || null,
+      brokerage_preference: document.getElementById('edit_brokerage_pref')?.value || null,
       updated_at: new Date().toISOString()
     };
     const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {

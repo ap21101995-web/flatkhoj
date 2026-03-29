@@ -244,6 +244,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">💼 Brokerage Preference</div>
+      <input type="hidden" id="fw-broker-choice" value="">
       <div class="broker-toggle">
         <div class="broker-opt" id="fw-byes" onclick="sbfw('yes')"><div class="broker-icon">✅</div><div><div class="broker-title">Yes — Okay with brokerage</div><div class="broker-desc">You're open to flats that involve a broker fee</div></div></div>
         <div class="broker-opt" id="fw-bprefno" onclick="sbfw('prefno')"><div class="broker-icon">🤝</div><div><div class="broker-title">Preferably no brokerage</div><div class="broker-desc">You'd prefer direct owner but open to brokers if needed</div></div></div>
@@ -669,7 +670,7 @@ function collectFormData() {
     data.gender_preference = document.querySelector('#f-fw .sel[onclick*="gender"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fw textarea')?.value || null;
     // Brokerage preference for flat wanted
-    const brokerChoice = document.getElementById('fw-bno')?.dataset?.choice || '';
+    const brokerChoice = document.getElementById('fw-broker-choice')?.value || '';
     data.brokerage_preference = brokerChoice || null;
     data.has_brokerage = false; // seeker is not charging brokerage
   } else if (type === 'fm') {
@@ -979,14 +980,12 @@ function mp(el){el.classList.toggle('sel');}
 
 function sbfw(choice) {
   ['fw-byes','fw-bprefno','fw-bno'].forEach(id => {
-    const el = document.getElementById(id);
-    el.classList.remove('sel-no','sel-yes','sel-pref');
+    document.getElementById(id).classList.remove('sel-no','sel-yes','sel-pref');
   });
   const map = { yes:'fw-byes', prefno:'fw-bprefno', no:'fw-bno' };
   const styleMap = { yes:'sel-yes', prefno:'sel-pref', no:'sel-no' };
   document.getElementById(map[choice]).classList.add(styleMap[choice]);
-  // Store choice
-  document.getElementById('fw-bno').dataset.choice = choice;
+  document.getElementById('fw-broker-choice').value = choice;
 }
 
 function sb(prefix,choice){
