@@ -218,7 +218,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="card-title">📍 Location & Budget</div>
       <div class="field"><div class="field-label">Preferred Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-fw-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'fw-area')" onfocus="areaSearch(this,'fw-area')" autocomplete="off">
+        <input class="area-input" type="text" placeholder="Type preferred areas — up to 3" oninput="areaSearch(this,'fw-area')" onfocus="areaSearch(this,'fw-area')" autocomplete="off">
         <button class="area-clear" onclick="clearArea('fw-area')">×</button>
         <div class="area-dropdown" id="dd-fw-area"></div>
       </div>
@@ -258,9 +258,9 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your Flat</div><div class="step-sub">Seekers will see these details before contacting you</div></div>
     <div class="form-card">
       <div class="card-title">📍 Location & Property</div>
-      <div class="field"><div class="field-label">Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-fl-area">
+      <div class="field"><div class="field-label">Flat's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-fl-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'fl-area')" onfocus="areaSearch(this,'fl-area')" autocomplete="off">
+        <input class="area-input" type="text" placeholder="Type your flat's area in Mumbai" oninput="areaSearch(this,'fl-area')" onfocus="areaSearch(this,'fl-area')" autocomplete="off">
         <button class="area-clear" onclick="clearArea('fl-area')">×</button>
         <div class="area-dropdown" id="dd-fl-area"></div>
       </div>
@@ -309,13 +309,14 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">📍 Flat Details</div>
-      <div class="field"><div class="field-label">Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-fm-area">
+      <div class="field"><div class="field-label">Your Flat's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-fm-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'fm-area')" onfocus="areaSearch(this,'fm-area')" autocomplete="off">
+        <input class="area-input" type="text" placeholder="Type your area in Mumbai" oninput="areaSearch(this,'fm-area')" onfocus="areaSearch(this,'fm-area')" autocomplete="off">
         <button class="area-clear" onclick="clearArea('fm-area')">×</button>
         <div class="area-dropdown" id="dd-fm-area"></div>
       </div>
-      <div class="area-selected-tag" id="tag-fm-area"><span id="tagval-fm-area"></span><button onclick="clearArea('fm-area')">×</button></div></div>
+      <div class="area-selected-tag" id="tag-fm-area"><span id="tagval-fm-area"></span><button onclick="clearArea('fm-area')">×</button></div>
+      <div class="field-hint" style="color:var(--ink3)">Select the area where your flat is located</div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>2 BHK</option><option>3 BHK</option><option>4 BHK</option><option>Other</option></select></div>
         <div class="field"><div class="field-label">People Currently Living <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Just Me</option><option>2 People</option><option>3 People</option><option>4+ People</option></select></div>
@@ -355,9 +356,9 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     <div class="form-card">
       <div class="card-title">📍 PG Details</div>
       <div class="field"><div class="field-label">PG Name <span style="color:var(--ink3);font-weight:400;font-size:11px">(Optional)</span></div><input class="input" type="text" placeholder="e.g. Sunshine PG — leave blank if no name"><div class="field-hint">Don't have a name? No problem — just leave it blank. We'll auto-generate a title like "PG available in Andheri West for girls"</div></div>
-      <div class="field"><div class="field-label">Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-pg-area">
+      <div class="field"><div class="field-label">PG's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-pg-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'pg-area')" onfocus="areaSearch(this,'pg-area')" autocomplete="off">
+        <input class="area-input" type="text" placeholder="Type your PG's area in Mumbai" oninput="areaSearch(this,'pg-area')" onfocus="areaSearch(this,'pg-area')" autocomplete="off">
         <button class="area-clear" onclick="clearArea('pg-area')">×</button>
         <div class="area-dropdown" id="dd-pg-area"></div>
       </div>
@@ -447,6 +448,7 @@ const GMAPS_KEY = 'AIzaSyAPL8PzitT2D1Nxvpc9a358U4tvpu6XWv0';
 
 // ── AREA VALUES — stores selected areas per field ──────────
 const areaVals = { 'fw-area':[], 'fl-area':[], 'fm-area':[], 'pg-area':[] };
+const areaMax = { 'fw-area':3, 'fl-area':1, 'fm-area':1, 'pg-area':1 };
 
 // Comprehensive Mumbai area list — always works even without Google Places
 const MUMBAI_AREAS = [
@@ -480,7 +482,7 @@ function areaSearch(input, id) {
   const clearBtn = input.parentElement.querySelector('.area-clear');
   clearBtn.classList.toggle('show', input.value.length > 0);
 
-  if (areaVals[id].length >= 3) { dd.classList.remove('open'); return; }
+  if (areaVals[id].length >= (areaMax[id] || 3)) { dd.classList.remove('open'); return; }
 
   const already = areaVals[id];
 
@@ -543,7 +545,8 @@ function renderDropdown(dd, areas, q, id) {
 }
 function selectArea(area, id) {
   if (areaVals[id].includes(area)) return;
-  if (areaVals[id].length >= 3) return;
+  const max = areaMax[id] || 3;
+  if (areaVals[id].length >= max) return;
 
   areaVals[id].push(area);
 
@@ -558,13 +561,13 @@ function selectArea(area, id) {
   dd.classList.remove('open');
 
   // Show remaining count hint
-  const remaining = 3 - areaVals[id].length;
+  const remaining = max - areaVals[id].length;
   if (remaining === 0) {
-    input.placeholder = '3 Areas Selected ✓';
+    input.placeholder = max === 1 ? '1 Area Selected ✓' : `${max} Areas Selected ✓`;
     input.disabled = true;
     input.style.background = 'var(--bg2)';
   } else {
-    input.placeholder = `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`;
+    input.placeholder = max === 1 ? 'Type your area' : `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`;
   }
 
   renderTags(id);
@@ -588,10 +591,11 @@ function removeArea(area, id) {
   areaVals[id] = areaVals[id].filter(a => a !== area);
   const wrap = document.getElementById('wrap-' + id);
   const input = wrap.querySelector('.area-input');
+  const max = areaMax[id] || 3;
   input.disabled = false;
   input.style.background = '';
-  const remaining = 3 - areaVals[id].length;
-  input.placeholder = remaining === 3 ? 'Type Area — Add Up To 3 Areas' : `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`;
+  const remaining = max - areaVals[id].length;
+  input.placeholder = max === 1 ? 'Type your area' : (remaining === max ? 'Type Area — Add Up To ' + max + ' Areas' : `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`);
   renderTags(id);
   const tag = document.getElementById('tag-' + id);
   if (areaVals[id].length === 0) tag.classList.remove('show');
