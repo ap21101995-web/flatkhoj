@@ -350,84 +350,50 @@ body {
 <div class="content">
 
   <!-- Type pill -->
-  <div class="listing-type-pill" id="listingTypePill">🏠 Flat listing</div>
+  <div class="listing-type-pill" id="listingTypePill"></div>
 
   <!-- Title & Price -->
-  <div class="listing-title" id="listingTitle">Spacious single room in 2BHK — working professionals only</div>
+  <div class="listing-title" id="listingTitle"></div>
 
   <div class="price-row">
-    <div class="price-main" id="listingPrice">₹18,000</div>
-    <div class="price-period" id="pricePeriod">/month</div>
+    <div class="price-main" id="listingPrice"></div>
+    <div class="price-period" id="pricePeriod"></div>
   </div>
-  <div class="price-deposit" id="priceDeposit">Deposit: 2 months rent</div>
+  <div class="price-deposit" id="priceDeposit" style="display:none"></div>
 
   <!-- Location -->
   <div class="location-row">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-    <span id="listingLocation">Bandra West, Mumbai</span>
+    <span id="listingLocation"></span>
   </div>
 
   <div class="divider"></div>
 
   <!-- Details Grid -->
-  <div class="section-heading">Flat details</div>
-  <div class="details-grid" id="detailsGrid">
-    <div class="detail-item">
-      <div class="detail-label">Flat type</div>
-      <div class="detail-value">2 BHK</div>
-    </div>
-    <div class="detail-item">
-      <div class="detail-label">Room type</div>
-      <div class="detail-value">Single occupancy</div>
-    </div>
-    <div class="detail-item">
-      <div class="detail-label">Furnishing</div>
-      <div class="detail-value">Fully furnished</div>
-    </div>
-    <div class="detail-item">
-      <div class="detail-label">Available from</div>
-      <div class="detail-value">Immediately</div>
-    </div>
-    <div class="detail-item">
-      <div class="detail-label">Food preference</div>
-      <div class="detail-value">Veg preferred</div>
-    </div>
-    <div class="detail-item">
-      <div class="detail-label">Gender preference</div>
-      <div class="detail-value">Any</div>
-    </div>
-  </div>
+  <div class="section-heading">Listing details</div>
+  <div class="details-grid" id="detailsGrid"></div>
 
-  <div class="divider"></div>
+  <div class="divider" id="amenitiesDivider" style="display:none"></div>
 
   <!-- Amenities -->
-  <div class="section-heading">Amenities</div>
-  <div class="tags-wrap" id="amenitiesWrap">
-    <span class="tag">🌬️ AC</span>
-    <span class="tag">📶 WiFi included</span>
-    <span class="tag">🚗 Parking</span>
-    <span class="tag">🏋️ Gym</span>
-    <span class="tag">🛗 Lift</span>
-    <span class="tag">💧 24hr water</span>
-  </div>
+  <div class="section-heading" id="amenitiesHeading" style="display:none">Amenities</div>
+  <div class="tags-wrap" id="amenitiesWrap"></div>
 
-  <div class="divider"></div>
+  <div class="divider" id="descDivider" style="display:none"></div>
 
   <!-- Description -->
-  <div class="section-heading">About this listing</div>
-  <div class="description" id="listingDesc">
-    Looking for a working professional or student for a single room in our 2BHK apartment. The flat is fully furnished with AC, WiFi, and parking. Very cooperative flatmates. Building has lift, 24hr security, and power backup. Close to Bandra station and linking road. No pets. Long-term preferred.
-  </div>
+  <div class="section-heading" id="descHeading" style="display:none">About this listing</div>
+  <div class="description" id="listingDesc"></div>
 
   <div class="divider"></div>
 
   <!-- Posted by -->
   <div class="section-heading">Posted by</div>
   <div class="poster-card">
-    <div class="poster-avatar" style="background:#0f7b6c" id="posterAvatar">SP</div>
+    <div class="poster-avatar" style="background:#0f7b6c" id="posterAvatar">FK</div>
     <div class="poster-info">
-      <div class="poster-name" id="posterName">Sunita P.</div>
-      <div class="poster-role" id="posterRole">Owner</div>
+      <div class="poster-name" id="posterName">FlatKhoj User</div>
+      <div class="poster-role" id="posterRole">Member</div>
       <div class="verified-badge">✓ Verified number</div>
     </div>
   </div>
@@ -435,47 +401,16 @@ body {
   <div class="divider"></div>
 
   <!-- Posted time -->
-  <div style="font-size:12px;color:var(--ink3);text-align:center;margin-bottom:16px" id="postedTime">
-    Posted 2 hours ago · Expires in 28 days
-  </div>
+  <div style="font-size:12px;color:var(--ink3);text-align:center;margin-bottom:16px" id="postedTime"></div>
 
   <!-- Report -->
   <button class="report-btn" onclick="openSheet('report')">Report this listing</button>
 
-  <div class="divider"></div>
+  <div class="divider" id="similarDivider"></div>
 
   <!-- Similar listings -->
-  <div class="section-heading">Similar listings</div>
-
-  <div class="similar-card">
-    <div style="flex:1">
-      <div class="similar-type">🏠 Flat listing</div>
-      <div class="similar-title">1BHK available for single person, Bandra West</div>
-      <div class="similar-price">₹22,000<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
-      <div class="similar-location">📍 Bandra West</div>
-    </div>
-    <button class="similar-unlock" onclick="openSheet('unlock')">Unlock<br>2 🪙</button>
-  </div>
-
-  <div class="similar-card">
-    <div style="flex:1">
-      <div class="similar-type">👥 Flatmate wanted</div>
-      <div class="similar-title">3 professionals looking for flatmate in 3BHK</div>
-      <div class="similar-price">₹15,000<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
-      <div class="similar-location">📍 Khar West</div>
-    </div>
-    <button class="similar-unlock" onclick="openSheet('unlock')">Unlock<br>2 🪙</button>
-  </div>
-
-  <div class="similar-card">
-    <div style="flex:1">
-      <div class="similar-type">🏠 Flat listing</div>
-      <div class="similar-title">Studio apartment, fully furnished, near station</div>
-      <div class="similar-price">₹14,000<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
-      <div class="similar-location">📍 Santacruz West</div>
-    </div>
-    <button class="similar-unlock" onclick="openSheet('unlock')">Unlock<br>2 🪙</button>
-  </div>
+  <div class="section-heading" id="similarHeading">Similar listings</div>
+  <div id="similarWrap"></div>
 
 </div>
 
@@ -597,8 +532,16 @@ window.onload=async function(){
 
 function renderListing(){
   if(!listing)return;
-  const typeLabels={flat_listing:'🏠 Flat listing',flat_wanted:'🔍 Flat wanted',flatmate_wanted:'👥 Flatmate wanted',pg_listing:'🏨 PG listing'};
+
+  const typeLabels={
+    flat_listing:'🏠 Flat listing',
+    flat_wanted:'🔍 Flat wanted',
+    flatmate_wanted:'👥 Flatmate wanted',
+    pg_listing:'🏨 PG listing'
+  };
   const areas=Array.isArray(listing.areas)?listing.areas.join(' / '):listing.areas||'Mumbai';
+
+  // Photos
   if(listing.photos&&listing.photos.length>0){
     document.getElementById('noPhoto').style.display='none';
     totalPhotos=listing.photos.length;
@@ -611,44 +554,137 @@ function renderListing(){
     });
     document.getElementById('photoCounter').style.display='block';updatePhotoCounter();
   }
-  if(listing.has_brokerage){const b=document.getElementById('brokerBanner');b.className='broker-banner has-broker';b.textContent='⚠ Brokerage applicable — fee will be charged';}
+
+  // Broker banner
+  if(listing.has_brokerage){
+    const b=document.getElementById('brokerBanner');
+    b.className='broker-banner has-broker';
+    b.textContent='⚠ Brokerage applicable — fee will be charged';
+  }
+
+  // Type, title, location
   document.getElementById('listingTypePill').textContent=typeLabels[listing.listing_type]||listing.listing_type;
-  document.getElementById('listingTitle').textContent=listing.title||listing.description?.slice(0,80)||'Listing in '+areas;
+  document.getElementById('listingTitle').textContent=listing.description?.slice(0,80)||'Listing in '+areas;
+  document.getElementById('listingLocation').textContent=areas+', Mumbai';
+
+  // Price — label depends on type
   if(listing.rent_amount){
     document.getElementById('listingPrice').textContent='₹'+listing.rent_amount.toLocaleString('en-IN');
-    document.getElementById('pricePeriod').textContent=listing.listing_type==='flat_wanted'?'budget':'/month';
+    if(listing.listing_type==='flat_wanted'){
+      document.getElementById('pricePeriod').textContent='max budget/mo';
+    } else {
+      document.getElementById('pricePeriod').textContent='/month';
+    }
+  } else {
+    document.getElementById('listingPrice').textContent='Price on request';
+    document.getElementById('pricePeriod').textContent='';
   }
-  if(listing.deposit_amount){document.getElementById('priceDeposit').textContent='Deposit: ₹'+listing.deposit_amount.toLocaleString('en-IN');}
-  else{document.getElementById('priceDeposit').style.display='none';}
-  document.getElementById('listingLocation').textContent=areas+', Mumbai';
-  const grid=document.getElementById('detailsGrid');grid.innerHTML='';
-  [['Flat type',listing.flat_type],['Room type',listing.room_type],['Furnishing',listing.furnishing],['Available from',listing.available_from||'Immediately'],['Food preference',listing.food_preference],['Gender preference',listing.gender_preference]].filter(d=>d[1]).forEach(([label,value])=>{
+
+  // Deposit — only for flat listings and PG
+  if(listing.deposit_amount && listing.listing_type !== 'flat_wanted'){
+    const dep=document.getElementById('priceDeposit');
+    dep.textContent='Deposit: ₹'+listing.deposit_amount.toLocaleString('en-IN');
+    dep.style.display='block';
+  }
+
+  // Details grid — only show fields that exist
+  const grid=document.getElementById('detailsGrid');
+  grid.innerHTML='';
+  const fields=[];
+
+  if(listing.listing_type==='flat_wanted'){
+    if(listing.flat_type) fields.push(['Looking for',listing.flat_type]);
+    if(listing.furnishing) fields.push(['Furnishing needed',listing.furnishing]);
+    if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
+    if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
+    if(listing.available_from) fields.push(['Move-in',listing.available_from]);
+  } else if(listing.listing_type==='flatmate_wanted'){
+    if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
+    if(listing.room_type) fields.push(['Room type',listing.room_type]);
+    if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
+    if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
+    if(listing.gender_preference) fields.push(['Gender preferred',listing.gender_preference]);
+  } else {
+    if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
+    if(listing.room_type) fields.push(['Room type',listing.room_type]);
+    if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
+    if(listing.available_from) fields.push(['Available from',listing.available_from||'Immediately']);
+    if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
+    if(listing.gender_preference) fields.push(['Gender preference',listing.gender_preference]);
+  }
+
+  fields.forEach(([label,value])=>{
     grid.innerHTML+=`<div class="detail-item"><div class="detail-label">${label}</div><div class="detail-value">${value}</div></div>`;
   });
-  if(listing.description)document.getElementById('listingDesc').textContent=listing.description;
+
+  // Amenities — only show if they exist
+  if(listing.amenities&&listing.amenities.length>0){
+    document.getElementById('amenitiesDivider').style.display='block';
+    document.getElementById('amenitiesHeading').style.display='block';
+    const wrap=document.getElementById('amenitiesWrap');
+    wrap.innerHTML=listing.amenities.map(a=>`<span class="tag">${a}</span>`).join('');
+  }
+
+  // Description — label depends on listing type
+  if(listing.description){
+    document.getElementById('descDivider').style.display='block';
+    document.getElementById('descHeading').style.display='block';
+    const descLabels={
+      flat_listing:'About this flat',
+      flat_wanted:'What I am looking for',
+      flatmate_wanted:'About us & what we need',
+      pg_listing:'About this PG'
+    };
+    document.getElementById('descHeading').textContent=descLabels[listing.listing_type]||'About this listing';
+    document.getElementById('listingDesc').textContent=listing.description;
+  }
+
+  // Poster name — use real name if saved, otherwise generic
+  const posterName = listing.poster_name || 'FlatKhoj Member';
+  const posterInitials = posterName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('posterAvatar').textContent=posterInitials;
+  document.getElementById('posterName').textContent=posterName;
+
+  // Posted time
   document.getElementById('postedTime').textContent=`Posted ${getTimeAgo(listing.created_at)} · Expires in ${getDaysLeft(listing.expires_at)} days`;
-  const initials=listing.user_id?listing.user_id.slice(-2).toUpperCase():'FK';
-  document.getElementById('posterAvatar').textContent=initials;
-  if(listing.is_free_contact){const btn=document.getElementById('unlockBtn');btn.innerHTML='Contact for free <span class="coin-cost" style="background:rgba(255,255,255,0.3)">Free!</span>';btn.style.background='var(--green)';}
+
+  // Free contact
+  if(listing.is_free_contact){
+    const btn=document.getElementById('unlockBtn');
+    btn.innerHTML='Contact for free <span class="coin-cost" style="background:rgba(255,255,255,0.3)">Free!</span>';
+    btn.style.background='var(--green)';
+  }
+
+  // Coins balance
   const user=getUser();
-  if(user){document.querySelector('.coin-balance strong').textContent=`🪙 ${user.coins||0}`;document.querySelector('.coin-balance-row strong').textContent=`🪙 ${user.coins||0} coins`;}
+  if(user){
+    document.querySelector('.coin-balance strong').textContent=`🪙 ${user.coins||0}`;
+    document.querySelector('.coin-balance-row strong').textContent=`🪙 ${user.coins||0} coins`;
+  }
 }
 
 async function loadSimilar(){
   try{
     const similar=await supaGet(`listings?listing_type=eq.${listing.listing_type}&is_active=eq.true&id=neq.${listing.id}&limit=3&order=created_at.desc&select=*`);
-    if(!similar||similar.length===0)return;
+    const wrap=document.getElementById('similarWrap');
+    if(!similar||similar.length===0){
+      document.getElementById('similarDivider').style.display='none';
+      document.getElementById('similarHeading').style.display='none';
+      return;
+    }
     const typeLabels={flat_listing:'🏠 Flat listing',flat_wanted:'🔍 Flat wanted',flatmate_wanted:'👥 Flatmate wanted',pg_listing:'🏨 PG listing'};
-    const container=document.querySelector('.similar-card').parentElement;
-    container.querySelectorAll('.similar-card').forEach(c=>c.remove());
+    wrap.innerHTML='';
     similar.forEach(l=>{
       const areas=Array.isArray(l.areas)?l.areas[0]:l.areas||'Mumbai';
       const price=l.rent_amount?'₹'+l.rent_amount.toLocaleString('en-IN'):'Ask';
       const div=document.createElement('div');div.className='similar-card';
-      div.innerHTML=`<div style="flex:1"><div class="similar-type">${typeLabels[l.listing_type]||l.listing_type}</div><div class="similar-title">${(l.title||l.description?.slice(0,60)||'Listing').replace(/</g,'&lt;')}</div><div class="similar-price">${price}<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div><div class="similar-location">📍 ${areas}</div></div><button class="similar-unlock" onclick="window.location.href='listing_detail.html?id=${l.id}'">View →</button>`;
-      container.appendChild(div);
+      div.innerHTML=`<div style="flex:1"><div class="similar-type">${typeLabels[l.listing_type]||l.listing_type}</div><div class="similar-title">${(l.description?.slice(0,60)||'Listing').replace(/</g,'&lt;')}</div><div class="similar-price">${price}<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div><div class="similar-location">📍 ${areas}</div></div><button class="similar-unlock" onclick="window.location.href='listing_detail.html?id=${l.id}'">View →</button>`;
+      wrap.appendChild(div);
     });
-  }catch(err){}
+  }catch(err){
+    document.getElementById('similarDivider').style.display='none';
+    document.getElementById('similarHeading').style.display='none';
+  }
 }
 
 async function confirmUnlock(){

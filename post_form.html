@@ -640,8 +640,14 @@ function collectFormData() {
   const data = { listing_type: type };
 
   // Areas
-  const areas = areaVals[type] || [];
+  const areas = areaVals[type + '-area'] || [];
   data.areas = areas.length > 0 ? areas : ['Mumbai'];
+
+  // Poster name — from whichever form section is active
+  const nameInput = document.querySelector('#f-' + type + ' input[placeholder*="name" i], #f-' + type + ' input[placeholder*="Name" i]');
+  if (nameInput && nameInput.value.trim()) {
+    data.poster_name = nameInput.value.trim();
+  }
 
   // Type-specific fields
   if (type === 'fl') {
@@ -760,6 +766,9 @@ const LIMITS = {
 async function checkPostingLimits() {
   const user = getUser();
   if (!user) return;
+  
+  // Owner has no posting limits
+  if (user.isOwner) return;
   try {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
