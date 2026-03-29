@@ -416,8 +416,12 @@ body {
 
   <!-- Report -->
   <!-- Owner controls — only visible to owner login -->
+  <div id="newPostBanner" style="display:none;background:var(--teal-bg);border:1.5px solid var(--teal);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:14px;color:var(--teal);font-weight:600;text-align:center">
+    🎉 Your listing is now live! This is exactly how others will see it.
+  </div>
+
   <div id="ownerControls" style="display:none;margin-bottom:16px">
-    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Owner controls</div>
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Manage your listing</div>
     <div style="display:flex;gap:10px">
       <button onclick="editListing()" style="flex:1;padding:12px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">✏️ Edit listing</button>
       <button onclick="deleteListing()" style="padding:12px 16px;background:var(--red-bg);color:var(--red);border:1.5px solid var(--red);border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">🗑️ Delete</button>
@@ -627,6 +631,12 @@ window.onload=async function(){
     }
     renderListing();
     showOwnerControls();
+    // Show "listing is live" banner if arriving from new post
+    const isNewPost = new URLSearchParams(window.location.search).get('new') === '1';
+    if (isNewPost) {
+      document.getElementById('newPostBanner').style.display = 'block';
+      window.history.replaceState({}, '', `listing_detail.html?id=${listingId}`);
+    }
     loadSimilar();
     fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({view_count:(listing.view_count||0)+1})});
   }catch(err){console.error('Error loading listing:',err);}
@@ -899,7 +909,8 @@ function toggleSave(){isSaved=!isSaved;const btn=document.getElementById('saveBt
 // ── OWNER CONTROLS ─────────────────────────────────────────
 function showOwnerControls() {
   const user = getUser();
-  if (user && (user.isOwner === true || user.phone === '9538584612')) {
+  if (!user) return;
+  if (user.isOwner || user.phone === '9538584612' || user.userId === listing.user_id) {
     document.getElementById('ownerControls').style.display = 'block';
   }
 }
@@ -964,6 +975,11 @@ async function saveEdit() {
 }
 
 async function deleteListing() {
+  const user = getUser();
+  if (!user || (!user.isOwner && user.phone !== '9538584612' && user.userId !== listing.user_id)) {
+    alert('You can only delete your own listings.');
+    return;
+  }
   if (!confirm('Delete this listing? This cannot be undone.')) return;
   try {
     await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {

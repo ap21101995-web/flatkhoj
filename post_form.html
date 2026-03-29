@@ -736,7 +736,7 @@ async function submitListing() {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${SUPA_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Prefer': 'return=representation'
       },
       body: JSON.stringify(formData)
     });
@@ -747,11 +747,18 @@ async function submitListing() {
       throw new Error(err);
     }
 
+    const inserted = await res.json();
+    const newId = inserted?.[0]?.id;
+
     // Clear saved state
     localStorage.removeItem('fk_post_state');
 
-    // Success — go to homepage
-    window.location.href = 'index.html?posted=1';
+    // Go to listing detail so user can preview their live post
+    if (newId) {
+      window.location.href = `listing_detail.html?id=${newId}&new=1`;
+    } else {
+      window.location.href = 'index.html?posted=1';
+    }
 
   } catch(err) {
     console.error('Post error:', err);
