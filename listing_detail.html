@@ -92,6 +92,8 @@ body {
 }
 .broker-banner.no-broker { background:var(--green-bg); color:var(--green); }
 .broker-banner.has-broker { background:var(--red-bg); color:var(--red); }
+.broker-banner.pref-broker { background:var(--gold-bg); color:var(--gold); }
+.broker-banner.ok-broker { background:#e8f5ee; color:#1a7a3c; }
 
 /* MAIN CONTENT */
 .content { padding:16px; }
@@ -352,7 +354,7 @@ body {
 
 <!-- BROKER BANNER -->
 <div class="broker-banner no-broker" id="brokerBanner">
-  ✓ No brokerage — direct from owner or tenant
+  ✓ No brokerage
 </div>
 
 <!-- MAIN CONTENT -->
@@ -653,10 +655,20 @@ function renderListing(){
   }
 
   // Broker banner
-  if(listing.has_brokerage){
-    const b=document.getElementById('brokerBanner');
+  // Broker banner
+  const b = document.getElementById('brokerBanner');
+  if (listing.listing_type === 'flat_wanted') {
+    const pref = listing.brokerage_preference;
+    if (pref === 'no') { b.className='broker-banner no-broker'; b.textContent='🚫 Strictly no brokerage'; }
+    else if (pref === 'prefno') { b.className='broker-banner pref-broker'; b.textContent='🤝 Preferably no brokerage'; }
+    else if (pref === 'yes') { b.className='broker-banner ok-broker'; b.textContent='✅ Okay with brokerage'; }
+    else { b.className='broker-banner no-broker'; b.textContent='🔍 Looking for a flat'; }
+  } else if (listing.has_brokerage) {
     b.className='broker-banner has-broker';
     b.textContent='⚠ Brokerage applicable — fee will be charged';
+  } else {
+    b.className='broker-banner no-broker';
+    b.textContent='✓ No brokerage — direct from owner';
   }
 
   // Type, title, location

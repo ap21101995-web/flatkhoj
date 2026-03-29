@@ -233,6 +233,8 @@ body {
 }
 .broker-tag.no-broker { background: var(--teal-bg); color: var(--teal); }
 .broker-tag.has-broker { background: var(--red-bg); color: var(--red); }
+.broker-tag.pref-broker { background: var(--gold-bg); color: var(--gold); }
+.broker-tag.ok-broker { background: #e8f5ee; color: #1a7a3c; }
 .broker-tag.dot::before {
   content: ''; width: 5px; height: 5px; border-radius: 50%;
   background: currentColor; display: inline-block;
@@ -907,8 +909,17 @@ function renderListings(listings, reset) {
     const price = l.rent_amount ? `₹${l.rent_amount.toLocaleString('en-IN')}` : 'Price on request';
     const period = l.listing_type === 'flat_wanted' ? 'budget' : '/mo';
     const typeLabel = typeLabels[l.listing_type] || l.listing_type;
-    const brokerClass = l.has_brokerage ? 'has-broker' : 'no-broker';
-    const brokerText = l.has_brokerage ? 'Brokerage applicable' : 'No brokerage';
+    let brokerClass, brokerText;
+    if (l.listing_type === 'flat_wanted') {
+      const pref = l.brokerage_preference;
+      if (pref === 'no') { brokerClass = 'no-broker'; brokerText = '🚫 No brokerage'; }
+      else if (pref === 'prefno') { brokerClass = 'pref-broker'; brokerText = '🤝 Prefer no brokerage'; }
+      else if (pref === 'yes') { brokerClass = 'ok-broker'; brokerText = '✅ Okay with brokerage'; }
+      else { brokerClass = 'no-broker'; brokerText = 'Looking for flat'; }
+    } else {
+      brokerClass = l.has_brokerage ? 'has-broker' : 'no-broker';
+      brokerText = l.has_brokerage ? 'Brokerage applicable' : 'No brokerage';
+    }
     const timeAgo = getTimeAgo(l.created_at);
     const name = l.poster_name || '';
     const initials = name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : getInitials(l.user_id);
