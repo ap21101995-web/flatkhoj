@@ -660,8 +660,14 @@ function renderListing(){
   }
   const areas = areasArr.length > 0 ? areasArr.join(' / ') : 'Mumbai';
 
-  // Photos
-  if(listing.photos&&listing.photos.length>0){
+  // Hide photo gallery only for flat_wanted
+  if (listing.listing_type === 'flat_wanted') {
+    document.getElementById('photoGallery').style.display = 'none';
+  }
+
+  // Photos — for flat_listing, pg_listing and flatmate_wanted
+  if (listing.listing_type !== 'flat_wanted' &&
+      listing.photos && listing.photos.length > 0) {
     document.getElementById('noPhoto').style.display='none';
     totalPhotos=listing.photos.length;
     listing.photos.forEach((url,i)=>{
@@ -674,7 +680,6 @@ function renderListing(){
     document.getElementById('photoCounter').style.display='block';updatePhotoCounter();
   }
 
-  // Broker banner
   // Broker banner
   const b = document.getElementById('brokerBanner');
   if (listing.listing_type === 'flat_wanted') {
@@ -732,7 +737,7 @@ function renderListing(){
     if(listing.furnishing) fields.push(['Furnishing needed',listing.furnishing]);
     if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
-    if(listing.available_from) fields.push(['Move-in',listing.available_from]);
+    if(listing.available_from) fields.push(['Move-in date', formatDate(listing.available_from)]);
     const brokerPref = listing.brokerage_preference;
     if(brokerPref === 'yes') fields.push(['Brokerage','✅ Okay with brokerage']);
     else if(brokerPref === 'prefno') fields.push(['Brokerage','🤝 Preferably no brokerage']);
@@ -743,11 +748,12 @@ function renderListing(){
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
     if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preferred',listing.gender_preference]);
+    if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
   } else {
     if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
     if(listing.room_type) fields.push(['Room type',listing.room_type]);
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
-    if(listing.available_from) fields.push(['Available from',listing.available_from||'Immediately']);
+    if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
     if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preference',listing.gender_preference]);
   }
@@ -897,6 +903,13 @@ async function submitReport(reason){
   closeSheet('report');showToast('Report submitted. Thank you!');
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return 'Immediately';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+  } catch(e) { return dateStr; }
+}
 function getTimeAgo(d){const diff=Date.now()-new Date(d).getTime();const m=Math.floor(diff/60000);if(m<60)return m+' mins ago';const h=Math.floor(m/60);if(h<24)return h+' hrs ago';return Math.floor(h/24)+' days ago';}
 function getDaysLeft(d){return Math.max(0,Math.floor((new Date(d)-Date.now())/86400000));}
 function touchStart(e){touchStartX=e.touches[0].clientX;}
