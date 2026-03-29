@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Posting Limits — FlatKhoj</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#fff; --bg2:#f7f7f5; --bg3:#f0efec;
+  --ink:#141414; --ink2:#444; --ink3:#888; --border:#e8e8e4;
+  --teal:#0f7b6c; --teal-bg:#e8f5f3; --teal-dark:#0a6358;
+  --gold:#e6a817; --gold-bg:#fef6e4;
+  --green:#1a7a3c; --green-bg:#e8f5ee;
+  --purple:#7c3aed; --purple-bg:#f3eeff;
+  --radius:14px; --font:'Plus Jakarta Sans',sans-serif;
+}
+body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-width:480px; margin:0 auto; min-height:100vh; padding-bottom:40px; }
+
+.topbar { display:flex; align-items:center; padding:0 16px; height:52px; background:var(--bg); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; gap:12px; }
+.back-btn { background:none; border:none; cursor:pointer; color:var(--ink2); font-size:22px; padding:4px; }
+.topbar-title { flex:1; font-size:16px; font-weight:700; }
+
+/* CURRENT PLAN */
+.current-plan { margin:16px; background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius); padding:16px 18px; }
+.current-label { font-size:12px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+.current-name { font-size:18px; font-weight:800; color:var(--ink); margin-bottom:12px; }
+.current-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stat-box { background:var(--bg2); border-radius:10px; padding:12px; text-align:center; }
+.stat-num { font-size:22px; font-weight:800; color:var(--teal); }
+.stat-label { font-size:11px; color:var(--ink3); margin-top:2px; }
+
+/* PLAN CARDS */
+.section-label { font-size:13px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; padding:20px 16px 10px; }
+.plans-wrap { padding:0 16px; display:flex; flex-direction:column; gap:12px; }
+
+.plan-card {
+  background:var(--bg); border:2px solid var(--border);
+  border-radius:var(--radius); padding:18px; position:relative;
+  transition:all 0.15s;
+}
+.plan-card.recommended { border-color:var(--teal); }
+.plan-card.pro-plan { border-color:var(--purple); }
+
+.recommended-badge {
+  position:absolute; top:-11px; left:20px;
+  background:var(--teal); color:white; font-size:11px; font-weight:700;
+  padding:3px 12px; border-radius:100px;
+}
+.pro-badge {
+  position:absolute; top:-11px; left:20px;
+  background:var(--purple); color:white; font-size:11px; font-weight:700;
+  padding:3px 12px; border-radius:100px;
+}
+
+.plan-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px; }
+.plan-name { font-size:18px; font-weight:800; color:var(--ink); }
+.plan-price { text-align:right; }
+.plan-coins { font-size:22px; font-weight:800; color:var(--ink); }
+.plan-coins-label { font-size:12px; color:var(--ink3); }
+
+.plan-features { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+.plan-feature { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--ink2); }
+.plan-feature .check { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+.plan-feature .check.teal { background:var(--teal-bg); color:var(--teal); }
+.plan-feature .check.purple { background:var(--purple-bg); color:var(--purple); }
+
+.plan-btn {
+  width:100%; padding:14px; border:none; border-radius:12px;
+  font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer;
+  transition:all 0.15s;
+}
+.plan-btn.teal { background:var(--teal); color:white; }
+.plan-btn.teal:active { background:var(--teal-dark); }
+.plan-btn.purple { background:var(--purple); color:white; }
+.plan-btn.current { background:var(--bg3); color:var(--ink3); cursor:default; }
+
+/* FREE PLAN CARD */
+.free-plan-card {
+  margin:0 16px; background:var(--bg3); border-radius:var(--radius);
+  padding:16px 18px; margin-top:4px;
+}
+.free-plan-title { font-size:15px; font-weight:700; margin-bottom:6px; }
+.free-plan-features { display:flex; flex-direction:column; gap:6px; }
+.free-plan-feature { font-size:13px; color:var(--ink2); display:flex; gap:8px; }
+
+/* FAQ */
+.faq-section { padding:20px 16px 0; }
+.faq-title { font-size:15px; font-weight:700; margin-bottom:14px; }
+.faq-item { margin-bottom:14px; }
+.faq-q { font-size:14px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+.faq-a { font-size:13px; color:var(--ink3); line-height:1.6; }
+
+/* SUCCESS OVERLAY */
+.success-overlay {
+  position:fixed; inset:0; background:var(--bg); z-index:200;
+  display:none; flex-direction:column; align-items:center; justify-content:center; padding:24px;
+}
+.success-overlay.show { display:flex; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back-btn" onclick="goBack()">←</button>
+  <div class="topbar-title">Posting Limits</div>
+</header>
+
+<!-- CURRENT PLAN -->
+<div class="current-plan">
+  <div class="current-label">Your current plan</div>
+  <div class="current-name" id="currentPlanName">Free plan</div>
+  <div class="current-stats">
+    <div class="stat-box">
+      <div class="stat-num" id="statDaily">1</div>
+      <div class="stat-label">posts per day</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="statMonthly">5</div>
+      <div class="stat-label">posts per month</div>
+    </div>
+  </div>
+</div>
+
+<!-- FREE PLAN -->
+<div class="free-plan-card">
+  <div class="free-plan-title">🆓 Free plan (current)</div>
+  <div class="free-plan-features">
+    <div class="free-plan-feature"><span>•</span> 1 post per day</div>
+    <div class="free-plan-feature"><span>•</span> 3 posts per month (free forever)</div>
+    <div class="free-plan-feature"><span>•</span> No coins needed to post</div>
+  </div>
+</div>
+
+<div class="section-label">Upgrade your posting limit</div>
+
+<div class="plans-wrap">
+
+  <!-- BASIC PLAN -->
+  <div class="plan-card recommended">
+    <div class="recommended-badge">⭐ Most popular</div>
+    <div class="plan-header">
+      <div>
+        <div class="plan-name">Basic plan</div>
+        <div style="font-size:13px;color:var(--ink3);margin-top:2px">Perfect for active searchers</div>
+      </div>
+      <div class="plan-price">
+        <div class="plan-coins">99 🪙</div>
+        <div class="plan-coins-label">one time</div>
+      </div>
+    </div>
+    <div class="plan-features">
+      <div class="plan-feature"><div class="check teal">✓</div> <strong>3 posts per day</strong></div>
+      <div class="plan-feature"><div class="check teal">✓</div> <strong>10 posts per month</strong></div>
+      <div class="plan-feature"><div class="check teal">✓</div> Valid for exactly <strong>30 days</strong> from purchase</div>
+      <div class="plan-feature"><div class="check teal">⚠️</div> <span style="color:var(--gold)">Auto-reverts to Free plan after 30 days — you'll need to pay again to renew</span></div>
+      <div class="plan-feature"><div class="check teal">✓</div> Priority listing visibility</div>
+    </div>
+    <button class="plan-btn teal" id="basicBtn" onclick="upgradePlan('basic', 99)">
+      Upgrade for 99 coins →
+    </button>
+  </div>
+
+  <!-- PRO PLAN -->
+  <div class="plan-card pro-plan">
+    <div class="pro-badge">🚀 For brokers & power users</div>
+    <div class="plan-header">
+      <div>
+        <div class="plan-name">Pro plan</div>
+        <div style="font-size:13px;color:var(--ink3);margin-top:2px">Best for brokers with multiple listings</div>
+      </div>
+      <div class="plan-price">
+        <div class="plan-coins" style="color:var(--purple)">199 🪙</div>
+        <div class="plan-coins-label">one time</div>
+      </div>
+    </div>
+    <div class="plan-features">
+      <div class="plan-feature"><div class="check purple">✓</div> <strong>8 posts per day</strong></div>
+      <div class="plan-feature"><div class="check purple">✓</div> <strong>25 posts per month</strong></div>
+      <div class="plan-feature"><div class="check purple">✓</div> Valid for exactly <strong>30 days</strong> from purchase</div>
+      <div class="plan-feature"><div class="check purple">⚠️</div> <span style="color:var(--gold)">Auto-reverts to Free plan after 30 days — you'll need to pay again to renew</span></div>
+      <div class="plan-feature"><div class="check purple">✓</div> Priority listing visibility</div>
+      <div class="plan-feature"><div class="check purple">✓</div> Featured badge on all listings</div>
+    </div>
+    <button class="plan-btn purple" id="proBtn" onclick="upgradePlan('pro', 199)">
+      Upgrade for 199 coins →
+    </button>
+  </div>
+
+</div>
+
+<!-- FAQ -->
+<div class="faq-section">
+  <div class="faq-title">Common questions</div>
+  <div class="faq-item">
+    <div class="faq-q">Do I need coins to post a listing?</div>
+    <div class="faq-a">No — posting is always free. Coins are only needed to upgrade your daily/monthly posting limit.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">How long does the upgrade last?</div>
+    <div class="faq-a">Exactly 30 days from the day you upgrade. After 30 days your plan auto-reverts to Free (1 post/day, 3 posts/month). You will need to pay coins again to renew. There is no auto-renewal — your coins are only spent when you choose to upgrade.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">What happens to my coin balance after upgrading?</div>
+    <div class="faq-a">The coins are deducted from your balance immediately. Make sure you have enough coins before upgrading.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Where do I buy coins?</div>
+    <div class="faq-a">Go to <a href="coins.html" style="color:var(--teal);font-weight:600">Buy Coins</a> — packs start at just ₹49 for 10 coins.</div>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="successOverlay">
+  <div style="font-size:64px;margin-bottom:16px">🎉</div>
+  <div style="font-size:24px;font-weight:800;margin-bottom:8px">Plan upgraded!</div>
+  <div id="successMsg" style="font-size:15px;color:var(--ink3);text-align:center;line-height:1.6;margin-bottom:32px"></div>
+  <button onclick="window.location.href='post_form.html'" style="width:100%;max-width:320px;padding:16px;background:var(--teal);color:white;border:none;border-radius:var(--radius);font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer">Post a listing now →</button>
+</div>
+
+<script>
+const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+const PLAN_DETAILS = {
+  free:  { daily: 1,  monthly: 3,  name: 'Free plan' },
+  basic: { daily: 3,  monthly: 10, name: 'Basic plan' },
+  pro:   { daily: 8,  monthly: 25, name: 'Pro plan' },
+};
+
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; }
+}
+
+window.onload = async function() {
+  const user = getUser();
+  if (!user) { window.location.href = 'login.html?trigger=post'; return; }
+
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins,posting_plan`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const data = await res.json();
+    const plan = data[0]?.posting_plan || 'free';
+    const details = PLAN_DETAILS[plan] || PLAN_DETAILS.free;
+
+    document.getElementById('currentPlanName').textContent = details.name;
+    document.getElementById('statDaily').textContent = details.daily;
+    document.getElementById('statMonthly').textContent = details.monthly;
+
+    // Show plan expiry if on paid plan
+    if (plan !== 'free' && data[0]?.posting_plan_expires) {
+      const expiry = new Date(data[0].posting_plan_expires);
+      const daysLeft = Math.max(0, Math.ceil((expiry - Date.now()) / 86400000));
+      const expiryStr = expiry.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+      const expiryBanner = document.createElement('div');
+      expiryBanner.style.cssText = 'margin-top:12px;background:var(--gold-bg);border:1px solid var(--gold);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--ink2);line-height:1.6';
+      expiryBanner.innerHTML = daysLeft > 0
+        ? `⏳ Your plan expires in <strong>${daysLeft} day${daysLeft>1?'s':''}</strong> (on ${expiryStr}). After expiry you will automatically go back to the Free plan and will need to pay again to upgrade.`
+        : `⚠️ <strong>Your plan has expired</strong> as of ${expiryStr}. You are now back on the Free plan. Upgrade again to continue posting more.`;
+      document.querySelector('.current-plan').appendChild(expiryBanner);
+    }
+
+    // Update buttons if already on a plan
+    if (plan === 'basic') {
+      document.getElementById('basicBtn').textContent = '✓ Current plan';
+      document.getElementById('basicBtn').className = 'plan-btn current';
+    } else if (plan === 'pro') {
+      document.getElementById('basicBtn').textContent = '✓ Downgrade not available';
+      document.getElementById('basicBtn').className = 'plan-btn current';
+      document.getElementById('proBtn').textContent = '✓ Current plan';
+      document.getElementById('proBtn').className = 'plan-btn current';
+    }
+  } catch(e) { console.log('Error:', e); }
+};
+
+async function upgradePlan(plan, coinCost) {
+  const user = getUser();
+  if (!user) { window.location.href = 'login.html?trigger=post'; return; }
+
+  try {
+    // Check coins
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const data = await res.json();
+    const currentCoins = data[0]?.coins || 0;
+
+    if (currentCoins < coinCost) {
+      const needed = coinCost - currentCoins;
+      if (confirm(`You need ${needed} more coins. Go to Buy Coins page?`)) {
+        window.location.href = 'coins.html';
+      }
+      return;
+    }
+
+    // Confirm
+    const details = PLAN_DETAILS[plan];
+    if (!confirm(`Upgrade to ${details.name} for ${coinCost} coins?\n\n• ${details.daily} posts per day\n• ${details.monthly} posts per month\n• Valid for 30 days`)) return;
+
+    // Deduct coins
+    const newCoins = currentCoins - coinCost;
+    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        coins: newCoins,
+        posting_plan: plan,
+        posting_plan_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      })
+    });
+
+    // Log transaction
+    await fetch(`${SUPA_URL}/rest/v1/coin_transactions`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.userId, type: 'plan_upgrade', amount: -coinCost,
+        balance_after: newCoins, description: `Upgraded to ${details.name}`,
+        created_at: new Date().toISOString()
+      })
+    });
+
+    // Update local storage
+    user.coins = newCoins;
+    localStorage.setItem('fmh_user', JSON.stringify(user));
+
+    // Show success
+    document.getElementById('successMsg').innerHTML = `You're now on the <strong>${details.name}</strong>!<br>You can post <strong>${details.daily} times per day</strong> and <strong>${details.monthly} times per month</strong> for the next 30 days.`;
+    document.getElementById('successOverlay').classList.add('show');
+
+  } catch(e) {
+    alert('Something went wrong. Please try again.');
+  }
+}
+
+function goBack() { window.history.back() || (window.location.href = 'post_form.html'); }
+</script>
+</body>
+</html>

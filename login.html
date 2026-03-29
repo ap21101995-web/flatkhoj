@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sign In — FlatKhoj</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#fff; --bg2:#f7f7f5; --bg3:#f0efec;
+  --ink:#141414; --ink2:#444; --ink3:#888;
+  --border:#e8e8e4;
+  --teal:#0f7b6c; --teal-bg:#e8f5f3;
+  --red:#d93025; --red-bg:#fce8e6;
+  --gold:#e6a817; --gold-bg:#fef6e4;
+  --radius:12px; --font:'Plus Jakarta Sans',sans-serif;
+}
+body {
+  font-family:var(--font); background:var(--bg2);
+  color:var(--ink); max-width:680px; margin:0 auto;
+  min-height:100vh; display:flex; flex-direction:column;
+}
+
+/* TOP BAR */
+.topbar {
+  display:flex; align-items:center; padding:0 16px; height:52px;
+  background:var(--bg); border-bottom:1px solid var(--border); gap:12px;
+}
+.close-btn {
+  background:none; border:none; cursor:pointer; color:var(--ink2);
+  display:flex; align-items:center; padding:0; font-size:22px; line-height:1;
+}
+.topbar-title { flex:1; text-align:center; font-size:15px; font-weight:700; color:var(--ink); }
+.topbar-spacer { width:28px; }
+
+/* SCREENS */
+.screen { display:none; flex:1; flex-direction:column; }
+.screen.active { display:flex; }
+
+/* CONTEXT BANNER */
+.context-banner {
+  margin:16px 16px 0; background:var(--gold-bg); border:1.5px solid var(--gold);
+  border-radius:var(--radius); padding:13px 16px;
+  display:flex; gap:10px; align-items:center;
+  font-size:13px; color:var(--ink2); line-height:1.5;
+}
+.ctx-icon { font-size:20px; flex-shrink:0; }
+
+/* MAIN CARD */
+.main-card {
+  margin:16px; background:var(--bg); border-radius:20px;
+  border:1px solid var(--border); padding:28px 20px; flex:1;
+}
+
+/* BRAND */
+.brand { text-align:center; margin-bottom:28px; }
+.brand-logo { font-size:22px; font-weight:800; color:var(--ink); letter-spacing:-0.5px; }
+.brand-logo span { color:var(--teal); }
+.brand-tagline { font-size:13px; color:var(--ink3); margin-top:4px; }
+
+/* HEADINGS */
+.screen-title { font-size:20px; font-weight:800; color:var(--ink); letter-spacing:-0.3px; margin-bottom:6px; }
+.screen-sub { font-size:13px; color:var(--ink3); line-height:1.6; margin-bottom:24px; }
+
+/* PHONE INPUT */
+.phone-wrap {
+  display:flex; align-items:center; border:2px solid var(--border);
+  border-radius:12px; overflow:hidden; background:var(--bg);
+  margin-bottom:8px; transition:border-color 0.15s;
+}
+.phone-wrap:focus-within { border-color:var(--teal); }
+.phone-flag {
+  padding:14px 12px; background:var(--bg2); border-right:1px solid var(--border);
+  font-size:15px; display:flex; align-items:center; gap:6px;
+  white-space:nowrap; color:var(--ink2); font-weight:600;
+}
+.phone-input {
+  flex:1; border:none; padding:14px 14px; font-family:var(--font);
+  font-size:17px; font-weight:600; color:var(--ink); background:transparent;
+  outline:none; letter-spacing:1px;
+}
+.phone-input::placeholder { color:var(--ink3); font-weight:400; letter-spacing:0; font-size:15px; }
+.field-hint { font-size:11px; color:var(--ink3); margin-bottom:16px; line-height:1.4; }
+
+/* OTP */
+.otp-wrap { display:flex; gap:10px; justify-content:center; margin-bottom:8px; }
+.otp-box {
+  width:48px; height:56px; border:2px solid var(--border); border-radius:10px;
+  text-align:center; font-family:var(--font); font-size:22px; font-weight:700;
+  color:var(--ink); background:var(--bg); outline:none; transition:border-color 0.15s;
+  caret-color:var(--teal);
+}
+.otp-box:focus { border-color:var(--teal); }
+.otp-box.filled { border-color:var(--teal); background:var(--teal-bg); }
+.otp-box.error { border-color:var(--red); background:var(--red-bg); }
+.otp-sent-to { font-size:13px; color:var(--ink3); text-align:center; margin-bottom:6px; }
+.otp-sent-to strong { color:var(--ink); }
+
+/* RESEND */
+.resend-row { text-align:center; margin-bottom:20px; font-size:13px; color:var(--ink3); }
+.resend-btn {
+  background:none; border:none; cursor:pointer; font-family:var(--font);
+  font-size:13px; color:var(--teal); font-weight:600; padding:0; display:none;
+}
+.resend-btn.show { display:inline; }
+
+/* WRONG NUMBER */
+.wrong-number { text-align:center; margin-bottom:20px; }
+.wrong-number-btn {
+  background:none; border:none; cursor:pointer; font-family:var(--font);
+  font-size:13px; color:var(--ink3); text-decoration:underline;
+  text-underline-offset:2px; padding:0;
+}
+
+/* CTA BUTTON */
+.cta-btn {
+  width:100%; padding:15px; background:var(--teal); color:white; border:none;
+  border-radius:var(--radius); font-family:var(--font); font-size:16px; font-weight:700;
+  cursor:pointer; transition:all 0.15s; margin-bottom:12px;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.cta-btn:active { background:#0a6358; transform:scale(0.98); }
+.cta-btn:disabled { background:var(--bg3); color:var(--ink3); cursor:not-allowed; transform:none; }
+.cta-btn .spinner {
+  width:18px; height:18px; border-radius:50%; display:none;
+  border:2px solid rgba(255,255,255,0.3); border-top-color:white;
+  animation:spin 0.7s linear infinite;
+}
+.cta-btn.loading .spinner { display:block; }
+.cta-btn.loading .btn-text { display:none; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* DIVIDER */
+.or-divider { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.or-line { flex:1; height:1px; background:var(--border); }
+.or-text { font-size:12px; color:var(--ink3); }
+
+/* TRUST ICONS */
+.trust-row { display:flex; gap:20px; justify-content:center; margin-bottom:20px; }
+.trust-item { text-align:center; }
+.trust-icon { font-size:20px; margin-bottom:4px; }
+.trust-label { font-size:11px; color:var(--ink3); }
+
+/* TERMS */
+.terms { font-size:11px; color:var(--ink3); text-align:center; line-height:1.6; }
+.terms a { color:var(--teal); text-decoration:none; }
+
+/* ERROR */
+.error-msg {
+  background:var(--red-bg); border:1.5px solid var(--red); border-radius:8px;
+  padding:10px 14px; font-size:13px; color:var(--red); margin-bottom:16px;
+  display:none; align-items:center; gap:8px;
+}
+.error-msg.show { display:flex; }
+
+/* SUCCESS */
+.success-wrap {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:32px 20px; text-align:center;
+}
+.success-circle {
+  width:80px; height:80px; border-radius:50%; background:var(--teal-bg);
+  border:3px solid var(--teal); display:flex; align-items:center;
+  justify-content:center; font-size:36px; margin-bottom:20px;
+  animation:popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+.success-title { font-size:22px; font-weight:800; color:var(--ink); letter-spacing:-0.3px; margin-bottom:8px; }
+.success-sub { font-size:14px; color:var(--ink3); line-height:1.7; margin-bottom:8px; }
+.coins-awarded {
+  background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px;
+  padding:12px 20px; font-size:14px; font-weight:600; color:var(--ink);
+  margin:12px 0 28px; display:inline-block;
+}
+.continue-btn {
+  width:100%; padding:15px; background:var(--ink); color:white; border:none;
+  border-radius:var(--radius); font-family:var(--font); font-size:16px;
+  font-weight:700; cursor:pointer; transition:background 0.15s;
+}
+.continue-btn:active { background:var(--teal); }
+
+/* LOGGED IN */
+.logged-in-wrap {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:32px 20px; text-align:center;
+}
+.user-avatar {
+  width:72px; height:72px; border-radius:50%; background:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; font-weight:700; color:white; margin-bottom:16px;
+}
+.logged-in-name { font-size:20px; font-weight:800; color:var(--ink); margin-bottom:4px; }
+.logged-in-phone { font-size:14px; color:var(--ink3); margin-bottom:24px; }
+.coin-balance-pill {
+  background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:100px;
+  padding:8px 20px; font-size:14px; font-weight:700; color:var(--ink);
+  margin-bottom:28px; display:inline-block;
+}
+.logout-btn {
+  background:none; border:1.5px solid var(--border); border-radius:var(--radius);
+  padding:12px 28px; font-family:var(--font); font-size:14px;
+  font-weight:600; color:var(--ink3); cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="close-btn" onclick="goBack()">×</button>
+  <div class="topbar-title" id="topbarTitle">Sign In</div>
+  <div class="topbar-spacer"></div>
+</header>
+
+
+<!-- SCREEN A: ALREADY LOGGED IN -->
+<div class="screen" id="screenLoggedIn">
+  <div class="logged-in-wrap">
+    <div class="user-avatar" id="userInitials">R</div>
+    <div class="logged-in-name" id="userName">Rahul</div>
+    <div class="logged-in-phone" id="userPhone">+91 98200 00000</div>
+    <div class="coin-balance-pill">🪙 8 coins available</div>
+    <button class="continue-btn" onclick="goBack()" style="margin-bottom:12px">Continue →</button>
+    <button class="logout-btn" onclick="logout()">Sign out</button>
+  </div>
+</div>
+
+
+<!-- SCREEN 1: ENTER PHONE -->
+<div class="screen active" id="screen1">
+
+  <div class="context-banner" id="contextBanner" style="display:none">
+    <div class="ctx-icon" id="ctxIcon">🪙</div>
+    <div id="ctxText">Sign in to unlock this contact</div>
+  </div>
+
+  <div class="main-card">
+    <div class="brand">
+      <div class="brand-logo">Flat<span>Khoj</span></div>
+      <div class="brand-tagline">Mumbai's flat & flatmate platform</div>
+    </div>
+
+    <div class="screen-title">Enter Your Mobile Number</div>
+    <div class="screen-sub">Enter your number to continue. v2.0</div>
+
+    <div class="phone-wrap">
+      <div class="phone-flag">🇮🇳 +91</div>
+      <input class="phone-input" type="tel" id="phoneInput"
+        placeholder="10-digit mobile number" maxlength="10"
+        inputmode="numeric" pattern="[0-9]*"
+        oninput="onPhoneInput(this)"
+        onkeydown="if(event.key==='Enter'&&!document.getElementById('sendOtpBtn').disabled)sendOtp()">
+    </div>
+    <div class="field-hint">We'll send a 6-digit OTP via WhatsApp. Make sure WhatsApp is installed.</div>
+
+    <div class="error-msg" id="phoneError">
+      <span>⚠️</span>
+      <span id="phoneErrorText">Please enter a valid 10-digit mobile number</span>
+    </div>
+
+    <button class="cta-btn" id="sendOtpBtn" onclick="sendOtp()" disabled>
+      <div class="spinner"></div>
+      <span class="btn-text">Send OTP →</span>
+    </button>
+
+    <div class="or-divider">
+      <div class="or-line"></div>
+      <div class="or-text">Safe & secure</div>
+      <div class="or-line"></div>
+    </div>
+
+    <div class="trust-row">
+      <div class="trust-item"><div class="trust-icon">🔒</div><div class="trust-label">Secure</div></div>
+      <div class="trust-item"><div class="trust-icon">📵</div><div class="trust-label">No spam</div></div>
+      <div class="trust-item"><div class="trust-icon">✅</div><div class="trust-label">Stay logged in</div></div>
+      <div class="trust-item"><div class="trust-icon">🆓</div><div class="trust-label">Free to join</div></div>
+    </div>
+
+    <div class="terms">
+      By signing in, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.<br>
+      Your contact details are only shared when someone pays coins to unlock them.
+    </div>
+  </div>
+</div>
+
+
+<!-- SCREEN OWNER: PASSWORD LOGIN (owner bypass) -->
+<div class="screen" id="screen-owner">
+  <div class="main-card">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:40px;margin-bottom:12px">🔐</div>
+      <div class="screen-title">Owner Sign In</div>
+      <div class="screen-sub">Enter your password to sign in without OTP</div>
+    </div>
+
+    <div class="phone-wrap" style="margin-bottom:16px">
+      <input class="phone-input" type="password" id="ownerPasswordInput"
+        placeholder="Enter password"
+        onkeydown="if(event.key==='Enter') verifyOwnerPassword()">
+    </div>
+
+    <div class="error-msg" id="ownerError" style="margin-bottom:12px">
+      <span>⚠️</span>
+      <span id="ownerErrorText">Incorrect password. Please try again.</span>
+    </div>
+
+    <button class="cta-btn" onclick="verifyOwnerPassword()">
+      <div class="spinner"></div>
+      <span class="btn-text">Sign In →</span>
+    </button>
+
+    <div class="wrong-number" style="margin-top:12px">
+      <button class="wrong-number-btn" onclick="goToScreen('screen1')">Go back</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- SCREEN 2: ENTER OTP -->
+<div class="screen" id="screen2">
+  <div class="main-card">
+
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:40px;margin-bottom:12px">📱</div>
+      <div class="screen-title">Enter OTP</div>
+      <div class="otp-sent-to">Sent to <strong id="sentToNumber">+91 98200 00000</strong></div>
+    </div>
+
+    <div class="otp-wrap">
+      <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]*" id="otp1" oninput="otpInput(this,1)" onkeydown="otpKeydown(event,1)">
+      <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]*" id="otp2" oninput="otpInput(this,2)" onkeydown="otpKeydown(event,2)">
+      <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]*" id="otp3" oninput="otpInput(this,3)" onkeydown="otpKeydown(event,3)">
+      <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]*" id="otp4" oninput="otpInput(this,4)" onkeydown="otpKeydown(event,4)">
+      <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]*" id="otp5" oninput="otpInput(this,5)" onkeydown="otpKeydown(event,5)">
+      <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]*" id="otp6" oninput="otpInput(this,6)" onkeydown="otpKeydown(event,6)">
+    </div>
+
+    <div class="error-msg" id="otpError" style="margin-top:12px">
+      <span>⚠️</span>
+      <span id="otpErrorText">Incorrect OTP. Please try again.</span>
+    </div>
+
+    <div class="resend-row" style="margin-top:16px">
+      <span id="resendTimer">Resend OTP in <strong id="countdown">30</strong>s</span>
+      <button class="resend-btn" id="resendBtn" onclick="resendOtp()">Resend OTP</button>
+    </div>
+
+    <div class="wrong-number">
+      <button class="wrong-number-btn" onclick="goToScreen('screen1')">Wrong number? Go back</button>
+    </div>
+
+    <button class="cta-btn" id="verifyBtn" onclick="verifyOtp()" disabled>
+      <div class="spinner"></div>
+      <span class="btn-text">Verify & Sign In →</span>
+    </button>
+
+    <div class="terms" style="margin-top:12px">
+      Having trouble? Make sure you have a network signal.<br>
+      OTP is valid for <strong>10 minutes</strong>.
+    </div>
+
+  </div>
+</div>
+
+
+<!-- SCREEN 3: SUCCESS -->
+<div class="screen" id="screen3">
+  <div class="success-wrap">
+    <div class="success-circle">✓</div>
+    <div class="success-title" id="welcomeTitle">Welcome to FlatKhoj!</div>
+    <div class="success-sub" id="welcomeSub">
+      You're signed in. As a welcome gift, you've received <strong>5 free coins</strong> to get started.
+    </div>
+    <div class="coins-awarded" id="coinsAwarded">🪙 5 free coins added to your account</div>
+    <button class="continue-btn" id="continueBtn" onclick="onContinue()">Continue →</button>
+  </div>
+</div>
+
+
+<script>
+let phoneNumber = '';
+let isNewUser = false;
+let resendInterval = null;
+let triggerContext = null;
+
+const contextMessages = {
+  unlock:  { icon:'🪙', text:'Sign in to unlock this contact — takes 30 seconds' },
+  post:    { icon:'📋', text:'Sign in to post your listing — it\'s free!' },
+  save:    { icon:'🔖', text:'Sign in to save listings across your devices' },
+  coins:   { icon:'💳', text:'Sign in to buy coins and unlock contacts' },
+  account: { icon:'👤', text:'Sign in to view and manage your account' },
+};
+
+window.onload = function() {
+  const saved = getLoginState();
+  if (saved) { showLoggedIn(saved); return; }
+
+  const params = new URLSearchParams(window.location.search);
+  triggerContext = params.get('trigger');
+  if (triggerContext && contextMessages[triggerContext]) {
+    const banner = document.getElementById('contextBanner');
+    document.getElementById('ctxIcon').textContent = contextMessages[triggerContext].icon;
+    document.getElementById('ctxText').textContent = contextMessages[triggerContext].text;
+    banner.style.display = 'flex';
+  }
+};
+
+function getLoginState() {
+  try { const d = localStorage.getItem('fmh_user'); return d ? JSON.parse(d) : null; }
+  catch(e) { return null; }
+}
+function saveLoginState(user) {
+  try { localStorage.setItem('fmh_user', JSON.stringify(user)); } catch(e) {}
+}
+function clearLoginState() {
+  try { localStorage.removeItem('fmh_user'); } catch(e) {}
+}
+
+function showLoggedIn(user) {
+  document.getElementById('screen1').classList.remove('active');
+  document.getElementById('screenLoggedIn').classList.add('active');
+  document.getElementById('topbarTitle').textContent = 'My Account';
+  const initials = user.name ? user.name.charAt(0).toUpperCase() : user.phone.charAt(0);
+  document.getElementById('userInitials').textContent = initials;
+  document.getElementById('userName').textContent = user.name || 'My Account';
+  document.getElementById('userPhone').textContent = '+91 ' + user.phone.replace(/(\d{5})(\d{5})/, '$1 $2');
+}
+
+function logout() {
+  if (confirm('Are you sure you want to sign out?')) {
+    clearLoginState(); location.reload();
+  }
+}
+
+function onPhoneInput(input) {
+  input.value = input.value.replace(/[^0-9]/g, '');
+  const val = input.value;
+  const isValid = val.length === 10 && /^[6-9]/.test(val);
+  const btn = document.getElementById('sendOtpBtn');
+  btn.disabled = !isValid;
+  document.getElementById('phoneError').classList.remove('show');
+
+  // Auto-detect owner number
+  if (val === '9538584612') {
+    btn.querySelector('.btn-text').textContent = 'Continue →';
+  } else {
+    btn.querySelector('.btn-text').textContent = 'Send OTP →';
+  }
+
+  // If exactly 10 digits and owner number — auto proceed
+  if (val === '9538584612' && val.length === 10) {
+    // Small delay so user sees it
+    setTimeout(function() {
+      if (document.getElementById('phoneInput').value === '9538584612') {
+        goToScreen('screen-owner');
+        setTimeout(() => document.getElementById('ownerPasswordInput').focus(), 300);
+      }
+    }, 500);
+  }
+}
+
+const SUPABASE_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+async function sendOtp() {
+  const phone = document.getElementById('phoneInput').value.trim();
+  if (phone.length !== 10 || !/^[6-9]/.test(phone)) {
+    document.getElementById('phoneErrorText').textContent = 'Please enter a valid 10-digit Indian mobile number';
+    document.getElementById('phoneError').classList.add('show');
+    return;
+  }
+  phoneNumber = phone;
+
+  // ── OWNER BYPASS ─────────────────────────────────────────
+  // If owner's number entered, show password screen instead of OTP
+  if (phone === '9538584612') {
+    goToScreen('screen-owner');
+    setTimeout(() => document.getElementById('ownerPasswordInput').focus(), 300);
+    return;
+  }
+  // ─────────────────────────────────────────────────────────
+
+  const btn = document.getElementById('sendOtpBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ action: 'send', phone })
+    });
+    const data = await res.json();
+    btn.classList.remove('loading');
+
+    if (data.success) {
+      document.getElementById('sentToNumber').textContent = '+91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
+      goToScreen('screen2');
+      startResendTimer();
+      setTimeout(() => document.getElementById('otp1').focus(), 300);
+    } else {
+      document.getElementById('phoneErrorText').textContent = data.error || 'Failed to send OTP. Please try again.';
+      document.getElementById('phoneError').classList.add('show');
+      btn.disabled = false;
+    }
+  } catch(err) {
+    btn.classList.remove('loading');
+    document.getElementById('phoneErrorText').textContent = 'Network error. Please check your connection and try again.';
+    document.getElementById('phoneError').classList.add('show');
+    btn.disabled = false;
+  }
+}
+
+function otpInput(input, num) {
+  input.value = input.value.replace(/[^0-9]/g, '');
+  document.getElementById('otpError').classList.remove('show');
+  if (input.value) {
+    input.classList.add('filled'); input.classList.remove('error');
+    if (num < 6) document.getElementById('otp'+(num+1)).focus();
+    else checkOtpComplete();
+  } else { input.classList.remove('filled'); }
+}
+
+function otpKeydown(e, num) {
+  if (e.key === 'Backspace') {
+    const input = document.getElementById('otp'+num);
+    if (!input.value && num > 1) document.getElementById('otp'+(num-1)).focus();
+    input.classList.remove('filled');
+  }
+  if (e.key === 'Enter') verifyOtp();
+}
+
+function checkOtpComplete() {
+  let full = '';
+  for(let i=1;i<=6;i++) full += document.getElementById('otp'+i).value;
+  document.getElementById('verifyBtn').disabled = full.length < 6;
+}
+
+function getOtpValue() {
+  let v=''; for(let i=1;i<=6;i++) v+=document.getElementById('otp'+i).value; return v;
+}
+
+function clearOtp() {
+  for(let i=1;i<=6;i++) {
+    const b=document.getElementById('otp'+i);
+    b.value=''; b.classList.remove('filled','error');
+  }
+  document.getElementById('verifyBtn').disabled = true;
+}
+
+// ── OWNER BYPASS LOGIN ─────────────────────────────────────
+async function verifyOwnerPassword() {
+  const pwd = document.getElementById('ownerPasswordInput').value;
+  const OWNER_PASSWORD = 'Owner_Aditya_2026';
+
+  if (pwd !== OWNER_PASSWORD) {
+    document.getElementById('ownerErrorText').textContent = 'Incorrect password. Please try again.';
+    document.getElementById('ownerError').classList.add('show');
+    return;
+  }
+
+  // Password correct — create/get owner account in Supabase
+  try {
+    const SUPA_URL = SUPABASE_URL;
+    const SUPA_KEY = SUPABASE_ANON_KEY;
+
+    // Check if user exists
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?phone=eq.9538584612&select=id,coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const existing = await res.json();
+
+    let userId, coins;
+
+    if (existing && existing.length > 0) {
+      userId = existing[0].id;
+      coins = existing[0].coins || 0;
+    } else {
+      // Create owner account
+      const createRes = await fetch(`${SUPA_URL}/rest/v1/users`, {
+        method: 'POST',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({ phone: '9538584612', coins: 999, created_at: new Date().toISOString() })
+      });
+      const newUser = await createRes.json();
+      userId = newUser[0]?.id;
+      coins = 999;
+    }
+
+    // Save owner login — mark as owner
+    const user = {
+      phone: '9538584612',
+      name: 'Aditya',
+      coins: coins,
+      userId: userId,
+      sessionToken: 'owner-session-' + Date.now(),
+      joinedAt: Date.now(),
+      isOwner: true  // special flag
+    };
+    saveLoginState(user);
+
+    // Show welcome screen
+    document.getElementById('welcomeTitle').textContent = 'Welcome back, Aditya!';
+    document.getElementById('welcomeSub').textContent = 'Signed in as owner. You can post listings with custom contact numbers.';
+    document.getElementById('coinsAwarded').style.display = 'none';
+
+    const cb = document.getElementById('continueBtn');
+    if (triggerContext === 'post') cb.textContent = 'Continue to post listing →';
+    else cb.textContent = 'Start exploring →';
+
+    goToScreen('screen3');
+
+  } catch(err) {
+    document.getElementById('ownerErrorText').textContent = 'Something went wrong. Please try again.';
+    document.getElementById('ownerError').classList.add('show');
+  }
+}
+
+async function verifyOtp() {
+  const otp = getOtpValue();
+  if (otp.length < 6) return;
+  const btn = document.getElementById('verifyBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ action: 'verify', phone: phoneNumber, otp })
+    });
+    const data = await res.json();
+    btn.classList.remove('loading');
+
+    if (data.success) {
+      // Save login state to device
+      const user = {
+        phone: phoneNumber,
+        name: '',
+        coins: data.coinsBalance,
+        userId: data.userId,
+        sessionToken: data.sessionToken,
+        joinedAt: Date.now()
+      };
+      saveLoginState(user);
+
+      if (data.isNewUser) {
+        document.getElementById('welcomeTitle').textContent = 'Welcome to FlatKhoj! 🎉';
+        document.getElementById('welcomeSub').innerHTML = "You're signed in. As a welcome gift, you've received <strong>5 free coins</strong> to get started.";
+        document.getElementById('coinsAwarded').style.display = 'inline-block';
+      } else {
+        document.getElementById('welcomeTitle').textContent = 'Welcome back!';
+        document.getElementById('welcomeSub').textContent = "You're signed in successfully. Pick up where you left off.";
+        document.getElementById('coinsAwarded').style.display = 'none';
+      }
+
+      const cb = document.getElementById('continueBtn');
+      if (triggerContext === 'unlock') cb.textContent = 'Continue to unlock contact →';
+      else if (triggerContext === 'post') cb.textContent = 'Continue to post listing →';
+      else cb.textContent = 'Start exploring →';
+
+      goToScreen('screen3');
+    } else {
+      document.getElementById('otpErrorText').textContent = data.error || 'Incorrect OTP. Please try again.';
+      document.getElementById('otpError').classList.add('show');
+      for(let i=1;i<=6;i++) document.getElementById('otp'+i).classList.add('error');
+      btn.disabled = false;
+    }
+  } catch(err) {
+    btn.classList.remove('loading');
+    document.getElementById('otpErrorText').textContent = 'Network error. Please check your connection and try again.';
+    document.getElementById('otpError').classList.add('show');
+    btn.disabled = false;
+  }
+}
+
+function startResendTimer() {
+  let s = 30;
+  document.getElementById('countdown').textContent = s;
+  document.getElementById('resendTimer').style.display = 'inline';
+  document.getElementById('resendBtn').classList.remove('show');
+  resendInterval = setInterval(() => {
+    s--;
+    document.getElementById('countdown').textContent = s;
+    if (s <= 0) {
+      clearInterval(resendInterval);
+      document.getElementById('resendTimer').style.display = 'none';
+      document.getElementById('resendBtn').classList.add('show');
+    }
+  }, 1000);
+}
+
+function resendOtp() {
+  clearOtp();
+  document.getElementById('resendBtn').classList.remove('show');
+  document.getElementById('otpError').classList.remove('show');
+  const btn = document.getElementById('resendBtn');
+  btn.textContent = 'Sending…';
+  // Re-use the real sendOtp flow but stay on screen 2
+  fetch(`${SUPABASE_URL}/functions/v1/otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+    body: JSON.stringify({ action: 'send', phone: phoneNumber })
+  }).then(r => r.json()).then(data => {
+    btn.textContent = 'Resend OTP';
+    if (data.success) {
+      startResendTimer();
+      document.getElementById('otp1').focus();
+    } else {
+      document.getElementById('otpErrorText').textContent = data.error || 'Failed to resend. Try again.';
+      document.getElementById('otpError').classList.add('show');
+      btn.classList.add('show');
+    }
+  }).catch(() => {
+    btn.textContent = 'Resend OTP';
+    btn.classList.add('show');
+  });
+}
+
+function goToScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const titles = { 'screen1':'Sign In', 'screen2':'Verify OTP', 'screen3':"You're in!", 'screenLoggedIn':'My Account', 'screen-owner':'Owner Sign In' };
+  document.getElementById('topbarTitle').textContent = titles[id] || 'Sign In';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function onContinue() {
+  const params = new URLSearchParams(window.location.search);
+  const returnUrl = params.get('return');
+  if (returnUrl) {
+    window.location.href = returnUrl;
+  } else if (triggerContext === 'post') {
+    window.location.href = 'post_form.html';
+  } else if (triggerContext === 'unlock') {
+    window.history.back();
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+function goBack() {
+  const active = document.querySelector('.screen.active');
+  if (active.id === 'screen2' || active.id === 'screen-owner') goToScreen('screen1');
+  else window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>

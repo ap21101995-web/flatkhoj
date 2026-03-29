@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Listing — FlatKhoj</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#fff; --bg2:#f7f7f5; --bg3:#f0efec;
+  --ink:#141414; --ink2:#444; --ink3:#888;
+  --border:#e8e8e4;
+  --teal:#0f7b6c; --teal-bg:#e8f5f3; --teal-dark:#0a6358;
+  --red:#d93025; --red-bg:#fce8e6;
+  --gold:#e6a817; --gold-bg:#fef6e4;
+  --green:#1a7a3c; --green-bg:#e8f5ee;
+  --radius:12px; --font:'Plus Jakarta Sans',sans-serif;
+}
+body {
+  font-family:var(--font); background:var(--bg2);
+  color:var(--ink); max-width:680px; margin:0 auto;
+  min-height:100vh; padding-bottom:100px;
+}
+
+/* TOP BAR */
+.topbar {
+  position:sticky; top:0; z-index:100;
+  display:flex; align-items:center; padding:0 16px; height:52px;
+  background:var(--bg); border-bottom:1px solid var(--border);
+  gap:12px;
+}
+.back-btn {
+  background:none; border:none; cursor:pointer; color:var(--ink2);
+  display:flex; align-items:center; padding:4px; font-size:22px;
+  line-height:1; border-radius:8px;
+}
+.topbar-title { flex:1; font-size:15px; font-weight:700; color:var(--ink); }
+.topbar-actions { display:flex; gap:8px; }
+.icon-btn {
+  background:none; border:none; cursor:pointer;
+  width:36px; height:36px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--ink2); transition:background 0.15s;
+}
+.icon-btn:active { background:var(--bg3); }
+.icon-btn.saved svg { fill:#d93025; stroke:#d93025; }
+
+/* PHOTO GALLERY */
+.photo-gallery {
+  position:relative; background:var(--bg3);
+  aspect-ratio:4/3; overflow:hidden;
+}
+.photo-slides {
+  display:flex; height:100%; transition:transform 0.3s ease;
+}
+.photo-slide {
+  min-width:100%; height:100%; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:48px; color:var(--ink3);
+}
+.photo-slide img {
+  width:100%; height:100%; object-fit:cover;
+}
+.photo-counter {
+  position:absolute; bottom:12px; right:12px;
+  background:rgba(0,0,0,0.6); color:white;
+  font-size:12px; font-weight:600; padding:4px 10px;
+  border-radius:100px;
+}
+.photo-dots {
+  position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+  display:flex; gap:6px;
+}
+.photo-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:rgba(255,255,255,0.5); transition:background 0.2s;
+}
+.photo-dot.active { background:white; }
+.no-photo-placeholder {
+  width:100%; height:100%; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px;
+  background:var(--bg3); color:var(--ink3);
+}
+.no-photo-placeholder svg { opacity:0.4; }
+.no-photo-placeholder span { font-size:13px; }
+
+/* BROKER TAG */
+.broker-banner {
+  padding:10px 16px; font-size:13px; font-weight:600;
+  display:flex; align-items:center; gap:8px;
+}
+.broker-banner.no-broker { background:var(--green-bg); color:var(--green); }
+.broker-banner.has-broker { background:var(--red-bg); color:var(--red); }
+
+/* MAIN CONTENT */
+.content { padding:16px; }
+
+/* LISTING TYPE */
+.listing-type-pill {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--bg3); border-radius:100px;
+  padding:4px 12px; font-size:12px; font-weight:600;
+  color:var(--ink2); margin-bottom:12px;
+}
+
+/* TITLE & PRICE */
+.listing-title {
+  font-size:20px; font-weight:800; color:var(--ink);
+  letter-spacing:-0.3px; line-height:1.3; margin-bottom:8px;
+}
+.price-row {
+  display:flex; align-items:baseline; gap:8px; margin-bottom:4px;
+}
+.price-main { font-size:26px; font-weight:800; color:var(--ink); }
+.price-period { font-size:14px; color:var(--ink3); }
+.price-deposit { font-size:13px; color:var(--ink3); margin-bottom:16px; }
+
+/* LOCATION */
+.location-row {
+  display:flex; align-items:center; gap:6px;
+  font-size:14px; color:var(--ink2); margin-bottom:16px;
+}
+.location-row svg { flex-shrink:0; color:var(--teal); }
+
+/* DIVIDER */
+.divider { height:1px; background:var(--border); margin:16px 0; }
+
+/* DETAILS GRID */
+.details-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px; margin-bottom:4px;
+}
+.detail-item {
+  background:var(--bg2); border-radius:10px; padding:12px;
+}
+.detail-label {
+  font-size:11px; font-weight:700; color:var(--ink3);
+  text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;
+}
+.detail-value { font-size:14px; font-weight:600; color:var(--ink); }
+
+/* SECTION HEADING */
+.section-heading {
+  font-size:16px; font-weight:800; color:var(--ink);
+  margin-bottom:12px; letter-spacing:-0.2px;
+}
+
+/* TAGS */
+.tags-wrap { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:4px; }
+.tag {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:100px; padding:6px 14px;
+  font-size:13px; color:var(--ink2);
+}
+
+/* DESCRIPTION */
+.description {
+  font-size:14px; color:var(--ink2); line-height:1.7;
+  margin-bottom:4px;
+}
+.read-more-btn {
+  background:none; border:none; cursor:pointer;
+  font-family:var(--font); font-size:13px; font-weight:600;
+  color:var(--teal); padding:0; margin-top:6px;
+}
+
+/* POSTER CARD */
+.poster-card {
+  background:var(--bg); border:1.5px solid var(--border);
+  border-radius:var(--radius); padding:16px;
+  display:flex; align-items:center; gap:12px;
+}
+.poster-avatar {
+  width:52px; height:52px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:700; color:white; flex-shrink:0;
+}
+.poster-info { flex:1; }
+.poster-name { font-size:16px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.poster-role { font-size:13px; color:var(--ink3); }
+.poster-since { font-size:12px; color:var(--ink3); margin-top:2px; }
+.verified-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:11px; font-weight:600; color:var(--teal);
+  background:var(--teal-bg); border-radius:100px;
+  padding:3px 8px; margin-top:4px;
+}
+
+/* REPORT */
+.report-btn {
+  background:none; border:none; cursor:pointer;
+  font-family:var(--font); font-size:12px; color:var(--ink3);
+  text-decoration:underline; text-underline-offset:2px;
+  padding:0; display:block; margin:0 auto; text-align:center;
+}
+
+/* SIMILAR LISTINGS */
+.similar-card {
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px; margin-bottom:10px;
+  display:flex; gap:12px; align-items:flex-start;
+}
+.similar-type { font-size:11px; color:var(--ink3); margin-bottom:4px; }
+.similar-title { font-size:14px; font-weight:600; color:var(--ink); margin-bottom:4px; line-height:1.3; }
+.similar-price { font-size:15px; font-weight:700; color:var(--ink); }
+.similar-location { font-size:12px; color:var(--ink3); margin-top:2px; }
+.similar-unlock {
+  flex-shrink:0; background:var(--ink); color:white;
+  border:none; border-radius:8px; padding:8px 12px;
+  font-family:var(--font); font-size:12px; font-weight:600;
+  cursor:pointer; white-space:nowrap;
+}
+
+/* BOTTOM ACTION BAR */
+.bottom-bar {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:680px;
+  background:var(--bg); border-top:1px solid var(--border);
+  padding:12px 16px; display:flex; gap:10px; align-items:center;
+}
+.coin-balance {
+  font-size:12px; color:var(--ink3); text-align:center;
+  flex-shrink:0;
+}
+.coin-balance strong { color:var(--ink); font-size:14px; display:block; }
+.unlock-main-btn {
+  flex:1; padding:15px; background:var(--teal); color:white;
+  border:none; border-radius:var(--radius);
+  font-family:var(--font); font-size:16px; font-weight:700;
+  cursor:pointer; transition:background 0.15s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.unlock-main-btn:active { background:var(--teal-dark); }
+.unlock-main-btn .coin-cost {
+  background:rgba(255,255,255,0.25); border-radius:100px;
+  padding:3px 10px; font-size:13px;
+}
+.free-contact-btn {
+  flex:1; padding:15px; background:var(--green); color:white;
+  border:none; border-radius:var(--radius);
+  font-family:var(--font); font-size:16px; font-weight:700;
+  cursor:pointer;
+}
+.already-unlocked {
+  flex:1; padding:15px; background:var(--teal-bg); color:var(--teal);
+  border:2px solid var(--teal); border-radius:var(--radius);
+  font-family:var(--font); font-size:15px; font-weight:700;
+  text-align:center;
+}
+
+/* UNLOCK SHEET */
+.modal-backdrop {
+  position:fixed; inset:0; background:rgba(0,0,0,0.4);
+  z-index:200; display:none; backdrop-filter:blur(2px);
+}
+.modal-backdrop.show { display:block; }
+.modal-sheet {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%) translateY(100%);
+  width:100%; max-width:680px; background:var(--bg);
+  border-radius:20px 20px 0 0; padding:20px 20px 40px;
+  z-index:201; transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+.modal-sheet.show { transform:translateX(-50%) translateY(0); }
+.sheet-handle {
+  width:40px; height:4px; background:var(--border);
+  border-radius:2px; margin:0 auto 20px;
+}
+.sheet-title { font-size:18px; font-weight:800; color:var(--ink); margin-bottom:6px; }
+.sheet-sub { font-size:14px; color:var(--ink3); margin-bottom:20px; line-height:1.5; }
+.contact-reveal {
+  background:var(--teal-bg); border:2px solid var(--teal);
+  border-radius:var(--radius); padding:16px 20px;
+  text-align:center; margin-bottom:16px;
+}
+.contact-reveal .contact-number {
+  font-size:24px; font-weight:800; color:var(--teal); letter-spacing:1px;
+}
+.contact-reveal .contact-name { font-size:14px; color:var(--ink2); margin-top:4px; }
+.contact-actions { display:flex; gap:10px; }
+.whatsapp-btn {
+  flex:1; padding:14px; background:#25D366; color:white;
+  border:none; border-radius:var(--radius); font-family:var(--font);
+  font-size:15px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.call-btn {
+  flex:1; padding:14px; background:var(--ink); color:white;
+  border:none; border-radius:var(--radius); font-family:var(--font);
+  font-size:15px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.coin-balance-row {
+  display:flex; justify-content:space-between; align-items:center;
+  background:var(--gold-bg); border-radius:10px; padding:12px 16px;
+  margin-bottom:16px; font-size:14px;
+}
+.confirm-unlock-btn {
+  width:100%; padding:15px; background:var(--teal); color:white;
+  border:none; border-radius:var(--radius); font-family:var(--font);
+  font-size:16px; font-weight:700; cursor:pointer;
+}
+.sheet-note { text-align:center; font-size:12px; color:var(--ink3); margin-top:10px; }
+
+/* REPORT SHEET */
+.report-option {
+  padding:14px 0; border-bottom:1px solid var(--border);
+  font-size:15px; color:var(--ink2); cursor:pointer;
+  display:flex; align-items:center; gap:10px;
+}
+.report-option:last-child { border-bottom:none; }
+.report-option:active { color:var(--teal); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <button class="back-btn" onclick="goBack()">←</button>
+  <div class="topbar-title">Listing Details</div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="saveBtn" onclick="toggleSave()" title="Save listing">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    </button>
+    <button class="icon-btn" onclick="openSheet('report')" title="Report listing">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- PHOTO GALLERY -->
+<div class="photo-gallery" id="photoGallery" ontouchstart="touchStart(event)" ontouchend="touchEnd(event)">
+  <!-- No photos state -->
+  <div class="no-photo-placeholder" id="noPhoto">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <span>No photos added</span>
+  </div>
+  <!-- Photos will be injected here -->
+  <div class="photo-slides" id="photoSlides"></div>
+  <div class="photo-counter" id="photoCounter" style="display:none">1 / 3</div>
+  <div class="photo-dots" id="photoDots"></div>
+</div>
+
+<!-- BROKER BANNER -->
+<div class="broker-banner no-broker" id="brokerBanner">
+  ✓ No brokerage — direct from owner or tenant
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+
+  <!-- Type pill -->
+  <div class="listing-type-pill" id="listingTypePill">🏠 Flat listing</div>
+
+  <!-- Title & Price -->
+  <div class="listing-title" id="listingTitle">Spacious single room in 2BHK — working professionals only</div>
+
+  <div class="price-row">
+    <div class="price-main" id="listingPrice">₹18,000</div>
+    <div class="price-period" id="pricePeriod">/month</div>
+  </div>
+  <div class="price-deposit" id="priceDeposit">Deposit: 2 months rent</div>
+
+  <!-- Location -->
+  <div class="location-row">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span id="listingLocation">Bandra West, Mumbai</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Details Grid -->
+  <div class="section-heading">Flat details</div>
+  <div class="details-grid" id="detailsGrid">
+    <div class="detail-item">
+      <div class="detail-label">Flat type</div>
+      <div class="detail-value">2 BHK</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Room type</div>
+      <div class="detail-value">Single occupancy</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Furnishing</div>
+      <div class="detail-value">Fully furnished</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Available from</div>
+      <div class="detail-value">Immediately</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Food preference</div>
+      <div class="detail-value">Veg preferred</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Gender preference</div>
+      <div class="detail-value">Any</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Amenities -->
+  <div class="section-heading">Amenities</div>
+  <div class="tags-wrap" id="amenitiesWrap">
+    <span class="tag">🌬️ AC</span>
+    <span class="tag">📶 WiFi included</span>
+    <span class="tag">🚗 Parking</span>
+    <span class="tag">🏋️ Gym</span>
+    <span class="tag">🛗 Lift</span>
+    <span class="tag">💧 24hr water</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Description -->
+  <div class="section-heading">About this listing</div>
+  <div class="description" id="listingDesc">
+    Looking for a working professional or student for a single room in our 2BHK apartment. The flat is fully furnished with AC, WiFi, and parking. Very cooperative flatmates. Building has lift, 24hr security, and power backup. Close to Bandra station and linking road. No pets. Long-term preferred.
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Posted by -->
+  <div class="section-heading">Posted by</div>
+  <div class="poster-card">
+    <div class="poster-avatar" style="background:#0f7b6c" id="posterAvatar">SP</div>
+    <div class="poster-info">
+      <div class="poster-name" id="posterName">Sunita P.</div>
+      <div class="poster-role" id="posterRole">Owner</div>
+      <div class="verified-badge">✓ Verified number</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Posted time -->
+  <div style="font-size:12px;color:var(--ink3);text-align:center;margin-bottom:16px" id="postedTime">
+    Posted 2 hours ago · Expires in 28 days
+  </div>
+
+  <!-- Report -->
+  <button class="report-btn" onclick="openSheet('report')">Report this listing</button>
+
+  <div class="divider"></div>
+
+  <!-- Similar listings -->
+  <div class="section-heading">Similar listings</div>
+
+  <div class="similar-card">
+    <div style="flex:1">
+      <div class="similar-type">🏠 Flat listing</div>
+      <div class="similar-title">1BHK available for single person, Bandra West</div>
+      <div class="similar-price">₹22,000<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
+      <div class="similar-location">📍 Bandra West</div>
+    </div>
+    <button class="similar-unlock" onclick="openSheet('unlock')">Unlock<br>2 🪙</button>
+  </div>
+
+  <div class="similar-card">
+    <div style="flex:1">
+      <div class="similar-type">👥 Flatmate wanted</div>
+      <div class="similar-title">3 professionals looking for flatmate in 3BHK</div>
+      <div class="similar-price">₹15,000<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
+      <div class="similar-location">📍 Khar West</div>
+    </div>
+    <button class="similar-unlock" onclick="openSheet('unlock')">Unlock<br>2 🪙</button>
+  </div>
+
+  <div class="similar-card">
+    <div style="flex:1">
+      <div class="similar-type">🏠 Flat listing</div>
+      <div class="similar-title">Studio apartment, fully furnished, near station</div>
+      <div class="similar-price">₹14,000<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
+      <div class="similar-location">📍 Santacruz West</div>
+    </div>
+    <button class="similar-unlock" onclick="openSheet('unlock')">Unlock<br>2 🪙</button>
+  </div>
+
+</div>
+
+
+<!-- BOTTOM ACTION BAR -->
+<div class="bottom-bar" id="bottomBar">
+  <div class="coin-balance">
+    <strong>🪙 8</strong>
+    coins
+  </div>
+  <button class="unlock-main-btn" onclick="openSheet('unlock')" id="unlockBtn">
+    Unlock contact
+    <span class="coin-cost">2 coins</span>
+  </button>
+</div>
+
+
+<!-- UNLOCK SHEET -->
+<div class="modal-backdrop" id="unlockBackdrop" onclick="closeSheet('unlock')"></div>
+<div class="modal-sheet" id="unlockSheet">
+  <div class="sheet-handle"></div>
+
+  <!-- Step 1: Confirm unlock -->
+  <div id="unlockStep1">
+    <div class="sheet-title">Unlock contact</div>
+    <div class="sheet-sub">Reveal Sunita P.'s WhatsApp number and call them directly. Once unlocked, you can contact them anytime without paying again.</div>
+    <div class="coin-balance-row">
+      <span>Your coin balance</span>
+      <strong>🪙 8 coins</strong>
+    </div>
+    <button class="confirm-unlock-btn" onclick="confirmUnlock()">
+      Spend 2 coins & unlock →
+    </button>
+    <div class="sheet-note">Coins never expire · 100% secure</div>
+  </div>
+
+  <!-- Step 2: Contact revealed -->
+  <div id="unlockStep2" style="display:none">
+    <div class="sheet-title">Contact unlocked! 🎉</div>
+    <div class="sheet-sub">You can now reach Sunita P. directly on WhatsApp or phone.</div>
+    <div class="contact-reveal">
+      <div class="contact-number">+91 98200 00000</div>
+      <div class="contact-name">Sunita P. · Owner</div>
+    </div>
+    <div class="contact-actions">
+      <button class="whatsapp-btn" onclick="openWhatsApp()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        WhatsApp
+      </button>
+      <button class="call-btn" onclick="makeCall()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.26h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.08 6.08l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Call
+      </button>
+    </div>
+    <div id="unlockDeleteReminder" style="background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink2);line-height:1.6;margin-top:14px"></div>
+    <div class="sheet-note" style="margin-top:10px">Use this number only for this flat inquiry</div>
+  </div>
+</div>
+
+<!-- REPORT SHEET -->
+<div class="modal-backdrop" id="reportBackdrop" onclick="closeSheet('report')"></div>
+<div class="modal-sheet" id="reportSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Report this listing</div>
+  <div class="sheet-sub">Help keep FlatKhoj clean and trustworthy.</div>
+  <div class="report-option" onclick="submitReport('fake')">🚫 Fake or fraudulent listing</div>
+  <div class="report-option" onclick="submitReport('brokerage')">💰 Wrong brokerage information</div>
+  <div class="report-option" onclick="submitReport('wrong_contact')">📞 Wrong or fake contact details</div>
+  <div class="report-option" onclick="submitReport('rented')">🔑 Already rented — listing is outdated</div>
+  <div class="report-option" onclick="submitReport('spam')">🗑️ Spam or duplicate listing</div>
+  <div class="report-option" onclick="submitReport('other')">⚠️ Other issue</div>
+</div>
+
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+let currentPhoto=0, totalPhotos=0, isSaved=false, touchStartX=0;
+let listing=null, posterPhone=null;
+
+function getUser(){try{return JSON.parse(localStorage.getItem('fmh_user'));}catch(e){return null;}}
+
+async function supaGet(path){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${path}`,{headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}});
+  return res.json();
+}
+async function supaPost(table,data){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${table}`,{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(data)});
+  return res.json();
+}
+
+window.onload=async function(){
+  const params=new URLSearchParams(window.location.search);
+  const listingId=params.get('id');
+  if(!listingId){window.location.href='index.html';return;}
+  try{
+    const listings=await supaGet(`listings?id=eq.${listingId}&select=*`);
+    if(!listings||listings.length===0){window.location.href='index.html';return;}
+    listing=listings[0];
+    // Use custom contact phone if set by owner, otherwise use poster's login phone
+    if (listing.custom_contact_phone) {
+      posterPhone = listing.custom_contact_phone;
+    } else {
+      const users=await supaGet(`users?id=eq.${listing.user_id}&select=phone`);
+      if(users&&users.length>0) posterPhone=users[0].phone;
+    }
+    const user=getUser();
+    if(user){
+      const unlocks=await supaGet(`contact_unlocks?unlocker_user_id=eq.${user.userId}&listing_id=eq.${listingId}`);
+      if(unlocks&&unlocks.length>0) showAlreadyUnlocked();
+    }
+    renderListing();
+    loadSimilar();
+    fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({view_count:(listing.view_count||0)+1})});
+  }catch(err){console.error('Error loading listing:',err);}
+};
+
+function renderListing(){
+  if(!listing)return;
+  const typeLabels={flat_listing:'🏠 Flat listing',flat_wanted:'🔍 Flat wanted',flatmate_wanted:'👥 Flatmate wanted',pg_listing:'🏨 PG listing'};
+  const areas=Array.isArray(listing.areas)?listing.areas.join(' / '):listing.areas||'Mumbai';
+  if(listing.photos&&listing.photos.length>0){
+    document.getElementById('noPhoto').style.display='none';
+    totalPhotos=listing.photos.length;
+    listing.photos.forEach((url,i)=>{
+      const s=document.createElement('div');s.className='photo-slide';
+      s.innerHTML=`<img src="${url}" alt="Photo ${i+1}" loading="lazy">`;
+      document.getElementById('photoSlides').appendChild(s);
+      const d=document.createElement('div');d.className='photo-dot'+(i===0?' active':'');
+      document.getElementById('photoDots').appendChild(d);
+    });
+    document.getElementById('photoCounter').style.display='block';updatePhotoCounter();
+  }
+  if(listing.has_brokerage){const b=document.getElementById('brokerBanner');b.className='broker-banner has-broker';b.textContent='⚠ Brokerage applicable — fee will be charged';}
+  document.getElementById('listingTypePill').textContent=typeLabels[listing.listing_type]||listing.listing_type;
+  document.getElementById('listingTitle').textContent=listing.title||listing.description?.slice(0,80)||'Listing in '+areas;
+  if(listing.rent_amount){
+    document.getElementById('listingPrice').textContent='₹'+listing.rent_amount.toLocaleString('en-IN');
+    document.getElementById('pricePeriod').textContent=listing.listing_type==='flat_wanted'?'budget':'/month';
+  }
+  if(listing.deposit_amount){document.getElementById('priceDeposit').textContent='Deposit: ₹'+listing.deposit_amount.toLocaleString('en-IN');}
+  else{document.getElementById('priceDeposit').style.display='none';}
+  document.getElementById('listingLocation').textContent=areas+', Mumbai';
+  const grid=document.getElementById('detailsGrid');grid.innerHTML='';
+  [['Flat type',listing.flat_type],['Room type',listing.room_type],['Furnishing',listing.furnishing],['Available from',listing.available_from||'Immediately'],['Food preference',listing.food_preference],['Gender preference',listing.gender_preference]].filter(d=>d[1]).forEach(([label,value])=>{
+    grid.innerHTML+=`<div class="detail-item"><div class="detail-label">${label}</div><div class="detail-value">${value}</div></div>`;
+  });
+  if(listing.description)document.getElementById('listingDesc').textContent=listing.description;
+  document.getElementById('postedTime').textContent=`Posted ${getTimeAgo(listing.created_at)} · Expires in ${getDaysLeft(listing.expires_at)} days`;
+  const initials=listing.user_id?listing.user_id.slice(-2).toUpperCase():'FK';
+  document.getElementById('posterAvatar').textContent=initials;
+  if(listing.is_free_contact){const btn=document.getElementById('unlockBtn');btn.innerHTML='Contact for free <span class="coin-cost" style="background:rgba(255,255,255,0.3)">Free!</span>';btn.style.background='var(--green)';}
+  const user=getUser();
+  if(user){document.querySelector('.coin-balance strong').textContent=`🪙 ${user.coins||0}`;document.querySelector('.coin-balance-row strong').textContent=`🪙 ${user.coins||0} coins`;}
+}
+
+async function loadSimilar(){
+  try{
+    const similar=await supaGet(`listings?listing_type=eq.${listing.listing_type}&is_active=eq.true&id=neq.${listing.id}&limit=3&order=created_at.desc&select=*`);
+    if(!similar||similar.length===0)return;
+    const typeLabels={flat_listing:'🏠 Flat listing',flat_wanted:'🔍 Flat wanted',flatmate_wanted:'👥 Flatmate wanted',pg_listing:'🏨 PG listing'};
+    const container=document.querySelector('.similar-card').parentElement;
+    container.querySelectorAll('.similar-card').forEach(c=>c.remove());
+    similar.forEach(l=>{
+      const areas=Array.isArray(l.areas)?l.areas[0]:l.areas||'Mumbai';
+      const price=l.rent_amount?'₹'+l.rent_amount.toLocaleString('en-IN'):'Ask';
+      const div=document.createElement('div');div.className='similar-card';
+      div.innerHTML=`<div style="flex:1"><div class="similar-type">${typeLabels[l.listing_type]||l.listing_type}</div><div class="similar-title">${(l.title||l.description?.slice(0,60)||'Listing').replace(/</g,'&lt;')}</div><div class="similar-price">${price}<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div><div class="similar-location">📍 ${areas}</div></div><button class="similar-unlock" onclick="window.location.href='listing_detail.html?id=${l.id}'">View →</button>`;
+      container.appendChild(div);
+    });
+  }catch(err){}
+}
+
+async function confirmUnlock(){
+  const user=getUser();
+  if(!user){window.location.href='login.html?trigger=unlock';return;}
+  const btn=document.querySelector('.confirm-unlock-btn');
+  btn.textContent='Unlocking…';btn.disabled=true;
+  try{
+    if((user.coins||0)<2&&!listing.is_free_contact){alert('You need 2 coins to unlock. Please buy coins first.');btn.textContent='Spend 2 coins & unlock →';btn.disabled=false;return;}
+    if(!listing.is_free_contact){
+      const newCoins=(user.coins||0)-2;
+      await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({coins:newCoins})});
+      user.coins=newCoins;localStorage.setItem('fmh_user',JSON.stringify(user));
+      await supaPost('coin_transactions',{user_id:user.userId,type:'unlock_contact',amount:-2,balance_after:newCoins,related_listing_id:listing.id,description:'Contact unlock',created_at:new Date().toISOString()});
+      await supaPost('contact_unlocks',{unlocker_user_id:user.userId,listing_id:listing.id,listing_user_id:listing.user_id,coins_spent:2,created_at:new Date().toISOString()});
+    }
+    revealContact();
+  }catch(err){btn.textContent='Spend 2 coins & unlock →';btn.disabled=false;alert('Failed to unlock. Please try again.');}
+}
+
+function revealContact(){
+  if(!posterPhone){alert('Contact not available. Please try again.');return;}
+  const formatted='+91 '+posterPhone.replace(/(\d{5})(\d{5})/,'$1 $2');
+  document.getElementById('unlockStep1').style.display='none';
+  document.getElementById('unlockStep2').style.display='block';
+  document.querySelector('.contact-number').textContent=formatted;
+
+  // Show smart delete reminder based on listing type
+  const msgs = {
+    flat_listing: '🏠 <strong>Found this place?</strong> If you end up booking it, please let the owner/broker know to <strong>delete the listing</strong> so other people looking for flats are not misled.',
+    flat_wanted: '🔍 <strong>Connecting with them?</strong> If this person finds a flat through you, please remind them to <strong>delete their listing</strong> so they stop getting unnecessary calls.',
+    flatmate_wanted: '👥 <strong>Found a match?</strong> If they end up moving in as your flatmate, please remind them to <strong>delete this listing</strong> so other people don\'t keep contacting them.',
+    pg_listing: '🏨 <strong>Booking this PG?</strong> Once confirmed, please ask the PG owner to <strong>delete or update this listing</strong> if the room is no longer available.',
+  };
+  const reminder = document.getElementById('unlockDeleteReminder');
+  if(reminder && listing && msgs[listing.listing_type]) {
+    reminder.innerHTML = msgs[listing.listing_type];
+  }
+
+  showAlreadyUnlocked();
+}
+
+function showAlreadyUnlocked(){
+  document.getElementById('bottomBar').innerHTML=`<button class="already-unlocked" onclick="openSheet('unlock')">✓ Contact unlocked — tap to view</button>`;
+  document.getElementById('unlockStep1').style.display='none';
+  document.getElementById('unlockStep2').style.display='block';
+  if(posterPhone)document.querySelector('.contact-number').textContent='+91 '+posterPhone.replace(/(\d{5})(\d{5})/,'$1 $2');
+}
+
+function openWhatsApp(){if(!posterPhone)return;window.open(`https://wa.me/91${posterPhone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`,'_blank');}
+function makeCall(){if(!posterPhone)return;window.location.href=`tel:+91${posterPhone}`;}
+
+async function submitReport(reason){
+  const user=getUser();
+  try{await supaPost('reports',{reporter_user_id:user?.userId||null,listing_id:listing?.id,reason,status:'pending',created_at:new Date().toISOString()});}catch(e){}
+  closeSheet('report');showToast('Report submitted. Thank you!');
+}
+
+function getTimeAgo(d){const diff=Date.now()-new Date(d).getTime();const m=Math.floor(diff/60000);if(m<60)return m+' mins ago';const h=Math.floor(m/60);if(h<24)return h+' hrs ago';return Math.floor(h/24)+' days ago';}
+function getDaysLeft(d){return Math.max(0,Math.floor((new Date(d)-Date.now())/86400000));}
+function touchStart(e){touchStartX=e.touches[0].clientX;}
+function touchEnd(e){const diff=touchStartX-e.changedTouches[0].clientX;if(Math.abs(diff)>50){if(diff>0)nextPhoto();else prevPhoto();}}
+function nextPhoto(){if(currentPhoto<totalPhotos-1){currentPhoto++;updatePhoto();}}
+function prevPhoto(){if(currentPhoto>0){currentPhoto--;updatePhoto();}}
+function updatePhoto(){document.getElementById('photoSlides').style.transform=`translateX(-${currentPhoto*100}%)`;document.querySelectorAll('.photo-dot').forEach((d,i)=>d.classList.toggle('active',i===currentPhoto));updatePhotoCounter();}
+function updatePhotoCounter(){document.getElementById('photoCounter').textContent=`${currentPhoto+1} / ${totalPhotos}`;}
+function toggleSave(){isSaved=!isSaved;const btn=document.getElementById('saveBtn');if(isSaved){btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="#d93025" stroke="#d93025" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Listing saved!');}else{btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Removed from saved');}}
+function openSheet(name){document.getElementById(name+'Backdrop').classList.add('show');setTimeout(()=>document.getElementById(name+'Sheet').classList.add('show'),10);}
+function closeSheet(name){document.getElementById(name+'Sheet').classList.remove('show');setTimeout(()=>document.getElementById(name+'Backdrop').classList.remove('show'),300);}
+function showToast(msg){const t=document.createElement('div');t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#141414;color:white;padding:10px 20px;border-radius:100px;font-family:var(--font);font-size:13px;font-weight:600;z-index:500;';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+function goBack(){window.history.back()||(window.location.href='index.html');}
+</script>
+</body>
+</html>

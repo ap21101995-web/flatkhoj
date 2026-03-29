@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Post with AI — FlatKhoj</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#fff; --bg2:#f7f7f5; --bg3:#f0efec;
+  --ink:#141414; --ink2:#444; --ink3:#888;
+  --border:#e8e8e4;
+  --teal:#0f7b6c; --teal-bg:#e8f5f3; --teal-dark:#0a6358;
+  --gold:#e6a817; --gold-bg:#fef6e4;
+  --green:#1a7a3c; --green-bg:#e8f5ee;
+  --red:#d93025; --red-bg:#fce8e6;
+  --radius:14px; --font:'Plus Jakarta Sans',sans-serif;
+}
+body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-width:480px; margin:0 auto; min-height:100vh; }
+
+.topbar { display:flex; align-items:center; padding:0 16px; height:52px; background:var(--bg); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; gap:12px; }
+.back-btn { background:none; border:none; cursor:pointer; color:var(--ink2); font-size:22px; padding:4px; }
+.topbar-title { flex:1; font-size:16px; font-weight:700; }
+
+/* METHOD SELECTOR */
+.method-tabs { display:flex; gap:0; margin:16px; background:var(--bg3); border-radius:12px; padding:4px; }
+.method-tab {
+  flex:1; padding:10px; border:none; background:none; cursor:pointer;
+  font-family:var(--font); font-size:14px; font-weight:600; color:var(--ink3);
+  border-radius:9px; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.method-tab.active { background:var(--bg); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+
+/* SCREENS */
+.screen { display:none; padding:0 16px 100px; }
+.screen.active { display:block; }
+
+/* SCREENSHOT SCREEN */
+.upload-zone {
+  border:2px dashed var(--border); border-radius:var(--radius);
+  padding:40px 20px; text-align:center; cursor:pointer;
+  transition:all 0.2s; background:var(--bg); margin-bottom:16px;
+}
+.upload-zone:active { border-color:var(--teal); background:var(--teal-bg); }
+.upload-zone.has-image { border-color:var(--teal); border-style:solid; padding:0; overflow:hidden; }
+.upload-zone img { width:100%; border-radius:12px; display:block; }
+.upload-icon { font-size:48px; margin-bottom:12px; }
+.upload-title { font-size:16px; font-weight:700; color:var(--ink); margin-bottom:8px; }
+.upload-desc { font-size:13px; color:var(--ink3); line-height:1.6; }
+.upload-examples { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px; }
+.upload-example { background:var(--bg3); border-radius:8px; padding:5px 12px; font-size:12px; color:var(--ink3); }
+
+/* VOICE SCREEN */
+.voice-container { text-align:center; padding:24px 0; }
+.mic-btn {
+  width:100px; height:100px; border-radius:50%; border:none; cursor:pointer;
+  background:var(--teal); color:white; font-size:40px;
+  display:flex; align-items:center; justify-content:center; margin:0 auto 20px;
+  transition:all 0.2s; box-shadow:0 4px 20px rgba(15,123,108,0.3);
+}
+.mic-btn.recording {
+  background:var(--red); box-shadow:0 4px 20px rgba(217,48,37,0.4);
+  animation:pulse 1s infinite;
+}
+.mic-btn.recording::after {
+  content:''; position:absolute; width:120px; height:120px; border-radius:50%;
+  border:3px solid var(--red); opacity:0.4; animation:ripple 1s infinite;
+}
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+@keyframes ripple { 0%{transform:scale(1);opacity:0.4} 100%{transform:scale(1.5);opacity:0} }
+.mic-status { font-size:16px; font-weight:700; color:var(--ink); margin-bottom:8px; }
+.mic-sub { font-size:13px; color:var(--ink3); line-height:1.6; margin-bottom:20px; }
+.transcript-box {
+  background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius);
+  padding:14px 16px; font-size:14px; color:var(--ink2); line-height:1.7;
+  min-height:80px; text-align:left; margin-bottom:16px; display:none;
+}
+.transcript-box.show { display:block; }
+.voice-hints { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.voice-hint { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--ink3); display:flex; gap:10px; align-items:flex-start; }
+.voice-hint strong { color:var(--ink2); display:block; margin-bottom:2px; font-size:12px; }
+
+/* AI PROCESSING */
+.ai-processing {
+  background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius);
+  padding:20px; text-align:center; display:none; margin-bottom:16px;
+}
+.ai-processing.show { display:block; }
+.ai-spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--teal); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 12px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.ai-processing-text { font-size:14px; color:var(--ink2); font-weight:600; }
+.ai-processing-sub { font-size:12px; color:var(--ink3); margin-top:4px; }
+
+/* EXTRACTED DATA */
+.extracted-card {
+  background:var(--bg); border:2px solid var(--teal); border-radius:var(--radius);
+  padding:16px; margin-bottom:16px; display:none;
+}
+.extracted-card.show { display:block; }
+.extracted-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.extracted-badge { background:var(--teal-bg); color:var(--teal); font-size:12px; font-weight:700; padding:4px 12px; border-radius:100px; }
+.extracted-title { font-size:15px; font-weight:700; }
+.extracted-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.extracted-item { background:var(--bg2); border-radius:8px; padding:10px 12px; }
+.extracted-label { font-size:10px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
+.extracted-value { font-size:14px; font-weight:600; color:var(--ink); }
+.extracted-value.missing { color:var(--ink3); font-style:italic; font-weight:400; }
+.extracted-desc { font-size:13px; color:var(--ink2); line-height:1.6; background:var(--bg2); border-radius:8px; padding:12px; margin-bottom:14px; }
+.extracted-warning { font-size:12px; color:var(--gold); background:var(--gold-bg); border-radius:8px; padding:10px 12px; margin-bottom:14px; display:none; }
+.extracted-warning.show { display:block; }
+
+/* BOTTOM BAR */
+.bottom-bar {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:480px; background:var(--bg);
+  border-top:1px solid var(--border); padding:12px 16px;
+  display:flex; gap:10px;
+}
+.btn-primary {
+  flex:1; padding:15px; background:var(--teal); color:white;
+  border:none; border-radius:var(--radius); font-family:var(--font);
+  font-size:15px; font-weight:700; cursor:pointer;
+}
+.btn-primary:disabled { background:#ccc; cursor:not-allowed; }
+.btn-secondary {
+  padding:15px 20px; background:var(--bg2); color:var(--ink2);
+  border:1.5px solid var(--border); border-radius:var(--radius); font-family:var(--font);
+  font-size:14px; font-weight:600; cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back-btn" onclick="goBack()">←</button>
+  <div class="topbar-title">Post with AI</div>
+</header>
+
+<!-- METHOD TABS -->
+<div class="method-tabs">
+  <button class="method-tab active" id="tab-screenshot" onclick="switchTab('screenshot')">
+    📸 Screenshot
+  </button>
+  <button class="method-tab" id="tab-voice" onclick="switchTab('voice')">
+    🎤 Voice
+  </button>
+</div>
+
+<!-- SCREENSHOT SCREEN -->
+<div class="screen active" id="screen-screenshot">
+
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📱</div>
+    <div class="upload-title">Upload a screenshot</div>
+    <div class="upload-desc">WhatsApp status, forwarded message, photo of a notice board — anything with flat details</div>
+    <div class="upload-examples">
+      <span class="upload-example">WhatsApp status</span>
+      <span class="upload-example">Forwarded message</span>
+      <span class="upload-example">Notice board photo</span>
+      <span class="upload-example">Broker poster</span>
+    </div>
+  </div>
+  <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleScreenshot(this)">
+
+  <!-- AI Processing -->
+  <div class="ai-processing" id="screenshotProcessing">
+    <div class="ai-spinner"></div>
+    <div class="ai-processing-text">Reading your screenshot…</div>
+    <div class="ai-processing-sub">Claude AI is extracting the listing details</div>
+  </div>
+
+  <!-- Extracted Data -->
+  <div class="extracted-card" id="screenshotExtracted">
+    <div class="extracted-header">
+      <div class="extracted-badge">✓ Details extracted</div>
+    </div>
+    <div class="extracted-warning" id="screenshotWarning"></div>
+    <div class="extracted-grid" id="screenshotGrid"></div>
+    <div class="extracted-desc" id="screenshotDesc"></div>
+  </div>
+
+</div>
+
+<!-- VOICE SCREEN -->
+<div class="screen" id="screen-voice">
+
+  <div class="voice-container">
+    <button class="mic-btn" id="micBtn" onclick="toggleRecording()">🎤</button>
+    <div class="mic-status" id="micStatus">Tap to start speaking</div>
+    <div class="mic-sub" id="micSub">Speak in Hindi, English, or mix both. Describe your flat listing naturally.</div>
+  </div>
+
+  <!-- Transcript -->
+  <div class="transcript-box" id="transcriptBox"></div>
+
+  <!-- AI Processing -->
+  <div class="ai-processing" id="voiceProcessing">
+    <div class="ai-spinner"></div>
+    <div class="ai-processing-text">Understanding your listing…</div>
+    <div class="ai-processing-sub">Claude AI is extracting the details from what you said</div>
+  </div>
+
+  <!-- Extracted Data -->
+  <div class="extracted-card" id="voiceExtracted">
+    <div class="extracted-header">
+      <div class="extracted-badge">✓ Details extracted</div>
+    </div>
+    <div class="extracted-warning" id="voiceWarning"></div>
+    <div class="extracted-grid" id="voiceGrid"></div>
+    <div class="extracted-desc" id="voiceDesc"></div>
+  </div>
+
+  <!-- Voice hints -->
+  <div class="voice-hints" id="voiceHints">
+    <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px">Example phrases:</div>
+    <div class="voice-hint">
+      <span>🏠</span>
+      <div><strong>Flat listing</strong>"2BHK available in Andheri West, rent 25000, fully furnished, no brokerage, vegetarian preferred"</div>
+    </div>
+    <div class="voice-hint">
+      <span>🔍</span>
+      <div><strong>Flat wanted</strong>"Looking for 1BHK in Bandra or Khar, budget 20000, for working male, non-veg ok"</div>
+    </div>
+    <div class="voice-hint">
+      <span>👥</span>
+      <div><strong>Flatmate wanted</strong>"We are 2 girls in 3BHK in Powai looking for third flatmate, rent 12000 per person"</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar" id="bottomBar" style="display:none">
+  <button class="btn-secondary" onclick="resetAndTryAgain()">Try again</button>
+  <button class="btn-primary" id="proceedBtn" onclick="proceedToForm()">Looks good → Post it</button>
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+// API keys are handled server-side via Supabase Edge Functions
+
+let extractedData = null;
+let isRecording = false;
+let recognition = null;
+let fullTranscript = '';
+
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; }
+}
+
+// Auto switch tab based on URL param
+window.onload = function() {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab === 'voice') switchTab('voice');
+};
+
+// ── TAB SWITCHING ──────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('screen-' + tab).classList.add('active');
+  document.getElementById('bottomBar').style.display = 'none';
+  extractedData = null;
+}
+
+// ── SCREENSHOT HANDLING ────────────────────────────────────
+async function handleScreenshot(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Show image preview
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const zone = document.getElementById('uploadZone');
+    zone.innerHTML = `<img src="${e.target.result}" alt="Screenshot">`;
+    zone.classList.add('has-image');
+    zone.onclick = null;
+
+    // Process with Claude
+    await processScreenshotWithClaude(e.target.result.split(',')[1], file.type);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function processScreenshotWithClaude(base64Image, mediaType) {
+  document.getElementById('screenshotProcessing').classList.add('show');
+  document.getElementById('screenshotExtracted').classList.remove('show');
+  document.getElementById('bottomBar').style.display = 'none';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64Image }
+            },
+            {
+              type: 'text',
+              text: `This is a screenshot of a flat/property listing from WhatsApp or a similar source in Mumbai, India.
+
+Extract the listing details and return ONLY a JSON object with these fields (use null if not found):
+{
+  "listing_type": "flat_listing" or "flat_wanted" or "flatmate_wanted" or "pg_listing",
+  "areas": ["area name in Mumbai"],
+  "rent_amount": number or null,
+  "flat_type": "1 RK" or "1 BHK" or "2 BHK" or "3 BHK" or "4+ BHK" or null,
+  "room_type": "Single occupancy" or "Double occupancy" or "Entire flat" or null,
+  "furnishing": "Fully furnished" or "Semi-furnished" or "Unfurnished" or null,
+  "food_preference": "Veg only" or "Non-veg ok" or "No preference" or null,
+  "gender_preference": "Male only" or "Female only" or "Any" or null,
+  "has_brokerage": true or false,
+  "description": "clean summary of the listing in 1-2 sentences",
+  "confidence": "high" or "medium" or "low",
+  "warnings": "any issues or missing important info" or null
+}
+
+Return ONLY the JSON, no other text.`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content[0].text.trim();
+    const json = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    extractedData = json;
+    showExtractedData('screenshot', json);
+
+  } catch(err) {
+    console.error('Claude error:', err);
+    document.getElementById('screenshotProcessing').classList.remove('show');
+    alert('Could not read the screenshot. Please try a clearer image or use the form instead.');
+  }
+}
+
+// ── VOICE HANDLING ─────────────────────────────────────────
+function toggleRecording() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Voice input is not supported on this browser. Please use Chrome on Android.');
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'hi-IN'; // Hindi + English
+
+  fullTranscript = '';
+
+  recognition.onstart = function() {
+    isRecording = true;
+    document.getElementById('micBtn').classList.add('recording');
+    document.getElementById('micBtn').textContent = '⏹️';
+    document.getElementById('micStatus').textContent = 'Listening… tap to stop';
+    document.getElementById('micSub').textContent = 'Speak clearly about your flat listing';
+    document.getElementById('transcriptBox').classList.add('show');
+    document.getElementById('voiceHints').style.display = 'none';
+  };
+
+  recognition.onresult = function(event) {
+    let interim = '';
+    let final = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        final += event.results[i][0].transcript + ' ';
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    fullTranscript += final;
+    document.getElementById('transcriptBox').textContent = fullTranscript + interim;
+  };
+
+  recognition.onerror = function(event) {
+    console.error('Speech error:', event.error);
+    stopRecording();
+    if (event.error === 'not-allowed') {
+      alert('Microphone permission denied. Please allow microphone access and try again.');
+    }
+  };
+
+  recognition.onend = function() {
+    if (isRecording) {
+      // Auto-process after stopping
+      processVoiceWithClaude(fullTranscript);
+    }
+  };
+
+  recognition.start();
+}
+
+function stopRecording() {
+  isRecording = false;
+  if (recognition) recognition.stop();
+  document.getElementById('micBtn').classList.remove('recording');
+  document.getElementById('micBtn').textContent = '🎤';
+  document.getElementById('micStatus').textContent = 'Processing…';
+}
+
+async function processVoiceWithClaude(transcript) {
+  if (!transcript || transcript.trim().length < 10) {
+    document.getElementById('micStatus').textContent = 'Tap to start speaking';
+    document.getElementById('micSub').textContent = 'Speak clearly about your flat listing';
+    document.getElementById('voiceHints').style.display = 'flex';
+    return;
+  }
+
+  document.getElementById('voiceProcessing').classList.add('show');
+  document.getElementById('voiceExtracted').classList.remove('show');
+  document.getElementById('bottomBar').style.display = 'none';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Someone spoke the following to describe their flat listing in Mumbai, India. The speech may be in Hindi, English, or a mix (Hinglish).
+
+Transcript: "${transcript}"
+
+Extract the listing details and return ONLY a JSON object:
+{
+  "listing_type": "flat_listing" or "flat_wanted" or "flatmate_wanted" or "pg_listing",
+  "areas": ["area name in Mumbai"],
+  "rent_amount": number or null,
+  "flat_type": "1 RK" or "1 BHK" or "2 BHK" or "3 BHK" or "4+ BHK" or null,
+  "room_type": "Single occupancy" or "Double occupancy" or "Entire flat" or null,
+  "furnishing": "Fully furnished" or "Semi-furnished" or "Unfurnished" or null,
+  "food_preference": "Veg only" or "Non-veg ok" or "No preference" or null,
+  "gender_preference": "Male only" or "Female only" or "Any" or null,
+  "has_brokerage": true or false,
+  "description": "clean polished summary of the listing in 2-3 sentences in English",
+  "confidence": "high" or "medium" or "low",
+  "warnings": "any issues or missing important info" or null
+}
+
+Return ONLY the JSON, no other text.`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content[0].text.trim();
+    const json = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    extractedData = json;
+    showExtractedData('voice', json);
+
+  } catch(err) {
+    console.error('Claude error:', err);
+    document.getElementById('voiceProcessing').classList.remove('show');
+    document.getElementById('micStatus').textContent = 'Tap to try again';
+    alert('Could not process your voice. Please try again.');
+  }
+}
+
+// ── SHOW EXTRACTED DATA ────────────────────────────────────
+function showExtractedData(source, data) {
+  document.getElementById(source + 'Processing').classList.remove('show');
+  const card = document.getElementById(source + 'Extracted');
+  card.classList.add('show');
+
+  const typeLabels = {
+    flat_listing: '🏠 Flat listing',
+    flat_wanted: '🔍 Flat wanted',
+    flatmate_wanted: '👥 Flatmate wanted',
+    pg_listing: '🏨 PG listing'
+  };
+
+  const fields = [
+    ['Type', typeLabels[data.listing_type] || data.listing_type],
+    ['Area', data.areas?.join(', ') || null],
+    ['Rent', data.rent_amount ? '₹' + data.rent_amount.toLocaleString('en-IN') + '/mo' : null],
+    ['Flat type', data.flat_type],
+    ['Furnishing', data.furnishing],
+    ['Food pref', data.food_preference],
+    ['Gender', data.gender_preference],
+    ['Brokerage', data.has_brokerage !== null ? (data.has_brokerage ? '⚠️ Yes' : '✓ No brokerage') : null],
+  ];
+
+  const grid = document.getElementById(source + 'Grid');
+  grid.innerHTML = fields.map(([label, value]) => `
+    <div class="extracted-item">
+      <div class="extracted-label">${label}</div>
+      <div class="extracted-value ${!value ? 'missing' : ''}">${value || 'Not found'}</div>
+    </div>
+  `).join('');
+
+  document.getElementById(source + 'Desc').textContent = data.description || '';
+
+  if (data.warnings) {
+    const warn = document.getElementById(source + 'Warning');
+    warn.textContent = '⚠️ ' + data.warnings;
+    warn.classList.add('show');
+  }
+
+  document.getElementById('bottomBar').style.display = 'flex';
+
+  if (data.confidence === 'low') {
+    document.getElementById('proceedBtn').textContent = 'Edit & post →';
+  }
+}
+
+// ── PROCEED TO FORM ────────────────────────────────────────
+function proceedToForm() {
+  if (!extractedData) return;
+
+  // Save extracted data to localStorage so post_form.html can pre-fill it
+  localStorage.setItem('fk_ai_prefill', JSON.stringify(extractedData));
+  window.location.href = 'post_form.html?prefill=1';
+}
+
+function resetAndTryAgain() {
+  extractedData = null;
+  document.getElementById('bottomBar').style.display = 'none';
+
+  // Reset screenshot
+  const zone = document.getElementById('uploadZone');
+  zone.innerHTML = `
+    <div class="upload-icon">📱</div>
+    <div class="upload-title">Upload a screenshot</div>
+    <div class="upload-desc">WhatsApp status, forwarded message, photo of a notice board — anything with flat details</div>
+    <div class="upload-examples">
+      <span class="upload-example">WhatsApp status</span>
+      <span class="upload-example">Forwarded message</span>
+      <span class="upload-example">Notice board photo</span>
+      <span class="upload-example">Broker poster</span>
+    </div>`;
+  zone.classList.remove('has-image');
+  zone.onclick = function() { document.getElementById('fileInput').click(); };
+  document.getElementById('fileInput').value = '';
+  document.getElementById('screenshotProcessing').classList.remove('show');
+  document.getElementById('screenshotExtracted').classList.remove('show');
+
+  // Reset voice
+  fullTranscript = '';
+  document.getElementById('transcriptBox').textContent = '';
+  document.getElementById('transcriptBox').classList.remove('show');
+  document.getElementById('micStatus').textContent = 'Tap to start speaking';
+  document.getElementById('micSub').textContent = 'Speak in Hindi, English, or mix both.';
+  document.getElementById('micBtn').textContent = '🎤';
+  document.getElementById('voiceProcessing').classList.remove('show');
+  document.getElementById('voiceExtracted').classList.remove('show');
+  document.getElementById('voiceHints').style.display = 'flex';
+}
+
+function goBack() { window.history.back() || (window.location.href = 'index.html'); }
+</script>
+</body>
+</html>

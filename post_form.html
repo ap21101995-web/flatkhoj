@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Post A Listing — FlatKhoj</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+// Define Places callback before Maps loads
+var placesService = null;
+var gmapsReady = false;
+function initPlaces() {
+  placesService = new google.maps.places.AutocompleteService();
+  gmapsReady = true;
+}
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAPL8PzitT2D1Nxvpc9a358U4tvpu6XWv0&libraries=places&callback=initPlaces" async defer></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#fff; --bg2:#f7f7f5; --bg3:#f0efec;
+  --ink:#141414; --ink2:#444; --ink3:#888;
+  --border:#e8e8e4;
+  --teal:#0f7b6c; --teal-bg:#e8f5f3;
+  --red:#d93025; --red-bg:#fce8e6;
+  --gold:#e6a817; --gold-bg:#fef6e4;
+  --radius:12px; --font:'Plus Jakarta Sans',sans-serif;
+}
+body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-width:680px; margin:0 auto; min-height:100vh; padding-bottom:100px; }
+
+.topbar { display:flex; align-items:center; padding:0 16px; height:52px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg); z-index:10; gap:12px; }
+.back-btn { background:none; border:none; cursor:pointer; padding:0; color:var(--ink2); display:flex; align-items:center; }
+.topbar-title { flex:1; text-align:center; font-size:15px; font-weight:700; color:var(--ink); }
+.topbar-step { font-size:12px; font-weight:600; color:var(--ink3); white-space:nowrap; }
+
+.progress-wrap { padding:12px 16px 8px; background:var(--bg); border-bottom:1px solid var(--border); }
+.progress-track { height:3px; background:var(--bg3); border-radius:2px; overflow:hidden; }
+.progress-fill { height:100%; background:var(--teal); border-radius:2px; transition:width 0.4s ease; }
+.progress-labels { display:flex; justify-content:space-between; margin-top:8px; }
+.prog-label { font-size:10px; font-weight:600; color:var(--ink3); text-transform:uppercase; letter-spacing:0.3px; }
+.prog-label.active { color:var(--teal); }
+.prog-label.done { color:var(--ink2); }
+
+.step { display:none; padding:16px; }
+.step.active { display:block; }
+.step-heading { font-size:18px; font-weight:800; color:var(--ink); letter-spacing:-0.3px; margin-bottom:4px; }
+.step-sub { font-size:13px; color:var(--ink3); margin-bottom:16px; line-height:1.5; }
+
+.form-card { background:var(--bg); border-radius:16px; border:1px solid var(--border); padding:20px 16px; margin-bottom:12px; }
+.card-title { font-size:12px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px; }
+
+.field { margin-bottom:16px; }
+.field:last-child { margin-bottom:0; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.field-label { font-size:13px; font-weight:600; color:var(--ink2); margin-bottom:7px; display:flex; align-items:center; gap:4px; }
+.req { color:var(--red); }
+.field-hint { font-size:11px; color:var(--ink3); margin-top:5px; line-height:1.4; }
+
+.input,.select,.textarea { width:100%; padding:13px 14px; border:1.5px solid var(--border); border-radius:10px; font-family:var(--font); font-size:15px; color:var(--ink); background:var(--bg); transition:border-color 0.15s; -webkit-appearance:none; appearance:none; }
+.input:focus,.select:focus,.textarea:focus { outline:none; border-color:var(--teal); }
+
+/* AREA AUTOCOMPLETE */
+.area-wrap { position:relative; }
+.area-input { width:100%; padding:13px 14px 13px 40px; border:1.5px solid var(--border); border-radius:10px; font-family:var(--font); font-size:15px; color:var(--ink); background:var(--bg); transition:border-color 0.15s; outline:none; }
+.area-input:focus { border-color:var(--teal); }
+.area-input::placeholder { color:var(--ink3); }
+.area-search-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--ink3); }
+.area-clear { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--ink3); font-size:16px; display:none; padding:4px; line-height:1; }
+.area-clear.show { display:block; }
+.area-dropdown { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--bg); border:1.5px solid var(--border); border-radius:12px; overflow:hidden; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,0.08); display:none; max-height:220px; overflow-y:auto; }
+.area-dropdown.open { display:block; }
+.area-option { padding:12px 16px; font-size:14px; color:var(--ink2); cursor:pointer; transition:background 0.1s; display:flex; align-items:center; gap:8px; font-family:var(--font); }
+.area-option:active,.area-option:hover { background:var(--teal-bg); color:var(--teal); }
+.area-option .match { color:var(--teal); font-weight:700; }
+.area-option .pin { font-size:12px; flex-shrink:0; }
+.area-selected-tag { display:none; align-items:center; gap:8px; margin-top:8px; background:var(--teal-bg); border:1px solid var(--teal); border-radius:8px; padding:8px 12px; font-size:13px; color:var(--teal); font-weight:600; }
+.area-selected-tag.show { display:flex; }
+.area-selected-tag button { background:none; border:none; cursor:pointer; color:var(--teal); font-size:15px; line-height:1; margin-left:auto; padding:0; }
+.input::placeholder,.textarea::placeholder { color:var(--ink3); }
+.textarea { resize:none; height:88px; line-height:1.6; }
+.char-count { text-align:right; font-size:11px; color:var(--ink3); margin-top:4px; }
+
+.input-row { display:flex; align-items:center; border:1.5px solid var(--border); border-radius:10px; overflow:hidden; background:var(--bg); transition:border-color 0.15s; }
+.input-row:focus-within { border-color:var(--teal); }
+.input-prefix { padding:13px 12px; background:var(--bg2); color:var(--ink3); font-size:13px; font-weight:600; border-right:1px solid var(--border); white-space:nowrap; }
+.input-row input { flex:1; border:none; padding:13px 12px; font-family:var(--font); font-size:15px; color:var(--ink); background:transparent; outline:none; }
+.input-row input::placeholder { color:var(--ink3); }
+
+.pill-wrap { display:flex; gap:8px; flex-wrap:wrap; }
+.pill { padding:8px 16px; border-radius:100px; border:1.5px solid var(--border); background:var(--bg); color:var(--ink2); font-family:var(--font); font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; user-select:none; }
+.pill:active { transform:scale(0.95); }
+.pill.sel { background:var(--ink); color:white; border-color:var(--ink); }
+
+.type-grid { display:flex; flex-direction:column; gap:10px; }
+.type-card { display:flex; align-items:center; gap:14px; padding:16px; border:2px solid var(--border); border-radius:14px; background:var(--bg); cursor:pointer; transition:all 0.15s; user-select:none; }
+.type-card:active { transform:scale(0.98); }
+.type-card.sel { border-color:var(--teal); background:var(--teal-bg); }
+.type-icon { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.type-text { flex:1; }
+.type-title { font-size:15px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.type-desc { font-size:12px; color:var(--ink3); line-height:1.4; }
+.type-card.sel .type-title { color:var(--teal); }
+.type-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; transition:all 0.15s; }
+.type-card.sel .type-check { background:var(--teal); border-color:var(--teal); color:white; }
+
+.broker-toggle { display:flex; flex-direction:column; gap:8px; }
+.broker-opt { display:flex; align-items:center; gap:14px; padding:14px 16px; border:2px solid var(--border); border-radius:12px; cursor:pointer; transition:all 0.15s; background:var(--bg); user-select:none; }
+.broker-opt:active { transform:scale(0.98); }
+.broker-opt.sel-no { border-color:var(--teal); background:var(--teal-bg); }
+.broker-opt.sel-yes { border-color:var(--red); background:var(--red-bg); }
+.broker-icon { font-size:20px; flex-shrink:0; }
+.broker-title { font-size:14px; font-weight:700; color:var(--ink); }
+.broker-desc { font-size:12px; color:var(--ink3); margin-top:2px; line-height:1.4; }
+.broker-opt.sel-no .broker-title { color:var(--teal); }
+.broker-opt.sel-yes .broker-title { color:var(--red); }
+.broker-amount { display:none; margin-top:10px; }
+.broker-amount.show { display:block; }
+
+.free-box { border:1.5px solid var(--border); border-radius:12px; padding:14px 16px; background:var(--bg); }
+.free-row { display:flex; align-items:center; gap:12px; }
+.free-text { flex:1; }
+.free-title { font-size:14px; font-weight:700; color:var(--ink); }
+.free-desc { font-size:12px; color:var(--ink3); margin-top:2px; line-height:1.4; }
+.toggle-sw { position:relative; width:44px; height:26px; flex-shrink:0; }
+.toggle-sw input { opacity:0; width:0; height:0; }
+.tog-slider { position:absolute; inset:0; background:var(--border); border-radius:13px; cursor:pointer; transition:background 0.2s; }
+.tog-slider::before { content:''; position:absolute; width:20px; height:20px; border-radius:50%; background:white; top:3px; left:3px; transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+.toggle-sw input:checked + .tog-slider { background:var(--teal); }
+.toggle-sw input:checked + .tog-slider::before { transform:translateX(18px); }
+.free-coins { display:none; margin-top:10px; background:var(--gold-bg); border:1px solid var(--gold); border-radius:8px; padding:10px 12px; font-size:12px; color:var(--ink2); line-height:1.5; }
+.free-coins.show { display:block; }
+
+.info-box { background:var(--teal-bg); border:1.5px solid var(--teal); border-radius:12px; padding:13px 15px; font-size:13px; color:var(--ink2); line-height:1.6; margin-bottom:12px; }
+
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; max-width:680px; margin:0 auto; background:var(--bg); border-top:1px solid var(--border); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; gap:10px; }
+.btn-back { padding:14px 20px; background:var(--bg2); color:var(--ink2); border:1.5px solid var(--border); border-radius:var(--radius); font-family:var(--font); font-size:14px; font-weight:600; cursor:pointer; }
+.btn-next { flex:1; padding:14px; background:var(--teal); color:white; border:none; border-radius:var(--radius); font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer; }
+.btn-next:active { background:#0a6358; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back-btn" onclick="prevStep()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+  </button>
+  <div class="topbar-title" id="topbarTitle">Post A Listing</div>
+  <div class="topbar-step" id="topbarStep">Step 1 Of 3</div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-track"><div class="progress-fill" id="pFill" style="width:33%"></div></div>
+  <div class="progress-labels">
+    <span class="prog-label active" id="pl1">Type</span>
+    <span class="prog-label" id="pl2">Details</span>
+    <span class="prog-label" id="pl3">Review</span>
+  </div>
+</div>
+
+
+<!-- STEP 1: TYPE -->
+<div class="step active" id="step1">
+  <div style="padding:4px 0 16px">
+    <div class="step-heading">What Are You Posting?</div>
+    <div class="step-sub">Choose the option that best describes your listing</div>
+  </div>
+
+  <!-- Posting limit info banner -->
+  <div id="limitInfoBanner" style="background:var(--teal-bg);border:1.5px solid var(--teal);border-radius:12px;padding:13px 16px;margin-bottom:16px;font-size:13px;color:var(--ink2);line-height:1.7;display:none">
+    <div id="limitInfoText"></div>
+  </div>
+
+  <!-- Blocked screen (shown when limit exceeded) -->
+  <div id="limitBlockedScreen" style="display:none;text-align:center;padding:32px 16px">
+    <div style="font-size:56px;margin-bottom:16px">🚫</div>
+    <div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:10px">Posting limit reached</div>
+    <div id="limitBlockedText" style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:24px"></div>
+    <a href="posting_limits.html" style="display:block;background:var(--teal);color:white;border-radius:12px;padding:14px 20px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:12px">Increase my limit →</a>
+    <button onclick="window.location.href='index.html'" style="background:none;border:none;font-family:var(--font);font-size:14px;color:var(--ink3);cursor:pointer;text-decoration:underline;text-underline-offset:2px">Back to listings</button>
+  </div>
+
+  <div id="typeGridWrap">
+  <div class="type-grid">
+    <div class="type-card" id="tc-fw" onclick="selectType('fw')">
+      <div class="type-icon" style="background:#eaf4ff">🔍</div>
+      <div class="type-text"><div class="type-title">Flat Wanted</div><div class="type-desc">I am looking for a flat or room to move into</div></div>
+      <div class="type-check" id="ck-fw"></div>
+    </div>
+    <div class="type-card" id="tc-fl" onclick="selectType('fl')">
+      <div class="type-icon" style="background:#eafaf1">🏠</div>
+      <div class="type-text"><div class="type-title">Flat Listing</div><div class="type-desc">I have a flat or room available for rent</div></div>
+      <div class="type-check" id="ck-fl"></div>
+    </div>
+    <div class="type-card" id="tc-fm" onclick="selectType('fm')">
+      <div class="type-icon" style="background:#f3eeff">👥</div>
+      <div class="type-text"><div class="type-title">Flatmate Wanted</div><div class="type-desc">I need someone to share my flat, or I am vacating and need a replacement</div></div>
+      <div class="type-check" id="ck-fm"></div>
+    </div>
+    <div class="type-card" id="tc-pg" onclick="selectType('pg')">
+      <div class="type-icon" style="background:#fff8e1">🏨</div>
+      <div class="type-text"><div class="type-title">PG Listing</div><div class="type-desc">I am posting a paying guest accommodation</div></div>
+      <div class="type-check" id="ck-pg"></div>
+    </div>
+  </div>
+  </div> <!-- end typeGridWrap -->
+</div>
+
+
+<!-- STEP 2: DETAILS -->
+<div class="step" id="step2">
+
+  <!-- FLAT WANTED -->
+  <div id="f-fw" style="display:none">
+    <div style="padding:4px 0 16px"><div class="step-heading">What Are You Looking For?</div><div class="step-sub">Owners and brokers will see these details</div></div>
+    <div class="form-card">
+      <div class="card-title">📍 Location & Budget</div>
+      <div class="field"><div class="field-label">Preferred Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-fw-area">
+        <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'fw-area')" onfocus="areaSearch(this,'fw-area')" autocomplete="off">
+        <button class="area-clear" onclick="clearArea('fw-area')">×</button>
+        <div class="area-dropdown" id="dd-fw-area"></div>
+      </div>
+      <div class="area-selected-tag" id="tag-fw-area"><span id="tagval-fw-area"></span><button onclick="clearArea('fw-area')">×</button></div>
+      <div class="field-hint" style="color:var(--ink3)">Add up to 3 areas — we'll show your listing in all of them</div></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Max Budget <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="20000" min="3000" max="400000"></div></div>
+        <div class="field"><div class="field-label">Move-In Date <span class="req">*</span></div><input class="input" type="date"></div>
+      </div>
+      <div class="field"><div class="field-label">Looking For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fw-lf')">Single Room</div><div class="pill" onclick="sp(this,'fw-lf')">Double Room</div><div class="pill" onclick="sp(this,'fw-lf')">Entire 1 BHK</div><div class="pill" onclick="sp(this,'fw-lf')">Entire 2 BHK</div><div class="pill" onclick="sp(this,'fw-lf')">Any / Flexible</div></div></div>
+      <div class="field"><div class="field-label">Stay Duration</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fw-dur')">Short Term (1–3 Months)</div><div class="pill" onclick="sp(this,'fw-dur')">Medium Term (3–6 Months)</div><div class="pill" onclick="sp(this,'fw-dur')">Long Term (6+ Months)</div><div class="pill" onclick="sp(this,'fw-dur')">Flexible</div></div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🙋 About You</div>
+      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" placeholder="First name is fine"></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">You Are A <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Working Professional</option><option>Student</option><option>Business Owner</option><option>Other</option></select></div>
+        <div class="field"><div class="field-label">Gender <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Male</option><option>Female</option><option>Prefer Not To Say</option></select></div>
+      </div>
+      <div class="field"><div class="field-label">Food Preference <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fw-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fw-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fw-food')">No Preference</div></div></div>
+      <div class="field"><div class="field-label">Originally From</div><input class="input" type="text" placeholder="e.g. Pune, Maharashtra"><div class="field-hint">Helps build trust with owners</div></div>
+      <div class="field"><div class="field-label">Anything Else To Mention?</div><textarea class="textarea" placeholder="e.g. I work night shifts, I have a pet, prefer a quiet building…" oninput="cc(this,'fw-cc',300)"></textarea><div class="char-count" id="fw-cc">0 / 300</div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">💼 Are You Working With A Broker?</div>
+      <div class="broker-toggle">
+        <div class="broker-opt" id="fw-bno" onclick="sb('fw','no')"><div class="broker-icon">✅</div><div><div class="broker-title">No — I Am Searching On My Own</div><div class="broker-desc">Owners will know no brokerage is involved from your side</div></div></div>
+        <div class="broker-opt" id="fw-byes" onclick="sb('fw','yes')"><div class="broker-icon">💼</div><div><div class="broker-title">Yes — I Am A Broker Posting For A Client</div><div class="broker-desc">A brokerage tag will appear on your listing</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLAT LISTING -->
+  <div id="f-fl" style="display:none">
+    <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your Flat</div><div class="step-sub">Seekers will see these details before contacting you</div></div>
+    <div class="form-card">
+      <div class="card-title">📍 Location & Property</div>
+      <div class="field"><div class="field-label">Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-fl-area">
+        <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'fl-area')" onfocus="areaSearch(this,'fl-area')" autocomplete="off">
+        <button class="area-clear" onclick="clearArea('fl-area')">×</button>
+        <div class="area-dropdown" id="dd-fl-area"></div>
+      </div>
+      <div class="area-selected-tag" id="tag-fl-area"><span id="tagval-fl-area"></span><button onclick="clearArea('fl-area')">×</button></div></div>
+      <div class="field"><div class="field-label">Landmark / Building Name</div><input class="input" type="text" placeholder="e.g. Near Infinity Mall, Andheri West"><div class="field-hint">Exact address is only shared after contact is unlocked</div></div>
+      <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-ft')">1 RK</div><div class="pill" onclick="sp(this,'fl-ft')">1 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">2 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">3 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">4 BHK+</div><div class="pill" onclick="sp(this,'fl-ft')">Bungalow / Villa</div></div></div>
+      <div class="field"><div class="field-label">What Is Available? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-av')">Single Room</div><div class="pill" onclick="sp(this,'fl-av')">Double Room</div><div class="pill" onclick="sp(this,'fl-av')">Entire Flat</div></div></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Monthly Rent <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="18000" min="3000" max="400000"></div></div>
+        <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="36000"></div></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Available From <span class="req">*</span></div><input class="input" type="date"></div>
+        <div class="field"><div class="field-label">Furnishing <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Fully Furnished</option><option>Semi-Furnished</option><option>Unfurnished</option></select></div>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🏠 Preferences & Amenities</div>
+      <div class="field"><div class="field-label">Food Preference In House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-food')">🥦 Veg Only</div><div class="pill" onclick="sp(this,'fl-food')">🍗 Non-Veg Ok</div><div class="pill" onclick="sp(this,'fl-food')">No Preference</div></div></div>
+      <div class="field"><div class="field-label">Preferred Tenant Gender <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-gen')">Male Only</div><div class="pill" onclick="sp(this,'fl-gen')">Female Only</div><div class="pill" onclick="sp(this,'fl-gen')">Any</div></div></div>
+      <div class="field"><div class="field-label">Preferred Tenant Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-tt')">Working Professional</div><div class="pill" onclick="sp(this,'fl-tt')">Student</div><div class="pill" onclick="sp(this,'fl-tt')">Family</div><div class="pill" onclick="sp(this,'fl-tt')">Any</div></div></div>
+      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Gated Society</div><div class="pill" onclick="mp(this)">Security Guard</div><div class="pill" onclick="mp(this)">Swimming Pool</div><div class="pill" onclick="mp(this)">Garden</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Modular Kitchen</div></div></div>
+      <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fl-pets')">No</div></div></div>
+      <div class="field"><div class="field-label">Anything Else To Mention?</div><textarea class="textarea" placeholder="e.g. Quiet building, close to metro, no late night noise…" oninput="cc(this,'fl-cc',300)"></textarea><div class="char-count" id="fl-cc">0 / 300</div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">💼 Is Brokerage Involved? <span style="color:var(--red);font-size:11px">Required</span></div>
+      <div class="broker-toggle">
+        <div class="broker-opt" id="fl-bno" onclick="sb('fl','no')"><div class="broker-icon">✅</div><div><div class="broker-title">No Brokerage — I Am The Owner</div><div class="broker-desc">Seekers will see a green "No Brokerage" tag</div></div></div>
+        <div class="broker-opt" id="fl-byes" onclick="sb('fl','yes')"><div class="broker-icon">💼</div><div><div class="broker-title">Yes — Brokerage Will Be Charged</div><div class="broker-desc">A red brokerage tag will appear so seekers know upfront</div></div></div>
+      </div>
+      <div class="broker-amount" id="fl-ba"><div class="field-label" style="margin-top:10px">Brokerage Amount</div><input class="input" type="text" placeholder="e.g. 1 month rent, or ₹10,000 fixed"></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🪙 Contact Unlock Setting</div>
+      <div class="free-box"><div class="free-row"><div class="free-text"><div class="free-title">Make Contact Free For Everyone</div><div class="free-desc">Pay coins upfront so seekers can contact you without spending their own coins. Gets you more responses.</div></div><label class="toggle-sw"><input type="checkbox" onchange="tfc(this,'fl-fc')"><span class="tog-slider"></span></label></div><div class="free-coins" id="fl-fc">🪙 You will be charged coins to make this listing free to contact. Exact number confirmed before you post.</div></div>
+    </div>
+  </div>
+
+  <!-- FLATMATE WANTED -->
+  <div id="f-fm" style="display:none">
+    <div style="padding:4px 0 16px"><div class="step-heading">Flatmate Wanted</div><div class="step-sub">Help potential flatmates understand what they are getting into</div></div>
+    <div class="form-card">
+      <div class="card-title">📋 Your Situation</div>
+      <div class="field"><div class="field-label">What Best Describes You? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-sit')">I Am Staying — Looking For A Flatmate</div><div class="pill" onclick="sp(this,'fm-sit')">I Am Vacating — Need A Replacement</div></div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">📍 Flat Details</div>
+      <div class="field"><div class="field-label">Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-fm-area">
+        <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'fm-area')" onfocus="areaSearch(this,'fm-area')" autocomplete="off">
+        <button class="area-clear" onclick="clearArea('fm-area')">×</button>
+        <div class="area-dropdown" id="dd-fm-area"></div>
+      </div>
+      <div class="area-selected-tag" id="tag-fm-area"><span id="tagval-fm-area"></span><button onclick="clearArea('fm-area')">×</button></div></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>2 BHK</option><option>3 BHK</option><option>4 BHK</option><option>Other</option></select></div>
+        <div class="field"><div class="field-label">People Currently Living <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Just Me</option><option>2 People</option><option>3 People</option><option>4+ People</option></select></div>
+      </div>
+      <div class="field"><div class="field-label">Room Available For Flatmate <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-rm')">Single Room</div><div class="pill" onclick="sp(this,'fm-rm')">Double Sharing</div><div class="pill" onclick="sp(this,'fm-rm')">Triple Sharing</div></div></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Rent Per Person <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="12000" min="2000"></div></div>
+        <div class="field"><div class="field-label">Available From <span class="req">*</span></div><input class="input" type="date"></div>
+      </div>
+      <div class="field"><div class="field-label">Furnishing</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-furn')">Fully Furnished</div><div class="pill" onclick="sp(this,'fm-furn')">Semi-Furnished</div><div class="pill" onclick="sp(this,'fm-furn')">Unfurnished</div></div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🏠 House Rules & Vibe</div>
+      <div class="field"><div class="field-label">Food In This House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-food')">🥦 Veg Only</div><div class="pill" onclick="sp(this,'fm-food')">🍗 Non-Veg Ok</div><div class="pill" onclick="sp(this,'fm-food')">No Preference</div></div></div>
+      <div class="field"><div class="field-label">Looking For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-gen')">Male Flatmate</div><div class="pill" onclick="sp(this,'fm-gen')">Female Flatmate</div><div class="pill" onclick="sp(this,'fm-gen')">Any Gender</div></div></div>
+      <div class="field"><div class="field-label">Preferred Flatmate Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pref')">Working Professional</div><div class="pill" onclick="sp(this,'fm-pref')">Student</div><div class="pill" onclick="sp(this,'fm-pref')">Any</div></div></div>
+      <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fm-pets')">No</div></div></div>
+      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Gated Society</div></div></div>
+      <div class="field"><div class="field-label">Describe the house vibe</div><textarea class="textarea" placeholder="e.g. We are 2 working girls, very clean and quiet, chill on weekends…" oninput="cc(this,'fm-cc',300)"></textarea><div class="char-count" id="fm-cc">0 / 300</div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">💼 Is Brokerage Involved?</div>
+      <div class="broker-toggle">
+        <div class="broker-opt" id="fm-bno" onclick="sb('fm','no')"><div class="broker-icon">✅</div><div><div class="broker-title">No — Direct Flatmate Search</div><div class="broker-desc">No broker involved</div></div></div>
+        <div class="broker-opt" id="fm-byes" onclick="sb('fm','yes')"><div class="broker-icon">💼</div><div><div class="broker-title">Yes — Brokerage Will Be Charged</div><div class="broker-desc">A red brokerage tag will appear on your listing</div></div></div>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🪙 Contact Unlock Setting</div>
+      <div class="free-box"><div class="free-row"><div class="free-text"><div class="free-title">Make Contact Free For Everyone</div><div class="free-desc">Pay coins upfront so potential flatmates can contact you for free.</div></div><label class="toggle-sw"><input type="checkbox" onchange="tfc(this,'fm-fc')"><span class="tog-slider"></span></label></div><div class="free-coins" id="fm-fc">🪙 You will be charged coins to make this listing free to contact.</div></div>
+    </div>
+  </div>
+
+  <!-- PG LISTING -->
+  <div id="f-pg" style="display:none">
+    <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your PG</div><div class="step-sub">Help people find the right paying guest accommodation</div></div>
+    <div class="form-card">
+      <div class="card-title">📍 PG Details</div>
+      <div class="field"><div class="field-label">PG Name <span style="color:var(--ink3);font-weight:400;font-size:11px">(Optional)</span></div><input class="input" type="text" placeholder="e.g. Sunshine PG — leave blank if no name"><div class="field-hint">Don't have a name? No problem — just leave it blank. We'll auto-generate a title like "PG available in Andheri West for girls"</div></div>
+      <div class="field"><div class="field-label">Area In Mumbai <span class="req">*</span></div><div class="area-wrap" id="wrap-pg-area">
+        <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="area-input" type="text" placeholder="Type Area — Add Up To 3 Areas" oninput="areaSearch(this,'pg-area')" onfocus="areaSearch(this,'pg-area')" autocomplete="off">
+        <button class="area-clear" onclick="clearArea('pg-area')">×</button>
+        <div class="area-dropdown" id="dd-pg-area"></div>
+      </div>
+      <div class="area-selected-tag" id="tag-pg-area"><span id="tagval-pg-area"></span><button onclick="clearArea('pg-area')">×</button></div></div>
+      <div class="field"><div class="field-label">Nearby Landmark</div><input class="input" type="text" placeholder="e.g. Near D-Mart, 2 mins from metro"></div>
+      <div class="field"><div class="field-label">PG Is For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-for')">Boys Only</div><div class="pill" onclick="sp(this,'pg-for')">Girls Only</div><div class="pill" onclick="sp(this,'pg-for')">Both Boys & Girls</div></div></div>
+      <div class="field"><div class="field-label">Room Types Available <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="mp(this)">Single Room</div><div class="pill" onclick="mp(this)">Double Sharing</div><div class="pill" onclick="mp(this)">Triple Sharing</div></div></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Rent Starts From <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="6000" min="2000"></div></div>
+        <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="10000"></div></div>
+      </div>
+      <div class="field"><div class="field-label">Total Number Of Beds / Capacity</div><input class="input" type="number" placeholder="e.g. 20"></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🍽️ Food & Meals</div>
+      <div class="field"><div class="field-label">Meals Included? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-meals')">Yes — Meals Included</div><div class="pill" onclick="sp(this,'pg-meals')">No Meals</div><div class="pill" onclick="sp(this,'pg-meals')">Optional / Extra Charge</div></div></div>
+      <div class="field"><div class="field-label">Food Type Served</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-food')">🥦 Veg Only</div><div class="pill" onclick="sp(this,'pg-food')">🍗 Non-Veg Available</div><div class="pill" onclick="sp(this,'pg-food')">Both Options Available</div></div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🏨 Amenities & Rules</div>
+      <div class="field"><div class="field-label">Amenities Provided</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC Rooms</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Laundry</div><div class="pill" onclick="mp(this)">Housekeeping</div><div class="pill" onclick="mp(this)">CCTV Security</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Attached Bathroom</div><div class="pill" onclick="mp(this)">Common Area</div><div class="pill" onclick="mp(this)">Water Purifier</div><div class="pill" onclick="mp(this)">Warden On Premises</div></div></div>
+      <div class="field"><div class="field-label">Entry / Curfew Timings</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-curfew')">No Curfew</div><div class="pill" onclick="sp(this,'pg-curfew')">10 PM</div><div class="pill" onclick="sp(this,'pg-curfew')">11 PM</div><div class="pill" onclick="sp(this,'pg-curfew')">12 AM</div><div class="pill" onclick="sp(this,'pg-curfew')">Flexible</div></div></div>
+      <div class="field"><div class="field-label">Visitors Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-vis')">Yes</div><div class="pill" onclick="sp(this,'pg-vis')">No</div><div class="pill" onclick="sp(this,'pg-vis')">Day Visits Only</div></div></div>
+      <div class="field"><div class="field-label">Anything Else To Mention?</div><textarea class="textarea" placeholder="e.g. Walking distance from station, female warden, rooftop area, CCTV on all floors…" oninput="cc(this,'pg-cc',300)"></textarea><div class="char-count" id="pg-cc">0 / 300</div></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">💼 Is Brokerage Involved?</div>
+      <div class="broker-toggle">
+        <div class="broker-opt" id="pg-bno" onclick="sb('pg','no')"><div class="broker-icon">✅</div><div><div class="broker-title">No — I Am The PG Owner</div><div class="broker-desc">No broker fee will be charged</div></div></div>
+        <div class="broker-opt" id="pg-byes" onclick="sb('pg','yes')"><div class="broker-icon">💼</div><div><div class="broker-title">Yes — Brokerage Will Be Charged</div><div class="broker-desc">Amount will be clearly shown on the listing</div></div></div>
+      </div>
+      <div class="broker-amount" id="pg-ba"><div class="field-label" style="margin-top:10px">Brokerage Amount</div><input class="input" type="text" placeholder="e.g. ₹5,000 one-time"></div>
+    </div>
+    <div class="form-card">
+      <div class="card-title">🪙 Contact Unlock Setting</div>
+      <div class="free-box"><div class="free-row"><div class="free-text"><div class="free-title">Make Contact Free For Everyone</div><div class="free-desc">Pay coins upfront so people can contact you for free. Ideal for PGs that want maximum inquiries.</div></div><label class="toggle-sw"><input type="checkbox" onchange="tfc(this,'pg-fc')"><span class="tog-slider"></span></label></div><div class="free-coins" id="pg-fc">🪙 You will be charged coins to make this listing free to contact.</div></div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- STEP 3: REVIEW -->
+<div class="step" id="step3">
+  <div style="padding:4px 0 16px"><div class="step-heading">Almost Done!</div><div class="step-sub">Check everything before your listing goes live</div></div>
+  <div class="form-card">
+    <div class="card-title">✅ Before You Post</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> My area, rent and all details are correct</label>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> I have correctly declared whether brokerage is involved or not</label>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> My phone number is correct — only shared after coins are unlocked</label>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> I agree to FlatKhoj's terms — no fake listings, no spam</label>
+    </div>
+  </div>
+  <!-- Owner custom contact number (only shown to owner) -->
+  <div id="ownerContactField" style="display:none" class="form-card">
+    <div class="card-title">📞 Contact number to show users</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:12px;line-height:1.6">Since you're posting on behalf of someone, enter the number that should be revealed when users unlock this listing. This will override your login number.</div>
+    <div class="field">
+      <div class="field-label">Contact number <span class="req">*</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px;color:var(--ink2);font-weight:600;flex-shrink:0">+91</span>
+        <input class="input" type="tel" id="ownerContactNumber" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+      </div>
+      <div class="field-hint">This number will be shown to users who pay coins to unlock this listing</div>
+    </div>
+  </div>
+
+  <div style="background:var(--teal-bg);border:1.5px solid var(--teal);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.7">
+    🎉 <strong>Posting is completely free.</strong> Your listing will stay live for <strong>30 Days</strong> and can be renewed for free anytime.
+  </div>
+  <div style="background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.7;margin-top:12px" id="deleteReminderMsg">
+  </div>
+</div>
+
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <button class="btn-back" id="bBtn" onclick="prevStep()" style="display:none">← Back</button>
+  <button class="btn-next" id="nBtn" onclick="nextStep()">Next →</button>
+</div>
+
+<script>
+const AREAS = []; // Not used — Google Places handles search
+const GMAPS_KEY = 'AIzaSyAPL8PzitT2D1Nxvpc9a358U4tvpu6XWv0';
+// placesService and gmapsReady defined in head script
+
+// ── AREA VALUES — stores selected areas per field ──────────
+const areaVals = { 'fw-area':[], 'fl-area':[], 'fm-area':[], 'pg-area':[] };
+
+function areaSearch(input, id) {
+  const q = input.value.trim();
+  const dd = document.getElementById('dd-' + id);
+  const clearBtn = input.parentElement.querySelector('.area-clear');
+  clearBtn.classList.toggle('show', input.value.length > 0);
+
+  if (areaVals[id].length >= 3) { dd.classList.remove('open'); return; }
+
+  if (q.length === 0) {
+    const popular = ['Andheri West','Andheri East','Bandra West','Powai','Thane West','Lower Parel','Malad West','Goregaon West','Kandivali West','Borivali West'].filter(a => !areaVals[id].includes(a));
+    renderDropdown(dd, popular.map(a => ({ name: a })), '', id);
+    dd.classList.add('open');
+    return;
+  }
+
+  if (!placesService || !gmapsReady) {
+    // Places still loading — show popular areas as fallback
+    const popular = ['Andheri West','Andheri East','Bandra West','Powai','Thane West','Lower Parel','Malad West','Goregaon West','Kandivali West','Borivali West','Worli','Dadar','Chembur','Mulund West','Vikhroli','Ghatkopar','Versova','Juhu','Khar West','Santacruz West'].filter(a => !areaVals[id].includes(a));
+    if (q.length > 0) {
+      const filtered = popular.filter(a => a.toLowerCase().includes(q.toLowerCase()));
+      renderDropdown(dd, filtered.length > 0 ? filtered.map(a => ({name:a})) : popular.slice(0,8).map(a=>({name:a})), q, id);
+    } else {
+      renderDropdown(dd, popular.slice(0,10).map(a => ({name:a})), '', id);
+    }
+    dd.classList.add('open');
+    // Retry with Places after delay
+    if (!gmapsReady) setTimeout(() => { if(document.activeElement && document.activeElement.closest('.area-wrap')) areaSearch(document.activeElement, id); }, 1000);
+    return;
+  }
+
+  placesService.getPlacePredictions({
+    input: q + ', Mumbai',
+    componentRestrictions: { country: 'IN' },
+    types: ['sublocality', 'neighborhood', 'locality'],
+    bounds: new google.maps.LatLngBounds(
+      new google.maps.LatLng(18.87, 72.77),
+      new google.maps.LatLng(19.27, 72.98)
+    )
+  }, function(predictions, status) {
+    if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
+      dd.innerHTML = `<div class="area-option" style="color:var(--ink3);cursor:default">📍 No areas found</div>`;
+      dd.classList.add('open');
+      return;
+    }
+    const areas = predictions
+      .map(p => ({ name: p.structured_formatting.main_text }))
+      .filter(a => !areaVals[id].includes(a.name))
+      .slice(0, 8);
+    renderDropdown(dd, areas, q, id);
+    dd.classList.add('open');
+  });
+}
+
+function renderDropdown(dd, areas, q, id) {
+  dd.innerHTML = areas.map(a => {
+    const name = typeof a === 'string' ? a : a.name;
+    const esc = name.replace(/'/g, "\'");
+    const highlighted = q ? name.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<span class="match">$1</span>') : name;
+    return `<div class="area-option" onclick="selectArea('${esc}','${id}')"><span class="pin">📍</span>${highlighted}</div>`;
+  }).join('');
+}
+function selectArea(area, id) {
+  if (areaVals[id].includes(area)) return;
+  if (areaVals[id].length >= 3) return;
+
+  areaVals[id].push(area);
+
+  const wrap = document.getElementById('wrap-' + id);
+  const input = wrap.querySelector('.area-input');
+  const dd = document.getElementById('dd-' + id);
+  const clearBtn = wrap.querySelector('.area-clear');
+  const tag = document.getElementById('tag-' + id);
+
+  input.value = '';
+  clearBtn.classList.remove('show');
+  dd.classList.remove('open');
+
+  // Show remaining count hint
+  const remaining = 3 - areaVals[id].length;
+  if (remaining === 0) {
+    input.placeholder = '3 Areas Selected ✓';
+    input.disabled = true;
+    input.style.background = 'var(--bg2)';
+  } else {
+    input.placeholder = `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`;
+  }
+
+  renderTags(id);
+  tag.classList.add('show');
+}
+
+function renderTags(id) {
+  const tag = document.getElementById('tag-' + id);
+  tag.innerHTML = areaVals[id].map((a, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--teal-bg);border:1px solid var(--teal);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--teal);font-weight:600;margin:2px">
+      📍 ${a}
+      <button onclick="removeArea('${a}','${id}')" style="background:none;border:none;cursor:pointer;color:var(--teal);font-size:14px;line-height:1;padding:0;margin-left:2px">×</button>
+    </span>`
+  ).join('');
+  tag.style.display = areaVals[id].length > 0 ? 'flex' : 'none';
+  tag.style.flexWrap = 'wrap';
+  tag.style.gap = '4px';
+}
+
+function removeArea(area, id) {
+  areaVals[id] = areaVals[id].filter(a => a !== area);
+  const wrap = document.getElementById('wrap-' + id);
+  const input = wrap.querySelector('.area-input');
+  input.disabled = false;
+  input.style.background = '';
+  const remaining = 3 - areaVals[id].length;
+  input.placeholder = remaining === 3 ? 'Type Area — Add Up To 3 Areas' : `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`;
+  renderTags(id);
+  const tag = document.getElementById('tag-' + id);
+  if (areaVals[id].length === 0) tag.classList.remove('show');
+}
+
+function clearArea(id) {
+  const wrap = document.getElementById('wrap-' + id);
+  const input = wrap.querySelector('.area-input');
+  input.value = '';
+  input.disabled = false;
+  input.style.background = '';
+  input.placeholder = 'Type Area — Add Up To 3 Areas';
+  wrap.querySelector('.area-clear').classList.remove('show');
+  document.getElementById('dd-' + id).classList.remove('open');
+  input.focus();
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.area-wrap')) {
+    document.querySelectorAll('.area-dropdown').forEach(d => d.classList.remove('open'));
+  }
+});
+
+// ── SUPABASE CONFIG ────────────────────────────────────────
+const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+async function supaInsert(table, data) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ── GET LOGGED IN USER ─────────────────────────────────────
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; }
+}
+
+// ── COLLECT FORM DATA ──────────────────────────────────────
+function collectFormData() {
+  const data = { listing_type: type };
+
+  // Areas
+  const areas = areaVals[type] || [];
+  data.areas = areas.length > 0 ? areas : ['Mumbai'];
+
+  // Type-specific fields
+  if (type === 'fl') {
+    data.listing_type = 'flat_listing';
+    data.rent_amount = parseInt(document.querySelector('#f-fl input[placeholder*="rent"]')?.value) || null;
+    data.flat_type = document.querySelector('#f-fl .sel[onclick*="flatType"]')?.textContent?.trim() || null;
+    data.furnishing = document.querySelector('#f-fl .sel[onclick*="furnishing"]')?.textContent?.trim() || null;
+    data.food_preference = document.querySelector('#f-fl .sel[onclick*="food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.querySelector('#f-fl .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.description = document.querySelector('#f-fl textarea')?.value || null;
+    data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') || false;
+  } else if (type === 'fw') {
+    data.listing_type = 'flat_wanted';
+    data.rent_amount = parseInt(document.querySelector('#f-fw input[type="number"]')?.value) || null;
+    data.food_preference = document.querySelector('#f-fw .sel[onclick*="food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.querySelector('#f-fw .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.description = document.querySelector('#f-fw textarea')?.value || null;
+    data.has_brokerage = false;
+  } else if (type === 'fm') {
+    data.listing_type = 'flatmate_wanted';
+    data.rent_amount = parseInt(document.querySelector('#f-fm input[type="number"]')?.value) || null;
+    data.food_preference = document.querySelector('#f-fm .sel[onclick*="food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.querySelector('#f-fm .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.description = document.querySelector('#f-fm textarea')?.value || null;
+    data.has_brokerage = false;
+  } else if (type === 'pg') {
+    data.listing_type = 'pg_listing';
+    data.rent_amount = parseInt(document.querySelector('#f-pg input[type="number"]')?.value) || null;
+    data.food_preference = document.querySelector('#f-pg .sel[onclick*="food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.querySelector('#f-pg .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.description = document.querySelector('#f-pg textarea')?.value || null;
+    data.has_brokerage = document.getElementById('pg-byes')?.classList.contains('sel-yes') || false;
+  }
+
+  return data;
+}
+
+// ── SUBMIT LISTING ─────────────────────────────────────────
+async function submitListing() {
+  const user = getUser();
+  if (!user) {
+    // Save form state before redirecting to login
+    const state = {
+      type: type,
+      step: step,
+      areas: areaVals,
+      savedAt: Date.now()
+    };
+    localStorage.setItem('fk_post_state', JSON.stringify(state));
+    window.location.href = 'login.html?trigger=post&return=post_form.html';
+    return;
+  }
+
+  const btn = document.getElementById('nBtn');
+  btn.textContent = 'Posting…';
+  btn.disabled = true;
+
+  try {
+    const formData = collectFormData();
+    formData.user_id = user.userId;
+    formData.city = 'Mumbai';
+    formData.is_active = true;
+    formData.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    formData.created_at = new Date().toISOString();
+    formData.updated_at = new Date().toISOString();
+
+    // If owner posting on behalf — save custom contact number
+    if (user.isOwner) {
+      const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
+      if (customPhone && customPhone.length === 10) {
+        formData.custom_contact_phone = customPhone;
+      }
+    }
+
+    // Post directly to Supabase
+    const res = await fetch(`${SUPA_URL}/rest/v1/listings`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(formData)
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Post error:', err);
+      throw new Error(err);
+    }
+
+    // Clear saved state
+    localStorage.removeItem('fk_post_state');
+
+    // Success — go to homepage
+    window.location.href = 'index.html?posted=1';
+
+  } catch(err) {
+    console.error('Post error:', err);
+    btn.textContent = "🚀 Post Listing — It's Free!";
+    btn.disabled = false;
+    alert('Failed to post listing. Please try again. Error: ' + err.message);
+  }
+}
+
+let step=1, type=null;
+
+// ── POSTING LIMITS ─────────────────────────────────────────
+const LIMITS = {
+  free:  { daily: 1, monthly: 3,  label: 'Free plan' },
+  basic: { daily: 3, monthly: 10, label: 'Basic plan (99 coins/month)' },
+  pro:   { daily: 8, monthly: 25, label: 'Pro plan (199 coins/month)' },
+};
+
+async function checkPostingLimits() {
+  const user = getUser();
+  if (!user) return;
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const userRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins,posting_plan,posting_plan_expires`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const userData = await userRes.json();
+    // Check if plan has expired
+    let plan = userData[0]?.posting_plan || 'free';
+    const planExpires = userData[0]?.posting_plan_expires;
+    if (plan !== 'free' && planExpires && new Date(planExpires) < new Date()) {
+      // Plan expired — reset to free
+      plan = 'free';
+      fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ posting_plan: 'free', posting_plan_expires: null })
+      });
+    }
+    const limit = LIMITS[plan] || LIMITS.free;
+
+    const [todayRes, monthRes] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfDay}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }),
+      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfMonth}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } })
+    ]);
+    const todayCount = (await todayRes.json()).length;
+    const monthCount = (await monthRes.json()).length;
+
+    const dailyBlocked = todayCount >= limit.daily;
+    const monthlyBlocked = monthCount >= limit.monthly;
+
+    if (dailyBlocked || monthlyBlocked) {
+      document.getElementById('typeGridWrap').style.display = 'none';
+      document.getElementById('limitBlockedScreen').style.display = 'block';
+      document.getElementById('limitInfoBanner').style.display = 'none';
+      document.getElementById('nBtn').style.display = 'none';
+      const msg = dailyBlocked
+        ? `You have already posted <strong>${todayCount}</strong> listing${todayCount>1?'s':''} today. Your <strong>${limit.label}</strong> allows <strong>${limit.daily} post${limit.daily>1?'s':''} per day</strong>. You can post again tomorrow.<br><br>Need to post more? <a href="posting_limits.html" style="color:var(--teal);font-weight:700">Increase your limit →</a>`
+        : `You have posted <strong>${monthCount}</strong> listings this month. Your <strong>${limit.label}</strong> allows <strong>${limit.monthly} posts per month</strong>. Limit resets on 1st of next month.<br><br>Need to post more? <a href="posting_limits.html" style="color:var(--teal);font-weight:700">Increase your limit →</a>`;
+      document.getElementById('limitBlockedText').innerHTML = msg;
+      return;
+    }
+
+    // Show info — not blocked
+    const rem_day = limit.daily - todayCount;
+    const rem_month = limit.monthly - monthCount;
+    document.getElementById('limitInfoBanner').style.display = 'block';
+    document.getElementById('limitInfoText').innerHTML =
+      `📋 You can post <strong>${rem_day} more listing${rem_day>1?'s':''} today</strong> and <strong>${rem_month} more this month</strong>. &nbsp;<a href="posting_limits.html" style="color:var(--teal);font-weight:700;text-decoration:underline;text-underline-offset:2px">Increase limit</a>`;
+  } catch(e) { console.log('Limit check error:', e); }
+}
+
+// ── AI PREFILL ─────────────────────────────────────────────
+window.addEventListener('load', function() {
+  checkPostingLimits();
+
+  // Restore form state if returning from login
+  const savedState = localStorage.getItem('fk_post_state');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      // Only restore if saved less than 30 mins ago
+      if (Date.now() - state.savedAt < 30 * 60 * 1000) {
+        if (state.type) {
+          selectType(state.type);
+          // Restore areas
+          if (state.areas) {
+            Object.keys(state.areas).forEach(id => {
+              if (state.areas[id] && state.areas[id].length > 0) {
+                areaVals[id] = state.areas[id];
+                renderTags(id);
+                const wrap = document.getElementById('wrap-' + id);
+                if (wrap) {
+                  const input = wrap.querySelector('.area-input');
+                  const remaining = 3 - areaVals[id].length;
+                  if (remaining === 0) {
+                    input.placeholder = '3 Areas Selected ✓';
+                    input.disabled = true;
+                    input.style.background = 'var(--bg2)';
+                  } else {
+                    input.placeholder = `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`;
+                  }
+                  const tag = document.getElementById('tag-' + id);
+                  if (tag) tag.classList.add('show');
+                }
+              }
+            });
+          }
+          step = 3;
+          updateUI();
+          // Show a notice
+          const notice = document.createElement('div');
+          notice.style.cssText = 'background:#e8f5f3;border:1px solid #0f7b6c;border-radius:10px;padding:12px 14px;font-size:13px;color:#0f7b6c;margin:0 0 16px;';
+          notice.innerHTML = '✓ <strong>Your details were saved.</strong> Review and post your listing!';
+          document.querySelector('.step.active').prepend(notice);
+        }
+      }
+      localStorage.removeItem('fk_post_state');
+    } catch(e) { localStorage.removeItem('fk_post_state'); }
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('prefill') === '1') {
+    try {
+      const data = JSON.parse(localStorage.getItem('fk_ai_prefill') || '{}');
+      if (data && data.listing_type) {
+        // Map listing type to form type
+        const typeMap = { flat_listing:'fl', flat_wanted:'fw', flatmate_wanted:'fm', pg_listing:'pg' };
+        const t = typeMap[data.listing_type];
+        if (t) {
+          selectType(t);
+          step = 2;
+          updateUI();
+          // Pre-fill areas
+          if (data.areas && data.areas.length > 0) {
+            data.areas.forEach(area => {
+              const areaId = t + '-area';
+              if (areaVals[areaId] && areaVals[areaId].length < 3) {
+                selectArea(area, areaId);
+              }
+            });
+          }
+          // Pre-fill description
+          if (data.description) {
+            const textarea = document.querySelector('#f-' + t + ' textarea');
+            if (textarea) textarea.value = data.description;
+          }
+          // Pre-fill rent
+          if (data.rent_amount) {
+            const rentInput = document.querySelector('#f-' + t + ' input[type="number"]');
+            if (rentInput) rentInput.value = data.rent_amount;
+          }
+          // Show prefill notice
+          const notice = document.createElement('div');
+          notice.style.cssText = 'background:#e8f5f3;border:1px solid #0f7b6c;border-radius:10px;padding:12px 14px;font-size:13px;color:#0f7b6c;margin:0 16px 16px;';
+          notice.innerHTML = '✓ <strong>AI filled this form</strong> — please review and correct any details before posting.';
+          document.querySelector('.step.active').prepend(notice);
+          localStorage.removeItem('fk_ai_prefill');
+        }
+      }
+    } catch(e) { console.log('Prefill error:', e); }
+  }
+});
+
+function nextStep(){
+  if(step===1&&!type){alert('Please select a listing type to continue');return;}
+  if(step===3){ submitListing(); return; }
+  step++;updateUI();
+}
+function prevStep(){if(step>1){step--;updateUI();}}
+
+function updateUI(){
+  document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('active',i+1===step));
+  if(step===2&&type){
+    ['fw','fl','fm','pg'].forEach(t=>{document.getElementById('f-'+t).style.display=t===type?'block':'none';});
+  }
+  if(step===3){
+    // Show custom contact field if owner is logged in
+    const user = getUser();
+    if (user && user.isOwner) {
+      document.getElementById('ownerContactField').style.display = 'block';
+    }
+    // Show smart delete reminder based on listing type
+    const msgs = {
+      fl: '🏠 <strong>Reminder:</strong> Once you find a tenant and confirm the booking, please <strong>delete this listing</strong> so people stop calling you unnecessarily.',
+      fw: '🔍 <strong>Reminder:</strong> Once you find a flat and move in, please <strong>delete this listing</strong> so owners and brokers stop contacting you.',
+      fm: '👥 <strong>Reminder:</strong> Once you find a flatmate and they move in, please <strong>delete this listing</strong> so people stop reaching out unnecessarily.',
+      pg: '🏨 <strong>Reminder:</strong> Once your PG is fully occupied, please <strong>delete this listing</strong> so people looking for PG accommodation are not misled.',
+    };
+    const msg = document.getElementById('deleteReminderMsg');
+    if(msg && type && msgs[type]) msg.innerHTML = msgs[type];
+  }
+  const titles=['What Are You Posting?','Listing Details','Review & Post'];
+  document.getElementById('topbarTitle').textContent=titles[step-1];
+  document.getElementById('topbarStep').textContent=`Step ${step} Of 3`;
+  document.getElementById('pFill').style.width=['33%','66%','100%'][step-1];
+  ['pl1','pl2','pl3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='prog-label';
+    if(i+1<step)el.classList.add('done');
+    else if(i+1===step)el.classList.add('active');
+  });
+  document.getElementById('nBtn').textContent=step===3?"🚀 Post Listing — It's Free!":'Next →';
+  document.getElementById('bBtn').style.display=step>1?'block':'none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function selectType(t){
+  ['fw','fl','fm','pg'].forEach(x=>{document.getElementById('tc-'+x).classList.remove('sel');document.getElementById('ck-'+x).textContent='';});
+  document.getElementById('tc-'+t).classList.add('sel');
+  document.getElementById('ck-'+t).textContent='✓';
+  type=t;
+}
+
+function sp(el,group){
+  document.querySelectorAll(`[onclick="sp(this,'${group}')"]`).forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function mp(el){el.classList.toggle('sel');}
+
+function sb(prefix,choice){
+  const no=document.getElementById(prefix+'-bno');
+  const yes=document.getElementById(prefix+'-byes');
+  const ba=document.getElementById(prefix+'-ba');
+  no.classList.remove('sel-no','sel-yes');
+  yes.classList.remove('sel-no','sel-yes');
+  if(choice==='no')no.classList.add('sel-no');
+  else yes.classList.add('sel-yes');
+  if(ba)ba.classList.toggle('show',choice==='yes');
+}
+
+function tfc(checkbox,coinId){document.getElementById(coinId).classList.toggle('show',checkbox.checked);}
+function cc(el,id,max){const n=el.value.length;document.getElementById(id).textContent=`${n} / ${max}`;document.getElementById(id).style.color=n>max*0.9?'var(--red)':'var(--ink3)';}
+</script>
+</body>
+</html>
