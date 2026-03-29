@@ -444,6 +444,32 @@ const GMAPS_KEY = 'AIzaSyAPL8PzitT2D1Nxvpc9a358U4tvpu6XWv0';
 // ── AREA VALUES — stores selected areas per field ──────────
 const areaVals = { 'fw-area':[], 'fl-area':[], 'fm-area':[], 'pg-area':[] };
 
+// Comprehensive Mumbai area list — always works even without Google Places
+const MUMBAI_AREAS = [
+  'Andheri West','Andheri East','Bandra West','Bandra East',
+  'Borivali West','Borivali East','Chembur','Colaba','Cuffe Parade',
+  'Dadar West','Dadar East','Dahisar','Dharavi','Dombivli',
+  'Fort','Ghatkopar West','Ghatkopar East','Goregaon West','Goregaon East',
+  'Grant Road','Jogeshwari West','Jogeshwari East','Juhu','Khar West',
+  'Kandivali West','Kandivali East','Kharghar','Kurla West','Kurla East',
+  'Lokhandwala','Lower Parel','Mahalaxmi','Mahim','Malad West','Malad East',
+  'Marine Lines','Marine Drive','Matunga','Mira Road','Mulund West','Mulund East',
+  'Navi Mumbai','Nerul','Panvel','Powai','Prabhadevi','Santacruz West',
+  'Santacruz East','Sion','Thane West','Thane East','Ulwe','Vashi',
+  'Versova','Vikhroli West','Vikhroli East','Virar','Vasai','Wadala',
+  'Worli','Worli Sea Face','Oshiwara','Azad Nagar','DN Nagar',
+  'Veera Desai','Sakinaka','Gundavali','Kalina','Vakola',
+  'Vile Parle West','Vile Parle East','Santacruz','Khar','Linking Road',
+  'Hiranandani','Chandivali','JVLR','Kopar Khairane','Belapur',
+  'Airoli','Ghansoli','Rabale','Seawoods','Palm Beach',
+  'Tardeo','Breach Candy','Malabar Hill','Peddar Road','Nepean Sea Road',
+  'Parel','Sewri','Reay Road','Curry Road','Cotton Green',
+  'Ghodbunder Road','Manpada','Majiwada','Vartak Nagar','Wagle Estate',
+  'Bhayander','Nalasopara','Mira Bhayandar','Ambernath','Badlapur',
+  'Kalyan West','Kalyan East','Dombivli East','Dombivli West','Ulhasnagar',
+  'Khopoli','Karjat','Kasara','Vasai East','Naigaon'
+];
+
 function areaSearch(input, id) {
   const q = input.value.trim();
   const dd = document.getElementById('dd-' + id);
@@ -452,49 +478,55 @@ function areaSearch(input, id) {
 
   if (areaVals[id].length >= 3) { dd.classList.remove('open'); return; }
 
+  const already = areaVals[id];
+
   if (q.length === 0) {
-    const popular = ['Andheri West','Andheri East','Bandra West','Powai','Thane West','Lower Parel','Malad West','Goregaon West','Kandivali West','Borivali West'].filter(a => !areaVals[id].includes(a));
+    // Show popular areas when empty
+    const popular = ['Andheri West','Andheri East','Bandra West','Powai',
+      'Thane West','Lower Parel','Malad West','Goregaon West',
+      'Kandivali West','Borivali West','Worli','Dadar West',
+      'Chembur','Mulund West','Vikhroli West','Ghatkopar West']
+      .filter(a => !already.includes(a));
     renderDropdown(dd, popular.map(a => ({ name: a })), '', id);
     dd.classList.add('open');
     return;
   }
 
-  if (!placesService || !gmapsReady) {
-    // Places still loading — show popular areas as fallback
-    const popular = ['Andheri West','Andheri East','Bandra West','Powai','Thane West','Lower Parel','Malad West','Goregaon West','Kandivali West','Borivali West','Worli','Dadar','Chembur','Mulund West','Vikhroli','Ghatkopar','Versova','Juhu','Khar West','Santacruz West'].filter(a => !areaVals[id].includes(a));
-    if (q.length > 0) {
-      const filtered = popular.filter(a => a.toLowerCase().includes(q.toLowerCase()));
-      renderDropdown(dd, filtered.length > 0 ? filtered.map(a => ({name:a})) : popular.slice(0,8).map(a=>({name:a})), q, id);
-    } else {
-      renderDropdown(dd, popular.slice(0,10).map(a => ({name:a})), '', id);
-    }
+  // Always search local list first — instant results
+  const localMatches = MUMBAI_AREAS
+    .filter(a => a.toLowerCase().includes(q.toLowerCase()) && !already.includes(a))
+    .slice(0, 8);
+
+  if (localMatches.length > 0) {
+    renderDropdown(dd, localMatches.map(a => ({ name: a })), q, id);
     dd.classList.add('open');
-    // Retry with Places after delay
-    if (!gmapsReady) setTimeout(() => { if(document.activeElement && document.activeElement.closest('.area-wrap')) areaSearch(document.activeElement, id); }, 1000);
-    return;
   }
 
-  placesService.getPlacePredictions({
-    input: q + ', Mumbai',
-    componentRestrictions: { country: 'IN' },
-    types: ['sublocality', 'neighborhood', 'locality'],
-    bounds: new google.maps.LatLngBounds(
-      new google.maps.LatLng(18.87, 72.77),
-      new google.maps.LatLng(19.27, 72.98)
-    )
-  }, function(predictions, status) {
-    if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
-      dd.innerHTML = `<div class="area-option" style="color:var(--ink3);cursor:default">📍 No areas found</div>`;
-      dd.classList.add('open');
-      return;
-    }
-    const areas = predictions
-      .map(p => ({ name: p.structured_formatting.main_text }))
-      .filter(a => !areaVals[id].includes(a.name))
-      .slice(0, 8);
-    renderDropdown(dd, areas, q, id);
+  // Also try Google Places for micro areas not in local list
+  if (gmapsReady && placesService && q.length >= 2) {
+    placesService.getPlacePredictions({
+      input: q + ' Mumbai',
+      componentRestrictions: { country: 'IN' },
+      types: ['geocode'],
+    }, function(predictions, status) {
+      if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) return;
+      const googleAreas = predictions
+        .map(p => ({ name: p.structured_formatting.main_text }))
+        .filter(a => !already.includes(a.name) && !localMatches.includes(a.name));
+      // Merge local + google results, local first
+      const merged = [
+        ...localMatches.map(a => ({ name: a })),
+        ...googleAreas
+      ].slice(0, 8);
+      if (merged.length > 0) {
+        renderDropdown(dd, merged, q, id);
+        dd.classList.add('open');
+      }
+    });
+  } else if (localMatches.length === 0) {
+    dd.innerHTML = `<div class="area-option" style="color:var(--ink3);cursor:default">📍 No areas found for "${q}"</div>`;
     dd.classList.add('open');
-  });
+  }
 }
 
 function renderDropdown(dd, areas, q, id) {
