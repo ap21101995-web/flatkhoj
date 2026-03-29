@@ -340,7 +340,7 @@ body {
 </header>
 
 <!-- PHOTO GALLERY -->
-<div class="photo-gallery" id="photoGallery" ontouchstart="touchStart(event)" ontouchend="touchEnd(event)">
+<div class="photo-gallery" id="photoGallery" style="display:none" ontouchstart="touchStart(event)" ontouchend="touchEnd(event)">
   <!-- No photos state -->
   <div class="no-photo-placeholder" id="noPhoto">
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -660,12 +660,12 @@ function renderListing(){
   }
   const areas = areasArr.length > 0 ? areasArr.join(' / ') : 'Mumbai';
 
-  // Hide photo gallery only for flat_wanted
-  if (listing.listing_type === 'flat_wanted') {
-    document.getElementById('photoGallery').style.display = 'none';
+  // Show photo gallery only for non flat_wanted listings
+  if (listing.listing_type !== 'flat_wanted') {
+    document.getElementById('photoGallery').style.display = 'block';
   }
 
-  // Photos — for flat_listing, pg_listing and flatmate_wanted
+  // Photos
   if (listing.listing_type !== 'flat_wanted' &&
       listing.photos && listing.photos.length > 0) {
     document.getElementById('noPhoto').style.display='none';
