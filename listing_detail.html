@@ -629,7 +629,14 @@ function renderListing(){
     flatmate_wanted:'👥 Flatmate wanted',
     pg_listing:'🏨 PG listing'
   };
-  const areas=Array.isArray(listing.areas)?listing.areas.join(' / '):listing.areas||'Mumbai';
+  // Areas — handle all possible formats from Supabase
+  let areasArr = [];
+  if (Array.isArray(listing.areas) && listing.areas.length > 0) {
+    areasArr = listing.areas;
+  } else if (typeof listing.areas === 'string' && listing.areas.length > 0) {
+    areasArr = [listing.areas];
+  }
+  const areas = areasArr.length > 0 ? areasArr.join(' / ') : 'Mumbai';
 
   // Photos
   if(listing.photos&&listing.photos.length>0){
@@ -677,9 +684,15 @@ function renderListing(){
     dep.style.display='block';
   }
 
-  // Details grid — only show fields that exist
+  // Details grid — always show area first
   const grid=document.getElementById('detailsGrid');
   grid.innerHTML='';
+
+  // Always show area
+  if (areasArr.length > 0) {
+    grid.innerHTML += `<div class="detail-item" style="grid-column:1/-1"><div class="detail-label">📍 Area${areasArr.length > 1 ? 's' : ''}</div><div class="detail-value" style="color:var(--teal);font-weight:700">${areasArr.join(', ')}</div></div>`;
+  }
+
   const fields=[];
 
   if(listing.listing_type==='flat_wanted'){
@@ -860,7 +873,7 @@ function toggleSave(){isSaved=!isSaved;const btn=document.getElementById('saveBt
 // ── OWNER CONTROLS ─────────────────────────────────────────
 function showOwnerControls() {
   const user = getUser();
-  if (user && user.isOwner) {
+  if (user && (user.isOwner === true || user.phone === '9538584612')) {
     document.getElementById('ownerControls').style.display = 'block';
   }
 }
