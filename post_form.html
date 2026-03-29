@@ -941,7 +941,10 @@ function nextStep(){
   if(step===3){ submitListing(); return; }
   step++;updateUI();
 }
-function prevStep(){if(step>1){step--;updateUI();}}
+function prevStep(){
+  if(step>1){ step--; updateUI(); }
+  else { window.location.href='index.html'; }
+}
 
 function updateUI(){
   document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('active',i+1===step));

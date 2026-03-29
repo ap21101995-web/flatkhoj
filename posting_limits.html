@@ -335,7 +335,13 @@ async function upgradePlan(plan, coinCost) {
   }
 }
 
-function goBack() { window.history.back() || (window.location.href = 'post_form.html'); }
+function goBack() {
+  if (document.referrer && document.referrer !== window.location.href) {
+    window.history.back();
+  } else {
+    window.location.href = 'post_form.html';
+  }
+}
 </script>
 </body>
 </html>

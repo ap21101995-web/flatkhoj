@@ -451,7 +451,13 @@ function showSuccess(coins) {
   if (user) document.getElementById('balanceAmount').textContent = user.coins || 0;
 }
 
-function goBack() { window.history.back() || (window.location.href = 'index.html'); }
+function goBack() {
+  if (document.referrer && document.referrer !== window.location.href) {
+    window.history.back();
+  } else {
+    window.location.href = 'index.html';
+  }
+}
 </script>
 </body>
 </html>
