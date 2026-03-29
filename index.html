@@ -865,22 +865,43 @@ async function loadListings(reset = true) {
       throw new Error('Invalid response');
     }
 
-    // Filter by area client-side — much more reliable
+    // Filter and sort by area client-side
     if (activeArea && activeArea !== 'all') {
       const areaLower = activeArea.toLowerCase();
-      const filtered = listings.filter(l => {
+      const searchCoords = activeAreaCoords || getAreaCoords(activeArea);
+
+      // Separate exact matches from others
+      const exactMatches = listings.filter(l => {
         if (!l.areas) return false;
         const areas = Array.isArray(l.areas) ? l.areas : [l.areas];
         return areas.some(a => a.toLowerCase().includes(areaLower));
       });
-      // If no matches found, show all with a message
-      if (filtered.length === 0) {
-        document.getElementById('feedLoading').style.display = 'none';
-        renderListings(listings.slice(0, PAGE_SIZE), reset);
-        document.querySelector('.stats-text').innerHTML = `No listings in <strong>${activeArea}</strong> yet — showing all Mumbai`;
-        return;
+
+      const others = listings.filter(l => {
+        if (!l.areas) return true;
+        const areas = Array.isArray(l.areas) ? l.areas : [l.areas];
+        return !areas.some(a => a.toLowerCase().includes(areaLower));
+      });
+
+      // Sort others by distance if we have coords
+      if (searchCoords) {
+        others.sort((a, b) => {
+          const coordsA = getListingCoords(a);
+          const coordsB = getListingCoords(b);
+          const distA = coordsA ? getDistance(searchCoords.lat, searchCoords.lng, coordsA.lat, coordsA.lng) : 999;
+          const distB = coordsB ? getDistance(searchCoords.lat, searchCoords.lng, coordsB.lat, coordsB.lng) : 999;
+          return distA - distB;
+        });
       }
-      listings = filtered;
+
+      // Combine: exact matches first, then sorted by proximity
+      listings = [...exactMatches, ...others];
+
+      if (exactMatches.length === 0 && searchCoords) {
+        // No exact matches — show proximity message
+        document.querySelector('.stats-text').innerHTML =
+          `No listings in <strong>${activeArea}</strong> — showing nearest listings`;
+      }
     }
 
     // Apply pagination
@@ -1226,8 +1247,7 @@ function selectHomeArea(area) {
   document.getElementById('homeSearchInput').value = area;
   document.getElementById('homeSearchDropdown').style.display = 'none';
   activeArea = area;
-  activeAreaCoords = null;
-  // Highlight matching chip if exists
+  activeAreaCoords = getAreaCoords(area);
   document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
   loadListings();
 }
@@ -1346,26 +1366,125 @@ const _user = getUser();
 if (_user) document.getElementById('loginNudge').style.display = 'none';
 
 // Area chips - now with coordinates for proximity search
+// Comprehensive Mumbai area coordinates for proximity sorting
 const AREA_COORDS = {
-  'bandraWest': { name: 'Bandra West', lat: 19.0596, lng: 72.8295 },
-  'andherWest': { name: 'Andheri West', lat: 19.1364, lng: 72.8296 },
-  'andherEast': { name: 'Andheri East', lat: 19.1197, lng: 72.8686 },
-  'powai': { name: 'Powai', lat: 19.1197, lng: 72.9051 },
-  'lowerParel': { name: 'Lower Parel', lat: 18.9952, lng: 72.8318 },
-  'maladWest': { name: 'Malad West', lat: 19.1872, lng: 72.8484 },
-  'goregaonWest': { name: 'Goregaon West', lat: 19.1641, lng: 72.8490 },
-  'thaneWest': { name: 'Thane West', lat: 19.2183, lng: 72.9781 },
-  'worli': { name: 'Worli', lat: 19.0130, lng: 72.8170 },
-  'chembur': { name: 'Chembur', lat: 19.0626, lng: 72.9009 },
-  'mulund': { name: 'Mulund', lat: 19.1730, lng: 72.9560 },
-  'vikhroli': { name: 'Vikhroli', lat: 19.1075, lng: 72.9315 },
-  'ghatkopar': { name: 'Ghatkopar', lat: 19.0860, lng: 72.9081 },
-  'kandivali': { name: 'Kandivali', lat: 19.2065, lng: 72.8570 },
-  'borivali': { name: 'Borivali', lat: 19.2307, lng: 72.8567 },
-  'naviMumbai': { name: 'Navi Mumbai', lat: 19.0330, lng: 73.0297 },
-  'worli': { name: 'Worli', lat: 19.0130, lng: 72.8170 },
-  'juhu': { name: 'Juhu', lat: 19.1075, lng: 72.8264 },
+  'Andheri West': { lat: 19.1364, lng: 72.8296 },
+  'Andheri East': { lat: 19.1197, lng: 72.8686 },
+  'Bandra West': { lat: 19.0596, lng: 72.8295 },
+  'Bandra East': { lat: 19.0548, lng: 72.8405 },
+  'Borivali West': { lat: 19.2307, lng: 72.8567 },
+  'Borivali East': { lat: 19.2295, lng: 72.8656 },
+  'Chembur': { lat: 19.0626, lng: 72.9009 },
+  'Colaba': { lat: 18.9067, lng: 72.8147 },
+  'Dadar West': { lat: 19.0178, lng: 72.8478 },
+  'Dadar East': { lat: 19.0211, lng: 72.8553 },
+  'Dahisar': { lat: 19.2529, lng: 72.8587 },
+  'Fort': { lat: 18.9340, lng: 72.8356 },
+  'Ghatkopar West': { lat: 19.0860, lng: 72.9081 },
+  'Ghatkopar East': { lat: 19.0821, lng: 72.9128 },
+  'Goregaon West': { lat: 19.1641, lng: 72.8490 },
+  'Goregaon East': { lat: 19.1590, lng: 72.8607 },
+  'Grant Road': { lat: 18.9642, lng: 72.8197 },
+  'Jogeshwari West': { lat: 19.1450, lng: 72.8388 },
+  'Jogeshwari East': { lat: 19.1388, lng: 72.8560 },
+  'Juhu': { lat: 19.1075, lng: 72.8264 },
+  'Khar West': { lat: 19.0728, lng: 72.8334 },
+  'Kandivali West': { lat: 19.2065, lng: 72.8570 },
+  'Kandivali East': { lat: 19.2050, lng: 72.8658 },
+  'Kurla West': { lat: 19.0726, lng: 72.8794 },
+  'Kurla East': { lat: 19.0659, lng: 72.8792 },
+  'Lokhandwala': { lat: 19.1388, lng: 72.8272 },
+  'Lower Parel': { lat: 18.9952, lng: 72.8318 },
+  'Mahalaxmi': { lat: 18.9800, lng: 72.8200 },
+  'Mahim': { lat: 19.0395, lng: 72.8427 },
+  'Malad West': { lat: 19.1872, lng: 72.8484 },
+  'Malad East': { lat: 19.1872, lng: 72.8602 },
+  'Marine Lines': { lat: 18.9438, lng: 72.8234 },
+  'Matunga': { lat: 19.0298, lng: 72.8627 },
+  'Mira Road': { lat: 19.2855, lng: 72.8674 },
+  'Mulund West': { lat: 19.1730, lng: 72.9560 },
+  'Mulund East': { lat: 19.1745, lng: 72.9638 },
+  'Navi Mumbai': { lat: 19.0330, lng: 73.0297 },
+  'Nerul': { lat: 19.0330, lng: 73.0167 },
+  'Oshiwara': { lat: 19.1488, lng: 72.8327 },
+  'Powai': { lat: 19.1197, lng: 72.9051 },
+  'Prabhadevi': { lat: 19.0025, lng: 72.8244 },
+  'Santacruz West': { lat: 19.0822, lng: 72.8358 },
+  'Santacruz East': { lat: 19.0795, lng: 72.8497 },
+  'Sakinaka': { lat: 19.1098, lng: 72.8973 },
+  'Sion': { lat: 19.0388, lng: 72.8629 },
+  'Thane West': { lat: 19.2183, lng: 72.9781 },
+  'Thane East': { lat: 19.2255, lng: 72.9872 },
+  'Vashi': { lat: 19.0771, lng: 73.0071 },
+  'Versova': { lat: 19.1316, lng: 72.8144 },
+  'Vikhroli West': { lat: 19.1075, lng: 72.9315 },
+  'Vikhroli East': { lat: 19.1012, lng: 72.9394 },
+  'Vile Parle West': { lat: 19.1009, lng: 72.8455 },
+  'Vile Parle East': { lat: 19.0996, lng: 72.8588 },
+  'Virar': { lat: 19.4648, lng: 72.8110 },
+  'Vasai': { lat: 19.3660, lng: 72.8366 },
+  'Wadala': { lat: 19.0176, lng: 72.8586 },
+  'Worli': { lat: 19.0130, lng: 72.8170 },
+  'Worli Sea Face': { lat: 19.0058, lng: 72.8131 },
+  'Azad Nagar': { lat: 19.1350, lng: 72.8372 },
+  'DN Nagar': { lat: 19.1316, lng: 72.8390 },
+  'Veera Desai': { lat: 19.1330, lng: 72.8340 },
+  'Hiranandani': { lat: 19.1176, lng: 72.9060 },
+  'Chandivali': { lat: 19.1121, lng: 72.9045 },
+  'Dharavi': { lat: 19.0416, lng: 72.8538 },
+  'Parel': { lat: 19.0006, lng: 72.8390 },
+  'Sewri': { lat: 19.0083, lng: 72.8587 },
+  'Kalyan West': { lat: 19.2403, lng: 73.1305 },
+  'Dombivli': { lat: 19.2183, lng: 73.0862 },
+  'Kharghar': { lat: 19.0474, lng: 73.0659 },
+  'Belapur': { lat: 19.0219, lng: 73.0375 },
+  'Airoli': { lat: 19.1591, lng: 72.9989 },
+  'Panvel': { lat: 18.9894, lng: 73.1175 },
+  'Tardeo': { lat: 18.9694, lng: 72.8139 },
+  'Malabar Hill': { lat: 18.9545, lng: 72.7989 },
+  'Peddar Road': { lat: 18.9694, lng: 72.8083 },
+  'Bhayander': { lat: 19.3029, lng: 72.8526 },
+  'Nalasopara': { lat: 19.4147, lng: 72.8002 },
+  'Naigaon': { lat: 19.3625, lng: 72.8416 },
+  'Cuffe Parade': { lat: 18.9038, lng: 72.8186 },
+  'Vakola': { lat: 19.0884, lng: 72.8508 },
+  'Kalina': { lat: 19.0847, lng: 72.8669 },
 };
+
+// Distance between two lat/lng points in km (Haversine formula)
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Get coordinates for an area name
+function getAreaCoords(areaName) {
+  if (!areaName) return null;
+  // Direct match
+  if (AREA_COORDS[areaName]) return AREA_COORDS[areaName];
+  // Partial match
+  const lower = areaName.toLowerCase();
+  for (const [key, val] of Object.entries(AREA_COORDS)) {
+    if (key.toLowerCase().includes(lower) || lower.includes(key.toLowerCase())) return val;
+  }
+  return null;
+}
+
+// Get closest coords for a listing's areas array
+function getListingCoords(listing) {
+  if (!listing.areas) return null;
+  const areas = Array.isArray(listing.areas) ? listing.areas : [listing.areas];
+  for (const area of areas) {
+    const coords = getAreaCoords(area);
+    if (coords) return coords;
+  }
+  return null;
+}
 
 function setArea(el, area) {
   document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
@@ -1375,7 +1494,7 @@ function setArea(el, area) {
     activeAreaCoords = null;
   } else {
     activeArea = area;
-    activeAreaCoords = AREA_COORDS[area] || null;
+    activeAreaCoords = getAreaCoords(area);
   }
   loadListings();
 }
