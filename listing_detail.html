@@ -187,6 +187,15 @@ body {
   padding:3px 8px; margin-top:4px;
 }
 
+/* EDIT INPUTS */
+.edit-input {
+  width:100%; padding:11px 14px; border:1.5px solid var(--border);
+  border-radius:10px; font-family:var(--font); font-size:14px;
+  color:var(--ink); background:var(--bg); outline:none;
+  -webkit-appearance:none; appearance:none;
+}
+.edit-input:focus { border-color:var(--teal); }
+
 /* REPORT */
 .report-btn {
   background:none; border:none; cursor:pointer;
@@ -404,6 +413,15 @@ body {
   <div style="font-size:12px;color:var(--ink3);text-align:center;margin-bottom:16px" id="postedTime"></div>
 
   <!-- Report -->
+  <!-- Owner controls — only visible to owner login -->
+  <div id="ownerControls" style="display:none;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Owner controls</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="editListing()" style="flex:1;padding:12px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">✏️ Edit listing</button>
+      <button onclick="deleteListing()" style="padding:12px 16px;background:var(--red-bg);color:var(--red);border:1.5px solid var(--red);border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">🗑️ Delete</button>
+    </div>
+  </div>
+
   <button class="report-btn" onclick="openSheet('report')">Report this listing</button>
 
   <div class="divider" id="similarDivider"></div>
@@ -436,7 +454,7 @@ body {
   <!-- Step 1: Confirm unlock -->
   <div id="unlockStep1">
     <div class="sheet-title">Unlock contact</div>
-    <div class="sheet-sub">Reveal Sunita P.'s WhatsApp number and call them directly. Once unlocked, you can contact them anytime without paying again.</div>
+    <div class="sheet-sub" id="unlockSheetSub">Reveal this person's WhatsApp number and call them directly. Once unlocked, you can contact them anytime without paying again.</div>
     <div class="coin-balance-row">
       <span>Your coin balance</span>
       <strong>🪙 8 coins</strong>
@@ -450,10 +468,10 @@ body {
   <!-- Step 2: Contact revealed -->
   <div id="unlockStep2" style="display:none">
     <div class="sheet-title">Contact unlocked! 🎉</div>
-    <div class="sheet-sub">You can now reach Sunita P. directly on WhatsApp or phone.</div>
+    <div class="sheet-sub" id="unlockRevealSub">You can now reach them directly on WhatsApp or phone.</div>
     <div class="contact-reveal">
       <div class="contact-number">+91 98200 00000</div>
-      <div class="contact-name">Sunita P. · Owner</div>
+      <div class="contact-name" id="contactNameDisplay">FlatKhoj Member</div>
     </div>
     <div class="contact-actions">
       <button class="whatsapp-btn" onclick="openWhatsApp()">
@@ -467,6 +485,77 @@ body {
     </div>
     <div id="unlockDeleteReminder" style="background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink2);line-height:1.6;margin-top:14px"></div>
     <div class="sheet-note" style="margin-top:10px">Use this number only for this flat inquiry</div>
+  </div>
+</div>
+
+<!-- EDIT SHEET — owner only -->
+<div class="modal-backdrop" id="editBackdrop" onclick="closeSheet('edit')"></div>
+<div class="modal-sheet" id="editSheet" style="max-height:90vh;overflow-y:auto;padding-bottom:40px">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Edit listing</div>
+
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">POSTER NAME</div>
+      <input id="edit_poster_name" class="edit-input" type="text" placeholder="First name is fine">
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">CONTACT NUMBER (shown after unlock)</div>
+      <input id="edit_contact" class="edit-input" type="tel" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">RENT / BUDGET (₹)</div>
+      <input id="edit_rent" class="edit-input" type="number" placeholder="e.g. 20000">
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">AREAS</div>
+      <input id="edit_areas" class="edit-input" type="text" placeholder="e.g. Andheri West, Bandra West">
+      <div style="font-size:11px;color:var(--ink3);margin-top:4px">Separate multiple areas with commas</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">DESCRIPTION</div>
+      <textarea id="edit_description" class="edit-input" rows="4" placeholder="Describe the listing..." style="resize:vertical"></textarea>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">FOOD PREFERENCE</div>
+      <select id="edit_food" class="edit-input">
+        <option value="">— Not specified —</option>
+        <option>Veg only</option>
+        <option>Non-veg ok</option>
+        <option>No preference</option>
+      </select>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">GENDER PREFERENCE</div>
+      <select id="edit_gender" class="edit-input">
+        <option value="">— Not specified —</option>
+        <option>Male only</option>
+        <option>Female only</option>
+        <option>Any</option>
+      </select>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">FURNISHING</div>
+      <select id="edit_furnishing" class="edit-input">
+        <option value="">— Not specified —</option>
+        <option>Fully furnished</option>
+        <option>Semi-furnished</option>
+        <option>Unfurnished</option>
+      </select>
+    </div>
+
+    <button onclick="saveEdit()" style="width:100%;padding:15px;background:var(--teal);color:white;border:none;border-radius:12px;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">
+      Save changes →
+    </button>
+
   </div>
 </div>
 
@@ -525,6 +614,7 @@ window.onload=async function(){
       if(unlocks&&unlocks.length>0) showAlreadyUnlocked();
     }
     renderListing();
+    showOwnerControls();
     loadSimilar();
     fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({view_count:(listing.view_count||0)+1})});
   }catch(err){console.error('Error loading listing:',err);}
@@ -645,6 +735,21 @@ function renderListing(){
   document.getElementById('posterAvatar').textContent=posterInitials;
   document.getElementById('posterName').textContent=posterName;
 
+  // Update unlock sheet with real name
+  const roleLabels={
+    flat_listing:'Owner / Broker',
+    flat_wanted:'Looking for flat',
+    flatmate_wanted:'Looking for flatmate',
+    pg_listing:'PG Owner / Broker'
+  };
+  const role = roleLabels[listing.listing_type] || 'Member';
+  document.getElementById('posterRole').textContent = role;
+  document.getElementById('contactNameDisplay').textContent = posterName + ' · ' + role;
+  if (posterName !== 'FlatKhoj Member') {
+    document.getElementById('unlockSheetSub').textContent = `Reveal ${posterName}'s contact number. Once unlocked, you can reach them anytime without paying again.`;
+    document.getElementById('unlockRevealSub').textContent = `You can now reach ${posterName} directly on WhatsApp or phone.`;
+  }
+
   // Posted time
   document.getElementById('postedTime').textContent=`Posted ${getTimeAgo(listing.created_at)} · Expires in ${getDaysLeft(listing.expires_at)} days`;
 
@@ -752,6 +857,78 @@ function prevPhoto(){if(currentPhoto>0){currentPhoto--;updatePhoto();}}
 function updatePhoto(){document.getElementById('photoSlides').style.transform=`translateX(-${currentPhoto*100}%)`;document.querySelectorAll('.photo-dot').forEach((d,i)=>d.classList.toggle('active',i===currentPhoto));updatePhotoCounter();}
 function updatePhotoCounter(){document.getElementById('photoCounter').textContent=`${currentPhoto+1} / ${totalPhotos}`;}
 function toggleSave(){isSaved=!isSaved;const btn=document.getElementById('saveBtn');if(isSaved){btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="#d93025" stroke="#d93025" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Listing saved!');}else{btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Removed from saved');}}
+// ── OWNER CONTROLS ─────────────────────────────────────────
+function showOwnerControls() {
+  const user = getUser();
+  if (user && user.isOwner) {
+    document.getElementById('ownerControls').style.display = 'block';
+  }
+}
+
+function editListing() {
+  if (!listing) return;
+  document.getElementById('edit_poster_name').value = listing.poster_name || '';
+  document.getElementById('edit_contact').value = listing.custom_contact_phone || '';
+  document.getElementById('edit_rent').value = listing.rent_amount || '';
+  document.getElementById('edit_areas').value = Array.isArray(listing.areas) ? listing.areas.join(', ') : listing.areas || '';
+  document.getElementById('edit_description').value = listing.description || '';
+  document.getElementById('edit_food').value = listing.food_preference || '';
+  document.getElementById('edit_gender').value = listing.gender_preference || '';
+  document.getElementById('edit_furnishing').value = listing.furnishing || '';
+  openSheet('edit');
+}
+
+async function saveEdit() {
+  const btn = document.querySelector('#editSheet button');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const areasRaw = document.getElementById('edit_areas').value;
+    const areas = areasRaw.split(',').map(a => a.trim()).filter(a => a.length > 0);
+    const updates = {
+      poster_name: document.getElementById('edit_poster_name').value.trim() || null,
+      custom_contact_phone: document.getElementById('edit_contact').value.trim() || null,
+      rent_amount: parseInt(document.getElementById('edit_rent').value) || null,
+      areas: areas.length > 0 ? areas : listing.areas,
+      description: document.getElementById('edit_description').value.trim() || null,
+      food_preference: document.getElementById('edit_food').value || null,
+      gender_preference: document.getElementById('edit_gender').value || null,
+      furnishing: document.getElementById('edit_furnishing').value || null,
+      updated_at: new Date().toISOString()
+    };
+    const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed');
+    Object.assign(listing, updates);
+    renderListing();
+    closeSheet('edit');
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#0f7b6c;color:white;padding:12px 24px;border-radius:100px;font-family:var(--font);font-size:14px;font-weight:600;z-index:500';
+    toast.textContent = '✓ Listing updated!';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  } catch(err) {
+    alert('Failed to save. Please try again.');
+  } finally {
+    btn.textContent = 'Save changes →'; btn.disabled = false;
+  }
+}
+
+async function deleteListing() {
+  if (!confirm('Delete this listing? This cannot be undone.')) return;
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: false })
+    });
+    alert('Listing deleted.');
+    window.location.href = 'index.html';
+  } catch(err) { alert('Failed to delete. Please try again.'); }
+}
+
 function openSheet(name){document.getElementById(name+'Backdrop').classList.add('show');setTimeout(()=>document.getElementById(name+'Sheet').classList.add('show'),10);}
 function closeSheet(name){document.getElementById(name+'Sheet').classList.remove('show');setTimeout(()=>document.getElementById(name+'Backdrop').classList.remove('show'),300);}
 function showToast(msg){const t=document.createElement('div');t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#141414;color:white;padding:10px 20px;border-radius:100px;font-family:var(--font);font-size:13px;font-weight:600;z-index:500;';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
