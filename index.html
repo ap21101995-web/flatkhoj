@@ -910,7 +910,8 @@ function renderListings(listings, reset) {
     const brokerClass = l.has_brokerage ? 'has-broker' : 'no-broker';
     const brokerText = l.has_brokerage ? 'Brokerage applicable' : 'No brokerage';
     const timeAgo = getTimeAgo(l.created_at);
-    const initials = getInitials(l.user_id);
+    const name = l.poster_name || '';
+    const initials = name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : getInitials(l.user_id);
     const avatarColor = getColor(l.user_id);
 
     const tags = [];
@@ -946,8 +947,13 @@ function renderListings(listings, reset) {
         <div class="poster-row">
           <div class="avatar" style="background:${avatarColor}">${initials}</div>
           <div>
-            <div class="poster-name">User</div>
-            <div class="poster-role">${l.has_brokerage ? 'Broker' : 'Owner / Tenant'}</div>
+            <div class="poster-name">${escHtml(l.poster_name || 'FlatKhoj Member')}</div>
+            <div class="poster-role">${
+              l.listing_type === 'flat_wanted' ? 'Looking for flat' :
+              l.listing_type === 'flatmate_wanted' ? 'Looking for flatmate' :
+              l.listing_type === 'pg_listing' ? 'PG Owner' :
+              l.has_brokerage ? 'Broker' : 'Owner'
+            }</div>
           </div>
         </div>
         <div class="time-ago">${timeAgo}</div>

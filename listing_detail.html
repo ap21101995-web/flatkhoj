@@ -701,6 +701,10 @@ function renderListing(){
     if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
     if(listing.available_from) fields.push(['Move-in',listing.available_from]);
+    const brokerPref = listing.brokerage_preference;
+    if(brokerPref === 'yes') fields.push(['Brokerage','✅ Okay with brokerage']);
+    else if(brokerPref === 'prefno') fields.push(['Brokerage','🤝 Preferably no brokerage']);
+    else if(brokerPref === 'no') fields.push(['Brokerage','🚫 Strictly no brokerage']);
   } else if(listing.listing_type==='flatmate_wanted'){
     if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
     if(listing.room_type) fields.push(['Room type',listing.room_type]);

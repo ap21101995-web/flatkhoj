@@ -108,6 +108,8 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 .broker-opt:active { transform:scale(0.98); }
 .broker-opt.sel-no { border-color:var(--teal); background:var(--teal-bg); }
 .broker-opt.sel-yes { border-color:var(--red); background:var(--red-bg); }
+.broker-opt.sel-pref { border-color:var(--gold); background:var(--gold-bg); }
+.broker-opt.sel-pref .broker-title { color:var(--gold); }
 .broker-icon { font-size:20px; flex-shrink:0; }
 .broker-title { font-size:14px; font-weight:700; color:var(--ink); }
 .broker-desc { font-size:12px; color:var(--ink3); margin-top:2px; line-height:1.4; }
@@ -241,10 +243,11 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field"><div class="field-label">Anything Else To Mention?</div><textarea class="textarea" placeholder="e.g. I work night shifts, I have a pet, prefer a quiet building…" oninput="cc(this,'fw-cc',300)"></textarea><div class="char-count" id="fw-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
-      <div class="card-title">💼 Are You Working With A Broker?</div>
+      <div class="card-title">💼 Brokerage Preference</div>
       <div class="broker-toggle">
-        <div class="broker-opt" id="fw-bno" onclick="sb('fw','no')"><div class="broker-icon">✅</div><div><div class="broker-title">No — I Am Searching On My Own</div><div class="broker-desc">Owners will know no brokerage is involved from your side</div></div></div>
-        <div class="broker-opt" id="fw-byes" onclick="sb('fw','yes')"><div class="broker-icon">💼</div><div><div class="broker-title">Yes — I Am A Broker Posting For A Client</div><div class="broker-desc">A brokerage tag will appear on your listing</div></div></div>
+        <div class="broker-opt" id="fw-byes" onclick="sbfw('yes')"><div class="broker-icon">✅</div><div><div class="broker-title">Yes — Okay with brokerage</div><div class="broker-desc">You're open to flats that involve a broker fee</div></div></div>
+        <div class="broker-opt" id="fw-bprefno" onclick="sbfw('prefno')"><div class="broker-icon">🤝</div><div><div class="broker-title">Preferably no brokerage</div><div class="broker-desc">You'd prefer direct owner but open to brokers if needed</div></div></div>
+        <div class="broker-opt" id="fw-bno" onclick="sbfw('no')"><div class="broker-icon">🚫</div><div><div class="broker-title">Strictly no brokerage</div><div class="broker-desc">You only want to deal directly with owners — no broker fees</div></div></div>
       </div>
     </div>
   </div>
@@ -665,7 +668,10 @@ function collectFormData() {
     data.food_preference = document.querySelector('#f-fw .sel[onclick*="food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fw .sel[onclick*="gender"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fw textarea')?.value || null;
-    data.has_brokerage = false;
+    // Brokerage preference for flat wanted
+    const brokerChoice = document.getElementById('fw-bno')?.dataset?.choice || '';
+    data.brokerage_preference = brokerChoice || null;
+    data.has_brokerage = false; // seeker is not charging brokerage
   } else if (type === 'fm') {
     data.listing_type = 'flatmate_wanted';
     data.rent_amount = parseInt(document.querySelector('#f-fm input[type="number"]')?.value) || null;
@@ -970,6 +976,18 @@ function sp(el,group){
   el.classList.add('sel');
 }
 function mp(el){el.classList.toggle('sel');}
+
+function sbfw(choice) {
+  ['fw-byes','fw-bprefno','fw-bno'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('sel-no','sel-yes','sel-pref');
+  });
+  const map = { yes:'fw-byes', prefno:'fw-bprefno', no:'fw-bno' };
+  const styleMap = { yes:'sel-yes', prefno:'sel-pref', no:'sel-no' };
+  document.getElementById(map[choice]).classList.add(styleMap[choice]);
+  // Store choice
+  document.getElementById('fw-bno').dataset.choice = choice;
+}
 
 function sb(prefix,choice){
   const no=document.getElementById(prefix+'-bno');
