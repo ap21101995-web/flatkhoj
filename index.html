@@ -848,25 +848,52 @@ async function loadListings(reset = true) {
     let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&limit=${PAGE_SIZE}&offset=${currentOffset}`;
 
     if (activeFilter !== 'all') url += `&listing_type=eq.${activeFilter}`;
-    if (activeArea !== 'all') url += `&areas=cs.["${activeArea}"]`;
+    if (activeArea && activeArea !== 'all') {
+      // Use ilike to search within the areas array as text — works reliably
+      url += `&areas=ilike.*${encodeURIComponent(activeArea)}*`;
+    }
 
     const res = await fetch(url, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     });
+
+    if (!res.ok) {
+      console.error('Supabase error:', res.status, await res.text());
+      throw new Error('Query failed');
+    }
+
     const listings = await res.json();
+
+    // If area filter returned nothing, fall back to all listings
+    if (listings.length === 0 && activeArea !== 'all' && currentOffset === 0) {
+      document.getElementById('feedLoading').style.display = 'none';
+      // Show all listings as fallback
+      const fallbackRes = await fetch(
+        `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&limit=${PAGE_SIZE}`,
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+      );
+      const fallback = await fallbackRes.json();
+      if (Array.isArray(fallback) && fallback.length > 0) {
+        renderListings(fallback, reset);
+        document.querySelector('.stats-text').innerHTML = `No listings in <strong>${activeArea}</strong> yet — showing all Mumbai listings`;
+        return;
+      }
+      document.getElementById('feedEmpty').style.display = 'block';
+      document.querySelector('.stats-text').innerHTML = `No listings found in ${activeArea}`;
+      return;
+    }
 
     document.getElementById('feedLoading').style.display = 'none';
 
-    if (listings.length === 0 && currentOffset === 0) {
-      document.getElementById('feedEmpty').style.display = 'block';
-      document.querySelector('.stats-text').innerHTML = 'No listings found';
-      return;
+    if (!Array.isArray(listings)) {
+      console.error('Unexpected response:', listings);
+      throw new Error('Invalid response');
     }
 
     allListings = [...allListings, ...listings];
     renderListings(listings, reset);
 
-    document.querySelector('.stats-text').innerHTML = `Showing <strong>${allListings.length} listings</strong> · Mumbai`;
+    document.querySelector('.stats-text').innerHTML = `Showing <strong>${allListings.length} listing${allListings.length !== 1 ? 's' : ''}</strong> · Mumbai`;
 
     if (listings.length === PAGE_SIZE) {
       document.getElementById('loadMoreWrap').style.display = 'block';
@@ -874,9 +901,15 @@ async function loadListings(reset = true) {
     }
 
   } catch(err) {
+    console.error('Load error:', err);
     document.getElementById('feedLoading').style.display = 'none';
-    document.getElementById('feedLoading').style.display = 'block';
-    document.getElementById('feedLoading').textContent = 'Failed to load listings. Check your connection.';
+    document.getElementById('feedEmpty').style.display = 'block';
+    document.getElementById('feedEmpty').innerHTML = `
+      <div style="font-size:40px;margin-bottom:12px">😕</div>
+      <div style="font-size:16px;font-weight:700;color:#141414;margin-bottom:8px">Something went wrong</div>
+      <div style="font-size:14px;color:#888;margin-bottom:20px">Could not load listings. Please try again.</div>
+      <button onclick="loadListings()" style="background:#0f7b6c;color:white;border:none;border-radius:12px;padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer">Try again</button>
+    `;
   }
 }
 
