@@ -451,7 +451,6 @@ const SUPABASE_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
 
 async function sendOtp() {
-  alert('Button tapped! Phone: ' + document.getElementById('phoneInput').value);
   const phone = document.getElementById('phoneInput').value.trim();
   if (phone.length !== 10 || !/^[6-9]/.test(phone)) {
     document.getElementById('phoneErrorText').textContent = 'Please enter a valid 10-digit Indian mobile number';
@@ -473,6 +472,7 @@ async function sendOtp() {
   btn.classList.add('loading'); btn.disabled = true;
 
   try {
+    alert('Calling Supabase OTP function...');
     const res = await fetch(`${SUPABASE_URL}/functions/v1/otp`, {
       method: 'POST',
       headers: {
@@ -481,7 +481,9 @@ async function sendOtp() {
       },
       body: JSON.stringify({ action: 'send', phone })
     });
+    alert('Response received. Status: ' + res.status);
     const data = await res.json();
+    alert('Data: ' + JSON.stringify(data));
     btn.classList.remove('loading');
 
     if (data.success) {
