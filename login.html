@@ -472,7 +472,9 @@ async function sendOtp() {
   btn.classList.add('loading'); btn.disabled = true;
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/otp`, {
+    const fetchUrl = `${SUPABASE_URL}/functions/v1/otp`;
+    alert('Fetching: ' + fetchUrl);
+    const res = await fetch(fetchUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -480,7 +482,9 @@ async function sendOtp() {
       },
       body: JSON.stringify({ action: 'send', phone })
     });
+    alert('Status: ' + res.status);
     const data = await res.json();
+    alert('Response: ' + JSON.stringify(data));
     btn.classList.remove('loading');
 
     if (data.success) {
@@ -496,6 +500,7 @@ async function sendOtp() {
   } catch(err) {
     btn.classList.remove('loading');
     btn.disabled = false;
+    alert('CATCH ERROR: ' + err.message + ' | ' + err.name);
     document.getElementById('phoneErrorText').textContent = 'Network error. Please check your connection and try again.';
     document.getElementById('phoneError').classList.add('show');
   }
