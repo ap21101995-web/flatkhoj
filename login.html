@@ -258,7 +258,7 @@ body {
       <span id="phoneErrorText">Please enter a valid 10-digit mobile number</span>
     </div>
 
-    <button class="cta-btn" id="sendOtpBtn" onclick="sendOtp()" disabled>
+    <button class="cta-btn" id="sendOtpBtn" onclick="sendOtp()" ontouchend="sendOtp()" disabled>
       <div class="spinner"></div>
       <span class="btn-text">Send OTP →</span>
     </button>
@@ -440,22 +440,10 @@ function onPhoneInput(input) {
   btn.disabled = !isValid;
   document.getElementById('phoneError').classList.remove('show');
 
-  // Auto-detect owner number
   if (val === '9538584612') {
     btn.querySelector('.btn-text').textContent = 'Continue →';
   } else {
     btn.querySelector('.btn-text').textContent = 'Send OTP →';
-  }
-
-  // If exactly 10 digits and owner number — auto proceed
-  if (val === '9538584612' && val.length === 10) {
-    // Small delay so user sees it
-    setTimeout(function() {
-      if (document.getElementById('phoneInput').value === '9538584612') {
-        goToScreen('screen-owner');
-        setTimeout(() => document.getElementById('ownerPasswordInput').focus(), 300);
-      }
-    }, 500);
   }
 }
 
@@ -507,9 +495,11 @@ async function sendOtp() {
     }
   } catch(err) {
     btn.classList.remove('loading');
+    btn.disabled = false;
+    console.error('OTP error:', err);
+    alert('Error: ' + err.message);
     document.getElementById('phoneErrorText').textContent = 'Network error. Please check your connection and try again.';
     document.getElementById('phoneError').classList.add('show');
-    btn.disabled = false;
   }
 }
 
