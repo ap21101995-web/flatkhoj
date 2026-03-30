@@ -472,7 +472,6 @@ async function sendOtp() {
   btn.classList.add('loading'); btn.disabled = true;
 
   try {
-    alert('Calling Supabase OTP function...');
     const res = await fetch(`${SUPABASE_URL}/functions/v1/otp`, {
       method: 'POST',
       headers: {
@@ -481,9 +480,7 @@ async function sendOtp() {
       },
       body: JSON.stringify({ action: 'send', phone })
     });
-    alert('Response received. Status: ' + res.status);
     const data = await res.json();
-    alert('Data: ' + JSON.stringify(data));
     btn.classList.remove('loading');
 
     if (data.success) {
@@ -499,8 +496,6 @@ async function sendOtp() {
   } catch(err) {
     btn.classList.remove('loading');
     btn.disabled = false;
-    console.error('OTP error:', err);
-    alert('Error: ' + err.message);
     document.getElementById('phoneErrorText').textContent = 'Network error. Please check your connection and try again.';
     document.getElementById('phoneError').classList.add('show');
   }
