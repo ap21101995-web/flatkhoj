@@ -447,7 +447,7 @@ body {
   </div>
   <button class="unlock-main-btn" onclick="openSheet('unlock')" id="unlockBtn">
     Unlock contact
-    <span class="coin-cost">2 coins</span>
+    <span class="coin-cost">5 coins</span>
   </button>
 </div>
 
@@ -463,10 +463,13 @@ body {
     <div class="sheet-sub" id="unlockSheetSub">Reveal this person's WhatsApp number and call them directly. Once unlocked, you can contact them anytime without paying again.</div>
     <div class="coin-balance-row">
       <span>Your coin balance</span>
-      <strong>🪙 8 coins</strong>
+      <strong id="unlockCoinBalance">🪙 0 coins</strong>
     </div>
-    <button class="confirm-unlock-btn" onclick="confirmUnlock()">
-      Spend 2 coins & unlock →
+    <div id="insufficientCoinsMsg" style="display:none;background:var(--red-bg);border:1px solid var(--red);border-radius:10px;padding:12px;font-size:13px;color:var(--red);margin-bottom:12px;text-align:center">
+      ⚠️ You need 5 coins to unlock. <a href="coins.html" style="color:var(--red);font-weight:700;text-decoration:underline">Buy coins →</a>
+    </div>
+    <button class="confirm-unlock-btn" id="confirmUnlockBtn" onclick="confirmUnlock()">
+      Spend 5 coins & unlock →
     </button>
     <div class="sheet-note">Coins never expire · 100% secure</div>
   </div>
@@ -819,6 +822,23 @@ function renderListing(){
   const user=getUser();
   if(user){
     document.querySelector('.coin-balance strong').textContent=`🪙 ${user.coins||0}`;
+    // Update unlock sheet balance
+    const unlockBalance = document.getElementById('unlockCoinBalance');
+    if (unlockBalance) unlockBalance.textContent = `🪙 ${user.coins||0} coins`;
+    // Show insufficient coins warning if needed
+    const insufficient = document.getElementById('insufficientCoinsMsg');
+    const confirmBtn = document.getElementById('confirmUnlockBtn');
+    if (insufficient && confirmBtn && !listing.is_free_contact) {
+      if ((user.coins||0) < 5) {
+        insufficient.style.display = 'block';
+        confirmBtn.disabled = true;
+        confirmBtn.style.background = '#ccc';
+      } else {
+        insufficient.style.display = 'none';
+        confirmBtn.disabled = false;
+        confirmBtn.style.background = '';
+      }
+    }
     document.querySelector('.coin-balance-row strong').textContent=`🪙 ${user.coins||0} coins`;
   }
 }
@@ -853,16 +873,23 @@ async function confirmUnlock(){
   const btn=document.querySelector('.confirm-unlock-btn');
   btn.textContent='Unlocking…';btn.disabled=true;
   try{
-    if((user.coins||0)<2&&!listing.is_free_contact){alert('You need 2 coins to unlock. Please buy coins first.');btn.textContent='Spend 2 coins & unlock →';btn.disabled=false;return;}
+    if((user.coins||0)<5&&!listing.is_free_contact){
+      closeSheet('unlock');
+      // Show buy coins prompt
+      if(confirm('You need 5 coins to unlock this contact.\n\nYour balance: ' + (user.coins||0) + ' coins\n\nWould you like to buy more coins?')) {
+        window.location.href = 'coins.html';
+      }
+      return;
+    }
     if(!listing.is_free_contact){
-      const newCoins=(user.coins||0)-2;
+      const newCoins=(user.coins||0)-5;
       await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({coins:newCoins})});
       user.coins=newCoins;localStorage.setItem('fmh_user',JSON.stringify(user));
-      await supaPost('coin_transactions',{user_id:user.userId,type:'unlock_contact',amount:-2,balance_after:newCoins,related_listing_id:listing.id,description:'Contact unlock',created_at:new Date().toISOString()});
-      await supaPost('contact_unlocks',{unlocker_user_id:user.userId,listing_id:listing.id,listing_user_id:listing.user_id,coins_spent:2,created_at:new Date().toISOString()});
+      await supaPost('coin_transactions',{user_id:user.userId,type:'unlock_contact',amount:-5,balance_after:newCoins,related_listing_id:listing.id,description:'Contact unlock',created_at:new Date().toISOString()});
+      await supaPost('contact_unlocks',{unlocker_user_id:user.userId,listing_id:listing.id,listing_user_id:listing.user_id,coins_spent:5,created_at:new Date().toISOString()});
     }
     revealContact();
-  }catch(err){btn.textContent='Spend 2 coins & unlock →';btn.disabled=false;alert('Failed to unlock. Please try again.');}
+  }catch(err){btn.textContent='Spend 5 coins & unlock →';btn.disabled=false;alert('Failed to unlock. Please try again.');}
 }
 
 function revealContact(){

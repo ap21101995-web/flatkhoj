@@ -1029,7 +1029,7 @@ function renderListings(listings, reset) {
       <div class="unlock-row">
         <button class="unlock-btn" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
           ${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
-          <span class="coin-pip">${l.is_free_contact ? 'Free!' : '2 coins'}</span>
+          <span class="coin-pip">${l.is_free_contact ? 'Free!' : '5 coins'}</span>
         </button>
         <button class="save-btn" onclick="toggleSave(this)" title="Save">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -1079,8 +1079,8 @@ async function confirmUnlock() {
     // Check coins
     if ((user.coins || 0) < 2) {
       closeSheet('unlock');
-      alert('You need 2 coins to unlock this contact. Please buy more coins.');
-      btn.textContent = 'Spend 2 coins & unlock →';
+      alert('You need 5 coins to unlock this contact. Please buy more coins.');
+      btn.textContent = 'Spend 5 coins & unlock →';
       btn.disabled = false;
       return;
     }
@@ -1101,7 +1101,7 @@ async function confirmUnlock() {
         unlocker_user_id: user.userId,
         listing_id: currentUnlockListingId,
         listing_user_id: 'unknown',
-        coins_spent: 2,
+        coins_spent: 5,
         created_at: new Date().toISOString()
       })
     });
@@ -1113,7 +1113,7 @@ async function confirmUnlock() {
     await showUnlockedContact(currentUnlockListingId);
 
   } catch(err) {
-    btn.textContent = 'Spend 2 coins & unlock →';
+    btn.textContent = 'Spend 5 coins & unlock →';
     btn.disabled = false;
     alert('Failed to unlock. Please try again.');
   }
@@ -1537,7 +1537,7 @@ function confirmUnlock() {
   btn.textContent = '✓ Unlocked!';
   btn.style.background = '#0f7b6c';
   setTimeout(() => {
-    btn.textContent = 'Spend 2 coins & unlock →';
+    btn.textContent = 'Spend 5 coins & unlock →';
     btn.style.background = '';
   }, 2000);
 }
