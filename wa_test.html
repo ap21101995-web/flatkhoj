@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WA Test</title>
+</head>
+<body style="font-family:sans-serif;padding:20px;max-width:480px;margin:0 auto">
+<h2>WhatsApp Test</h2>
+
+<div style="margin-bottom:12px">
+  <label>Phone Number (with country code e.g. 919960395782)</label><br>
+  <input id="phone" type="text" value="919960395782" style="width:100%;padding:10px;margin-top:4px;border:1px solid #ccc;border-radius:8px;font-size:16px">
+</div>
+
+<div style="margin-bottom:12px">
+  <label>Supabase Function URL</label><br>
+  <input id="url" type="text" value="https://hbvdboxyppsmcuqgbpwp.supabase.co/functions/v1/otp" style="width:100%;padding:10px;margin-top:4px;border:1px solid #ccc;border-radius:8px;font-size:14px">
+</div>
+
+<button onclick="testOtp()" style="width:100%;padding:14px;background:#0f7b6c;color:white;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer">
+  Send Test OTP
+</button>
+
+<div id="result" style="margin-top:16px;padding:12px;border-radius:8px;display:none;word-break:break-all;font-size:13px"></div>
+
+<script>
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+async function testOtp() {
+  const phone = document.getElementById('phone').value.replace(/^91/, ''); // remove 91 prefix
+  const url = document.getElementById('url').value;
+  const result = document.getElementById('result');
+  
+  result.style.display = 'block';
+  result.style.background = '#f0efec';
+  result.textContent = 'Sending...';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPA_KEY}`
+      },
+      body: JSON.stringify({ action: 'send', phone })
+    });
+    const data = await res.json();
+    result.style.background = data.success ? '#e8f5f3' : '#fce8e6';
+    result.textContent = JSON.stringify(data, null, 2);
+  } catch(err) {
+    result.style.background = '#fce8e6';
+    result.textContent = 'Error: ' + err.message;
+  }
+}
+</script>
+</body>
+</html>
