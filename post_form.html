@@ -936,8 +936,28 @@ window.addEventListener('load', function() {
   }
 });
 
+function containsPhoneNumber(text) {
+  if (!text) return false;
+  // Detect Indian phone numbers in various formats
+  const phoneRegex = /(\+91|91)?[\s\-]?[6-9]\d{9}|\d{5}[\s\-]\d{5}/g;
+  return phoneRegex.test(text.replace(/\s/g, ''));
+}
+
 function nextStep(){
   if(step===1&&!type){alert('Please select a listing type to continue');return;}
+
+  // Check for phone numbers in description when moving to review
+  if(step===2){
+    const textareas = document.querySelectorAll('#f-'+type+' textarea');
+    for(const ta of textareas){
+      if(containsPhoneNumber(ta.value)){
+        alert('⚠️ Please remove phone numbers from your description.\n\nYour contact number is shared securely after someone pays coins to unlock it. Adding it in the description defeats the purpose and may attract spam.');
+        ta.focus();
+        return;
+      }
+    }
+  }
+
   if(step===3){ submitListing(); return; }
   step++;updateUI();
 }

@@ -150,6 +150,10 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <!-- SCREENSHOT SCREEN -->
 <div class="screen active" id="screen-screenshot">
 
+  <div style="background:var(--gold-bg);border:1px solid var(--gold);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--ink2);line-height:1.6">
+    💡 <strong>Note:</strong> If your screenshot has a phone number, our AI will extract listing details but the number will NOT be posted publicly. It stays private and is only shared after coins are unlocked.
+  </div>
+
   <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
     <div class="upload-icon">📱</div>
     <div class="upload-title">Upload a screenshot</div>
@@ -366,7 +370,7 @@ function startRecording() {
   recognition = new SpeechRecognition();
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = 'hi-IN'; // Hindi + English
+  recognition.lang = 'en-IN'; // Works for both English and Hinglish on Android
 
   fullTranscript = '';
 
@@ -403,9 +407,15 @@ function startRecording() {
   };
 
   recognition.onend = function() {
-    if (isRecording) {
-      // Auto-process after stopping
+    // Always process when recording ends
+    if (fullTranscript && fullTranscript.trim().length > 5) {
       processVoiceWithClaude(fullTranscript);
+    } else if (isRecording) {
+      // Nothing was captured
+      isRecording = false;
+      document.getElementById('micBtn').classList.remove('recording');
+      document.getElementById('micBtn').textContent = '🎤';
+      document.getElementById('micStatus').textContent = 'Nothing heard. Tap to try again.';
     }
   };
 
