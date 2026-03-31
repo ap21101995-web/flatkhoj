@@ -938,15 +938,25 @@ window.addEventListener('load', function() {
 
 function containsPhoneNumber(text) {
   if (!text) return false;
-  // Detect Indian phone numbers in various formats
   const phoneRegex = /(\+91|91)?[\s\-]?[6-9]\d{9}|\d{5}[\s\-]\d{5}/g;
   return phoneRegex.test(text.replace(/\s/g, ''));
+}
+
+function containsAbusiveLanguage(text) {
+  if (!text) return false;
+  // Common abusive words in Hindi/English — extend as needed
+  const abusiveWords = [
+    'fuck', 'shit', 'bastard', 'bitch', 'asshole', 'damn', 'crap',
+    'madarchod', 'behenchod', 'chutiya', 'gaandu', 'randi', 'saala',
+    'harami', 'bhosdi', 'lund', 'bhosdike', 'chut', 'lavda'
+  ];
+  const lower = text.toLowerCase();
+  return abusiveWords.some(word => lower.includes(word));
 }
 
 function nextStep(){
   if(step===1&&!type){alert('Please select a listing type to continue');return;}
 
-  // Check for phone numbers in description when moving to review
   if(step===2){
     const textareas = document.querySelectorAll('#f-'+type+' textarea');
     for(const ta of textareas){
@@ -955,6 +965,18 @@ function nextStep(){
         ta.focus();
         return;
       }
+      if(containsAbusiveLanguage(ta.value)){
+        alert('⚠️ Your description contains inappropriate language.\n\nPlease keep your listing description respectful and relevant to housing.');
+        ta.focus();
+        return;
+      }
+    }
+    // Also check name field
+    const nameInput = document.querySelector('#f-'+type+' input[type="text"]');
+    if(nameInput && containsAbusiveLanguage(nameInput.value)){
+      alert('⚠️ Please use a valid name.');
+      nameInput.focus();
+      return;
     }
   }
 

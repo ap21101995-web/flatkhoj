@@ -459,6 +459,18 @@ window.onload = function() {
   listingId = params.get('listing_id');
 };
 
+// ── PHOTO MODERATION ───────────────────────────────────────
+async function moderatePhoto(base64Data, mediaType) {
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/moderate-photo`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64Data, mediaType })
+    });
+    return await res.json();
+  } catch(e) { return { allowed: true, issues: [] }; }
+}
+
 // ── HANDLE FILE SELECTION ──────────────────────────────────
 function handleFiles(input) {
   const files = Array.from(input.files);
@@ -467,22 +479,40 @@ function handleFiles(input) {
   const toAdd = files.slice(0, remaining);
 
   toAdd.forEach(file => {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Photo too large. Max 5MB per photo.');
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      alert('Only image files are allowed.');
-      return;
-    }
+    if (file.size > 5 * 1024 * 1024) { alert('Photo too large. Max 5MB per photo.'); return; }
+    if (!file.type.startsWith('image/')) { alert('Only image files are allowed.'); return; }
+
     const reader = new FileReader();
-    reader.onload = e => {
-      photos.push({ file, preview: e.target.result, url: null });
+    reader.onload = async e => {
+      const base64Full = e.target.result;
+      const base64Data = base64Full.split(',')[1];
+
+      // Show checking message
+      const btn = document.getElementById('continueBtn');
+      const origText = btn.textContent;
+      btn.textContent = '🔍 Checking photo…';
+      btn.disabled = true;
+
+      const modResult = await moderatePhoto(base64Data, file.type);
+
+      btn.textContent = origText;
+      btn.disabled = false;
+
+      if (!modResult.allowed) {
+        let msg = '⚠️ This photo cannot be uploaded:\n\n';
+        if (modResult.has_phone_number || modResult.has_contact_info) msg += '📞 Phone number or contact info detected.\n';
+        if (modResult.has_watermark_with_text) msg += '🏷️ Watermark with text/contact info detected.\n';
+        if (modResult.has_inappropriate_content) msg += '🚫 Inappropriate content detected.\n';
+        msg += '\nPlease remove the contact info or watermark and upload again.';
+        alert(msg);
+        return;
+      }
+
+      photos.push({ file, preview: base64Full, url: null });
       renderPhotos();
     };
     reader.readAsDataURL(file);
   });
-  // Reset input so same file can be re-selected
   input.value = '';
 }
 
