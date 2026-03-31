@@ -44,7 +44,7 @@ body {
   color:var(--ink2); transition:background 0.15s;
 }
 .icon-btn:active { background:var(--bg3); }
-.icon-btn.saved svg { fill:#d93025; stroke:#d93025; }
+.icon-btn.saved svg { fill:#e6a817; stroke:#e6a817; }
 
 /* PHOTO GALLERY */
 .photo-gallery {
@@ -822,23 +822,30 @@ function renderListing(){
   const user=getUser();
   if(user){
     document.querySelector('.coin-balance strong').textContent=`🪙 ${user.coins||0}`;
-    // Update unlock sheet balance
-    const unlockBalance = document.getElementById('unlockCoinBalance');
-    if (unlockBalance) unlockBalance.textContent = `🪙 ${user.coins||0} coins`;
-    // Show insufficient coins warning if needed
-    const insufficient = document.getElementById('insufficientCoinsMsg');
-    const confirmBtn = document.getElementById('confirmUnlockBtn');
-    if (insufficient && confirmBtn && !listing.is_free_contact) {
-      if ((user.coins||0) < 5) {
-        insufficient.style.display = 'block';
-        confirmBtn.disabled = true;
-        confirmBtn.style.background = '#ccc';
-      } else {
-        insufficient.style.display = 'none';
-        confirmBtn.disabled = false;
-        confirmBtn.style.background = '';
+    // Fetch fresh balance from Supabase and update
+    fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`,{
+      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
+    }).then(r=>r.json()).then(data=>{
+      const fresh = data[0]?.coins || 0;
+      user.coins = fresh;
+      localStorage.setItem('fmh_user', JSON.stringify(user));
+      document.querySelector('.coin-balance strong').textContent=`🪙 ${fresh}`;
+      const unlockBalance = document.getElementById('unlockCoinBalance');
+      if(unlockBalance) unlockBalance.textContent=`🪙 ${fresh} coins`;
+      const confirmBtn = document.getElementById('confirmUnlockBtn');
+      const insufficient = document.getElementById('insufficientCoinsMsg');
+      if(insufficient && confirmBtn && !listing.is_free_contact){
+        if(fresh < 5){
+          insufficient.style.display='block';
+          confirmBtn.disabled=true;
+          confirmBtn.style.background='#ccc';
+        } else {
+          insufficient.style.display='none';
+          confirmBtn.disabled=false;
+          confirmBtn.style.background='';
+        }
       }
-    }
+    }).catch(()=>{});
     document.querySelector('.coin-balance-row strong').textContent=`🪙 ${user.coins||0} coins`;
   }
 }
@@ -873,18 +880,35 @@ async function confirmUnlock(){
   const btn=document.querySelector('.confirm-unlock-btn');
   btn.textContent='Unlocking…';btn.disabled=true;
   try{
-    if((user.coins||0)<5&&!listing.is_free_contact){
-      closeSheet('unlock');
-      // Show buy coins prompt
-      if(confirm('You need 5 coins to unlock this contact.\n\nYour balance: ' + (user.coins||0) + ' coins\n\nWould you like to buy more coins?')) {
-        window.location.href = 'coins.html';
-      }
-      return;
-    }
     if(!listing.is_free_contact){
-      const newCoins=(user.coins||0)-5;
+      // Always fetch FRESH balance from Supabase
+      const freshRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`,{
+        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
+      });
+      const freshData = await freshRes.json();
+      const currentCoins = freshData[0]?.coins || 0;
+
+      if(currentCoins < 5){
+        btn.textContent='Spend 5 coins & unlock →';btn.disabled=false;
+        closeSheet('unlock');
+        if(confirm('You need 5 coins to unlock this contact.\n\nYour balance: ' + currentCoins + ' coins\n\nWould you like to buy more coins?')) {
+          window.location.href = 'coins.html';
+        }
+        return;
+      }
+
+      const newCoins = currentCoins - 5;
       await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({coins:newCoins})});
-      user.coins=newCoins;localStorage.setItem('fmh_user',JSON.stringify(user));
+      
+      // Sync to localStorage
+      user.coins = newCoins;
+      localStorage.setItem('fmh_user', JSON.stringify(user));
+
+      // Update all coin displays on this page
+      document.querySelectorAll('.coin-balance strong, #unlockCoinBalance').forEach(el => {
+        el.textContent = '🪙 ' + newCoins + ' coins';
+      });
+
       await supaPost('coin_transactions',{user_id:user.userId,type:'unlock_contact',amount:-5,balance_after:newCoins,related_listing_id:listing.id,description:'Contact unlock',created_at:new Date().toISOString()});
       await supaPost('contact_unlocks',{unlocker_user_id:user.userId,listing_id:listing.id,listing_user_id:listing.user_id,coins_spent:5,created_at:new Date().toISOString()});
     }
@@ -962,7 +986,7 @@ function nextPhoto(){if(currentPhoto<totalPhotos-1){currentPhoto++;updatePhoto()
 function prevPhoto(){if(currentPhoto>0){currentPhoto--;updatePhoto();}}
 function updatePhoto(){document.getElementById('photoSlides').style.transform=`translateX(-${currentPhoto*100}%)`;document.querySelectorAll('.photo-dot').forEach((d,i)=>d.classList.toggle('active',i===currentPhoto));updatePhotoCounter();}
 function updatePhotoCounter(){document.getElementById('photoCounter').textContent=`${currentPhoto+1} / ${totalPhotos}`;}
-function toggleSave(){isSaved=!isSaved;const btn=document.getElementById('saveBtn');if(isSaved){btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="#d93025" stroke="#d93025" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Listing saved!');}else{btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Removed from saved');}}
+function toggleSave(){isSaved=!isSaved;const btn=document.getElementById('saveBtn');if(isSaved){btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="#e6a817" stroke="#e6a817" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Listing saved!');}else{btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Removed from saved');}}
 // ── OWNER CONTROLS ─────────────────────────────────────────
 function showOwnerControls() {
   const user = getUser();
