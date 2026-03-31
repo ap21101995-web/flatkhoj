@@ -604,7 +604,7 @@ body {
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <button class="nav-item active">
+  <button class="nav-item active" onclick="window.location.href='index.html'">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     Home
   </button>
@@ -616,13 +616,9 @@ body {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
     Post
   </button>
-  <button class="nav-item">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-    Saved
-  </button>
-  <button class="nav-item" onclick="openLoginSheet()">
+  <button class="nav-item" onclick="goToActivity()">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    Sign in
+    My Activity
   </button>
 </nav>
 
@@ -828,6 +824,27 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; }
 }
 
+function goToActivity() {
+  const user = getUser();
+  if (!user) {
+    window.location.href = 'login.html?trigger=account';
+  } else {
+    window.location.href = 'activity.html';
+  }
+}
+
+// Track unlocked listings locally for homepage display
+function getUnlockedListings() {
+  try { return JSON.parse(localStorage.getItem('fk_unlocked') || '[]'); } catch(e) { return []; }
+}
+function markAsUnlocked(listingId) {
+  const unlocked = getUnlockedListings();
+  if (!unlocked.includes(listingId)) {
+    unlocked.push(listingId);
+    localStorage.setItem('fk_unlocked', JSON.stringify(unlocked));
+  }
+}
+
 // ── LOAD LISTINGS FROM SUPABASE ────────────────────────────
 let allListings = [];
 let currentOffset = 0;
@@ -969,13 +986,13 @@ function renderListings(listings, reset) {
     let brokerClass, brokerText;
     if (l.listing_type === 'flat_wanted') {
       const pref = l.brokerage_preference;
-      if (pref === 'no') { brokerClass = 'no-broker'; brokerText = '🚫 No brokerage'; }
-      else if (pref === 'prefno') { brokerClass = 'pref-broker'; brokerText = '🤝 Prefer no brokerage'; }
-      else if (pref === 'yes') { brokerClass = 'ok-broker'; brokerText = '✅ Okay with brokerage'; }
-      else { brokerClass = 'no-broker'; brokerText = 'Looking for flat'; }
+      if (pref === 'no') { brokerClass = 'no-broker'; brokerText = '🚫 No Brokerage'; }
+      else if (pref === 'prefno') { brokerClass = 'pref-broker'; brokerText = '🤝 Prefer No Brokerage'; }
+      else if (pref === 'yes') { brokerClass = 'ok-broker'; brokerText = '✅ Okay With Brokerage'; }
+      else { brokerClass = 'no-broker'; brokerText = 'Looking For Flat'; }
     } else {
       brokerClass = l.has_brokerage ? 'has-broker' : 'no-broker';
-      brokerText = l.has_brokerage ? 'Brokerage applicable' : 'No brokerage';
+      brokerText = l.has_brokerage ? 'Brokerage Applicable' : 'No Brokerage';
     }
     const timeAgo = getTimeAgo(l.created_at);
     const name = l.poster_name || '';
@@ -1017,7 +1034,7 @@ function renderListings(listings, reset) {
           <div>
             <div class="poster-name">${escHtml(l.poster_name || 'FlatKhoj Member')}</div>
             <div class="poster-role">${
-              l.listing_type === 'flat_wanted' ? 'Looking for flat' :
+              l.listing_type === 'flat_wanted' ? 'Looking For Flat' :
               l.listing_type === 'flatmate_wanted' ? 'Looking for flatmate' :
               l.listing_type === 'pg_listing' ? 'PG Owner' :
               l.has_brokerage ? 'Broker' : 'Owner'
@@ -1027,10 +1044,13 @@ function renderListings(listings, reset) {
         <div class="time-ago">${timeAgo}</div>
       </div>
       <div class="unlock-row">
-        <button class="unlock-btn" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
-          ${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
-          <span class="coin-pip">${l.is_free_contact ? 'Free!' : '5 coins'}</span>
-        </button>
+        ${getUnlockedListings().includes(l.id)
+          ? `<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal);cursor:default" onclick="window.location.href='listing_detail.html?id=${l.id}'">✓ Contact unlocked — view</button>`
+          : `<button class="unlock-btn" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
+            ${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
+            <span class="coin-pip">${l.is_free_contact ? 'Free!' : '5 🪙'}</span>
+          </button>`
+        }
         <button class="save-btn" onclick="toggleSave(this)" title="Save">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         </button>
@@ -1582,7 +1602,7 @@ function toggleFPill(el, group) {
 <div style="background:var(--bg3);border-top:1px solid var(--border);padding:20px 16px;margin-top:24px;text-align:center">
   <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:6px">FlatKhoj</div>
   <div style="font-size:12px;color:var(--ink3);margin-bottom:4px">Operated by <strong>Pivot24</strong> · Mumbai, India</div>
-  <div style="font-size:11px;color:var(--ink3);margin-bottom:12px">Mumbai's flat & flatmate marketplace</div>
+  <div style="font-size:11px;color:var(--ink3);margin-bottom:12px">Flat & Flatmate Marketplace</div>
   <div style="display:flex;justify-content:center;gap:16px;font-size:12px">
     <a href="privacy.html" style="color:var(--ink3);text-decoration:none">Privacy Policy</a>
     <a href="terms.html" style="color:var(--ink3);text-decoration:none">Terms of Service</a>

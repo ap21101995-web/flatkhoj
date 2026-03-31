@@ -687,16 +687,16 @@ function renderListing(){
   const b = document.getElementById('brokerBanner');
   if (listing.listing_type === 'flat_wanted') {
     const pref = listing.brokerage_preference;
-    if (pref === 'no') { b.className='broker-banner no-broker'; b.textContent='🚫 Strictly no brokerage'; }
-    else if (pref === 'prefno') { b.className='broker-banner pref-broker'; b.textContent='🤝 Preferably no brokerage'; }
-    else if (pref === 'yes') { b.className='broker-banner ok-broker'; b.textContent='✅ Okay with brokerage'; }
-    else { b.className='broker-banner no-broker'; b.textContent='🔍 Looking for a flat'; }
+    if (pref === 'no') { b.className='broker-banner no-broker'; b.textContent='🚫 Strictly No Brokerage'; }
+    else if (pref === 'prefno') { b.className='broker-banner pref-broker'; b.textContent='🤝 Preferably No Brokerage'; }
+    else if (pref === 'yes') { b.className='broker-banner ok-broker'; b.textContent='✅ Okay With Brokerage'; }
+    else { b.className='broker-banner no-broker'; b.textContent='🔍 Looking For A Flat'; }
   } else if (listing.has_brokerage) {
     b.className='broker-banner has-broker';
-    b.textContent='⚠ Brokerage applicable — fee will be charged';
+    b.textContent='⚠ Brokerage Applicable — Fee Will Be Charged';
   } else {
     b.className='broker-banner no-broker';
-    b.textContent='✓ No brokerage — direct from owner';
+    b.textContent='✓ No Brokerage — Direct From Owner';
   }
 
   // Type, title, location
@@ -742,9 +742,9 @@ function renderListing(){
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
     if(listing.available_from) fields.push(['Move-in date', formatDate(listing.available_from)]);
     const brokerPref = listing.brokerage_preference;
-    if(brokerPref === 'yes') fields.push(['Brokerage','✅ Okay with brokerage']);
-    else if(brokerPref === 'prefno') fields.push(['Brokerage','🤝 Preferably no brokerage']);
-    else if(brokerPref === 'no') fields.push(['Brokerage','🚫 Strictly no brokerage']);
+    if(brokerPref === 'yes') fields.push(['Brokerage','✅ Okay With Brokerage']);
+    else if(brokerPref === 'prefno') fields.push(['Brokerage','🤝 Preferably No Brokerage']);
+    else if(brokerPref === 'no') fields.push(['Brokerage','🚫 Strictly No Brokerage']);
   } else if(listing.listing_type==='flatmate_wanted'){
     if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
     if(listing.room_type) fields.push(['Room type',listing.room_type]);
@@ -894,6 +894,16 @@ async function confirmUnlock(){
 
 function revealContact(){
   if(!posterPhone){alert('Contact not available. Please try again.');return;}
+  
+  // Save to localStorage so homepage shows unlocked state
+  try {
+    const unlocked = JSON.parse(localStorage.getItem('fk_unlocked') || '[]');
+    if (!unlocked.includes(listing.id)) {
+      unlocked.push(listing.id);
+      localStorage.setItem('fk_unlocked', JSON.stringify(unlocked));
+    }
+  } catch(e) {}
+
   const formatted='+91 '+posterPhone.replace(/(\d{5})(\d{5})/,'$1 $2');
   document.getElementById('unlockStep1').style.display='none';
   document.getElementById('unlockStep2').style.display='block';
@@ -915,6 +925,13 @@ function revealContact(){
 }
 
 function showAlreadyUnlocked(){
+  // Save to localStorage
+  if (listing) {
+    try {
+      const unlocked = JSON.parse(localStorage.getItem('fk_unlocked') || '[]');
+      if (!unlocked.includes(listing.id)) { unlocked.push(listing.id); localStorage.setItem('fk_unlocked', JSON.stringify(unlocked)); }
+    } catch(e) {}
+  }
   document.getElementById('bottomBar').innerHTML=`<button class="already-unlocked" onclick="openSheet('unlock')">✓ Contact unlocked — tap to view</button>`;
   document.getElementById('unlockStep1').style.display='none';
   document.getElementById('unlockStep2').style.display='block';
