@@ -1055,8 +1055,8 @@ function renderListings(listings, reset) {
             <span class="coin-pip">${l.is_free_contact ? 'Free!' : '5 🪙'}</span>
           </button>`
         }
-        <button class="save-btn" onclick="toggleSave(this)" title="Save">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <button class="save-btn" onclick="toggleSave(this,'${l.id}')" title="Save" style="${savedListingIds.has(l.id)?'background:#fef6e4;border-color:#e6a817':''}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${savedListingIds.has(l.id)?'#e6a817':'none'}" stroke="${savedListingIds.has(l.id)?'#e6a817':'#888'}" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         </button>
       </div>
     `;
@@ -1395,7 +1395,22 @@ async function loadAreaChips() {
 
 // Load area chips and listings on page load
 loadAreaChips();
-loadListings();
+
+// Load saved listing IDs from Supabase, then load listings
+let savedListingIds = new Set();
+(async () => {
+  const user = getUser();
+  if (user) {
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${user.userId}&select=listing_id`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) savedListingIds = new Set(data.map(d => d.listing_id));
+    } catch(e) {}
+  }
+  loadListings();
+})();
 
 // Hide login nudge if already logged in
 const _user = getUser();
@@ -1579,9 +1594,15 @@ function confirmUnlock() {
 }
 
 // Save button toggle
-function toggleSave(btn) {
+async function toggleSave(btn, listingId) {
+  const user = getUser();
+  if (!user) { window.location.href = 'login.html?trigger=save'; return; }
+
   const svg = btn.querySelector('svg');
-  if (svg.getAttribute('fill') === 'none') {
+  const isSaved = svg.getAttribute('fill') !== 'none';
+
+  // Optimistic UI update
+  if (!isSaved) {
     svg.setAttribute('fill', '#e6a817');
     svg.setAttribute('stroke', '#e6a817');
     btn.style.background = '#fef6e4';
@@ -1591,6 +1612,33 @@ function toggleSave(btn) {
     svg.setAttribute('stroke', '#888');
     btn.style.background = '';
     btn.style.borderColor = '';
+  }
+
+  try {
+    if (!isSaved) {
+      // Save to Supabase
+      await fetch(`${SUPA_URL}/rest/v1/saved_listings`, {
+        method: 'POST',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ user_id: user.userId, listing_id: listingId, created_at: new Date().toISOString() })
+      });
+    } else {
+      // Remove from Supabase
+      await fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${user.userId}&listing_id=eq.${listingId}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+    }
+  } catch(e) {
+    console.error('Save error:', e);
+    // Revert UI on error
+    if (!isSaved) {
+      svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', '#888');
+      btn.style.background = ''; btn.style.borderColor = '';
+    } else {
+      svg.setAttribute('fill', '#e6a817'); svg.setAttribute('stroke', '#e6a817');
+      btn.style.background = '#fef6e4'; btn.style.borderColor = '#e6a817';
+    }
   }
 }
 

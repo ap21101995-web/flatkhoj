@@ -647,6 +647,19 @@ window.onload=async function(){
     }
     loadSimilar();
     fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({view_count:(listing.view_count||0)+1})});
+
+    // Restore saved state from Supabase
+    const userForSave = getUser();
+    if (userForSave) {
+      fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${userForSave.userId}&listing_id=eq.${listingId}&select=id`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      }).then(r=>r.json()).then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          isSaved = true;
+          document.getElementById('saveBtn').innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#e6a817" stroke="#e6a817" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+        }
+      }).catch(()=>{});
+    }
   }catch(err){console.error('Error loading listing:',err);}
 };
 
@@ -743,7 +756,7 @@ function renderListing(){
   if(listing.listing_type==='flat_wanted'){
     if(listing.flat_type) fields.push(['Looking for',listing.flat_type]);
     if(listing.furnishing) fields.push(['Furnishing needed',listing.furnishing]);
-    if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
+    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'?'Veg/Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
     if(listing.available_from) fields.push(['Move-in date', formatDate(listing.available_from)]);
     const brokerPref = listing.brokerage_preference;
@@ -754,7 +767,7 @@ function renderListing(){
     if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
     if(listing.room_type) fields.push(['Room type',listing.room_type]);
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
-    if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
+    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'?'Veg/Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preferred',listing.gender_preference]);
     if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
   } else {
@@ -762,7 +775,7 @@ function renderListing(){
     if(listing.room_type) fields.push(['Room type',listing.room_type]);
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
     if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
-    if(listing.food_preference) fields.push(['Food preference',listing.food_preference]);
+    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'?'Veg/Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preference',listing.gender_preference]);
   }
 
@@ -991,7 +1004,42 @@ function nextPhoto(){if(currentPhoto<totalPhotos-1){currentPhoto++;updatePhoto()
 function prevPhoto(){if(currentPhoto>0){currentPhoto--;updatePhoto();}}
 function updatePhoto(){document.getElementById('photoSlides').style.transform=`translateX(-${currentPhoto*100}%)`;document.querySelectorAll('.photo-dot').forEach((d,i)=>d.classList.toggle('active',i===currentPhoto));updatePhotoCounter();}
 function updatePhotoCounter(){document.getElementById('photoCounter').textContent=`${currentPhoto+1} / ${totalPhotos}`;}
-function toggleSave(){isSaved=!isSaved;const btn=document.getElementById('saveBtn');if(isSaved){btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="#e6a817" stroke="#e6a817" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Listing saved!');}else{btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;showToast('Removed from saved');}}
+async function toggleSave(){
+  const user=getUser();
+  if(!user){window.location.href='login.html?trigger=save';return;}
+  const btn=document.getElementById('saveBtn');
+
+  isSaved=!isSaved;
+
+  // Update button UI immediately
+  if(isSaved){
+    btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="#e6a817" stroke="#e6a817" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+    showToast('Listing saved!');
+  } else {
+    btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+    showToast('Removed from saved');
+  }
+
+  try {
+    if(isSaved){
+      await fetch(`${SUPA_URL}/rest/v1/saved_listings`,{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({user_id:user.userId,listing_id:listing.id,created_at:new Date().toISOString()})
+      });
+    } else {
+      await fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${user.userId}&listing_id=eq.${listing.id}`,{
+        method:'DELETE',
+        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
+      });
+    }
+  } catch(e) {
+    // Revert on error
+    isSaved=!isSaved;
+    if(isSaved){btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="#e6a817" stroke="#e6a817" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;}
+    else{btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;}
+  }
+}
 // ── OWNER CONTROLS ─────────────────────────────────────────
 function showOwnerControls() {
   const user = getUser();

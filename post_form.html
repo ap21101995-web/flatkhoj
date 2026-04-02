@@ -266,7 +266,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       </div>
       <div class="area-selected-tag" id="tag-fl-area"><span id="tagval-fl-area"></span><button onclick="clearArea('fl-area')">×</button></div></div>
       <div class="field"><div class="field-label">Landmark / Building Name</div><input class="input" type="text" placeholder="e.g. Near Infinity Mall, Andheri West"><div class="field-hint">Exact address is only shared after contact is unlocked</div></div>
-      <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-ft')">1 RK</div><div class="pill" onclick="sp(this,'fl-ft')">1 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">2 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">3 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">4 BHK+</div><div class="pill" onclick="sp(this,'fl-ft')">Bungalow / Villa</div></div></div>
+      <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-ft')">1 RK</div><div class="pill" onclick="sp(this,'fl-ft')">1 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">2 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">3 BHK</div><div class="pill" onclick="spWithOther(this,'fl-ft','fl-other-type')">Other</div></div><input class="input" id="fl-other-type" type="text" placeholder="e.g. 4 BHK, Bungalow, Studio" style="display:none;margin-top:8px" /></div>
       <div class="field"><div class="field-label">What Is Available? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-av')">Single Room</div><div class="pill" onclick="sp(this,'fl-av')">Double Room</div><div class="pill" onclick="sp(this,'fl-av')">Entire flat</div></div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Monthly Rent <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="18000" min="3000" max="400000"></div></div>
@@ -309,6 +309,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">📍 Flat Details</div>
+      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="fm-poster-name" placeholder="First name is fine"></div>
       <div class="field"><div class="field-label">Your Flat's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-fm-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input class="area-input" type="text" placeholder="Type your area in Mumbai" oninput="areaSearch(this,'fm-area')" onfocus="areaSearch(this,'fm-area')" autocomplete="off">
@@ -318,7 +319,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="area-selected-tag" id="tag-fm-area"><span id="tagval-fm-area"></span><button onclick="clearArea('fm-area')">×</button></div>
       <div class="field-hint" style="color:var(--ink3)">Select the area where your flat is located</div></div>
       <div class="field-row">
-        <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>2 BHK</option><option>3 BHK</option><option>4 BHK</option><option>Other</option></select></div>
+        <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><select class="select" id="fm-flat-type" onchange="showOtherInput(this,'fm-other-type')"><option value="">Select…</option><option>1 BHK</option><option>2 BHK</option><option>3 BHK</option><option>Other</option></select><input class="input" id="fm-other-type" type="text" placeholder="e.g. 1.5 BHK, 1 RK, Studio" style="display:none;margin-top:8px"></div>
         <div class="field"><div class="field-label">People Currently Living <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Just Me</option><option>2 People</option><option>3 People</option><option>4+ People</option></select></div>
       </div>
       <div class="field"><div class="field-label">Room Available For Flatmate <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-rm')">Single Room</div><div class="pill" onclick="sp(this,'fm-rm')">Double Sharing</div><div class="pill" onclick="sp(this,'fm-rm')">Triple Sharing</div></div></div>
@@ -661,7 +662,7 @@ function collectFormData() {
   if (type === 'fl') {
     data.listing_type = 'flat_listing';
     data.rent_amount = parseInt(document.querySelector('#f-fl input[placeholder*="rent"]')?.value) || null;
-    data.flat_type = document.querySelector('#f-fl .sel[onclick*="flatType"]')?.textContent?.trim() || null;
+    const flFtEl = document.querySelector('#f-fl [onclick*="fl-ft"].sel'); const flOther = document.getElementById('fl-other-type')?.value?.trim(); data.flat_type = flFtEl ? (flFtEl.textContent.trim() === 'Other' && flOther ? flOther : flFtEl.textContent.trim()) : null;
     data.furnishing = document.querySelector('#f-fl .sel[onclick*="furnishing"]')?.textContent?.trim() || null;
     data.food_preference = document.querySelector('#f-fl .sel[onclick*="food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fl .sel[onclick*="gender"]')?.textContent?.trim() || null;
@@ -681,6 +682,8 @@ function collectFormData() {
     data.has_brokerage = false; // seeker is not charging brokerage
   } else if (type === 'fm') {
     data.listing_type = 'flatmate_wanted';
+    data.poster_name = document.getElementById('fm-poster-name')?.value?.trim() || null;
+    const fmFtSel = document.getElementById('fm-flat-type'); const fmOther = document.getElementById('fm-other-type')?.value?.trim(); data.flat_type = fmFtSel?.value === 'Other' && fmOther ? fmOther : (fmFtSel?.value || null);
     data.rent_amount = parseInt(document.querySelector('#f-fm input[type="number"]')?.value) || null;
     data.food_preference = document.querySelector('#f-fm .sel[onclick*="food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fm .sel[onclick*="gender"]')?.textContent?.trim() || null;
@@ -942,22 +945,59 @@ window.addEventListener('load', function() {
   }
 });
 
+function showOtherInput(select, inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.style.display = select.value === 'Other' ? 'block' : 'none';
+  if (select.value !== 'Other') input.value = '';
+}
+
+// Handle "Other" pill for flat type in fl
+function spWithOther(el, group, otherId) {
+  sp(el, group);
+  const otherInput = document.getElementById(otherId);
+  if (!otherInput) return;
+  if (el.textContent.trim() === 'Other') {
+    otherInput.style.display = 'block';
+    otherInput.focus();
+  } else {
+    otherInput.style.display = 'none';
+    otherInput.value = '';
+  }
+}
+
 function containsPhoneNumber(text) {
   if (!text) return false;
-  const phoneRegex = /(\+91|91)?[\s\-]?[6-9]\d{9}|\d{5}[\s\-]\d{5}/g;
-  return phoneRegex.test(text.replace(/\s/g, ''));
+  // Indian phone numbers in various formats
+  return /(\+91|91)?[\s\-\.]?[6-9]\d{4}[\s\-\.]?\d{5}/.test(text.replace(/\s/g,''));
+}
+
+function containsContactInfo(text) {
+  if (!text) return false;
+  // Email addresses
+  if (/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/.test(text)) return 'email address';
+  // Phone numbers
+  if (containsPhoneNumber(text)) return 'phone number';
+  // WhatsApp mentions with numbers
+  if (/whatsapp|whats.?app|wa\.me/i.test(text) && /\d{7,}/.test(text)) return 'WhatsApp contact';
+  // Instagram/social handles with contact intent
+  if (/(instagram|insta|ig|facebook|fb|twitter|telegram)\s*[:@]\s*\w+/i.test(text)) return 'social media handle';
+  return false;
 }
 
 function containsAbusiveLanguage(text) {
   if (!text) return false;
-  // Common abusive words in Hindi/English — extend as needed
-  const abusiveWords = [
-    'fuck', 'shit', 'bastard', 'bitch', 'asshole', 'damn', 'crap',
-    'madarchod', 'behenchod', 'chutiya', 'gaandu', 'randi', 'saala',
-    'harami', 'bhosdi', 'lund', 'bhosdike', 'chut', 'lavda'
+  const abusive = [
+    'fuck','shit','bastard','bitch','asshole','damn','crap','bloody',
+    'madarchod','behenchod','chutiya','gaandu','randi','saala','harami',
+    'bhosdi','lund','bhosdike','chut','lavda','bc','mc','mc bc',
+    'kamina','kamine','haramzada','suar','kutte','kutta'
   ];
   const lower = text.toLowerCase();
-  return abusiveWords.some(word => lower.includes(word));
+  return abusive.some(word => {
+    const regex = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b','i');
+    return regex.test(lower);
+  });
 }
 
 function nextStep(){
@@ -965,23 +1005,29 @@ function nextStep(){
 
   if(step===2){
     const textareas = document.querySelectorAll('#f-'+type+' textarea');
-    for(const ta of textareas){
-      if(containsPhoneNumber(ta.value)){
-        alert('⚠️ Please remove phone numbers from your description.\n\nYour contact number is shared securely after someone pays coins to unlock it. Adding it in the description defeats the purpose and may attract spam.');
-        ta.focus();
+    const textInputs = document.querySelectorAll('#f-'+type+' input[type="text"]:not([id*="area"]):not([id*="name"])');
+    const allFields = [...textareas, ...textInputs];
+
+    for(const field of allFields){
+      const val = field.value;
+      if(!val) continue;
+      const contactType = containsContactInfo(val);
+      if(contactType){
+        alert(`⚠️ Please remove the ${contactType} from your listing.\n\nYour contact is shared securely when someone unlocks it — adding it here defeats that purpose.`);
+        field.focus();
         return;
       }
-      if(containsAbusiveLanguage(ta.value)){
-        alert('⚠️ Your description contains inappropriate language.\n\nPlease keep your listing description respectful and relevant to housing.');
-        ta.focus();
+      if(containsAbusiveLanguage(val)){
+        alert('⚠️ Your description contains inappropriate language.\n\nPlease keep your listing respectful and relevant to housing.');
+        field.focus();
         return;
       }
     }
-    // Also check name field
-    const nameInput = document.querySelector('#f-'+type+' input[type="text"]');
-    if(nameInput && containsAbusiveLanguage(nameInput.value)){
+    // Check name field separately — allow names but not contact info
+    const nameField = document.getElementById(type + '-poster-name') || document.querySelector('#f-'+type+' input[id*="name"]');
+    if(nameField && containsAbusiveLanguage(nameField.value)){
       alert('⚠️ Please use a valid name.');
-      nameInput.focus();
+      nameField.focus();
       return;
     }
   }
