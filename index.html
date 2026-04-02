@@ -634,13 +634,16 @@ body {
   <div class="sheet-sub" id="unlockSub">Reveal this person's WhatsApp number</div>
   <div class="coin-balance-row">
     <span>Your coin balance</span>
-    <strong>🪙 8 coins</strong>
+    <strong id="unlockSheetBalance">🪙 — coins</strong>
   </div>
-  <div class="unlock-info-box">
-    Spending <strong>2 coins</strong> reveals their phone number. You can then WhatsApp or call them directly. Once unlocked, you won't need to pay again for the same person.
+  <div id="unlockInsufficientMsg" style="display:none;background:var(--red-bg);border:1px solid var(--red);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--red);margin-bottom:12px;text-align:center">
+    ⚠️ Not enough coins. <a href="coins.html" style="color:var(--red);font-weight:700;text-decoration:underline">Buy coins →</a>
   </div>
-  <button class="sheet-confirm-btn" onclick="confirmUnlock()">Spend 2 Coins & Unlock →</button>
-  <div class="sheet-note">Coins never expire · Payments via Razorpay · 100% secure</div>
+  <div class="unlock-info-box" id="unlockInfoBox">
+    Spending <strong id="unlockCostText">5 coins</strong> reveals their phone number. You can then WhatsApp or call them directly. Once unlocked, you won't need to pay again for the same listing.
+  </div>
+  <button class="sheet-confirm-btn" id="unlockConfirmBtn" onclick="confirmUnlock()">Spend <span id="unlockBtnCost">5</span> Coins & Unlock →</button>
+  <div class="sheet-note">Coins never expire · 100% secure</div>
 </div>
 
 <!-- ── FILTER SHEET ── -->
@@ -807,6 +810,9 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 function getUser() {
   try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; }
 }
+
+// ── UNLOCK COST — change this one number to update everywhere ──
+const UNLOCK_COST = 5;
 
 function goToActivity() {
   const user = getUser();
@@ -1032,7 +1038,7 @@ function renderListings(listings, reset) {
           ? `<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal);cursor:default" onclick="window.location.href='listing_detail.html?id=${l.id}'">✓ Contact unlocked — view</button>`
           : `<button class="unlock-btn" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
             ${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
-            <span class="coin-pip">${l.is_free_contact ? 'Free!' : '5 🪙'}</span>
+            <span class="coin-pip">${l.is_free_contact ? 'Free!' : UNLOCK_COST + ' 🪙'}</span>
           </button>`
         }
         <button class="save-btn" onclick="toggleSave(this,'${l.id}')" title="Save" style="${savedListingIds.has(l.id)?'background:#fef6e4;border-color:#e6a817':''}">
@@ -1047,7 +1053,7 @@ function renderListings(listings, reset) {
 // ── UNLOCK CONTACT ─────────────────────────────────────────
 let currentUnlockListingId = null;
 
-function handleUnlock(listingId, area) {
+async function handleUnlock(listingId, area) {
   const user = getUser();
   if (!user) {
     window.location.href = 'login.html?trigger=unlock';
@@ -1055,7 +1061,39 @@ function handleUnlock(listingId, area) {
   }
   currentUnlockListingId = listingId;
   document.getElementById('unlockSub').textContent = `Reveal the contact for this listing in ${area}.`;
+
+  // Set cost text from constant
+  document.getElementById('unlockCostText').textContent = UNLOCK_COST + ' coins';
+  document.getElementById('unlockBtnCost').textContent = UNLOCK_COST;
+
+  // Show loading state for balance
+  document.getElementById('unlockSheetBalance').textContent = '🪙 Loading…';
+  document.getElementById('unlockInsufficientMsg').style.display = 'none';
+  document.getElementById('unlockConfirmBtn').disabled = false;
+
   openSheet('unlock');
+
+  // Fetch fresh balance
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const data = await res.json();
+    const fresh = data[0]?.coins ?? 0;
+    user.coins = fresh;
+    localStorage.setItem('fmh_user', JSON.stringify(user));
+    document.getElementById('unlockSheetBalance').textContent = `🪙 ${fresh} coins`;
+
+    if (fresh < UNLOCK_COST) {
+      document.getElementById('unlockInsufficientMsg').style.display = 'block';
+      document.getElementById('unlockConfirmBtn').disabled = true;
+      document.getElementById('unlockConfirmBtn').style.opacity = '0.5';
+    } else {
+      document.getElementById('unlockConfirmBtn').style.opacity = '1';
+    }
+  } catch(e) {
+    document.getElementById('unlockSheetBalance').textContent = `🪙 ${user.coins || 0} coins`;
+  }
 }
 
 async function confirmUnlock() {
@@ -1088,9 +1126,9 @@ async function confirmUnlock() {
     const currentCoins = freshData[0]?.coins || 0;
 
     // Check coins with fresh balance
-    if (currentCoins < 5) {
+    if (currentCoins < UNLOCK_COST) {
       closeSheet('unlock');
-      if (confirm(`You need 5 coins to unlock this contact.\nYour balance: ${currentCoins} coins\n\nWould you like to buy more coins?`)) {
+      if (confirm(`You need ${UNLOCK_COST} coins to unlock this contact.\nYour balance: ${currentCoins} coins\n\nWould you like to buy more coins?`)) {
         window.location.href = 'coins.html';
       }
       btn.textContent = 'Spend 5 coins & unlock →';
@@ -1099,7 +1137,7 @@ async function confirmUnlock() {
     }
 
     // Deduct 5 coins
-    const newCoins = currentCoins - 5;
+    const newCoins = currentCoins - UNLOCK_COST;
     await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
       method: 'PATCH',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
@@ -1114,7 +1152,7 @@ async function confirmUnlock() {
         unlocker_user_id: user.userId,
         listing_id: currentUnlockListingId,
         listing_user_id: 'unknown',
-        coins_spent: 5,
+        coins_spent: UNLOCK_COST,
         created_at: new Date().toISOString()
       })
     });
@@ -1124,7 +1162,7 @@ async function confirmUnlock() {
     localStorage.setItem('fmh_user', JSON.stringify(user));
     
     // Update coin display in unlock sheet
-    document.querySelector('.coin-balance strong').textContent = '🪙 ' + newCoins;
+    document.getElementById('unlockSheetBalance').textContent = '🪙 ' + newCoins + ' coins';
 
     await showUnlockedContact(currentUnlockListingId);
 

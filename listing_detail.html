@@ -596,6 +596,7 @@ body {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────
+const UNLOCK_COST = 5; // Change this one number to update unlock price everywhere
 const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
 
@@ -885,8 +886,8 @@ async function confirmUnlock(){
       const freshData = await freshRes.json();
       const currentCoins = freshData[0]?.coins || 0;
 
-      if(currentCoins < 5){
-        btn.textContent='Spend 5 coins & unlock →';btn.disabled=false;
+      if(currentCoins < UNLOCK_COST){
+        btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;
         closeSheet('unlock');
         if(confirm('You need 5 coins to unlock this contact.\n\nYour balance: ' + currentCoins + ' coins\n\nWould you like to buy more coins?')) {
           window.location.href = 'coins.html';
@@ -894,7 +895,7 @@ async function confirmUnlock(){
         return;
       }
 
-      const newCoins = currentCoins - 5;
+      const newCoins = currentCoins - UNLOCK_COST;
       await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({coins:newCoins})});
       
       // Sync to localStorage
@@ -906,11 +907,11 @@ async function confirmUnlock(){
         el.textContent = '🪙 ' + newCoins + ' coins';
       });
 
-      await supaPost('coin_transactions',{user_id:user.userId,type:'unlock_contact',amount:-5,balance_after:newCoins,related_listing_id:listing.id,description:'Contact unlock',created_at:new Date().toISOString()});
-      await supaPost('contact_unlocks',{unlocker_user_id:user.userId,listing_id:listing.id,listing_user_id:listing.user_id,coins_spent:5,created_at:new Date().toISOString()});
+      await supaPost('coin_transactions',{user_id:user.userId,type:'unlock_contact',amount:-UNLOCK_COST,balance_after:newCoins,related_listing_id:listing.id,description:'Contact unlock',created_at:new Date().toISOString()});
+      await supaPost('contact_unlocks',{unlocker_user_id:user.userId,listing_id:listing.id,listing_user_id:listing.user_id,coins_spent:UNLOCK_COST,created_at:new Date().toISOString()});
     }
     revealContact();
-  }catch(err){btn.textContent='Spend 5 coins & unlock →';btn.disabled=false;alert('Failed to unlock. Please try again.');}
+  }catch(err){btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;alert('Failed to unlock. Please try again.');}
 }
 
 function revealContact(){
