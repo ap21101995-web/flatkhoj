@@ -1,76 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlatKhoj Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0f1117; --bg2:#1a1d27; --bg3:#222536;
+  --border:#2a2d3e; --border2:#353849;
+  --ink:#f0f0f0; --ink2:#a0a4b8; --ink3:#6b6f85;
+  --teal:#0f7b6c; --teal-light:#13a090; --teal-bg:rgba(15,123,108,0.15);
+  --red:#e05252; --red-bg:rgba(224,82,82,0.12);
+  --gold:#e6a817; --gold-bg:rgba(230,168,23,0.12);
+  --green:#2ecc71; --green-bg:rgba(46,204,113,0.12);
+  --blue:#4a9eff; --blue-bg:rgba(74,158,255,0.12);
+  --font:'Plus Jakarta Sans',sans-serif; --radius:10px; --sidebar:220px;
+}
+body { font-family:var(--font); background:var(--bg); color:var(--ink); min-height:100vh; }
+#loginScreen { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:9999; }
+.login-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; text-align:center; }
+.login-logo { font-size:28px; font-weight:800; margin-bottom:4px; }
+.login-logo span { color:var(--teal-light); }
+.login-sub { font-size:13px; color:var(--ink3); margin-bottom:32px; }
+.lbl { font-size:12px; color:var(--ink2); text-align:left; margin-bottom:6px; font-weight:600; display:block; }
+.linput { width:100%; background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; font-family:var(--font); font-size:14px; color:var(--ink); outline:none; margin-bottom:16px; }
+.linput:focus { border-color:var(--teal-light); }
+.lbtn { width:100%; padding:13px; background:var(--teal); color:white; border:none; border-radius:8px; font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer; }
+.lerr { font-size:13px; color:var(--red); margin-top:10px; display:none; }
+.layout { display:flex; min-height:100vh; }
+.sidebar { width:var(--sidebar); background:var(--bg2); border-right:1px solid var(--border); position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:10; }
+.main { margin-left:var(--sidebar); flex:1; }
+.sidebar-logo { padding:20px 16px 16px; border-bottom:1px solid var(--border); }
+.sidebar-logo-text { font-size:18px; font-weight:800; }
+.sidebar-logo-text span { color:var(--teal-light); }
+.sidebar-sub { font-size:11px; color:var(--ink3); margin-top:2px; }
+.nav-section { padding:12px 10px 4px; font-size:10px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:1px; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; color:var(--ink2); border-left:3px solid transparent; margin:2px 6px; }
+.nav-item:hover { color:var(--ink); background:var(--bg3); }
+.nav-item.active { color:var(--teal-light); background:var(--teal-bg); border-left-color:var(--teal-light); }
+.nav-badge { background:var(--red); color:white; border-radius:10px; padding:1px 7px; font-size:10px; font-weight:700; margin-left:auto; }
+.topbar { background:var(--bg2); border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:5; }
+.topbar-title { font-size:16px; font-weight:700; }
+.page { display:none; padding:24px; }
+.page.active { display:block; }
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; }
+.stat-label { font-size:12px; color:var(--ink3); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+.stat-value { font-size:28px; font-weight:800; }
+.stat-sub { font-size:12px; color:var(--ink3); margin-top:4px; }
+.table-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:20px; }
+.table-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.ttitle { font-size:15px; font-weight:700; }
+table { width:100%; border-collapse:collapse; }
+th { padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; background:var(--bg3); border-bottom:1px solid var(--border); }
+td { padding:12px 16px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(255,255,255,0.02); }
+.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.b-ok { background:var(--green-bg); color:var(--green); }
+.b-pending { background:var(--gold-bg); color:var(--gold); }
+.b-red { background:var(--red-bg); color:var(--red); }
+.b-blue { background:var(--blue-bg); color:var(--blue); }
+.b-resolved { background:var(--green-bg); color:var(--green); }
+.b-purchase { background:var(--gold-bg); color:var(--gold); }
+.b-unlock { background:var(--teal-bg); color:var(--teal-light); }
+.btn { padding:6px 14px; border-radius:6px; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; }
+.btn-ghost { background:var(--bg3); color:var(--ink2); border:1px solid var(--border2); }
+.btn-ghost:hover { color:var(--ink); }
+.btn-red { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); }
+.btn-teal { background:var(--teal-bg); color:var(--teal-light); border:1px solid rgba(19,160,144,0.3); }
+.toast { position:fixed; bottom:24px; right:24px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; font-size:13px; font-weight:600; z-index:9999; }
+.toast.ok { border-color:var(--teal); color:var(--teal-light); }
+.toast.err { border-color:var(--red); color:var(--red); }
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
+.modal-box { background:var(--bg2); border:1px solid var(--border); border-radius:16px; width:100%; max-width:540px; max-height:85vh; overflow-y:auto; }
+.modal-head { padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; }
+.modal-title { font-size:16px; font-weight:700; }
+.modal-sub { font-size:12px; color:var(--ink3); margin-top:3px; }
+.modal-close { background:none; border:none; color:var(--ink3); font-size:22px; cursor:pointer; line-height:1; }
+.filter-input { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:7px 12px; font-family:var(--font); font-size:13px; color:var(--ink); outline:none; }
+.filter-input:focus { border-color:var(--teal-light); }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Flat<span>Khoj</span></div>
+    <div class="login-sub">Admin Dashboard</div>
+    <label class="lbl">Password</label>
+    <input class="linput" type="password" id="pwInput" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="lbtn" onclick="doLogin()">Sign in</button>
+    <div class="lerr" id="lerr">Incorrect password</div>
+  </div>
+</div>
+
+<div class="layout" id="app" style="display:none">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
+      <div class="sidebar-sub">Admin Panel</div>
+    </div>
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
+    <div class="nav-item" onclick="go('listings',this)"><span>🏠</span> Listings</div>
+    <div class="nav-item" onclick="go('users',this)"><span>👥</span> Users</div>
+    <div class="nav-section">Analytics</div>
+    <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
+    <div class="nav-item" onclick="go('unlocks',this)"><span>🔓</span> Contact Unlocks</div>
+    <div class="nav-section">Moderation</div>
+    <div class="nav-item" onclick="go('reports',this)"><span>🚩</span> Reports <span class="nav-badge" id="rbadge" style="display:none">0</span></div>
+    <div class="nav-item" onclick="go('support',this)"><span>💬</span> Support</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <span style="font-size:12px;color:var(--ink3)">Admin</span>
+        <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="pg-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Active Listings</div><div class="stat-value" id="s-listings">—</div><div class="stat-sub" id="s-listings-sub">Loading…</div></div>
+        <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value" id="s-users">—</div><div class="stat-sub" id="s-users-sub">Loading…</div></div>
+        <div class="stat-card"><div class="stat-label">Coins Sold</div><div class="stat-value" id="s-revenue">—</div><div class="stat-sub" id="s-revenue-sub">Loading…</div></div>
+        <div class="stat-card"><div class="stat-label">Total Unlocks</div><div class="stat-value" id="s-unlocks">—</div><div class="stat-sub" id="s-unlocks-sub">Loading…</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="ttitle">Recent Unlocks</div></div>
+        <table id="recentTable"></table>
+      </div>
+    </div>
+
+    <!-- LISTINGS -->
+    <div class="page" id="pg-listings">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="ttitle">All Listings</div>
+          <input class="filter-input" placeholder="Search area…" oninput="filterTable('listingsTable',this.value)">
+        </div>
+        <table id="listingsTable"></table>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="page" id="pg-users">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="ttitle">All Users</div>
+          <input class="filter-input" placeholder="Search phone…" oninput="filterTable('usersTable',this.value)">
+        </div>
+        <table id="usersTable"></table>
+      </div>
+    </div>
+
+    <!-- COIN PURCHASES -->
+    <div class="page" id="pg-coinpurchases">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="ttitle">Coin Purchases</div>
+          <div id="totalCoinsInfo" style="font-size:13px;color:var(--gold)"></div>
+        </div>
+        <table id="coinpurchasesTable"></table>
+      </div>
+    </div>
+
+    <!-- UNLOCKS -->
+    <div class="page" id="pg-unlocks">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="ttitle">Contact Unlocks</div>
+          <div id="totalUnlocksInfo" style="font-size:13px;color:var(--teal-light)"></div>
+        </div>
+        <table id="unlocksTable"></table>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="page" id="pg-reports">
+      <div class="table-card">
+        <div class="table-header"><div class="ttitle">Reports</div></div>
+        <table id="reportsTable"></table>
+      </div>
+    </div>
+
+    <!-- SUPPORT -->
+    <div class="page" id="pg-support">
+      <div class="table-card">
+        <div class="table-header"><div class="ttitle">Support Conversations</div></div>
+        <table id="supportTable"></table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+const ADMIN_PW = 'Owner_Aditya_2026';
+
+async function supaGet(path) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+  });
+  return r.json();
+}
+async function supaPatch(table, query, data) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, {
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  });
+  return r.ok;
+}
+
+function doLogin() {
+  if (document.getElementById('pwInput').value === ADMIN_PW) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    loadDashboard();
+  } else {
+    document.getElementById('lerr').style.display = 'block';
+  }
+}
+function logout() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('pwInput').value = '';
+}
+
+function go(page, el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('pg-' + page).classList.add('active');
+  const titles = { dashboard:'Dashboard', listings:'All Listings', users:'All Users', coinpurchases:'Coin Purchases', unlocks:'Contact Unlocks', reports:'Reports', support:'Support' };
+  document.getElementById('topbarTitle').textContent = titles[page] || page;
+  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
+  if (loaders[page]) loaders[page]();
+}
+
+function timeAgo(d) {
+  const diff = Date.now() - new Date(d).getTime();
+  const m = Math.floor(diff/60000);
+  if(m<1) return 'just now';
+  if(m<60) return m+'m ago';
+  const h = Math.floor(m/60);
+  if(h<24) return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+
+function toast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type||'ok');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function showModal(title, sub, bodyHtml) {
+  const m = document.createElement('div');
+  m.className = 'modal-backdrop';
+  m.innerHTML = `<div class="modal-box">
+    <div class="modal-head">
+      <div><div class="modal-title">${title}</div><div class="modal-sub">${sub}</div></div>
+      <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">x</button>
+    </div>
+    ${bodyHtml}
+  </div>`;
+  m.onclick = e => { if(e.target===m) m.remove(); };
+  document.body.appendChild(m);
+}
+
+function filterTable(tableId, q) {
+  const lower = q.toLowerCase();
+  document.querySelectorAll('#'+tableId+' tr:not(:first-child)').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(lower) ? '' : 'none';
+  });
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [listings, users, purchases, unlocks] = await Promise.all([
+      supaGet('listings?select=id&is_active=eq.true'),
+      supaGet('users?select=id'),
+      supaGet('coin_transactions?select=amount&type=eq.purchase'),
+      supaGet('contact_unlocks?select=id')
+    ]);
+
+    document.getElementById('s-listings').textContent = listings.length;
+    document.getElementById('s-listings-sub').textContent = 'Active listings';
+    document.getElementById('s-users').textContent = users.length;
+    document.getElementById('s-users-sub').textContent = 'Registered users';
+    const totalCoins = purchases.reduce((s,p)=>s+(p.amount||0),0);
+    document.getElementById('s-revenue').textContent = totalCoins;
+    document.getElementById('s-revenue-sub').textContent = purchases.length + ' transactions';
+    document.getElementById('s-unlocks').textContent = unlocks.length;
+    document.getElementById('s-unlocks-sub').textContent = 'Contacts revealed';
+
+    const recentUnlocks = await supaGet('contact_unlocks?order=created_at.desc&limit=15&select=*');
+    const uids = [...new Set(recentUnlocks.map(u=>u.unlocker_user_id).filter(Boolean))];
+    const lids = [...new Set(recentUnlocks.map(u=>u.listing_id).filter(Boolean))];
+    const [rUsers, rListings] = await Promise.all([
+      uids.length > 0 ? supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : Promise.resolve([]),
+      lids.length > 0 ? supaGet('listings?id=in.('+lids.join(',')+')&select=id,areas') : Promise.resolve([])
+    ]);
+    const uMap = {}; rUsers.forEach(u=>uMap[u.id]=u.phone);
+    const lMap = {}; rListings.forEach(l=>lMap[l.id]=Array.isArray(l.areas)?l.areas[0]:l.areas||'Mumbai');
+
+    const t = document.getElementById('recentTable');
+    t.innerHTML = '<tr><th>User</th><th>Area Unlocked</th><th>Coins Paid</th><th>When</th></tr>';
+    if (!recentUnlocks.length) {
+      t.innerHTML += '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink3)">No unlocks yet</td></tr>';
+    } else {
+      recentUnlocks.forEach(u => {
+        const phone = uMap[u.unlocker_user_id] ? '+91 '+uMap[u.unlocker_user_id] : 'Unknown';
+        const area = lMap[u.listing_id] || '—';
+        t.innerHTML += `<tr>
+          <td style="font-weight:600">${phone}</td>
+          <td>${area}</td>
+          <td><span class="badge b-unlock">${u.coins_spent||5} coins</span></td>
+          <td style="font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
+        </tr>`;
+      });
+    }
+  } catch(e) { console.error('Dashboard:', e); }
+}
+
+// ── LISTINGS ──────────────────────────────────────────────
 async function loadListings() {
   try {
-    var listings = await supaGet('listings?select=*&order=created_at.desc&limit=100');
-    var tbody = document.querySelector('#pg-listings table');
-    if (!tbody) return;
-    var typeLabels = {flat_listing:'Flat listing',flat_wanted:'Flat wanted',flatmate_wanted:'Flatmate wanted',pg_listing:'PG listing'};
-    tbody.innerHTML = '<tr><th>Area / Type</th><th>Rent</th><th>Unlocks</th><th>Posted</th><th>Status</th><th>Actions</th></tr>';
-    if (listings.length === 0) {
-      tbody.innerHTML += '<tr><td colspan="6" style="text-align:center;color:var(--ink3);padding:24px">No listings yet</td></tr>';
-      document.querySelector('#pg-listings .ttitle').textContent = '0 listings';
-      return;
-    }
-    document.querySelector('#pg-listings .ttitle').textContent = listings.length + ' listings';
-    var unlocks = await supaGet('contact_unlocks?select=listing_id');
-    var unlockMap = {};
-    unlocks.forEach(function(u) { unlockMap[u.listing_id] = (unlockMap[u.listing_id] || 0) + 1; });
-    listings.forEach(function(l) {
-      var areas = Array.isArray(l.areas) ? l.areas.join(', ') : l.areas || 'Mumbai';
-      var price = l.rent_amount ? 'Rs.' + l.rent_amount.toLocaleString('en-IN') : '-';
-      var lid = l.id;
-      var unlockCount = unlockMap[lid] || 0;
-      var unlockCell = unlockCount > 0
-        ? '<button class="btn btn-ghost" onclick="viewUnlockers(\'' + lid + '\')" style="color:var(--teal-light);font-weight:700">Unlocked: ' + unlockCount + '</button>'
-        : '<span style="color:var(--ink3);font-size:12px">None yet</span>';
-      tbody.innerHTML += '<tr>' +
-        '<td><div style="font-weight:600;font-size:13px">' + areas + '</div>' +
-          '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + (typeLabels[l.listing_type]||l.listing_type) + '</div>' +
-          (l.custom_contact_phone ? '<div style="font-size:11px;color:var(--gold);margin-top:2px">+91 ' + l.custom_contact_phone + '</div>' : '') + '</td>' +
-        '<td>' + price + '</td>' +
-        '<td>' + unlockCell + '</td>' +
-        '<td style="font-size:12px;color:var(--ink3)">' + getTimeAgo(l.created_at) + '</td>' +
-        '<td><span class="badge ' + (l.is_active?'b-ok">Live':'b-pending">Inactive') + '</span></td>' +
-        '<td>' +
-          '<button class="btn btn-ghost" style="margin-right:4px" onclick="window.open('listing_detail.html?id=' + lid + '','_blank')">View</button>' +
-          '<button class="btn btn-red" onclick="removeListing(\'' + lid + '\', this)">Remove</button>' +
-        '</td></tr>';
+    const [listings, unlocks] = await Promise.all([
+      supaGet('listings?select=*&order=created_at.desc&limit=200'),
+      supaGet('contact_unlocks?select=listing_id')
+    ]);
+    const unlockMap = {};
+    unlocks.forEach(u => { unlockMap[u.listing_id] = (unlockMap[u.listing_id]||0)+1; });
+    const typeMap = {flat_listing:'Flat',flat_wanted:'Wanted',flatmate_wanted:'Flatmate',pg_listing:'PG'};
+    const t = document.getElementById('listingsTable');
+    t.innerHTML = '<tr><th>Area / Type</th><th>Custom Phone</th><th>Rent</th><th>Unlocks</th><th>Posted</th><th>Status</th><th>Actions</th></tr>';
+    listings.forEach(l => {
+      const areas = Array.isArray(l.areas) ? l.areas.join(', ') : l.areas||'Mumbai';
+      const price = l.rent_amount ? 'Rs.'+l.rent_amount.toLocaleString('en-IN') : '-';
+      const uc = unlockMap[l.id]||0;
+      const unlockBtn = uc > 0
+        ? `<button class="btn btn-teal" onclick="viewListingUnlockers('${l.id}','${areas.replace(/'/g,"\\'")}')">View ${uc}</button>`
+        : '<span style="color:var(--ink3)">None</span>';
+      t.innerHTML += `<tr>
+        <td><div style="font-weight:600">${areas}</div><div style="font-size:11px;color:var(--ink3)">${typeMap[l.listing_type]||l.listing_type}</div></td>
+        <td style="color:var(--gold);font-size:12px">${l.custom_contact_phone?'+91 '+l.custom_contact_phone:'—'}</td>
+        <td>${price}</td>
+        <td>${unlockBtn}</td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.created_at)}</td>
+        <td><span class="badge ${l.is_active?'b-ok">Live':'b-red">Off'}</span></td>
+        <td>
+          <button class="btn btn-ghost" style="margin-right:4px" onclick="window.open('listing_detail.html?id=${l.id}','_blank')">View</button>
+          <button class="btn btn-red" onclick="removeListing('${l.id}',this)">Remove</button>
+        </td>
+      </tr>`;
     });
-  } catch(e) { console.log('Listings error:', e); }
+  } catch(e) { console.error('Listings:', e); }
 }
 
-async function viewUnlockers(listingId) {
+async function removeListing(id, btn) {
+  if (!confirm('Remove this listing?')) return;
+  if (await supaPatch('listings', 'id=eq.'+id, {is_active:false})) {
+    btn.closest('tr').cells[5].innerHTML = '<span class="badge b-red">Off</span>';
+    toast('Removed', 'ok');
+  } else toast('Failed', 'err');
+}
+
+async function viewListingUnlockers(listingId, areaName) {
+  const unlocks = await supaGet('contact_unlocks?listing_id=eq.'+listingId+'&order=created_at.desc&select=*');
+  if (!unlocks.length) { toast('No unlocks', 'ok'); return; }
+  const uids = [...new Set(unlocks.map(u=>u.unlocker_user_id).filter(Boolean))];
+  const users = uids.length > 0 ? await supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : [];
+  const uMap = {}; users.forEach(u=>uMap[u.id]=u.phone);
+  const rows = unlocks.map(u => {
+    const phone = uMap[u.unlocker_user_id] ? '+91 '+uMap[u.unlocker_user_id] : 'Unknown';
+    return `<tr>
+      <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-weight:600">${phone}</td>
+      <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
+      <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--gold)">${u.coins_spent||5} coins</td>
+    </tr>`;
+  }).join('');
+  showModal('Who Unlocked This', areaName+' - '+unlocks.length+' unlock'+(unlocks.length>1?'s':''),
+    `<table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">
+      <th style="padding:10px 16px;text-align:left">User Phone</th>
+      <th style="padding:10px 16px;text-align:left">When</th>
+      <th style="padding:10px 16px;text-align:left">Coins Paid</th>
+    </tr>${rows}</table>`);
+}
+
+// ── USERS ─────────────────────────────────────────────────
+async function loadUsers() {
   try {
-    var unlocks = await supaGet('contact_unlocks?listing_id=eq.' + listingId + '&order=created_at.desc&select=*');
-    if (!unlocks || unlocks.length === 0) { toast('No unlocks yet', 'info'); return; }
-    var userIds = [];
-    unlocks.forEach(function(u){ if(u.unlocker_user_id && userIds.indexOf(u.unlocker_user_id)===-1) userIds.push(u.unlocker_user_id); });
-    var users = userIds.length > 0 ? await supaGet('users?id=in.(' + userIds.join(',') + ')&select=id,phone') : [];
-    var userMap = {};
-    users.forEach(function(u){userMap[u.id]=u.phone;});
-    var rows = unlocks.map(function(u){
-      var phone = userMap[u.unlocker_user_id] ? '+91 ' + userMap[u.unlocker_user_id] : 'Unknown';
-      return '<tr>' +
-        '<td style="padding:10px 12px;border-bottom:1px solid var(--border)">' + phone + '</td>' +
-        '<td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--ink3);font-size:12px">' + getTimeAgo(u.created_at) + '</td>' +
-        '<td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--gold)">' + (u.coins_spent||5) + ' coins</td></tr>';
-    }).join('');
-    var modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-    modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">' +
-      '<div style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
-        '<div><div style="font-size:16px;font-weight:700">Who Unlocked This Listing</div>' +
-          '<div style="font-size:12px;color:var(--ink3);margin-top:2px">' + unlocks.length + ' unlock' + (unlocks.length>1?'s':'') + '</div></div>' +
-        '<button onclick="this.closest('.modal-outer').remove()" style="background:none;border:none;color:var(--ink3);font-size:22px;cursor:pointer;line-height:1">x</button>' +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse">' +
-        '<tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">' +
-          '<th style="padding:10px 12px;text-align:left">User Phone</th>' +
-          '<th style="padding:10px 12px;text-align:left">When</th>' +
-          '<th style="padding:10px 12px;text-align:left">Coins Paid</th></tr>' +
-        rows + '</table></div>';
-    modal.className = 'modal-outer';
-    modal.onclick = function(e){if(e.target===modal)modal.remove();};
-    document.body.appendChild(modal);
-  } catch(e) { toast('Failed to load', 'err'); }
+    const users = await supaGet('users?select=*&order=created_at.desc');
+    const t = document.getElementById('usersTable');
+    t.innerHTML = '<tr><th>Phone</th><th>Coins Balance</th><th>Joined</th><th>Actions</th></tr>';
+    if (!users.length) { t.innerHTML += '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink3)">No users yet</td></tr>'; return; }
+    users.forEach(u => {
+      t.innerHTML += `<tr>
+        <td style="font-weight:600">+91 ${u.phone}</td>
+        <td><span style="color:var(--gold);font-weight:700">${u.coins||0} coins</span></td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
+        <td>
+          <button class="btn btn-teal" onclick="viewUserDetail('${u.id}','+91 ${u.phone}')">Full Activity</button>
+        </td>
+      </tr>`;
+    });
+  } catch(e) { console.error('Users:', e); }
 }
 
+async function viewUserDetail(userId, phone) {
+  const [purchases, unlocks, posts] = await Promise.all([
+    supaGet('coin_transactions?user_id=eq.'+userId+'&type=eq.purchase&order=created_at.desc&select=*'),
+    supaGet('contact_unlocks?unlocker_user_id=eq.'+userId+'&order=created_at.desc&select=*'),
+    supaGet('listings?user_id=eq.'+userId+'&order=created_at.desc&select=id,areas,listing_type,is_active,rent_amount')
+  ]);
+
+  // Fetch listing areas for unlocks
+  const lids = [...new Set(unlocks.map(u=>u.listing_id).filter(Boolean))];
+  const lListings = lids.length > 0 ? await supaGet('listings?id=in.('+lids.join(',')+')&select=id,areas') : [];
+  const lMap = {}; lListings.forEach(l=>lMap[l.id]=Array.isArray(l.areas)?l.areas[0]:l.areas||'Unknown');
+
+  const purchaseRows = !purchases.length ? '<tr><td colspan="3" style="padding:12px 16px;color:var(--ink3)">No purchases</td></tr>' :
+    purchases.map(p=>`<tr>
+      <td style="padding:8px 16px;border-bottom:1px solid var(--border)">${timeAgo(p.created_at)}</td>
+      <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--gold);font-weight:700">${p.amount} coins</td>
+      <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-size:11px;color:var(--ink3)">${p.order_id||'—'}</td>
+    </tr>`).join('');
+
+  const unlockRows = !unlocks.length ? '<tr><td colspan="3" style="padding:12px 16px;color:var(--ink3)">No unlocks</td></tr>' :
+    unlocks.map(u=>`<tr>
+      <td style="padding:8px 16px;border-bottom:1px solid var(--border)">${lMap[u.listing_id]||'Unknown'}</td>
+      <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--teal-light)">${u.coins_spent||5} coins</td>
+      <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
+    </tr>`).join('');
+
+  const postRows = !posts.length ? '<tr><td colspan="3" style="padding:12px 16px;color:var(--ink3)">No posts</td></tr>' :
+    posts.map(p=>{
+      const areas = Array.isArray(p.areas)?p.areas.join(', '):p.areas||'Mumbai';
+      return `<tr>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--border)">${areas}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${p.listing_type}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--border)"><span class="badge ${p.is_active?'b-ok">Live':'b-red">Off'}</span></td>
+      </tr>`;
+    }).join('');
+
+  showModal(phone, `${purchases.length} purchase${purchases.length!==1?'s':''} · ${unlocks.length} unlock${unlocks.length!==1?'s':''} · ${posts.length} post${posts.length!==1?'s':''}`,
+    `<div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px">Coin Purchases</div>
+    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">
+      <th style="padding:8px 16px;text-align:left">When</th><th style="padding:8px 16px;text-align:left">Coins</th><th style="padding:8px 16px;text-align:left">Order ID</th>
+    </tr>${purchaseRows}</table>
+    <div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;border-top:1px solid var(--border);margin-top:4px">Contacts Unlocked</div>
+    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">
+      <th style="padding:8px 16px;text-align:left">Area</th><th style="padding:8px 16px;text-align:left">Coins Paid</th><th style="padding:8px 16px;text-align:left">When</th>
+    </tr>${unlockRows}</table>
+    <div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;border-top:1px solid var(--border);margin-top:4px">Posts Made</div>
+    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">
+      <th style="padding:8px 16px;text-align:left">Area</th><th style="padding:8px 16px;text-align:left">Type</th><th style="padding:8px 16px;text-align:left">Status</th>
+    </tr>${postRows}</table>`);
+}
+
+// ── COIN PURCHASES ────────────────────────────────────────
+async function loadCoinPurchases() {
+  try {
+    const purchases = await supaGet('coin_transactions?type=eq.purchase&order=created_at.desc&select=*');
+    const uids = [...new Set(purchases.map(p=>p.user_id).filter(Boolean))];
+    const users = uids.length > 0 ? await supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : [];
+    const uMap = {}; users.forEach(u=>uMap[u.id]=u.phone);
+    const totalCoins = purchases.reduce((s,p)=>s+(p.amount||0),0);
+    document.getElementById('totalCoinsInfo').textContent = purchases.length+' transactions · '+totalCoins+' total coins sold';
+    const t = document.getElementById('coinpurchasesTable');
+    t.innerHTML = '<tr><th>User Phone</th><th>Coins Bought</th><th>Order ID</th><th>When</th></tr>';
+    if (!purchases.length) { t.innerHTML += '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink3)">No purchases yet</td></tr>'; return; }
+    purchases.forEach(p => {
+      const phone = uMap[p.user_id] ? '+91 '+uMap[p.user_id] : 'Unknown';
+      t.innerHTML += `<tr>
+        <td style="font-weight:600">${phone}</td>
+        <td><span class="badge b-purchase">${p.amount} coins</span></td>
+        <td style="font-size:12px;color:var(--ink3);font-family:monospace">${p.order_id||'—'}</td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(p.created_at)}</td>
+      </tr>`;
+    });
+  } catch(e) { console.error('Coin purchases:', e); }
+}
+
+// ── CONTACT UNLOCKS ───────────────────────────────────────
+async function loadUnlocks() {
+  try {
+    const unlocks = await supaGet('contact_unlocks?order=created_at.desc&select=*');
+    const uids = [...new Set(unlocks.map(u=>u.unlocker_user_id).filter(Boolean))];
+    const lids = [...new Set(unlocks.map(u=>u.listing_id).filter(Boolean))];
+    const [users, listings] = await Promise.all([
+      uids.length > 0 ? supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : Promise.resolve([]),
+      lids.length > 0 ? supaGet('listings?id=in.('+lids.join(',')+')&select=id,areas,listing_type,custom_contact_phone') : Promise.resolve([])
+    ]);
+    const uMap = {}; users.forEach(u=>uMap[u.id]=u.phone);
+    const lMap = {}; listings.forEach(l=>lMap[l.id]={area:Array.isArray(l.areas)?l.areas[0]:l.areas||'Unknown', phone:l.custom_contact_phone});
+    document.getElementById('totalUnlocksInfo').textContent = unlocks.length+' total unlock'+(unlocks.length!==1?'s':'');
+    const t = document.getElementById('unlocksTable');
+    t.innerHTML = '<tr><th>Unlocked By</th><th>Listing Area</th><th>Listing Phone</th><th>Coins Paid</th><th>When</th></tr>';
+    if (!unlocks.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No unlocks yet</td></tr>'; return; }
+    unlocks.forEach(u => {
+      const phone = uMap[u.unlocker_user_id] ? '+91 '+uMap[u.unlocker_user_id] : 'Unknown';
+      const lInfo = lMap[u.listing_id] || {};
+      t.innerHTML += `<tr>
+        <td style="font-weight:600">${phone}</td>
+        <td>${lInfo.area||'—'}</td>
+        <td style="color:var(--gold);font-size:12px">${lInfo.phone?'+91 '+lInfo.phone:'—'}</td>
+        <td><span class="badge b-unlock">${u.coins_spent||5} coins</span></td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
+      </tr>`;
+    });
+  } catch(e) { console.error('Unlocks:', e); }
+}
+
+// ── REPORTS ───────────────────────────────────────────────
+async function loadReports() {
+  try {
+    const reports = await supaGet('reports?order=created_at.desc&select=*');
+    const pending = reports.filter(r=>r.status==='pending').length;
+    const rb = document.getElementById('rbadge');
+    if (pending > 0) { rb.textContent=pending; rb.style.display=''; } else rb.style.display='none';
+    const rMap = {fake:'Fake listing',brokerage:'Wrong brokerage',wrong_contact:'Wrong contact',rented:'Already rented',spam:'Spam',other:'Other'};
+    const t = document.getElementById('reportsTable');
+    t.innerHTML = '<tr><th>Listing</th><th>Reason</th><th>Time</th><th>Status</th><th>Actions</th></tr>';
+    if (!reports.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No reports yet</td></tr>'; return; }
+    reports.forEach(r => {
+      const status = r.status==='pending' ? '<span class="badge b-pending">Pending</span>' : '<span class="badge b-ok">Resolved</span>';
+      const actions = r.status==='pending'
+        ? `<button class="btn btn-red" style="margin-right:4px" onclick="resolveReport('${r.id}','remove',this)">Remove listing</button>
+           <button class="btn btn-ghost" onclick="resolveReport('${r.id}','dismiss',this)">Dismiss</button>`
+        : '<span style="font-size:12px;color:var(--ink3)">Done</span>';
+      t.innerHTML += `<tr>
+        <td style="font-size:12px;color:var(--ink3);font-family:monospace">${(r.listing_id||'').slice(0,8)}...</td>
+        <td>${rMap[r.reason]||r.reason}</td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(r.created_at)}</td>
+        <td>${status}</td><td>${actions}</td>
+      </tr>`;
+    });
+  } catch(e) { console.error('Reports:', e); }
+}
+
+async function resolveReport(id, action, btn) {
+  if (action==='remove') {
+    const reports = await supaGet('reports?id=eq.'+id+'&select=listing_id');
+    if (reports[0]?.listing_id) await supaPatch('listings','id=eq.'+reports[0].listing_id,{is_active:false});
+  }
+  await supaPatch('reports','id=eq.'+id,{status:'resolved',resolved_at:new Date().toISOString()});
+  const row = btn.closest('tr');
+  row.cells[3].innerHTML = '<span class="badge b-ok">Resolved</span>';
+  row.cells[4].innerHTML = '<span style="font-size:12px;color:var(--ink3)">Done</span>';
+  toast(action==='remove'?'Listing removed':'Dismissed','ok');
+}
+
+// ── SUPPORT ───────────────────────────────────────────────
+async function loadSupport() {
+  try {
+    const convs = await supaGet('support_conversations?order=updated_at.desc&select=*');
+    const t = document.getElementById('supportTable');
+    t.innerHTML = '<tr><th>User Phone</th><th>Subject</th><th>Status</th><th>Updated</th><th>Actions</th></tr>';
+    if (!convs.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No conversations</td></tr>'; return; }
+    convs.forEach(c => {
+      t.innerHTML += `<tr>
+        <td style="font-weight:600">+91 ${c.user_phone||'Unknown'}</td>
+        <td>${c.subject}</td>
+        <td><span class="badge ${c.status==='open'?'b-pending">Open':'b-ok">Resolved'}</span></td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(c.updated_at)}</td>
+        <td><a href="support_admin.html" target="_blank" class="btn btn-ghost">Open chat</a></td>
+      </tr>`;
+    });
+  } catch(e) { console.error('Support:', e); }
+}
+</script>
+</body>
+</html>
