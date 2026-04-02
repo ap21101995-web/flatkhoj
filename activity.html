@@ -178,11 +178,28 @@ window.onload = async function() {
 async function loadMyPosts(user) {
   const wrap = document.getElementById('myPostsWrap');
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&order=created_at.desc&select=*`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    // Fetch both posts created by user AND posts claimed by user (posted on their behalf)
+    const [myRes, claimedRes] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&order=created_at.desc&select=*`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      }),
+      fetch(`${SUPA_URL}/rest/v1/listings?claimed_by_user_id=eq.${user.userId}&order=created_at.desc&select=*`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      })
+    ]);
+
+    const myPosts = await myRes.json();
+    const claimedPosts = await claimedRes.json();
+
+    // Merge and deduplicate
+    const allIds = new Set();
+    const posts = [];
+    [...(Array.isArray(myPosts) ? myPosts : []), ...(Array.isArray(claimedPosts) ? claimedPosts : [])].forEach(p => {
+      if (!allIds.has(p.id)) { allIds.add(p.id); posts.push(p); }
     });
-    const posts = await res.json();
-    if (!Array.isArray(posts) || posts.length === 0) {
+    posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    if (posts.length === 0) {
       wrap.innerHTML = `<div class="empty-state">
         <div class="empty-icon">📋</div>
         <div class="empty-title">No posts yet</div>
@@ -194,11 +211,12 @@ async function loadMyPosts(user) {
     wrap.innerHTML = '';
     posts.forEach(p => {
       const areas = Array.isArray(p.areas) ? p.areas.join(', ') : p.areas || 'Mumbai';
+      const isClaimed = p.claimed_by_user_id === user.userId && p.user_id !== user.userId;
       const div = document.createElement('div');
       div.className = 'activity-card';
       div.onclick = () => window.location.href = `listing_detail.html?id=${p.id}`;
       div.innerHTML = `
-        <div class="activity-type">${typeLabels[p.listing_type] || p.listing_type}</div>
+        <div class="activity-type">${typeLabels[p.listing_type] || p.listing_type}${isClaimed ? ' <span style="background:var(--gold-bg);color:var(--gold);padding:2px 6px;border-radius:4px;font-size:10px">Added for you</span>' : ''}</div>
         <div class="activity-title">${p.description?.slice(0,80) || 'Listing in ' + areas}</div>
         <div class="activity-meta">
           <span>📍 ${areas}</span>
