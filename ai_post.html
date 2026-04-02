@@ -346,9 +346,9 @@ function startRecording() {
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
-  recognition.continuous = true;
+  recognition.continuous = false;   // false works more reliably on mobile
   recognition.interimResults = true;
-  recognition.lang = 'en-IN'; // Works for both English and Hinglish on Android
+  recognition.lang = 'en-IN';
 
   fullTranscript = '';
 
@@ -357,7 +357,7 @@ function startRecording() {
     document.getElementById('micBtn').classList.add('recording');
     document.getElementById('micBtn').textContent = '⏹️';
     document.getElementById('micStatus').textContent = 'Listening… tap to stop';
-    document.getElementById('micSub').textContent = 'Speak clearly about your flat listing';
+    document.getElementById('micSub').textContent = 'Speak clearly, then pause — it will auto-process';
     document.getElementById('transcriptBox').classList.add('show');
     document.getElementById('voiceHints').style.display = 'none';
   };
@@ -378,26 +378,39 @@ function startRecording() {
 
   recognition.onerror = function(event) {
     console.error('Speech error:', event.error);
-    stopRecording();
+    isRecording = false;
+    document.getElementById('micBtn').classList.remove('recording');
+    document.getElementById('micBtn').textContent = '🎤';
     if (event.error === 'not-allowed') {
-      alert('Microphone permission denied. Please allow microphone access and try again.');
+      document.getElementById('micStatus').textContent = 'Microphone access denied';
+      alert('Please allow microphone access in your browser settings and try again.');
+    } else if (event.error === 'no-speech') {
+      document.getElementById('micStatus').textContent = 'No speech detected — tap to try again';
+    } else if (event.error === 'network') {
+      document.getElementById('micStatus').textContent = 'Network error — check connection';
+    } else {
+      document.getElementById('micStatus').textContent = 'Error: ' + event.error + ' — tap to try again';
     }
   };
 
   recognition.onend = function() {
-    // Always process when recording ends
+    document.getElementById('micBtn').classList.remove('recording');
+    document.getElementById('micBtn').textContent = '🎤';
     if (fullTranscript && fullTranscript.trim().length > 5) {
-      processVoiceWithClaude(fullTranscript);
+      document.getElementById('micStatus').textContent = 'Processing your listing…';
+      processVoiceWithClaude(fullTranscript.trim());
     } else if (isRecording) {
-      // Nothing was captured
       isRecording = false;
-      document.getElementById('micBtn').classList.remove('recording');
-      document.getElementById('micBtn').textContent = '🎤';
-      document.getElementById('micStatus').textContent = 'Nothing heard. Tap to try again.';
+      document.getElementById('micStatus').textContent = 'Nothing heard — tap to try again';
     }
+    isRecording = false;
   };
 
-  recognition.start();
+  try {
+    recognition.start();
+  } catch(e) {
+    alert('Could not start microphone. Please refresh and try again.');
+  }
 }
 
 function stopRecording() {
