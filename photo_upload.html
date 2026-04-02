@@ -612,25 +612,15 @@ async function uploadToCloudinary(file, index, total) {
 
 // ── HANDLE CONTINUE ────────────────────────────────────────
 async function handleContinue() {
-  const isNew = new URLSearchParams(window.location.search).get('new') === '1';
-  const redirectUrl = listingId
-    ? `listing_detail.html?id=${listingId}${isNew ? '&new=1' : ''}`
-    : 'index.html?posted=1';
-
   if (photos.length === 0) {
-    window.location.href = redirectUrl;
+    window.location.href = 'index.html?posted=1';
     return;
   }
 
   if (CLOUDINARY_CLOUD_NAME === 'YOUR_CLOUD_NAME') {
     // Demo mode — no real upload
-    // Redirect to listing detail with new banner
-    if (listingId) {
-      const isNew = new URLSearchParams(window.location.search).get('new') === '1';
-      window.location.href = `listing_detail.html?id=${listingId}${isNew ? '&new=1' : ''}`;
-    } else {
-      document.getElementById('successOverlay').classList.add('show');
-    }
+    // Redirect to homepage after posting
+    window.location.href = 'index.html?posted=1';
     return;
   }
 
@@ -670,13 +660,8 @@ async function handleContinue() {
       });
     }
 
-    // Redirect to listing detail with new banner
-    if (listingId) {
-      const isNew = new URLSearchParams(window.location.search).get('new') === '1';
-      window.location.href = `listing_detail.html?id=${listingId}${isNew ? '&new=1' : ''}`;
-    } else {
-      document.getElementById('successOverlay').classList.add('show');
-    }
+    // Redirect to homepage after posting
+    window.location.href = 'index.html?posted=1';
 
   } catch(err) {
     console.error('Upload error:', err);

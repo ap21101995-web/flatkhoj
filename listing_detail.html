@@ -754,6 +754,8 @@ function renderListing(){
     if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'?'Veg/Non-Veg':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
     if(listing.available_from) fields.push(['Move-in date', formatDate(listing.available_from)]);
+    if(listing.room_type) fields.push(['Looking for', listing.room_type]);
+    if(listing.stay_duration) fields.push(['Stay duration', listing.stay_duration]);
     const brokerPref = listing.brokerage_preference;
     if(brokerPref === 'yes') fields.push(['Brokerage','✅ Okay With Brokerage']);
     else if(brokerPref === 'prefno') fields.push(['Brokerage','🤝 Preferably No Brokerage']);
