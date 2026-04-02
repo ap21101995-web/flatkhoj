@@ -367,13 +367,13 @@ body {
 
 /* ── BOTTOM NAV ── */
 .bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  max-width: 680px; margin: 0 auto;
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
   background: var(--bg);
   border-top: 1px solid var(--border);
   display: flex;
   padding-bottom: env(safe-area-inset-bottom);
-  z-index: 50;
+  z-index: 100;
 }
 .nav-item {
   flex: 1; display: flex; flex-direction: column;
@@ -639,10 +639,10 @@ body {
   <div id="unlockInsufficientMsg" style="display:none;background:var(--red-bg);border:1px solid var(--red);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--red);margin-bottom:12px;text-align:center">
     ⚠️ Not enough coins. <a href="coins.html" style="color:var(--red);font-weight:700;text-decoration:underline">Buy coins →</a>
   </div>
+  <button class="sheet-confirm-btn" id="unlockConfirmBtn" onclick="confirmUnlock()">Spend <span id="unlockBtnCost">5</span> Coins & Unlock →</button>
   <div class="unlock-info-box" id="unlockInfoBox">
     Spending <strong id="unlockCostText">5 coins</strong> reveals their phone number. You can then WhatsApp or call them directly. Once unlocked, you won't need to pay again for the same listing.
   </div>
-  <button class="sheet-confirm-btn" id="unlockConfirmBtn" onclick="confirmUnlock()">Spend <span id="unlockBtnCost">5</span> Coins & Unlock →</button>
   <div class="sheet-note">Coins never expire · 100% secure</div>
 </div>
 
