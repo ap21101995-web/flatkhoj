@@ -435,19 +435,15 @@ body {
 
   <button class="report-btn" onclick="openSheet('report')">Report this listing</button>
 
-  <div class="divider" id="similarDivider"></div>
 
-  <!-- Similar listings -->
-  <div class="section-heading" id="similarHeading">Similar listings</div>
-  <div id="similarWrap"></div>
 
 </div>
 
 
 <!-- BOTTOM ACTION BAR -->
 <div class="bottom-bar" id="bottomBar">
-  <div class="coin-balance">
-    <strong>🪙 8</strong>
+  <div class="coin-balance" id="coinBalanceBar" style="display:none">
+    <strong id="coinBalanceNum">🪙 0</strong>
     coins
   </div>
   <button class="unlock-main-btn" onclick="openSheet('unlock')" id="unlockBtn">
@@ -645,7 +641,6 @@ window.onload=async function(){
       document.getElementById('newPostBanner').style.display = 'block';
       window.history.replaceState({}, '', `listing_detail.html?id=${listingId}`);
     }
-    loadSimilar();
     fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({view_count:(listing.view_count||0)+1})});
 
     // Restore saved state from Supabase
@@ -756,7 +751,7 @@ function renderListing(){
   if(listing.listing_type==='flat_wanted'){
     if(listing.flat_type) fields.push(['Looking for',listing.flat_type]);
     if(listing.furnishing) fields.push(['Furnishing needed',listing.furnishing]);
-    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'?'Veg/Non-Veg':listing.food_preference]);
+    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'?'Veg/Non-Veg':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
     if(listing.available_from) fields.push(['Move-in date', formatDate(listing.available_from)]);
     const brokerPref = listing.brokerage_preference;
@@ -767,7 +762,7 @@ function renderListing(){
     if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
     if(listing.room_type) fields.push(['Room type',listing.room_type]);
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
-    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'?'Veg/Non-Veg':listing.food_preference]);
+    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'?'Veg/Non-Veg':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preferred',listing.gender_preference]);
     if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
   } else {
@@ -775,7 +770,7 @@ function renderListing(){
     if(listing.room_type) fields.push(['Room type',listing.room_type]);
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
     if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
-    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'?'Veg/Non-Veg':listing.food_preference]);
+    if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'?'Veg/Non-Veg':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preference',listing.gender_preference]);
   }
 
@@ -840,6 +835,8 @@ function renderListing(){
   const user=getUser();
   if(user){
     document.querySelector('.coin-balance strong').textContent=`🪙 ${user.coins||0}`;
+    document.getElementById('coinBalanceBar').style.display = 'flex';
+    document.getElementById('coinBalanceNum').textContent = `🪙 ${user.coins||0}`;
     // Fetch fresh balance from Supabase and update
     fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`,{
       headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
@@ -848,6 +845,8 @@ function renderListing(){
       user.coins = fresh;
       localStorage.setItem('fmh_user', JSON.stringify(user));
       document.querySelector('.coin-balance strong').textContent=`🪙 ${fresh}`;
+      document.getElementById('coinBalanceBar').style.display = 'flex';
+      document.getElementById('coinBalanceNum').textContent = `🪙 ${fresh}`;
       const unlockBalance = document.getElementById('unlockCoinBalance');
       if(unlockBalance) unlockBalance.textContent=`🪙 ${fresh} coins`;
       const confirmBtn = document.getElementById('confirmUnlockBtn');
@@ -868,29 +867,7 @@ function renderListing(){
   }
 }
 
-async function loadSimilar(){
-  try{
-    const similar=await supaGet(`listings?listing_type=eq.${listing.listing_type}&is_active=eq.true&id=neq.${listing.id}&limit=3&order=created_at.desc&select=*`);
-    const wrap=document.getElementById('similarWrap');
-    if(!similar||similar.length===0){
-      document.getElementById('similarDivider').style.display='none';
-      document.getElementById('similarHeading').style.display='none';
-      return;
-    }
-    const typeLabels={flat_listing:'🏠 Flat listing',flat_wanted:'🔍 Flat wanted',flatmate_wanted:'👥 Flatmate wanted',pg_listing:'🏨 PG listing'};
-    wrap.innerHTML='';
-    similar.forEach(l=>{
-      const areas=Array.isArray(l.areas)?l.areas[0]:l.areas||'Mumbai';
-      const price=l.rent_amount?'₹'+l.rent_amount.toLocaleString('en-IN'):'Ask';
-      const div=document.createElement('div');div.className='similar-card';
-      div.innerHTML=`<div style="flex:1"><div class="similar-type">${typeLabels[l.listing_type]||l.listing_type}</div><div class="similar-title">${(l.description?.slice(0,60)||'Listing').replace(/</g,'&lt;')}</div><div class="similar-price">${price}<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div><div class="similar-location">📍 ${areas}</div></div><button class="similar-unlock" onclick="window.location.href='listing_detail.html?id=${l.id}'">View →</button>`;
-      wrap.appendChild(div);
-    });
-  }catch(err){
-    document.getElementById('similarDivider').style.display='none';
-    document.getElementById('similarHeading').style.display='none';
-  }
-}
+
 
 async function confirmUnlock(){
   const user=getUser();
