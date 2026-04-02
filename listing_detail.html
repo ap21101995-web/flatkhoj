@@ -422,9 +422,14 @@ body {
 
   <div id="ownerControls" style="display:none;margin-bottom:16px">
     <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Manage your listing</div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;margin-bottom:12px">
       <button onclick="editListing()" style="flex:1;padding:12px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">✏️ Edit listing</button>
       <button onclick="deleteListing()" style="padding:12px 16px;background:var(--red-bg);color:var(--red);border:1.5px solid var(--red);border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">🗑️ Delete</button>
+    </div>
+    <!-- Who unlocked my contact -->
+    <div id="unlockersSection" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px">🔓 Who unlocked your contact</div>
+      <div id="unlockersList" style="font-size:13px;color:var(--ink3)">Loading…</div>
     </div>
   </div>
 
@@ -997,6 +1002,35 @@ function showOwnerControls() {
 
   if (isAppOwner || isOriginalPoster || isClaimedUser) {
     document.getElementById('ownerControls').style.display = 'block';
+    loadUnlockers();
+  }
+}
+
+async function loadUnlockers() {
+  const wrap = document.getElementById('unlockersList');
+  try {
+    const unlocks = await supaGet(`contact_unlocks?listing_id=eq.${listing.id}&order=created_at.desc&select=*`);
+    if (!unlocks || unlocks.length === 0) {
+      wrap.innerHTML = '<span style="color:var(--ink3)">No one has unlocked your contact yet.</span>';
+      return;
+    }
+    // Fetch user phones
+    const userIds = [...new Set(unlocks.map(u => u.unlocker_user_id).filter(Boolean))];
+    let userMap = {};
+    if (userIds.length > 0) {
+      const users = await supaGet(`users?id=in.(${userIds.join(',')})&select=id,phone`);
+      users.forEach(u => userMap[u.id] = u.phone);
+    }
+    wrap.innerHTML = unlocks.map(u => {
+      const phone = userMap[u.unlocker_user_id] ? '+91 ' + userMap[u.unlocker_user_id] : 'Unknown';
+      const time = (() => { const diff=Date.now()-new Date(u.created_at).getTime(); const m=Math.floor(diff/60000); if(m<60)return m+'m ago'; const h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; })();
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:600;color:var(--ink)">${phone}</div>
+        <div style="font-size:12px;color:var(--ink3)">${time}</div>
+      </div>`;
+    }).join('') + `<div style="font-size:12px;color:var(--ink3);margin-top:8px;text-align:right">${unlocks.length} person${unlocks.length>1?'s':''} unlocked your contact</div>`;
+  } catch(e) {
+    wrap.innerHTML = '<span style="color:var(--ink3)">Could not load</span>';
   }
 }
 
