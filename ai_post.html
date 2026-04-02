@@ -297,57 +297,35 @@ async function processScreenshotWithClaude(base64Image, mediaType) {
   document.getElementById('bottomBar').style.display = 'none';
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Route through Supabase Edge Function (secure — API key stays on server)
+    const response = await fetch(`${SUPA_URL}/functions/v1/ai-extract`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mediaType, data: base64Image }
-            },
-            {
-              type: 'text',
-              text: `This is a screenshot of a flat/property listing from WhatsApp or a similar source in Mumbai, India.
-
-Extract the listing details and return ONLY a JSON object with these fields (use null if not found):
-{
-  "listing_type": "flat_listing" or "flat_wanted" or "flatmate_wanted" or "pg_listing",
-  "areas": ["area name in Mumbai"],
-  "rent_amount": number or null,
-  "flat_type": "1 RK" or "1 BHK" or "2 BHK" or "3 BHK" or "4+ BHK" or null,
-  "room_type": "Single occupancy" or "Double occupancy" or "Entire flat" or null,
-  "furnishing": "Fully furnished" or "Semi-furnished" or "Unfurnished" or null,
-  "food_preference": "Veg only" or "Non-veg ok" or "No preference" or null,
-  "gender_preference": "Male only" or "Female only" or "Any" or null,
-  "has_brokerage": true or false,
-  "description": "clean summary of the listing in 1-2 sentences",
-  "confidence": "high" or "medium" or "low",
-  "warnings": "any issues or missing important info" or null
-}
-
-Return ONLY the JSON, no other text.`
-            }
-          ]
-        }]
+        type: 'screenshot',
+        imageBase64: base64Image,
+        mediaType: mediaType
       })
     });
 
     const data = await response.json();
-    const text = data.content[0].text.trim();
-    const json = JSON.parse(text.replace(/```json|```/g, '').trim());
 
+    if (!data.success || !data.data) {
+      throw new Error(data.error || 'Extraction failed');
+    }
+
+    const json = data.data;
     extractedData = json;
     showExtractedData('screenshot', json);
 
   } catch(err) {
-    console.error('Claude error:', err);
+    console.error('AI extract error:', err);
     document.getElementById('screenshotProcessing').classList.remove('show');
-    alert('Could not read the screenshot. Please try a clearer image or use the form instead.');
+    alert('Could not read the screenshot. Please try a clearer image or use the manual form instead.');
   }
 }
 
@@ -443,43 +421,26 @@ async function processVoiceWithClaude(transcript) {
   document.getElementById('bottomBar').style.display = 'none';
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(`${SUPA_URL}/functions/v1/ai-extract`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `Someone spoke the following to describe their flat listing in Mumbai, India. The speech may be in Hindi, English, or a mix (Hinglish).
-
-Transcript: "${transcript}"
-
-Extract the listing details and return ONLY a JSON object:
-{
-  "listing_type": "flat_listing" or "flat_wanted" or "flatmate_wanted" or "pg_listing",
-  "areas": ["area name in Mumbai"],
-  "rent_amount": number or null,
-  "flat_type": "1 RK" or "1 BHK" or "2 BHK" or "3 BHK" or "4+ BHK" or null,
-  "room_type": "Single occupancy" or "Double occupancy" or "Entire flat" or null,
-  "furnishing": "Fully furnished" or "Semi-furnished" or "Unfurnished" or null,
-  "food_preference": "Veg only" or "Non-veg ok" or "No preference" or null,
-  "gender_preference": "Male only" or "Female only" or "Any" or null,
-  "has_brokerage": true or false,
-  "description": "clean polished summary of the listing in 2-3 sentences in English",
-  "confidence": "high" or "medium" or "low",
-  "warnings": "any issues or missing important info" or null
-}
-
-Return ONLY the JSON, no other text.`
-        }]
+        type: 'voice',
+        transcript: transcript
       })
     });
 
     const data = await response.json();
-    const text = data.content[0].text.trim();
-    const json = JSON.parse(text.replace(/```json|```/g, '').trim());
 
+    if (!data.success || !data.data) {
+      throw new Error(data.error || 'Extraction failed');
+    }
+
+    const json = data.data;
     extractedData = json;
     showExtractedData('voice', json);
 
