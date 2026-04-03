@@ -1425,7 +1425,7 @@ loadAreaChips();
 let savedListingIds = new Set();
 let unlockedListingIds = new Set();
 
-(async () => {
+async function fetchUserData() {
   const user = getUser();
   if (user) {
     try {
@@ -1441,13 +1441,28 @@ let unlockedListingIds = new Set();
       if (Array.isArray(savedData)) savedListingIds = new Set(savedData.map(d => d.listing_id));
       if (Array.isArray(unlockedData)) {
         unlockedListingIds = new Set(unlockedData.map(d => d.listing_id));
-        // Sync to localStorage so listing_detail page also knows
         localStorage.setItem('fk_unlocked', JSON.stringify([...unlockedListingIds]));
       }
     } catch(e) {}
   }
+}
+
+// Initial load
+(async () => {
+  await fetchUserData();
   loadListings();
 })();
+
+// Re-fetch when user navigates back (e.g. from listing_detail)
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    // Page was restored from cache — re-fetch and re-render
+    (async () => {
+      await fetchUserData();
+      loadListings();
+    })();
+  }
+});
 
 // Hide login nudge if already logged in
 const _user = getUser();

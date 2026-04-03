@@ -286,6 +286,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your Flat</div><div class="step-sub">Seekers will see these details before contacting you</div></div>
     <div class="form-card">
       <div class="card-title">📍 Location & Property</div>
+      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="fl-poster-name" placeholder="First name is fine"></div>
       <div class="field"><div class="field-label">Flat's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-fl-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input class="area-input" type="text" placeholder="Type your flat's area in Mumbai" oninput="areaSearch(this,'fl-area')" onfocus="areaSearch(this,'fl-area')" autocomplete="off">
@@ -384,6 +385,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your PG</div><div class="step-sub">Help people find the right paying guest accommodation</div></div>
     <div class="form-card">
       <div class="card-title">📍 PG Details</div>
+      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="pg-poster-name" placeholder="First name is fine"></div>
       <div class="field"><div class="field-label">PG Name <span style="color:var(--ink3);font-weight:400;font-size:11px">(Optional)</span></div><input class="input" type="text" placeholder="e.g. Sunshine PG — leave blank if no name"><div class="field-hint">Don't have a name? No problem — just leave it blank. We'll auto-generate a title like "PG available in Andheri West for girls"</div></div>
       <div class="field"><div class="field-label">PG's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-pg-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -680,8 +682,10 @@ function collectFormData() {
   const areas = areaVals[type + '-area'] || [];
   data.areas = areas.length > 0 ? areas : ['Mumbai'];
 
-  // Poster name — from whichever form section is active
-  const nameInput = document.querySelector('#f-' + type + ' input[placeholder*="name" i], #f-' + type + ' input[placeholder*="Name" i]');
+  // Poster name — try specific ID first, fallback to generic search
+  const nameById = document.getElementById(type + '-poster-name');
+  const nameByQuery = document.querySelector('#f-' + type + ' input[type="text"][placeholder*="name" i]');
+  const nameInput = nameById || nameByQuery;
   if (nameInput && nameInput.value.trim()) {
     data.poster_name = nameInput.value.trim();
   }

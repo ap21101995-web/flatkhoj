@@ -631,8 +631,15 @@ window.onload=async function(){
     }
     const user=getUser();
     if(user){
-      const unlocks=await supaGet(`contact_unlocks?unlocker_user_id=eq.${user.userId}&listing_id=eq.${listingId}`);
-      if(unlocks&&unlocks.length>0) showAlreadyUnlocked();
+      // Check localStorage first for instant display
+      const cachedUnlocked = JSON.parse(localStorage.getItem('fk_unlocked') || '[]');
+      if(cachedUnlocked.includes(listingId)) {
+        showAlreadyUnlocked();
+      } else {
+        // Verify with Supabase
+        const unlocks=await supaGet(`contact_unlocks?unlocker_user_id=eq.${user.userId}&listing_id=eq.${listingId}`);
+        if(unlocks&&unlocks.length>0) showAlreadyUnlocked();
+      }
     }
     renderListing();
     showOwnerControls();
