@@ -1048,9 +1048,13 @@ async function toggleSave(){
 function showOwnerControls() {
   const user = getUser();
   if (!user) return;
-  const isAppOwner = user.isOwner === true || user.isOwner === 'true' || user.phone === '9538584612';
-  const isOriginalPoster = user.userId && listing.user_id && user.userId === listing.user_id;
-  const isClaimedUser = listing.claimed_by_user_id && user.userId === listing.claimed_by_user_id;
+
+  // Normalize phone for comparison
+  const userPhone = String(user.phone || '').replace(/\s/g, '').replace(/^\+91/, '').replace(/^91/, '');
+  const isAppOwner = user.isOwner === true || user.isOwner === 'true' || userPhone === '9538584612';
+  const isOriginalPoster = user.userId && listing && listing.user_id && String(user.userId) === String(listing.user_id);
+  const isClaimedUser = listing && listing.claimed_by_user_id && String(user.userId) === String(listing.claimed_by_user_id);
+
   if (isAppOwner || isOriginalPoster || isClaimedUser) {
     document.getElementById('ownerControls').style.display = 'block';
     loadUnlockers();
