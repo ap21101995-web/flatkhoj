@@ -741,22 +741,10 @@ body {
 <div class="modal-sheet" id="loginSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">Sign In to FlatKhoj</div>
-  <div class="sheet-sub">Enter your mobile number — we'll send a quick OTP</div>
-
-  <div style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg2)">
-      <span style="padding:13px 12px;font-size:14px;font-weight:600;color:var(--ink2);border-right:1px solid var(--border);background:white">+91</span>
-      <input type="tel" placeholder="Mobile number" maxlength="10" id="phoneInput"
-        style="flex:1;border:none;padding:13px 14px;font-family:var(--font);font-size:15px;color:var(--ink);background:transparent;outline:none"
-        oninput="checkPhone(this)">
-    </div>
-  </div>
-
-  <button class="sheet-confirm-btn" id="sendOtpBtn" style="opacity:0.4;cursor:not-allowed" disabled>Send OTP →</button>
-
+  <div class="sheet-sub">Sign in to unlock contacts and post listings</div>
+  <button class="sheet-confirm-btn" onclick="closeSheet('login');window.location.href='login.html'">Continue to sign in →</button>
   <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--ink3);line-height:1.6">
-    By signing in you agree to our Terms of Service.<br>
-    Browse freely without signing in — sign in only to unlock contacts.
+    Browse freely without signing in — sign in only to unlock contacts or post.
   </div>
 </div>
 
@@ -1596,7 +1584,7 @@ function openUnlockSheet(name) {
   openSheet('unlock');
 }
 function openFilterSheet() { openSheet('filter'); }
-function openLoginSheet() { openSheet('login'); }
+function openLoginSheet() { window.location.href = 'login.html'; }
 function openPostSheet() { openSheet('post'); }
 
 function confirmUnlock() {
@@ -1661,18 +1649,7 @@ async function toggleSave(btn, listingId) {
 }
 
 // Phone input enable OTP
-function checkPhone(input) {
-  const btn = document.getElementById('sendOtpBtn');
-  if (input.value.length === 10) {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.style.cursor = 'pointer';
-  } else {
-    btn.disabled = true;
-    btn.style.opacity = '0.4';
-    btn.style.cursor = 'not-allowed';
-  }
-}
+
 
 // Filter pills (single select per group)
 function toggleFPill(el, group) {
