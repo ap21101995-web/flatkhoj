@@ -1119,7 +1119,7 @@ async function confirmUnlock() {
       if (confirm(`You need ${UNLOCK_COST} coins to unlock this contact.\nYour balance: ${currentCoins} coins\n\nWould you like to buy more coins?`)) {
         window.location.href = 'coins.html';
       }
-      btn.textContent = 'Spend 5 coins & unlock →';
+      btn.innerHTML = 'Spend <span id="unlockBtnCost">' + UNLOCK_COST + '</span> Coins & Unlock →';
       btn.disabled = false;
       return;
     }
@@ -1155,7 +1155,7 @@ async function confirmUnlock() {
     await showUnlockedContact(currentUnlockListingId);
 
   } catch(err) {
-    btn.textContent = 'Spend 5 coins & unlock →';
+    btn.innerHTML = 'Spend <span id="unlockBtnCost">' + UNLOCK_COST + '</span> Coins & Unlock →';
     btn.disabled = false;
     alert('Failed to unlock. Please try again.');
   }
@@ -1586,18 +1586,6 @@ function openUnlockSheet(name) {
 function openFilterSheet() { openSheet('filter'); }
 function openLoginSheet() { window.location.href = 'login.html'; }
 function openPostSheet() { openSheet('post'); }
-
-function confirmUnlock() {
-  closeSheet('unlock');
-  // Show success feedback
-  const btn = event.target;
-  btn.textContent = '✓ Unlocked!';
-  btn.style.background = '#0f7b6c';
-  setTimeout(() => {
-    btn.textContent = 'Spend 5 coins & unlock →';
-    btn.style.background = '';
-  }, 2000);
-}
 
 // Save button toggle
 async function toggleSave(btn, listingId) {
