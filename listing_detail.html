@@ -420,7 +420,7 @@ body {
     🎉 Your listing is now live! This is exactly how others will see it.
   </div>
 
-  <div id="ownerControls" style="display:none;margin-bottom:16px">
+  <div id="ownerControls" style="display:none;margin-bottom:16px" data-owner-section="true">
     <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Manage your listing</div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <button onclick="editListing()" style="flex:1;padding:12px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">✏️ Edit listing</button>
@@ -1046,28 +1046,27 @@ async function toggleSave(){
 }
 // ── OWNER CONTROLS ─────────────────────────────────────────
 function showOwnerControls() {
-  const user = getUser();
+  try {
+    const raw = localStorage.getItem('fmh_user');
+    if (!raw) return;
+    const user = JSON.parse(raw);
+    if (!user) return;
 
-  // Show debug info on screen
-  const debugDiv = document.createElement('div');
-  debugDiv.style.cssText = 'position:fixed;top:60px;left:0;right:0;background:red;color:white;padding:8px;font-size:11px;z-index:9999;word-break:break-all';
-  debugDiv.textContent = 'user=' + JSON.stringify(user) + ' | listing.user_id=' + (listing && listing.user_id);
-  document.body.appendChild(debugDiv);
+    // Extract last 10 digits of phone
+    const phone = String(user.phone || '').replace(/\D/g,'').slice(-10);
+    const isOwner = phone === '9538584612' || user.isOwner === true || user.isOwner === 'true';
+    const isOriginalPoster = user.userId && listing && listing.user_id && String(user.userId) === String(listing.user_id);
+    const isClaimed = listing && listing.claimed_by_user_id && String(user.userId) === String(listing.claimed_by_user_id);
 
-  if (!user) return;
-
-  const phone = String(user.phone || '').replace(/\D/g, '').slice(-10);
-  const isAppOwner = phone === '9538584612' || user.isOwner === true || user.isOwner === 'true';
-  const isOriginalPoster = !!(user.userId && listing && listing.user_id && String(user.userId) === String(listing.user_id));
-  const isClaimedUser = !!(listing && listing.claimed_by_user_id && user.userId && String(user.userId) === String(listing.claimed_by_user_id));
-
-  debugDiv.textContent += ' | phone=' + phone + ' isOwner=' + isAppOwner;
-
-  if (isAppOwner || isOriginalPoster || isClaimedUser) {
-    document.getElementById('ownerControls').style.display = 'block';
-    loadUnlockers();
+    if (isOwner || isOriginalPoster || isClaimed) {
+      document.getElementById('ownerControls').style.display = 'block';
+      loadUnlockers();
+    }
+  } catch(e) {
+    console.error('showOwnerControls error:', e);
   }
 }
+
 
 async function loadUnlockers() {
   const wrap = document.getElementById('unlockersList');
