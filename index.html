@@ -816,11 +816,26 @@ function getUnlockedListings() {
   try { return JSON.parse(localStorage.getItem('fk_unlocked') || '[]'); } catch(e) { return []; }
 }
 function markAsUnlocked(listingId) {
+  // Update in-memory set immediately
+  unlockedListingIds.add(listingId);
+  // Sync to localStorage
   const unlocked = getUnlockedListings();
   if (!unlocked.includes(listingId)) {
     unlocked.push(listingId);
     localStorage.setItem('fk_unlocked', JSON.stringify(unlocked));
   }
+  // Update card button on homepage if visible
+  document.querySelectorAll(`[onclick*="handleUnlock('${listingId}'"]`).forEach(btn => {
+    const row = btn.closest('.unlock-row');
+    if (row) {
+      btn.style.background = 'var(--teal-bg)';
+      btn.style.color = 'var(--teal)';
+      btn.style.border = '1.5px solid var(--teal)';
+      btn.style.cursor = 'default';
+      btn.innerHTML = '✓ Contact unlocked — view';
+      btn.onclick = () => window.location.href = `listing_detail.html?id=${listingId}`;
+    }
+  });
 }
 
 // ── LOAD LISTINGS FROM SUPABASE ────────────────────────────
@@ -1022,7 +1037,7 @@ function renderListings(listings, reset) {
         <div class="time-ago">${timeAgo}</div>
       </div>
       <div class="unlock-row">
-        ${getUnlockedListings().includes(l.id)
+        ${unlockedListingIds.has(l.id)
           ? `<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal);cursor:default" onclick="window.location.href='listing_detail.html?id=${l.id}'">✓ Contact unlocked — view</button>`
           : `<button class="unlock-btn" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
             ${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
@@ -1101,7 +1116,8 @@ async function confirmUnlock() {
     const existing = await checkRes.json();
 
     if (existing.length > 0) {
-      // Already unlocked — show contact
+      // Already unlocked — mark and show contact
+      markAsUnlocked(currentUnlockListingId);
       await showUnlockedContact(currentUnlockListingId);
       return;
     }
@@ -1151,6 +1167,9 @@ async function confirmUnlock() {
     
     // Update coin display in unlock sheet
     document.getElementById('unlockSheetBalance').textContent = '🪙 ' + newCoins + ' coins';
+
+    // Mark as unlocked in memory and update card
+    markAsUnlocked(currentUnlockListingId);
 
     await showUnlockedContact(currentUnlockListingId);
 
@@ -1402,17 +1421,29 @@ async function loadAreaChips() {
 // Load area chips and listings on page load
 loadAreaChips();
 
-// Load saved listing IDs from Supabase, then load listings
+// Fetch saved AND unlocked listings from Supabase before rendering cards
 let savedListingIds = new Set();
+let unlockedListingIds = new Set();
+
 (async () => {
   const user = getUser();
   if (user) {
     try {
-      const res = await fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${user.userId}&select=listing_id`, {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) savedListingIds = new Set(data.map(d => d.listing_id));
+      const [savedRes, unlockedRes] = await Promise.all([
+        fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${user.userId}&select=listing_id`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        }),
+        fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&select=listing_id`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        })
+      ]);
+      const [savedData, unlockedData] = await Promise.all([savedRes.json(), unlockedRes.json()]);
+      if (Array.isArray(savedData)) savedListingIds = new Set(savedData.map(d => d.listing_id));
+      if (Array.isArray(unlockedData)) {
+        unlockedListingIds = new Set(unlockedData.map(d => d.listing_id));
+        // Sync to localStorage so listing_detail page also knows
+        localStorage.setItem('fk_unlocked', JSON.stringify([...unlockedListingIds]));
+      }
     } catch(e) {}
   }
   loadListings();
