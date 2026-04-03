@@ -1047,13 +1047,21 @@ async function toggleSave(){
 // ── OWNER CONTROLS ─────────────────────────────────────────
 function showOwnerControls() {
   const user = getUser();
+
+  // Show debug info on screen
+  const debugDiv = document.createElement('div');
+  debugDiv.style.cssText = 'position:fixed;top:60px;left:0;right:0;background:red;color:white;padding:8px;font-size:11px;z-index:9999;word-break:break-all';
+  debugDiv.textContent = 'user=' + JSON.stringify(user) + ' | listing.user_id=' + (listing && listing.user_id);
+  document.body.appendChild(debugDiv);
+
   if (!user) return;
 
-  // Multiple ways to detect owner
   const phone = String(user.phone || '').replace(/\D/g, '').slice(-10);
   const isAppOwner = phone === '9538584612' || user.isOwner === true || user.isOwner === 'true';
   const isOriginalPoster = !!(user.userId && listing && listing.user_id && String(user.userId) === String(listing.user_id));
   const isClaimedUser = !!(listing && listing.claimed_by_user_id && user.userId && String(user.userId) === String(listing.claimed_by_user_id));
+
+  debugDiv.textContent += ' | phone=' + phone + ' isOwner=' + isAppOwner;
 
   if (isAppOwner || isOriginalPoster || isClaimedUser) {
     document.getElementById('ownerControls').style.display = 'block';
