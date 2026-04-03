@@ -261,10 +261,10 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">🙋 About You</div>
-      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" placeholder="First name is fine"></div>
+      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="fw-poster-name" placeholder="First name is fine"></div>
       <div class="field-row">
         <div class="field"><div class="field-label">You Are A <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Working Professional</option><option>Student</option><option>Business Owner</option><option>Other</option></select></div>
-        <div class="field"><div class="field-label">Gender <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Male</option><option>Female</option><option>Prefer Not To Say</option></select></div>
+        <div class="field"><div class="field-label">Gender <span class="req">*</span></div><select class="select" id="fw-gender-select"><option value="">Select…</option><option>Male</option><option>Female</option><option>Prefer Not To Say</option></select></div>
       </div>
       <div class="field"><div class="field-label">Food Preference <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fw-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fw-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fw-food')">No Veg/Non-Veg Preference</div></div></div>
       <div class="field"><div class="field-label">Originally From</div><input class="input" type="text" placeholder="e.g. Pune, Maharashtra"><div class="field-hint">Helps build trust with owners</div></div>
@@ -693,19 +693,22 @@ function collectFormData() {
   // Type-specific fields
   if (type === 'fl') {
     data.listing_type = 'flat_listing';
+    data.poster_name = document.getElementById('fl-poster-name')?.value?.trim() || null;
+    const flFtEl = document.querySelector('#f-fl .sel[onclick*="fl-ft"]'); const flOther = document.getElementById('fl-other-type')?.value?.trim(); data.flat_type = flFtEl ? (flFtEl.textContent.trim() === 'Other' && flOther ? flOther : flFtEl.textContent.trim()) : null;
     data.rent_amount = parseInt(document.querySelector('#f-fl input[placeholder*="rent"]')?.value) || null;
     const flFtEl = document.querySelector('#f-fl [onclick*="fl-ft"].sel'); const flOther = document.getElementById('fl-other-type')?.value?.trim(); data.flat_type = flFtEl ? (flFtEl.textContent.trim() === 'Other' && flOther ? flOther : flFtEl.textContent.trim()) : null;
     data.furnishing = document.querySelector('#f-fl .sel[onclick*="furnishing"]')?.textContent?.trim() || null;
-    data.food_preference = document.querySelector('#f-fl .sel[onclick*="food"]')?.textContent?.trim() || null;
-    data.gender_preference = document.querySelector('#f-fl .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.food_preference = document.querySelector('#f-fl .sel[onclick*="fl-food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.querySelector('#f-fl .sel[onclick*="fl-gen"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
     data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fl-available')?.value || null;
   } else if (type === 'fw') {
     data.listing_type = 'flat_wanted';
+    data.poster_name = document.getElementById('fw-poster-name')?.value?.trim() || null;
     data.rent_amount = parseInt(document.querySelector('#f-fw input[type="number"]')?.value) || null;
-    data.food_preference = document.querySelector('#f-fw .sel[onclick*="food"]')?.textContent?.trim() || null;
-    data.gender_preference = document.querySelector('#f-fw .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.food_preference = document.querySelector('#f-fw .sel[onclick*="fw-food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.getElementById('fw-gender-select')?.value || null;
     data.description = document.querySelector('#f-fw textarea')?.value || null;
     data.available_from = document.getElementById('fw-movein')?.value || null;
     data.room_type = getLookingForValue() || null;
@@ -718,16 +721,19 @@ function collectFormData() {
     data.poster_name = document.getElementById('fm-poster-name')?.value?.trim() || null;
     const fmFtSel = document.getElementById('fm-flat-type'); const fmOther = document.getElementById('fm-other-type')?.value?.trim(); data.flat_type = fmFtSel?.value === 'Other' && fmOther ? fmOther : (fmFtSel?.value || null);
     data.rent_amount = parseInt(document.querySelector('#f-fm input[type="number"]')?.value) || null;
-    data.food_preference = document.querySelector('#f-fm .sel[onclick*="food"]')?.textContent?.trim() || null;
-    data.gender_preference = document.querySelector('#f-fm .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.food_preference = document.querySelector('#f-fm .sel[onclick*="fm-food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.querySelector('#f-fm .sel[onclick*="fm-gen"]')?.textContent?.trim() || null;
+    data.room_type = document.querySelector('#f-fm .sel[onclick*="fm-rm"]')?.textContent?.trim() || null;
+    data.furnishing = document.querySelector('#f-fm .sel[onclick*="fm-furn"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fm textarea')?.value || null;
     data.has_brokerage = false;
     data.available_from = document.getElementById('fm-available')?.value || null;
   } else if (type === 'pg') {
     data.listing_type = 'pg_listing';
+    data.poster_name = document.getElementById('pg-poster-name')?.value?.trim() || null;
     data.rent_amount = parseInt(document.querySelector('#f-pg input[type="number"]')?.value) || null;
-    data.food_preference = document.querySelector('#f-pg .sel[onclick*="food"]')?.textContent?.trim() || null;
-    data.gender_preference = document.querySelector('#f-pg .sel[onclick*="gender"]')?.textContent?.trim() || null;
+    data.food_preference = document.querySelector('#f-pg .sel[onclick*="pg-food"]')?.textContent?.trim() || null;
+    data.gender_preference = document.querySelector('#f-pg .sel[onclick*="pg-gen"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-pg textarea')?.value || null;
     data.has_brokerage = document.getElementById('pg-byes')?.classList.contains('sel-yes') || false;
   }
