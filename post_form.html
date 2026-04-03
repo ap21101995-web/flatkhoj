@@ -227,7 +227,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="area-selected-tag" id="tag-fw-area"><span id="tagval-fw-area"></span><button onclick="clearArea('fw-area')">×</button></div>
       <div class="field-hint" style="color:var(--ink3)">Add up to 3 areas — we'll show your listing in all of them</div></div>
       <div class="field-row">
-        <div class="field"><div class="field-label">Max Budget <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="20000" min="3000" max="400000"></div></div>
+        <div class="field"><div class="field-label">Budget (max) <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="20000" min="3000" max="400000"></div></div>
         <div class="field"><div class="field-label">Move-in date <span class="req">*</span></div><input class="input" type="date" id="fw-movein"></div>
       </div>
       <div class="field"><div class="field-label">Looking For <span class="req">*</span></div>
@@ -298,7 +298,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-ft')">1 RK</div><div class="pill" onclick="sp(this,'fl-ft')">1 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">2 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">3 BHK</div><div class="pill" onclick="spWithOther(this,'fl-ft','fl-other-type')">Other</div></div><input class="input" id="fl-other-type" type="text" placeholder="e.g. 4 BHK, Bungalow, Studio" style="display:none;margin-top:8px" /></div>
       <div class="field"><div class="field-label">What Is Available? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-av')">Single Room</div><div class="pill" onclick="sp(this,'fl-av')">Double Room</div><div class="pill" onclick="sp(this,'fl-av')">Entire flat</div></div></div>
       <div class="field-row">
-        <div class="field"><div class="field-label">Monthly Rent <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="18000" min="3000" max="400000"></div></div>
+        <div class="field"><div class="field-label">Monthly rent <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="18000" min="3000" max="400000"></div></div>
         <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="36000"></div></div>
       </div>
       <div class="field-row">
@@ -353,7 +353,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       </div>
       <div class="field"><div class="field-label">Room Available For Flatmate <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-rm')">Single Room</div><div class="pill" onclick="sp(this,'fm-rm')">Double Sharing</div><div class="pill" onclick="sp(this,'fm-rm')">Triple Sharing</div></div></div>
       <div class="field-row">
-        <div class="field"><div class="field-label">Rent Per Person <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="12000" min="2000"></div></div>
+        <div class="field"><div class="field-label">Rent per person <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="12000" min="2000"></div></div>
         <div class="field"><div class="field-label">Available from <span class="req">*</span></div><input class="input" type="date" id="fm-available"></div>
       </div>
       <div class="field"><div class="field-label">Furnishing</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-furn')">Fully furnished</div><div class="pill" onclick="sp(this,'fm-furn')">Semi-furnished</div><div class="pill" onclick="sp(this,'fm-furn')">Unfurnished</div></div></div>
@@ -1075,8 +1075,24 @@ function nextStep(){
   if(step===1&&!type){alert('Please select a listing type to continue');return;}
 
   if(step===2){
+    // Validate name is filled
+    const nameField = document.getElementById(type + '-poster-name');
+    if(nameField && !nameField.value.trim()){
+      alert('Please enter your name before continuing.');
+      nameField.focus();
+      return;
+    }
+
+    // Validate budget/rent is filled
+    const rentField = document.querySelector('#f-' + type + ' input[type="number"]');
+    if(rentField && !rentField.value){
+      alert('Please enter a budget or rent amount before continuing.');
+      rentField.focus();
+      return;
+    }
+
     const textareas = document.querySelectorAll('#f-'+type+' textarea');
-    const textInputs = document.querySelectorAll('#f-'+type+' input[type="text"]:not([id*="area"]):not([id*="name"])');
+    const textInputs = document.querySelectorAll('#f-'+type+' input[type="text"]:not([id*="area"]):not([id*="name"]):not([id*="other"])');
     const allFields = [...textareas, ...textInputs];
 
     for(const field of allFields){
@@ -1094,8 +1110,7 @@ function nextStep(){
         return;
       }
     }
-    // Check name field separately — allow names but not contact info
-    const nameField = document.getElementById(type + '-poster-name') || document.querySelector('#f-'+type+' input[id*="name"]');
+    // Check name field for abusive language
     if(nameField && containsAbusiveLanguage(nameField.value)){
       alert('⚠️ Please use a valid name.');
       nameField.focus();

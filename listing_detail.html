@@ -507,38 +507,55 @@ body {
   <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
 
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">POSTER NAME</div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">NAME</div>
       <input id="edit_poster_name" class="edit-input" type="text" placeholder="First name is fine">
     </div>
 
-    <div>
+    <div id="edit_contact_wrap">
       <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">CONTACT NUMBER (shown after unlock)</div>
       <input id="edit_contact" class="edit-input" type="tel" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
     </div>
 
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">RENT / BUDGET (₹)</div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">RENT / BUDGET (₹/month)</div>
       <input id="edit_rent" class="edit-input" type="number" placeholder="e.g. 20000">
     </div>
 
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">AREAS</div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">AREA(S)</div>
       <input id="edit_areas" class="edit-input" type="text" placeholder="e.g. Andheri West, Bandra West">
       <div style="font-size:11px;color:var(--ink3);margin-top:4px">Separate multiple areas with commas</div>
     </div>
 
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">DESCRIPTION</div>
-      <textarea id="edit_description" class="edit-input" rows="4" placeholder="Describe the listing..." style="resize:vertical"></textarea>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">FLAT TYPE</div>
+      <select id="edit_flat_type" class="edit-input">
+        <option value="">— Not specified —</option>
+        <option>1 RK</option>
+        <option>1 BHK</option>
+        <option>2 BHK</option>
+        <option>3 BHK</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">FURNISHING</div>
+      <select id="edit_furnishing" class="edit-input">
+        <option value="">— Not specified —</option>
+        <option>Fully furnished</option>
+        <option>Semi-furnished</option>
+        <option>Unfurnished</option>
+      </select>
     </div>
 
     <div>
       <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">FOOD PREFERENCE</div>
       <select id="edit_food" class="edit-input">
         <option value="">— Not specified —</option>
-        <option>Veg only</option>
-        <option>Non-veg ok</option>
-        <option>No preference</option>
+        <option value="🥦 Veg">Veg</option>
+        <option value="🍗 Non-Veg">Non-Veg</option>
+        <option value="No Veg/Non-Veg Preference">No Veg/Non-Veg Preference</option>
       </select>
     </div>
 
@@ -553,13 +570,8 @@ body {
     </div>
 
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">FURNISHING</div>
-      <select id="edit_furnishing" class="edit-input">
-        <option value="">— Not specified —</option>
-        <option>Fully furnished</option>
-        <option>Semi-furnished</option>
-        <option>Unfurnished</option>
-      </select>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">AVAILABLE FROM / MOVE-IN DATE</div>
+      <input id="edit_available_from" class="edit-input" type="date">
     </div>
 
     <div id="edit_broker_wrap" style="display:none">
@@ -570,6 +582,11 @@ body {
         <option value="prefno">🤝 Preferably no brokerage</option>
         <option value="no">🚫 Strictly no brokerage</option>
       </select>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">DESCRIPTION</div>
+      <textarea id="edit_description" class="edit-input" rows="4" placeholder="Describe the listing..." style="resize:vertical"></textarea>
     </div>
 
     <button onclick="saveEdit()" style="width:100%;padding:15px;background:var(--teal);color:white;border:none;border-radius:12px;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">
@@ -729,12 +746,12 @@ function renderListing(){
   if(listing.rent_amount){
     document.getElementById('listingPrice').textContent='₹'+listing.rent_amount.toLocaleString('en-IN');
     if(listing.listing_type==='flat_wanted'){
-      document.getElementById('pricePeriod').textContent='max budget/mo';
+      document.getElementById('pricePeriod').textContent='Budget/mo';
     } else {
       document.getElementById('pricePeriod').textContent='/month';
     }
   } else {
-    document.getElementById('listingPrice').textContent='Price on request';
+    document.getElementById('listingPrice').textContent='Budget not specified';
     document.getElementById('pricePeriod').textContent='';
   }
 
@@ -811,7 +828,7 @@ function renderListing(){
   }
 
   // Poster name — use real name if saved, otherwise generic
-  const posterName = listing.poster_name || 'FlatKhoj Member';
+  const posterName = listing.poster_name || 'FlatKhoj User';
   const posterInitials = posterName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('posterAvatar').textContent=posterInitials;
   document.getElementById('posterName').textContent=posterName;
@@ -826,7 +843,7 @@ function renderListing(){
   const role = roleLabels[listing.listing_type] || 'Member';
   document.getElementById('posterRole').textContent = role;
   document.getElementById('contactNameDisplay').textContent = posterName + ' · ' + role;
-  if (posterName !== 'FlatKhoj Member') {
+  if (posterName && posterName !== 'FlatKhoj User') {
     document.getElementById('unlockSheetSub').textContent = `Reveal ${posterName}'s contact number. Once unlocked, you can reach them anytime without paying again.`;
     document.getElementById('unlockRevealSub').textContent = `You can now reach ${posterName} directly on WhatsApp or phone.`;
   }
@@ -1075,16 +1092,41 @@ function editListing() {
   document.getElementById('edit_rent').value = listing.rent_amount || '';
   document.getElementById('edit_areas').value = Array.isArray(listing.areas) ? listing.areas.join(', ') : listing.areas || '';
   document.getElementById('edit_description').value = listing.description || '';
-  document.getElementById('edit_food').value = listing.food_preference || '';
-  document.getElementById('edit_gender').value = listing.gender_preference || '';
+
+  // Flat type — handle Other
+  const ft = listing.flat_type || '';
+  const ftSelect = document.getElementById('edit_flat_type');
+  const knownTypes = ['1 RK','1 BHK','2 BHK','3 BHK'];
+  if (knownTypes.includes(ft)) { ftSelect.value = ft; }
+  else if (ft) { ftSelect.value = 'Other'; }
+  else { ftSelect.value = ''; }
+
   document.getElementById('edit_furnishing').value = listing.furnishing || '';
-  // Show brokerage preference only for flat wanted
+  document.getElementById('edit_available_from').value = listing.available_from || '';
+
+  // Food — map old values to new
+  const foodMap = {'Veg only':'🥦 Veg','Non-veg ok':'🍗 Non-Veg','No preference':'No Veg/Non-Veg Preference','Veg':'🥦 Veg','Non-Veg':'🍗 Non-Veg'};
+  const foodVal = listing.food_preference || '';
+  document.getElementById('edit_food').value = foodMap[foodVal] || foodVal;
+
+  // Gender — map old values
+  const genderMap = {'Male only':'Male only','Female only':'Female only','Any':'Any','Male':'Male only','Female':'Female only'};
+  const genderVal = listing.gender_preference || '';
+  document.getElementById('edit_gender').value = genderMap[genderVal] || genderVal;
+
+  // Show brokerage for flat wanted
   if (listing.listing_type === 'flat_wanted') {
     document.getElementById('edit_broker_wrap').style.display = 'block';
     document.getElementById('edit_brokerage_pref').value = listing.brokerage_preference || '';
   } else {
     document.getElementById('edit_broker_wrap').style.display = 'none';
   }
+
+  // Show/hide contact field — only for owner
+  const user = getUser();
+  const isAppOwner = user && (user.isOwner === true || user.isOwner === 'true' || String(user.phone).trim() === '9538584612');
+  document.getElementById('edit_contact_wrap').style.display = isAppOwner ? 'block' : 'none';
+
   openSheet('edit');
 }
 
@@ -1100,9 +1142,11 @@ async function saveEdit() {
       rent_amount: parseInt(document.getElementById('edit_rent').value) || null,
       areas: areas.length > 0 ? areas : listing.areas,
       description: document.getElementById('edit_description').value.trim() || null,
+      flat_type: document.getElementById('edit_flat_type').value || null,
+      furnishing: document.getElementById('edit_furnishing').value || null,
       food_preference: document.getElementById('edit_food').value || null,
       gender_preference: document.getElementById('edit_gender').value || null,
-      furnishing: document.getElementById('edit_furnishing').value || null,
+      available_from: document.getElementById('edit_available_from').value || null,
       brokerage_preference: document.getElementById('edit_brokerage_pref')?.value || null,
       updated_at: new Date().toISOString()
     };
