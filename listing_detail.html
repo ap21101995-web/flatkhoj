@@ -324,6 +324,18 @@ body {
 </style>
 </head>
 <body>
+<script>
+// Run immediately - hide owner controls for non-owners
+(function(){
+  try {
+    var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
+    if (!u) { document.write('<style>#ownerControls{display:none!important}</style>'); return; }
+    var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
+    var isOwner = ph==='9538584612' || u.isOwner===true || u.isOwner==='true';
+    if (!isOwner) { document.write('<style>#ownerControls{display:none!important}</style>'); }
+  } catch(e) { document.write('<style>#ownerControls{display:none!important}</style>'); }
+})();
+</script>
 
 <!-- TOP BAR -->
 <header class="topbar">
@@ -420,7 +432,7 @@ body {
     🎉 Your listing is now live! This is exactly how others will see it.
   </div>
 
-  <div id="ownerControls" style="display:none;margin-bottom:16px">
+  <div id="ownerControls" style="margin-bottom:16px">
     <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Manage your listing</div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <button onclick="editListing()" style="flex:1;padding:12px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">✏️ Edit listing</button>
@@ -1046,21 +1058,24 @@ async function toggleSave(){
 }
 // ── OWNER CONTROLS ─────────────────────────────────────────
 function showOwnerControls() {
-  const raw = localStorage.getItem('fmh_user');
-  if (!raw) return;
-  let user;
-  try { user = JSON.parse(raw); } catch(e) { return; }
-  if (!user) return;
-
-  const phone = String(user.phone || '').replace(/\D/g, '').slice(-10);
-  const isOwner = (phone === '9538584612') || (user.isOwner === true) || (user.isOwner === 'true');
-  const isPoster = user.userId && listing && listing.user_id && (user.userId === listing.user_id);
-  const isClaimed = user.userId && listing && listing.claimed_by_user_id && (user.userId === listing.claimed_by_user_id);
-
-  if (isOwner || isPoster || isClaimed) {
-    document.getElementById('ownerControls').style.display = 'block';
-    loadUnlockers();
-  }
+  try {
+    var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
+    if (!u) return;
+    var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
+    var isOwner = ph==='9538584612' || u.isOwner===true || u.isOwner==='true';
+    var isPoster = u.userId && listing && listing.user_id && u.userId===listing.user_id;
+    var isClaimed = u.userId && listing && listing.claimed_by_user_id && u.userId===listing.claimed_by_user_id;
+    var ctrl = document.getElementById('ownerControls');
+    if (isOwner || isPoster || isClaimed) {
+      ctrl.style.display = 'block';
+      ctrl.style.removeProperty('display');
+      ctrl.removeAttribute('style');
+      ctrl.style.marginBottom = '16px';
+      loadUnlockers();
+    } else {
+      ctrl.style.display = 'none';
+    }
+  } catch(e) { console.error(e); }
 }
 
 

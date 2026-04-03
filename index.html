@@ -1181,33 +1181,48 @@ async function confirmUnlock() {
 }
 
 async function showUnlockedContact(listingId) {
-  // Fetch the listing user's phone
-  const res = await fetch(
-    `${SUPA_URL}/rest/v1/listings?id=eq.${listingId}&select=user_id`,
-    { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
-  );
-  const [listing] = await res.json();
-
-  if (listing) {
-    const userRes = await fetch(
-      `${SUPA_URL}/rest/v1/users?id=eq.${listing.user_id}&select=phone`,
+  try {
+    // Fetch listing with custom_contact_phone and user_id
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/listings?id=eq.${listingId}&select=user_id,custom_contact_phone`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
     );
-    const [poster] = await userRes.json();
-    if (poster) {
-      closeSheet('unlock');
-      const phone = '91' + poster.phone;
-      const formatted = '+91 ' + poster.phone.replace(/(\d{5})(\d{5})/, '$1 $2');
+    const [listingData] = await res.json();
+    let phone = null;
+
+    if (listingData) {
+      if (listingData.custom_contact_phone) {
+        // Use custom contact phone set by owner
+        phone = listingData.custom_contact_phone;
+      } else if (listingData.user_id) {
+        // Fetch phone from users table
+        const userRes = await fetch(
+          `${SUPA_URL}/rest/v1/users?id=eq.${listingData.user_id}&select=phone`,
+          { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
+        );
+        const [poster] = await userRes.json();
+        if (poster) phone = poster.phone;
+      }
+    }
+
+    closeSheet('unlock');
+
+    if (phone) {
+      const formatted = '+91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
       setTimeout(() => {
         if (confirm(`Contact revealed!\n\n${formatted}\n\nOpen WhatsApp to message them?`)) {
-          window.open(`https://wa.me/${phone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`, '_blank');
+          window.open(`https://wa.me/91${phone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`, '_blank');
         }
       }, 100);
-      return;
+    } else {
+      alert('Contact unlocked! Open the listing to view their number.');
+      window.location.href = `listing_detail.html?id=${listingId}`;
     }
+  } catch(err) {
+    closeSheet('unlock');
+    alert('Contact unlocked! Open the listing to view their number.');
+    window.location.href = `listing_detail.html?id=${listingId}`;
   }
-  closeSheet('unlock');
-  alert('Contact retrieved! Check the listing detail page for the number.');
 }
 
 // ── HELPERS ────────────────────────────────────────────────
