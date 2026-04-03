@@ -1024,8 +1024,9 @@ async function toggleSave(){
 function showOwnerControls() {
   const user = getUser();
   if (!user) return;
-  const isAppOwner = user.isOwner || user.phone === '9538584612';
-  const isOriginalPoster = user.userId === listing.user_id;
+  // Check all possible ways owner status could be stored
+  const isAppOwner = user.isOwner === true || user.isOwner === 'true' || user.phone === '9538584612';
+  const isOriginalPoster = user.userId && listing.user_id && user.userId === listing.user_id;
   const isClaimedUser = listing.claimed_by_user_id && user.userId === listing.claimed_by_user_id;
 
   if (isAppOwner || isOriginalPoster || isClaimedUser) {
@@ -1123,7 +1124,8 @@ async function saveEdit() {
 
 async function deleteListing() {
   const user = getUser();
-  if (!user || (!user.isOwner && user.phone !== '9538584612' && user.userId !== listing.user_id && user.userId !== listing.claimed_by_user_id)) {
+  const isAppOwner = user.isOwner === true || user.isOwner === 'true' || user.phone === '9538584612';
+  if (!user || (!isAppOwner && user.userId !== listing.user_id && user.userId !== listing.claimed_by_user_id)) {
     alert('You can only delete your own listings.');
     return;
   }
