@@ -1024,11 +1024,10 @@ async function toggleSave(){
 function showOwnerControls() {
   const user = getUser();
   if (!user) return;
-  // Check all possible ways owner status could be stored
   const isAppOwner = user.isOwner === true || user.isOwner === 'true' || user.phone === '9538584612';
   const isOriginalPoster = user.userId && listing.user_id && user.userId === listing.user_id;
   const isClaimedUser = listing.claimed_by_user_id && user.userId === listing.claimed_by_user_id;
-
+  alert('Debug - phone:' + user.phone + ' isOwner:' + user.isOwner + ' isAppOwner:' + isAppOwner + ' userId:' + user.userId + ' listing.user_id:' + listing.user_id);
   if (isAppOwner || isOriginalPoster || isClaimedUser) {
     document.getElementById('ownerControls').style.display = 'block';
     loadUnlockers();
