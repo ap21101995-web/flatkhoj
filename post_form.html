@@ -1113,6 +1113,27 @@ window.addEventListener('load', async function() {
   checkPostingLimits();
   const params = new URLSearchParams(window.location.search);
 
+  // Pre-fill name from user's most recent post (for new posts)
+  if (!params.get('edit')) {
+    const user = getUser();
+    if (user && user.userId) {
+      try {
+        const res = await fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&select=poster_name&order=created_at.desc&limit=1`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        });
+        const data = await res.json();
+        const lastName = data?.[0]?.poster_name;
+        if (lastName) {
+          // Pre-fill all name fields
+          ['fl','fw','fm','pg'].forEach(t => {
+            const el = document.getElementById(t + '-poster-name');
+            if (el && !el.value) el.value = lastName;
+          });
+        }
+      } catch(e) {}
+    }
+  }
+
   // Restore form state if returning from login
   const savedState = localStorage.getItem('fk_post_state');
   if (savedState && getUser()) {
@@ -1206,16 +1227,8 @@ window.addEventListener('load', async function() {
       step = 2;
       updateUI(); // This makes the form section visible
 
-      // Pre-fill after a short delay to ensure DOM is ready
-      setTimeout(() => {
-        prefillEditForm(listing, t);
-        // Show edit notice at top of step 2
-        const notice = document.createElement('div');
-        notice.style.cssText = 'background:#fef6e4;border:1px solid #e6a817;border-radius:10px;padding:12px 14px;font-size:13px;color:#b8860b;margin:0 0 16px;';
-        notice.innerHTML = '✏️ <strong>Editing your listing</strong> — your previous answers are filled in. Make changes and tap Next.';
-        const activeStep = document.querySelector('.step.active');
-        if (activeStep) activeStep.prepend(notice);
-      }, 100);
+      // Pre-fill after DOM is ready
+      setTimeout(() => prefillEditForm(listing, t), 150);
 
     } catch(e) { console.error('Edit mode error:', e); }
     // Don't return — let page remain on step 1
@@ -1629,13 +1642,12 @@ function updateUI(){
 }
 
 function prefillEditForm(listing, t) {
-  // Areas
+  // Areas — reset and re-add
+  const areaId = t+'-area';
+  areaVals[areaId] = [];
   if(listing.areas){
     const areas = Array.isArray(listing.areas) ? listing.areas : [listing.areas];
-    areas.forEach(area => {
-      const areaId = t+'-area';
-      if(areaVals[areaId] && areaVals[areaId].length < 3) selectArea(area, areaId);
-    });
+    areas.forEach(area => { if(areaVals[areaId].length < (areaMax[areaId]||3)) selectArea(area, areaId); });
   }
   // Name
   const nameEl = document.getElementById(t+'-poster-name');
@@ -1644,60 +1656,58 @@ function prefillEditForm(listing, t) {
   const rentEl = document.querySelector('#f-'+t+' input[type="number"]');
   if(rentEl && listing.rent_amount) rentEl.value = listing.rent_amount;
   // Date
-  const dateId = t==='fw' ? 'fw-movein' : t+'-available';
-  const dateEl = document.getElementById(dateId);
+  const dateEl = document.getElementById(t==='fw' ? 'fw-movein' : t+'-available');
   if(dateEl && listing.available_from) dateEl.value = listing.available_from;
-  // Flat type pills
+  // Flat type
   if(listing.flat_type){
-    const pills = document.querySelectorAll(`#f-${t} [onclick*="${t}-ft"]`);
     let matched = false;
-    pills.forEach(p => { if(p.textContent.trim()===listing.flat_type){ sp(p, t+'-ft'); matched=true; }});
+    document.querySelectorAll(`#f-${t} [onclick*="${t}-ft"]`).forEach(p => {
+      if(p.textContent.trim()===listing.flat_type){ sp(p, t+'-ft'); matched=true; }
+    });
     if(!matched){
+      const pills = document.querySelectorAll(`#f-${t} [onclick*="${t}-ft"]`);
       const otherPill = [...pills].find(p=>p.textContent.trim()==='Other');
       if(otherPill){ spWithOther(otherPill, t+'-ft', t+'-other-type'); const oi=document.getElementById(t+'-other-type'); if(oi) oi.value=listing.flat_type; }
     }
-    // Select (fm)
     const ftSel = document.getElementById(t+'-flat-type');
     if(ftSel) ftSel.value = listing.flat_type;
   }
   // Furnishing
-  if(listing.furnishing){
-    document.querySelectorAll(`#f-${t} [onclick*="${t}-furn"]`).forEach(p=>{ if(p.textContent.trim()===listing.furnishing) sp(p,t+'-furn'); });
-  }
-  // Food
+  if(listing.furnishing) document.querySelectorAll(`#f-${t} [onclick*="${t}-furn"]`).forEach(p=>{ if(p.textContent.trim()===listing.furnishing) sp(p,t+'-furn'); });
+  // Food — strip emoji for comparison
   if(listing.food_preference){
+    const fp = listing.food_preference;
+    const fpClean = fp.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{26FF}]/gu,'').trim();
     document.querySelectorAll(`#f-${t} [onclick*="${t}-food"], #f-${t} [onclick*="fw-food"]`).forEach(p=>{
-      const pText = p.textContent.trim();
-      const fp = listing.food_preference;
-      if(pText===fp || pText.replace(/🥦|🍗/g,'').trim()===fp.replace(/🥦|🍗/g,'').trim()){
+      const pClean = p.textContent.trim().replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{26FF}]/gu,'').trim();
+      if(p.textContent.trim()===fp || pClean===fpClean){
         const grp = p.getAttribute('onclick').match(/'([^']+)'/)?.[1] || t+'-food';
         sp(p, grp);
       }
     });
   }
-  // Gender pills
+  // Gender
   if(listing.gender_preference){
+    const gp = listing.gender_preference;
     document.querySelectorAll(`#f-${t} [onclick*="${t}-gen"]`).forEach(p=>{
-      if(p.textContent.trim()===listing.gender_preference || p.textContent.includes(listing.gender_preference)) sp(p,t+'-gen');
+      if(p.textContent.trim()===gp || p.textContent.includes(gp.replace(' Flatmate','').replace(' only',''))) sp(p,t+'-gen');
     });
     const genSel = document.getElementById(t+'-gender-select');
-    if(genSel) genSel.value = listing.gender_preference;
+    if(genSel) genSel.value = gp;
   }
+  // Situation (fm)
+  if(t==='fm' && listing.situation) document.querySelectorAll(`#f-fm [onclick*="fm-sit"]`).forEach(p=>{ if(p.textContent.trim()===listing.situation) sp(p,'fm-sit'); });
+  // Room type
+  if(listing.room_type) document.querySelectorAll(`#f-${t} [onclick*="${t}-rm"]`).forEach(p=>{ if(p.textContent.trim()===listing.room_type) sp(p,t+'-rm'); });
   // Brokerage
-  if(t==='fw' && listing.brokerage_preference){ document.getElementById('fw-broker-choice').value=listing.brokerage_preference; sbfw(listing.brokerage_preference); }
-  if((t==='fl'||t==='pg') && listing.has_brokerage!==undefined){ listing.has_brokerage ? sb(t,'yes') : sb(t,'no'); }
+  if(t==='fw' && listing.brokerage_preference){ const bc=document.getElementById('fw-broker-choice'); if(bc) bc.value=listing.brokerage_preference; sbfw(listing.brokerage_preference); }
+  if((t==='fl'||t==='pg'||t==='fm') && listing.has_brokerage!==undefined){ listing.has_brokerage ? sb(t,'yes') : sb(t,'no'); }
   // Description
   const descEl = document.querySelector('#f-'+t+' textarea');
   if(descEl && listing.description) descEl.value = listing.description;
   // Custom contact (owner only)
   const contactEl = document.getElementById('ownerContactNumber');
   if(contactEl && listing.custom_contact_phone) contactEl.value = listing.custom_contact_phone;
-  // Show notice
-  const notice = document.createElement('div');
-  notice.style.cssText='background:#fef6e4;border:1px solid #e6a817;border-radius:10px;padding:12px 14px;font-size:13px;color:#b8860b;margin:0 0 16px;';
-  notice.innerHTML='✏️ <strong>Editing your listing</strong> — all your previous answers are filled in. Make changes and tap Save.';
-  const activeStep = document.querySelector('.step.active');
-  if(activeStep) activeStep.prepend(notice);
 }
 
 function selectType(t){
