@@ -452,7 +452,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 async function sendOtp() {
   const phone = document.getElementById('phoneInput').value.trim();
-  if (phone.length !== 10 || !/^[6-9]/.test(phone)) {
+  const isTestUser = phone === '1111111100';
+  if (!isTestUser && (phone.length !== 10 || !/^[6-9]/.test(phone))) {
     document.getElementById('phoneErrorText').textContent = 'Please enter a valid 10-digit Indian mobile number';
     document.getElementById('phoneError').classList.add('show');
     return;
