@@ -875,9 +875,7 @@ async function submitListing() {
       const currentCoins = coinData[0]?.coins || 0;
       if (currentCoins < 50) {
         btn.textContent = '🚀 Post Listing — It\'s Free!'; btn.disabled = false;
-        if (confirm(`You need 50 coins to make your contact free, but you only have ${currentCoins} coins.\n\nWould you like to buy more coins?`)) {
-          window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
-        }
+        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
         return;
       }
       // Deduct coins first
@@ -973,18 +971,8 @@ async function upgradeInline(plan, coinCost) {
     const currentCoins = data[0]?.coins || 0;
 
     if (currentCoins < coinCost) {
-      const needed = coinCost - currentCoins;
       btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
-      if (confirm(`You need ${needed} more coins to upgrade.\n\nYour balance: ${currentCoins} coins\nRequired: ${coinCost} coins\n\nGo to Buy Coins page?`)) {
-        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
-      }
-      return;
-    }
-
-    const planNames = { basic: 'Basic', pro: 'Pro' };
-    const planLimits = { basic: '3 posts/day, 10/month', pro: '8 posts/day, 25/month' };
-    if (!confirm(`Upgrade to ${planNames[plan]} Plan for ${coinCost} coins?\n\n✓ ${planLimits[plan]}\n✓ Valid for 30 days\n\nYour balance: ${currentCoins} → ${currentCoins - coinCost} coins`)) {
-      btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
+      window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
       return;
     }
 

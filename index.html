@@ -1181,9 +1181,7 @@ async function confirmUnlock() {
     // Check coins with fresh balance
     if (currentCoins < UNLOCK_COST) {
       closeSheet('unlock');
-      if (confirm(`You need ${UNLOCK_COST} coins to unlock this contact.\nYour balance: ${currentCoins} coins\n\nWould you like to buy more coins?`)) {
-        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
-      }
+      window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
       btn.innerHTML = 'Spend <span id="unlockBtnCost">' + UNLOCK_COST + '</span> Coins & Unlock →';
       btn.disabled = false;
       return;

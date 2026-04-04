@@ -984,9 +984,7 @@ async function confirmUnlock(){
       if(currentCoins < UNLOCK_COST){
         btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;
         closeSheet('unlock');
-        if(confirm('You need 5 coins to unlock this contact.\n\nYour balance: ' + currentCoins + ' coins\n\nWould you like to buy more coins?')) {
-          window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
-        }
+        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
         return;
       }
 
@@ -1231,13 +1229,9 @@ async function activateFreeContact() {
   const coins = data[0]?.coins || 0;
 
   if (coins < 50) {
-    if (confirm(`You need 50 coins but only have ${coins}. Buy more coins?`)) {
-      window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
-    }
+    window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
     return;
   }
-
-  if (!confirm('Pay 50 coins to let anyone contact you for free — no coins needed on their end. Confirm?')) return;
 
   btn.textContent = 'Activating…'; btn.disabled = true;
 
