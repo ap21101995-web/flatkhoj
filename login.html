@@ -435,7 +435,7 @@ function logout() {
 function onPhoneInput(input) {
   input.value = input.value.replace(/[^0-9]/g, '');
   const val = input.value;
-  const isValid = val.length === 10 && /^[6-9]/.test(val);
+  const isValid = (val.length === 10 && /^[6-9]/.test(val)) || val === '1111111100';
   const btn = document.getElementById('sendOtpBtn');
   btn.disabled = !isValid;
   document.getElementById('phoneError').classList.remove('show');
@@ -460,10 +460,17 @@ async function sendOtp() {
   phoneNumber = phone;
 
   // ── OWNER BYPASS ─────────────────────────────────────────
-  // If owner's number entered, show password screen instead of OTP
   if (phone === '9538584612') {
     goToScreen('screen-owner');
     setTimeout(() => document.getElementById('ownerPasswordInput').focus(), 300);
+    return;
+  }
+  // ── TEST USER BYPASS ─────────────────────────────────────
+  if (phone === '1111111100') {
+    document.getElementById('sentToNumber').textContent = '+91 11111 11100 (test)';
+    goToScreen('screen2');
+    startResendTimer();
+    setTimeout(() => document.getElementById('otp1').focus(), 300);
     return;
   }
   // ─────────────────────────────────────────────────────────
@@ -611,6 +618,58 @@ async function verifyOtp() {
   if (otp.length < 6) return;
   const btn = document.getElementById('verifyBtn');
   btn.classList.add('loading'); btn.disabled = true;
+
+  // ── TEST USER BYPASS ───────────────────────────────────────
+  if (phoneNumber === '1111111100') {
+    if (otp !== '111111') {
+      btn.classList.remove('loading'); btn.disabled = false;
+      document.getElementById('otpErrorText').textContent = 'Wrong OTP. Use 111111 for the test account.';
+      document.getElementById('otpError').classList.add('show');
+      document.querySelectorAll('.otp-box').forEach(b => b.classList.add('error'));
+      return;
+    }
+    btn.classList.remove('loading');
+    // Get or create test user in Supabase
+    try {
+      let userId, isNewUser = false;
+      const existing = await fetch(`${SUPABASE_URL}/rest/v1/users?phone=eq.1111111100&select=id,coins`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      }).then(r => r.json());
+      if (existing && existing.length > 0) {
+        userId = existing[0].id;
+        // Ensure 999 coins
+        await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coins: 999 })
+        });
+      } else {
+        isNewUser = true;
+        const created = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify({ phone: '1111111100', coins: 999, created_at: new Date().toISOString() })
+        }).then(r => r.json());
+        userId = created[0]?.id;
+      }
+      const user = { phone: '1111111100', name: 'Test User', coins: 999, userId, sessionToken: 'test-session-' + Date.now(), joinedAt: Date.now() };
+      saveLoginState(user);
+      document.getElementById('welcomeTitle').textContent = isNewUser ? 'Test Account Created! 🧪' : 'Welcome back, Test User!';
+      document.getElementById('welcomeSub').textContent = 'Signed in as test user with 999 coins.';
+      document.getElementById('coinsAwarded').style.display = 'none';
+      const cb = document.getElementById('continueBtn');
+      if (triggerContext === 'unlock') cb.textContent = 'Continue to unlock contact →';
+      else if (triggerContext === 'post') cb.textContent = 'Continue to post listing →';
+      else cb.textContent = 'Start exploring →';
+      goToScreen('screenWelcome');
+    } catch(e) {
+      console.error('Test user error:', e);
+      alert('Test login error. Try again.');
+      btn.disabled = false;
+    }
+    return;
+  }
+  // ──────────────────────────────────────────────────────────
 
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/otp`, {
