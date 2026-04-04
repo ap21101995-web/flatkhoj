@@ -1525,13 +1525,13 @@ function nextStep(){
 
     // ── Type-specific required fields ──
     if(t === 'fl'){
-      if(!document.querySelector(`#f-fl [onclick*="'fl-ft'"].sel, #f-fl [onclick*='"fl-ft"'].sel`)){
+      if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-ft"]')){
         alert('Please select the flat type (1 BHK, 2 BHK, etc.).'); return;
       }
-      if(!document.querySelector(`#f-fl [onclick*="'fl-food'"].sel, #f-fl [onclick*='"fl-food"'].sel`)){
+      if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-food"]')){
         alert('Please select the food preference.'); return;
       }
-      if(!document.querySelector(`#f-fl [onclick*="'fl-gen'"].sel, #f-fl [onclick*='"fl-gen"'].sel`)){
+      if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-gen"]')){
         alert('Please select the preferred tenant gender.'); return;
       }
       if(!document.getElementById('fl-available')?.value){
@@ -1556,7 +1556,7 @@ function nextStep(){
       if(!document.getElementById('fw-gender-select')?.value){
         alert('Please select your gender.'); return;
       }
-      if(!document.querySelector(`#f-fw [onclick*="'fw-food'"].sel, #f-fw [onclick*='"fw-food"'].sel`)){
+      if(!document.querySelector('#f-fw .pill.sel[onclick*="fw-food"]')){
         alert('Please select your food preference.'); return;
       }
       // Looking for (multi-select)
@@ -1570,23 +1570,23 @@ function nextStep(){
     }
 
     if(t === 'fm'){
-      if(!document.querySelector(`#f-fm [onclick*="'fm-sit'"].sel, #f-fm [onclick*='"fm-sit"'].sel`)){
+      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-sit"]')){
         alert('Please select what best describes your situation.'); return;
       }
       if(!document.getElementById('fm-flat-type')?.value){
         alert('Please select the flat type.'); return;
       }
-      if(!document.querySelector(`#f-fm [onclick*="'fm-rm'"].sel, #f-fm [onclick*='"fm-rm"'].sel`)){
+      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-rm"]')){
         alert('Please select the room type available for flatmate.'); return;
       }
       if(!document.getElementById('fm-available')?.value){
         alert('Please select the available from date.'); return;
       }
-      if(!document.querySelector(`#f-fm [onclick*="'fm-food'"].sel, #f-fm [onclick*='"fm-food"'].sel`)){
+      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-food"]')){
         alert('Please select the food preference in your house.'); return;
       }
-      if(!document.querySelector(`#f-fm [onclick*="'fm-gen'"].sel, #f-fm [onclick*='"fm-gen"'].sel`)){
-        alert('Please select the gender you\'re looking for.'); return;
+      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-gen"]')){
+        alert("Please select the gender you're looking for."); return;
       }
       // Brokerage
       if(!document.getElementById('fm-bno')?.classList.contains('sel-no') && !document.getElementById('fm-byes')?.classList.contains('sel-yes')){
@@ -1595,10 +1595,10 @@ function nextStep(){
     }
 
     if(t === 'pg'){
-      if(!document.querySelector(`#f-pg [onclick*="'pg-for'"].sel, #f-pg [onclick*='"pg-for"'].sel`)){
+      if(!document.querySelector('#f-pg .pill.sel[onclick*="pg-for"]')){
         alert('Please select who the PG is for (Boys/Girls/Both).'); return;
       }
-      if(!document.querySelector(`#f-pg [onclick*="'pg-food'"].sel, #f-pg [onclick*='"pg-food"'].sel`)){
+      if(!document.querySelector('#f-pg .pill.sel[onclick*="pg-food"]')){
         alert('Please select the food type served.'); return;
       }
       // Brokerage
@@ -1691,22 +1691,27 @@ function updateUI(){
 }
 
 function prefillEditForm(listing, t) {
+  // Normalize text for comparison — handles em dash, spaces, case
+  function norm(s) {
+    return s.trim().replace(/\u2014/g,'—').replace(/\s+/g,' ');
+  }
   // Helper: click a pill by text match within a scope and group
   function fillPill(scope, group, value) {
     if (!value) return;
-    const v = value.trim();
+    const v = norm(value);
     document.querySelectorAll(`${scope} [onclick*="${group}"]`).forEach(p => {
-      if (p.textContent.trim() === v) sp(p, group);
+      if (norm(p.textContent) === v) sp(p, group);
     });
   }
-  // Helper: fill a pill stripping emoji
+  // Helper: fill a pill stripping emoji (for food etc)
   function fillPillFuzzy(scope, group, value) {
     if (!value) return;
-    const clean = s => s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim();
-    const vClean = clean(value.trim());
+    const stripEmoji = s => s.replace(/[^\w\s\-—]/gu, '').trim();
+    const v = norm(value);
+    const vStripped = stripEmoji(v);
     document.querySelectorAll(`${scope} [onclick*="${group}"]`).forEach(p => {
-      const t = p.textContent.trim();
-      if (t === value.trim() || clean(t) === vClean) sp(p, group);
+      const t = norm(p.textContent);
+      if (t === v || stripEmoji(t) === vStripped) sp(p, group);
     });
   }
 
