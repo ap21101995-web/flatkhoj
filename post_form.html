@@ -694,7 +694,6 @@ function collectFormData() {
   if (type === 'fl') {
     data.listing_type = 'flat_listing';
     data.poster_name = document.getElementById('fl-poster-name')?.value?.trim() || null;
-    const flFtEl = document.querySelector('#f-fl .sel[onclick*="fl-ft"]'); const flOther = document.getElementById('fl-other-type')?.value?.trim(); data.flat_type = flFtEl ? (flFtEl.textContent.trim() === 'Other' && flOther ? flOther : flFtEl.textContent.trim()) : null;
     data.rent_amount = parseInt(document.querySelector('#f-fl input[placeholder*="rent"]')?.value) || null;
     const flFtEl = document.querySelector('#f-fl [onclick*="fl-ft"].sel'); const flOther = document.getElementById('fl-other-type')?.value?.trim(); data.flat_type = flFtEl ? (flFtEl.textContent.trim() === 'Other' && flOther ? flOther : flFtEl.textContent.trim()) : null;
     data.furnishing = document.querySelector('#f-fl .sel[onclick*="furnishing"]')?.textContent?.trim() || null;
