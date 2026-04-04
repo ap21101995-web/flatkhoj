@@ -1219,6 +1219,11 @@ function prevStep(){
 
 function updateUI(){
   document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('active',i+1===step));
+  // Always ensure step 1 elements are visible when on step 1
+  if(step===1){
+    document.getElementById('typeGridWrap').style.display='block';
+    document.getElementById('nBtn').style.display='block';
+  }
   if(step===2&&type){
     ['fw','fl','fm','pg'].forEach(t=>{document.getElementById('f-'+t).style.display=t===type?'block':'none';});
   }
