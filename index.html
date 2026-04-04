@@ -1037,9 +1037,9 @@ function renderListings(listings, reset) {
         <div class="time-ago">${timeAgo}</div>
       </div>
       <div class="unlock-row">
-        ${unlockedListingIds.has(l.id)
+        ${(unlockedListingIds.has(l.id) || getUnlockedListings().includes(l.id))
           ? `<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal);cursor:default" onclick="window.location.href='listing_detail.html?id=${l.id}'">✓ Contact unlocked — view</button>`
-          : `<button class="unlock-btn" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
+          : `<button class="unlock-btn" data-listing-id="${l.id}" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
             ${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
             <span class="coin-pip">${l.is_free_contact ? 'Free!' : UNLOCK_COST + ' 🪙'}</span>
           </button>`
@@ -1468,15 +1468,38 @@ async function fetchUserData() {
   loadListings();
 })();
 
-// Re-fetch when user navigates back (e.g. from listing_detail)
-window.addEventListener('pageshow', function(e) {
-  if (e.persisted) {
-    // Page was restored from cache — re-fetch and re-render
-    (async () => {
-      await fetchUserData();
-      loadListings();
-    })();
-  }
+// Re-fetch when user navigates back — fires on BOTH cached and fresh loads
+window.addEventListener('pageshow', async function(e) {
+  await fetchUserData();
+  loadListings();
+});
+
+// Also re-fetch on focus (when switching back from another tab/app)
+window.addEventListener('focus', async function() {
+  const user = getUser();
+  if (!user) return;
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&select=listing_id`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      unlockedListingIds = new Set(data.map(d => d.listing_id));
+      localStorage.setItem('fk_unlocked', JSON.stringify([...unlockedListingIds]));
+      // Update any visible cards without full re-render
+      document.querySelectorAll('.unlock-btn[data-listing-id]').forEach(btn => {
+        const id = btn.getAttribute('data-listing-id');
+        if (unlockedListingIds.has(id)) {
+          btn.style.background = 'var(--teal-bg)';
+          btn.style.color = 'var(--teal)';
+          btn.style.border = '1.5px solid var(--teal)';
+          btn.style.cursor = 'default';
+          btn.innerHTML = '✓ Contact unlocked — view';
+          btn.onclick = () => window.location.href = `listing_detail.html?id=${id}`;
+        }
+      });
+    }
+  } catch(e) {}
 });
 
 // Hide login nudge if already logged in

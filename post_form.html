@@ -758,11 +758,29 @@ async function submitListing() {
   }
 
   const btn = document.getElementById('nBtn');
-  btn.textContent = 'Posting…';
+  btn.textContent = window._editListingId ? 'Saving…' : 'Posting…';
   btn.disabled = true;
 
   try {
     const formData = collectFormData();
+
+    // Edit mode — PATCH existing listing
+    if (window._editListingId) {
+      formData.updated_at = new Date().toISOString();
+      // Add custom contact if owner
+      if (user.isOwner || user.phone === '9538584612') {
+        const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
+        if (customPhone && customPhone.length === 10) formData.custom_contact_phone = customPhone;
+      }
+      const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${window._editListingId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      window.location.href = `listing_detail.html?id=${window._editListingId}`;
+      return;
+    }
     formData.user_id = user.userId;
     formData.city = 'Mumbai';
     formData.is_active = true;
@@ -893,8 +911,9 @@ async function checkPostingLimits() {
 }
 
 // ── AI PREFILL ─────────────────────────────────────────────
-window.addEventListener('load', function() {
+window.addEventListener('load', async function() {
   checkPostingLimits();
+  const params = new URLSearchParams(window.location.search);
 
   // Restore form state if returning from login
   const savedState = localStorage.getItem('fk_post_state');
@@ -941,7 +960,134 @@ window.addEventListener('load', function() {
     } catch(e) { localStorage.removeItem('fk_post_state'); }
   }
 
-  const params = new URLSearchParams(window.location.search);
+  // ── EDIT MODE ──────────────────────────────────────────────
+  if (params.get('edit')) {
+    const editId = params.get('edit');
+    const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+    // Show loading
+    document.getElementById('topbarTitle').textContent = 'Edit Listing';
+
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${editId}&select=*`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+      const [listing] = await res.json();
+      if (!listing) { alert('Listing not found.'); return; }
+
+      // Save listing id for update later
+      window._editListingId = editId;
+
+      // Map type
+      const typeMap = { flat_listing:'fl', flat_wanted:'fw', flatmate_wanted:'fm', pg_listing:'pg' };
+      const t = typeMap[listing.listing_type];
+      if (!t) return;
+
+      selectType(t);
+      step = 2;
+      updateUI();
+
+      // Pre-fill areas
+      if (listing.areas) {
+        const areas = Array.isArray(listing.areas) ? listing.areas : [listing.areas];
+        areas.forEach(area => {
+          const areaId = t + '-area';
+          if (areaVals[areaId].length < (areaMax[areaId] || 3)) selectArea(area, areaId);
+        });
+      }
+
+      // Pre-fill name
+      const nameEl = document.getElementById(t + '-poster-name');
+      if (nameEl && listing.poster_name) nameEl.value = listing.poster_name;
+
+      // Pre-fill rent
+      const rentEl = document.querySelector('#f-' + t + ' input[type="number"]');
+      if (rentEl && listing.rent_amount) rentEl.value = listing.rent_amount;
+
+      // Pre-fill date
+      const dateEl = document.getElementById(t === 'fw' ? 'fw-movein' : t + '-available');
+      if (dateEl && listing.available_from) dateEl.value = listing.available_from;
+
+      // Pre-fill flat type (pills or select)
+      if (listing.flat_type) {
+        // Try pill first
+        const pillEl = document.querySelector(`#f-${t} [onclick*="${t}-ft"]`);
+        if (pillEl) {
+          const pills = document.querySelectorAll(`#f-${t} [onclick*="${t}-ft"]`);
+          pills.forEach(p => { if (p.textContent.trim() === listing.flat_type) { sp(p, t+'-ft'); } });
+          // If not found, try Other
+          const otherInput = document.getElementById(t + '-other-type');
+          if (otherInput && !document.querySelector(`#f-${t} [onclick*="${t}-ft"].sel`)) {
+            const otherPill = [...pills].find(p => p.textContent.trim() === 'Other');
+            if (otherPill) { spWithOther(otherPill, t+'-ft', t+'-other-type'); otherInput.value = listing.flat_type; }
+          }
+        }
+        // Try select (fm)
+        const selectEl = document.getElementById(t + '-flat-type');
+        if (selectEl) selectEl.value = listing.flat_type;
+      }
+
+      // Pre-fill furnishing
+      if (listing.furnishing) {
+        document.querySelectorAll(`#f-${t} [onclick*="${t}-furn"]`).forEach(p => {
+          if (p.textContent.trim() === listing.furnishing) sp(p, t+'-furn');
+        });
+      }
+
+      // Pre-fill food
+      if (listing.food_preference) {
+        document.querySelectorAll(`#f-${t} [onclick*="${t}-food"], #f-${t} [onclick*="fw-food"]`).forEach(p => {
+          if (p.textContent.trim() === listing.food_preference || p.textContent.trim().includes(listing.food_preference.replace(/🥦|🍗/g,'').trim())) sp(p, p.getAttribute('onclick').match(/'([^']+)'/)?.[1] || t+'-food');
+        });
+      }
+
+      // Pre-fill gender
+      if (listing.gender_preference) {
+        // Pills
+        document.querySelectorAll(`#f-${t} [onclick*="${t}-gen"]`).forEach(p => {
+          if (p.textContent.trim() === listing.gender_preference || p.textContent.includes(listing.gender_preference)) sp(p, t+'-gen');
+        });
+        // Select
+        const genSel = document.getElementById(t + '-gender-select');
+        if (genSel) genSel.value = listing.gender_preference;
+      }
+
+      // Pre-fill brokerage
+      if (t === 'fw' && listing.brokerage_preference) {
+        document.getElementById('fw-broker-choice').value = listing.brokerage_preference;
+        sbfw(listing.brokerage_preference);
+      }
+      if ((t === 'fl' || t === 'pg') && listing.has_brokerage !== undefined) {
+        if (listing.has_brokerage) sb(t, 'yes'); else sb(t, 'no');
+      }
+
+      // Pre-fill description
+      const descEl = document.querySelector('#f-' + t + ' textarea');
+      if (descEl && listing.description) descEl.value = listing.description;
+
+      // Pre-fill custom contact (owner only)
+      const contactEl = document.getElementById('ownerContactNumber');
+      if (contactEl && listing.custom_contact_phone) contactEl.value = listing.custom_contact_phone;
+
+      // Show edit notice
+      const notice = document.createElement('div');
+      notice.style.cssText = 'background:#fef6e4;border:1px solid #e6a817;border-radius:10px;padding:12px 14px;font-size:13px;color:#b8860b;margin:0 0 16px;';
+      notice.innerHTML = '✏️ <strong>Editing your listing</strong> — make your changes and tap "Save Changes" at the end.';
+      setTimeout(() => {
+        const activeStep = document.querySelector('.step.active');
+        if (activeStep) activeStep.prepend(notice);
+      }, 100);
+
+      // Change submit button to "Save Changes"
+      const nBtn = document.getElementById('nBtn');
+      if (nBtn) { nBtn.textContent = '💾 Save Changes'; }
+
+    } catch(e) { console.error('Edit mode error:', e); }
+    return; // Exit edit mode early
+  }
+
+  // ── AI PREFILL MODE ────────────────────────────────────────
   if (params.get('prefill') === '1') {
     try {
       const data = JSON.parse(localStorage.getItem('fk_ai_prefill') || '{}');

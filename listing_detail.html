@@ -325,15 +325,17 @@ body {
 </head>
 <body>
 <script>
-// Run immediately - hide owner controls for non-owners
+// Run immediately - hide owner controls for non-owners initially
+// showOwnerControls() will show it later if user is poster/claimed
 (function(){
   try {
     var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
-    if (!u) { document.write('<style>#ownerControls{display:none!important}</style>'); return; }
+    if (!u) { document.write('<style>#ownerControls{display:none}</style>'); return; }
     var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
     var isOwner = ph==='9538584612' || u.isOwner===true || u.isOwner==='true';
-    if (!isOwner) { document.write('<style>#ownerControls{display:none!important}</style>'); }
-  } catch(e) { document.write('<style>#ownerControls{display:none!important}</style>'); }
+    if (!isOwner) { document.write('<style>#ownerControls{display:none}</style>'); }
+    // If owner, leave visible (default in HTML)
+  } catch(e) { document.write('<style>#ownerControls{display:none}</style>'); }
 })();
 </script>
 
@@ -741,7 +743,7 @@ function renderListing(){
     else if (pref === 'prefno') { b.className='broker-banner pref-broker'; b.textContent='🤝 Preferably No Brokerage'; }
     else if (pref === 'yes') { b.className='broker-banner ok-broker'; b.textContent='✅ Okay With Brokerage'; }
     else { b.className='broker-banner no-broker'; b.textContent='🔍 Looking For A Flat'; }
-  } else if (listing.has_brokerage) {
+  } else if (listing.has_brokerage === true) {
     b.className='broker-banner has-broker';
     b.textContent='⚠ Brokerage Applicable — Fee Will Be Charged';
   } else {
@@ -763,8 +765,8 @@ function renderListing(){
       document.getElementById('pricePeriod').textContent='/month';
     }
   } else {
-    document.getElementById('listingPrice').textContent='Budget not specified';
-    document.getElementById('pricePeriod').textContent='';
+    document.getElementById('listingPrice').textContent='—';
+    document.getElementById('pricePeriod').textContent='Contact to discuss';
   }
 
   // Deposit — only for flat listings and PG
@@ -1067,15 +1069,13 @@ function showOwnerControls() {
     var isClaimed = u.userId && listing && listing.claimed_by_user_id && u.userId===listing.claimed_by_user_id;
     var ctrl = document.getElementById('ownerControls');
     if (isOwner || isPoster || isClaimed) {
-      ctrl.style.display = 'block';
-      ctrl.style.removeProperty('display');
-      ctrl.removeAttribute('style');
-      ctrl.style.marginBottom = '16px';
+      // Force show regardless of any CSS
+      ctrl.setAttribute('style', 'display:block!important;margin-bottom:16px');
       loadUnlockers();
     } else {
-      ctrl.style.display = 'none';
+      ctrl.setAttribute('style', 'display:none');
     }
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error('showOwnerControls:', e); }
 }
 
 
@@ -1109,47 +1109,7 @@ async function loadUnlockers() {
 
 function editListing() {
   if (!listing) return;
-  document.getElementById('edit_poster_name').value = listing.poster_name || '';
-  document.getElementById('edit_contact').value = listing.custom_contact_phone || '';
-  document.getElementById('edit_rent').value = listing.rent_amount || '';
-  document.getElementById('edit_areas').value = Array.isArray(listing.areas) ? listing.areas.join(', ') : listing.areas || '';
-  document.getElementById('edit_description').value = listing.description || '';
-
-  // Flat type — handle Other
-  const ft = listing.flat_type || '';
-  const ftSelect = document.getElementById('edit_flat_type');
-  const knownTypes = ['1 RK','1 BHK','2 BHK','3 BHK'];
-  if (knownTypes.includes(ft)) { ftSelect.value = ft; }
-  else if (ft) { ftSelect.value = 'Other'; }
-  else { ftSelect.value = ''; }
-
-  document.getElementById('edit_furnishing').value = listing.furnishing || '';
-  document.getElementById('edit_available_from').value = listing.available_from || '';
-
-  // Food — map old values to new
-  const foodMap = {'Veg only':'🥦 Veg','Non-veg ok':'🍗 Non-Veg','No preference':'No Veg/Non-Veg Preference','Veg':'🥦 Veg','Non-Veg':'🍗 Non-Veg'};
-  const foodVal = listing.food_preference || '';
-  document.getElementById('edit_food').value = foodMap[foodVal] || foodVal;
-
-  // Gender — map old values
-  const genderMap = {'Male only':'Male only','Female only':'Female only','Any':'Any','Male':'Male only','Female':'Female only'};
-  const genderVal = listing.gender_preference || '';
-  document.getElementById('edit_gender').value = genderMap[genderVal] || genderVal;
-
-  // Show brokerage for flat wanted
-  if (listing.listing_type === 'flat_wanted') {
-    document.getElementById('edit_broker_wrap').style.display = 'block';
-    document.getElementById('edit_brokerage_pref').value = listing.brokerage_preference || '';
-  } else {
-    document.getElementById('edit_broker_wrap').style.display = 'none';
-  }
-
-  // Show/hide contact field — only for owner
-  const user = getUser();
-  const isAppOwner = user && (user.isOwner === true || user.isOwner === 'true' || String(user.phone).trim() === '9538584612');
-  document.getElementById('edit_contact_wrap').style.display = isAppOwner ? 'block' : 'none';
-
-  openSheet('edit');
+  window.location.href = `post_form.html?edit=${listing.id}`;
 }
 
 async function saveEdit() {
@@ -1222,6 +1182,24 @@ function goBack() {
     window.location.href = 'index.html';
   }
 }
+
+// When leaving this page, ensure unlock state is saved to localStorage
+window.addEventListener('pagehide', function() {
+  // This is already done in revealContact/showAlreadyUnlocked
+  // but let's double-check if listing was unlocked
+  if (listing) {
+    try {
+      const user = getUser();
+      if (!user) return;
+      // Check if this listing was unlocked in this session
+      const unlocked = JSON.parse(localStorage.getItem('fk_unlocked') || '[]');
+      if (document.getElementById('unlockStep2').style.display === 'block' && !unlocked.includes(listing.id)) {
+        unlocked.push(listing.id);
+        localStorage.setItem('fk_unlocked', JSON.stringify(unlocked));
+      }
+    } catch(e) {}
+  }
+});
 </script>
 </body>
 </html>
