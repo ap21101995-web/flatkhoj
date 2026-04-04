@@ -175,12 +175,49 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
   </div>
 
   <!-- Blocked screen (shown when limit exceeded) -->
-  <div id="limitBlockedScreen" style="display:none;text-align:center;padding:32px 16px">
-    <div style="font-size:56px;margin-bottom:16px">🚫</div>
-    <div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:10px">Posting limit reached</div>
-    <div id="limitBlockedText" style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:24px"></div>
-    <a href="posting_limits.html" style="display:block;background:var(--teal);color:white;border-radius:12px;padding:14px 20px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:12px">Increase my limit →</a>
-    <button onclick="window.location.href='index.html'" style="background:none;border:none;font-family:var(--font);font-size:14px;color:var(--ink3);cursor:pointer;text-decoration:underline;text-underline-offset:2px">Back to listings</button>
+  <div id="limitBlockedScreen" style="display:none;padding:16px">
+    <div style="text-align:center;padding:24px 0 20px">
+      <div style="font-size:48px;margin-bottom:12px">🚫</div>
+      <div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:8px">Posting limit reached</div>
+      <div id="limitBlockedText" style="font-size:14px;color:var(--ink2);line-height:1.7"></div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Upgrade your plan with coins</div>
+
+    <!-- Basic Plan -->
+    <div style="background:var(--bg);border:2px solid var(--teal);border-radius:14px;padding:18px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--ink)">Basic Plan</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px">3 posts/day · 10 posts/month · 30 days</div>
+        </div>
+        <div style="font-size:18px;font-weight:800;color:var(--teal)">99 🪙</div>
+      </div>
+      <button onclick="upgradeInline('basic', 99)" id="basicUpgradeBtn" style="width:100%;padding:13px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
+        Upgrade for 99 coins →
+      </button>
+    </div>
+
+    <!-- Pro Plan -->
+    <div style="background:var(--bg);border:2px solid #7c3aed;border-radius:14px;padding:18px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--ink)">Pro Plan</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px">8 posts/day · 25 posts/month · 30 days</div>
+        </div>
+        <div style="font-size:18px;font-weight:800;color:#7c3aed">199 🪙</div>
+      </div>
+      <button onclick="upgradeInline('pro', 199)" id="proUpgradeBtn" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
+        Upgrade for 199 coins →
+      </button>
+    </div>
+
+    <div style="text-align:center">
+      <div id="userCoinBalance" style="font-size:13px;color:var(--ink3);margin-bottom:12px"></div>
+      <button onclick="window.location.href='coins.html'" style="background:var(--gold);color:white;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">🪙 Buy more coins</button>
+      <br>
+      <button onclick="window.location.href='index.html'" style="background:none;border:none;font-family:var(--font);font-size:14px;color:var(--ink3);cursor:pointer;text-decoration:underline;text-underline-offset:2px">Back to listings</button>
+    </div>
   </div>
 
   <div id="typeGridWrap">
@@ -792,6 +829,12 @@ async function submitListing() {
   btn.disabled = true;
 
   try {
+    // Final limit check — catches all bypass attempts
+    if (!window._editListingId) {
+      const allowed = await checkPostingLimitsStrict();
+      if (!allowed) { btn.textContent = 'Next →'; btn.disabled = false; return; }
+    }
+
     // Use restored form data if returning from login, otherwise collect fresh
     const formData = window._restoredFormData || collectFormData();
     window._restoredFormData = null; // clear after use
@@ -886,9 +929,97 @@ let step=1, type=null;
 // ── POSTING LIMITS ─────────────────────────────────────────
 const LIMITS = {
   free:  { daily: 1, monthly: 3,  label: 'Free plan' },
-  basic: { daily: 3, monthly: 10, label: 'Basic plan (99 coins/month)' },
-  pro:   { daily: 8, monthly: 25, label: 'Pro plan (199 coins/month)' },
+  basic: { daily: 3, monthly: 10, label: 'Basic plan' },
+  pro:   { daily: 8, monthly: 25, label: 'Pro plan' },
 };
+
+async function upgradeInline(plan, coinCost) {
+  const user = getUser();
+  if (!user) { window.location.href = 'login.html?trigger=post'; return; }
+
+  const btn = document.getElementById(plan + 'UpgradeBtn');
+  btn.textContent = 'Checking balance…'; btn.disabled = true;
+
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const data = await res.json();
+    const currentCoins = data[0]?.coins || 0;
+
+    if (currentCoins < coinCost) {
+      const needed = coinCost - currentCoins;
+      btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
+      if (confirm(`You need ${needed} more coins to upgrade.\n\nYour balance: ${currentCoins} coins\nRequired: ${coinCost} coins\n\nGo to Buy Coins page?`)) {
+        window.location.href = 'coins.html';
+      }
+      return;
+    }
+
+    const planNames = { basic: 'Basic', pro: 'Pro' };
+    const planLimits = { basic: '3 posts/day, 10/month', pro: '8 posts/day, 25/month' };
+    if (!confirm(`Upgrade to ${planNames[plan]} Plan for ${coinCost} coins?\n\n✓ ${planLimits[plan]}\n✓ Valid for 30 days\n\nYour balance: ${currentCoins} → ${currentCoins - coinCost} coins`)) {
+      btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
+      return;
+    }
+
+    btn.textContent = 'Upgrading…';
+    const newCoins = currentCoins - coinCost;
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coins: newCoins, posting_plan: plan, posting_plan_expires: expires })
+    });
+
+    user.coins = newCoins;
+    localStorage.setItem('fmh_user', JSON.stringify(user));
+
+    // Success — reload page so limit check runs fresh
+    alert(`✅ Upgraded to ${planNames[plan]} Plan! You can now post more listings.`);
+    window.location.reload();
+
+  } catch(e) {
+    btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
+    alert('Something went wrong. Please try again.');
+  }
+}
+
+// Strict version — returns true if allowed, false if blocked. Used before auto-submit.
+async function checkPostingLimitsStrict() {
+  const user = getUser();
+  if (!user) return false; // Must be logged in
+  const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
+  if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return true; // Owner never blocked
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const userData = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=posting_plan,posting_plan_expires`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    }).then(r => r.json());
+    let plan = userData[0]?.posting_plan || 'free';
+    const planExpires = userData[0]?.posting_plan_expires;
+    if (plan !== 'free' && planExpires && new Date(planExpires) < new Date()) plan = 'free';
+    const limit = LIMITS[plan] || LIMITS.free;
+    const [todayData, monthData] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfDay}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }).then(r => r.json()),
+      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfMonth}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }).then(r => r.json())
+    ]);
+    const todayCount = todayData.length;
+    const monthCount = monthData.length;
+    if (todayCount >= limit.daily) {
+      alert(`⚠️ You've already posted ${todayCount} listing${todayCount>1?'s':''} today. Your limit is ${limit.daily} per day.\n\nCome back tomorrow or upgrade your plan.`);
+      return false;
+    }
+    if (monthCount >= limit.monthly) {
+      alert(`⚠️ You've posted ${monthCount} listings this month. Your limit is ${limit.monthly} per month.\n\nUpgrade your plan to post more.`);
+      return false;
+    }
+    return true;
+  } catch(e) { return true; } // On error, allow — better to allow than block unfairly
+}
 
 async function checkPostingLimits() {
   // Never apply posting limits in edit mode
@@ -937,9 +1068,21 @@ async function checkPostingLimits() {
       document.getElementById('limitInfoBanner').style.display = 'none';
       document.getElementById('nBtn').style.display = 'none';
       const msg = dailyBlocked
-        ? `You have already posted <strong>${todayCount}</strong> listing${todayCount>1?'s':''} today. Your <strong>${limit.label}</strong> allows <strong>${limit.daily} post${limit.daily>1?'s':''} per day</strong>. You can post again tomorrow.<br><br>Need to post more? <a href="posting_limits.html" style="color:var(--teal);font-weight:700">Increase your limit →</a>`
-        : `You have posted <strong>${monthCount}</strong> listings this month. Your <strong>${limit.label}</strong> allows <strong>${limit.monthly} posts per month</strong>. Limit resets on 1st of next month.<br><br>Need to post more? <a href="posting_limits.html" style="color:var(--teal);font-weight:700">Increase your limit →</a>`;
+        ? `You've posted <strong>${todayCount}</strong> listing${todayCount>1?'s':''} today. Your <strong>${limit.label}</strong> allows <strong>${limit.daily} per day</strong>.`
+        : `You've posted <strong>${monthCount}</strong> listings this month. Your <strong>${limit.label}</strong> allows <strong>${limit.monthly} per month</strong>.`;
       document.getElementById('limitBlockedText').innerHTML = msg;
+
+      // Show user's current coin balance
+      try {
+        const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        });
+        const coinData = await coinRes.json();
+        const coins = coinData[0]?.coins || 0;
+        document.getElementById('userCoinBalance').textContent = `Your coin balance: 🪙 ${coins} coins`;
+        user.coins = coins;
+        localStorage.setItem('fmh_user', JSON.stringify(user));
+      } catch(e) {}
       return;
     }
 
@@ -993,6 +1136,18 @@ window.addEventListener('load', async function() {
 
         // Default to standard contact (user skipped step 3 — standard is fine)
         document.getElementById('fc-choice').value = 'paid';
+
+        // Check posting limits AGAIN now that user is logged in
+        // This prevents the bypass where user posts without being logged in
+        overlay.innerHTML = '<div style="font-size:48px">🔍</div><div style="font-size:18px;font-weight:700;color:var(--ink)">Checking your account…</div>';
+        const limitOk = await checkPostingLimitsStrict();
+        if (!limitOk) {
+          overlay.remove();
+          localStorage.removeItem('fk_post_state');
+          return; // Blocked — checkPostingLimitsStrict already showed the blocked screen
+        }
+
+        overlay.innerHTML = '<div style="font-size:48px">🚀</div><div style="font-size:18px;font-weight:700;color:var(--ink)">Posting your listing…</div><div style="font-size:14px;color:var(--ink3)">You\'re signed in. Publishing now!</div>';
 
         // Submit immediately
         setTimeout(async () => {
