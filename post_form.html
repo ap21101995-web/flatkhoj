@@ -163,6 +163,62 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 
 
 <!-- STEP 1: TYPE -->
+<!-- LIMIT BLOCKED SCREEN — shown as overlay when posting limit exceeded -->
+<div id="limitBlockedScreen" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;overflow-y:auto;max-width:480px;margin:0 auto">
+  <!-- Topbar -->
+  <div style="display:flex;align-items:center;padding:0 16px;height:52px;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10">
+    <button onclick="window.location.replace('index.html')" style="background:none;border:none;font-size:22px;color:var(--ink2);cursor:pointer;padding:4px">←</button>
+    <div style="flex:1;font-size:16px;font-weight:700;color:var(--ink);margin-left:12px">Posting Limit Reached</div>
+  </div>
+  <div style="padding:16px">
+    <div style="text-align:center;padding:24px 0 20px">
+      <div style="font-size:56px;margin-bottom:16px">🚫</div>
+      <div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:8px">You've reached your posting limit</div>
+      <div id="limitBlockedText" style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:8px"></div>
+      <div style="font-size:13px;color:var(--ink3)">Upgrade your plan using your coin balance to post more.</div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Choose a plan</div>
+
+    <div style="background:var(--bg);border:2px solid var(--teal);border-radius:14px;padding:18px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--ink)">Basic Plan</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:4px">3 posts/day · 10 posts/month · 30 days</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:var(--teal)">99 🪙</div>
+      </div>
+      <button onclick="upgradeInline('basic', 99)" id="basicUpgradeBtn" style="width:100%;padding:14px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
+        Upgrade for 99 coins →
+      </button>
+    </div>
+
+    <div style="background:var(--bg);border:2px solid #7c3aed;border-radius:14px;padding:18px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--ink)">Pro Plan</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:4px">8 posts/day · 25 posts/month · 30 days</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:#7c3aed">199 🪙</div>
+      </div>
+      <button onclick="upgradeInline('pro', 199)" id="proUpgradeBtn" style="width:100%;padding:14px;background:#7c3aed;color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
+        Upgrade for 199 coins →
+      </button>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px">
+      <div id="userCoinBalance" style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:12px"></div>
+      <button onclick="window.location.href='coins.html?return_to='+encodeURIComponent(window.location.href)" style="width:100%;padding:14px;background:var(--gold);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
+        🪙 Buy more coins first
+      </button>
+    </div>
+
+    <button onclick="window.location.replace('index.html')" style="width:100%;padding:14px;background:none;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);font-size:14px;color:var(--ink3);cursor:pointer">
+      Back to homepage
+    </button>
+  </div>
+</div>
+
 <div class="step active" id="step1">
   <div style="padding:4px 0 16px">
     <div class="step-heading">What are you posting?</div>
@@ -174,51 +230,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     <div id="limitInfoText"></div>
   </div>
 
-  <!-- Blocked screen (shown when limit exceeded) -->
-  <div id="limitBlockedScreen" style="display:none;padding:16px">
-    <div style="text-align:center;padding:24px 0 20px">
-      <div style="font-size:48px;margin-bottom:12px">🚫</div>
-      <div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:8px">Posting limit reached</div>
-      <div id="limitBlockedText" style="font-size:14px;color:var(--ink2);line-height:1.7"></div>
-    </div>
 
-    <div style="font-size:13px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Upgrade your plan with coins</div>
-
-    <!-- Basic Plan -->
-    <div style="background:var(--bg);border:2px solid var(--teal);border-radius:14px;padding:18px;margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div>
-          <div style="font-size:16px;font-weight:800;color:var(--ink)">Basic Plan</div>
-          <div style="font-size:13px;color:var(--ink3);margin-top:2px">3 posts/day · 10 posts/month · 30 days</div>
-        </div>
-        <div style="font-size:18px;font-weight:800;color:var(--teal)">99 🪙</div>
-      </div>
-      <button onclick="upgradeInline('basic', 99)" id="basicUpgradeBtn" style="width:100%;padding:13px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
-        Upgrade for 99 coins →
-      </button>
-    </div>
-
-    <!-- Pro Plan -->
-    <div style="background:var(--bg);border:2px solid #7c3aed;border-radius:14px;padding:18px;margin-bottom:20px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div>
-          <div style="font-size:16px;font-weight:800;color:var(--ink)">Pro Plan</div>
-          <div style="font-size:13px;color:var(--ink3);margin-top:2px">8 posts/day · 25 posts/month · 30 days</div>
-        </div>
-        <div style="font-size:18px;font-weight:800;color:#7c3aed">199 🪙</div>
-      </div>
-      <button onclick="upgradeInline('pro', 199)" id="proUpgradeBtn" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
-        Upgrade for 199 coins →
-      </button>
-    </div>
-
-    <div style="text-align:center">
-      <div id="userCoinBalance" style="font-size:13px;color:var(--ink3);margin-bottom:12px"></div>
-      <button onclick="window.location.href='coins.html'" style="background:var(--gold);color:white;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">🪙 Buy more coins</button>
-      <br>
-      <button onclick="window.location.href='index.html'" style="background:none;border:none;font-family:var(--font);font-size:14px;color:var(--ink3);cursor:pointer;text-decoration:underline;text-underline-offset:2px">Back to listings</button>
-    </div>
-  </div>
 
   <div id="typeGridWrap">
   <div class="type-grid">
@@ -957,25 +969,14 @@ const LIMITS = {
 };
 
 function showLimitBlocked(msg, coins) {
-  // Hide all form steps, show the blocked screen
-  document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
-  document.getElementById('nBtn').style.display = 'none';
-  document.getElementById('bBtn').style.display = 'none';
-
-  // Show blocked screen with upgrade options and coin balance
-  document.getElementById('typeGridWrap').style.display = 'none';
-  document.getElementById('limitBlockedScreen').style.display = 'block';
+  // Show the full-screen overlay — works regardless of which step user is on
+  const screen = document.getElementById('limitBlockedScreen');
   document.getElementById('limitBlockedText').innerHTML = msg;
-  if (document.getElementById('userCoinBalance')) {
-    document.getElementById('userCoinBalance').textContent = coins !== undefined ? `Your coin balance: 🪙 ${coins} coins` : '';
+  if (coins !== undefined) {
+    document.getElementById('userCoinBalance').textContent = `Your current balance: 🪙 ${coins} coins`;
   }
-
-  // Show a back-to-home button at the bottom
-  document.getElementById('nBtn').style.display = 'none';
-  const bBtn = document.getElementById('bBtn');
-  bBtn.style.display = 'block';
-  bBtn.textContent = '← Back to home';
-  bBtn.onclick = () => window.location.replace('index.html');
+  screen.style.display = 'block';
+  window.scrollTo(0, 0);
 }
 
 async function upgradeInline(plan, coinCost) {
@@ -1012,8 +1013,13 @@ async function upgradeInline(plan, coinCost) {
     localStorage.setItem('fmh_user', JSON.stringify(user));
 
     // Success — reload page so limit check runs fresh
-    alert(`✅ Upgraded to ${planNames[plan]} Plan! You can now post more listings.`);
-    window.location.reload();
+    // Hide blocked screen, reload to fresh state
+    document.getElementById('limitBlockedScreen').style.display = 'none';
+    // Show a brief success message then reload
+    const btn2 = document.getElementById(plan + 'UpgradeBtn');
+    btn2.textContent = '✅ Upgraded! Reloading…';
+    btn2.style.background = '#1a7a3c';
+    setTimeout(() => window.location.reload(), 1000);
 
   } catch(e) {
     btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
