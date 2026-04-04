@@ -630,20 +630,40 @@ body {
 <div class="modal-backdrop" id="unlockBackdrop" onclick="closeSheet('unlock')"></div>
 <div class="modal-sheet" id="unlockSheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">Unlock Contact</div>
-  <div class="sheet-sub" id="unlockSub">Reveal this person's WhatsApp number</div>
-  <div class="coin-balance-row">
-    <span>Your coin balance</span>
-    <strong id="unlockSheetBalance">🪙 — coins</strong>
+
+  <!-- State 1: unlock prompt (default) -->
+  <div id="unlockPromptState">
+    <div class="sheet-title">Unlock Contact</div>
+    <div class="sheet-sub" id="unlockSub">Reveal this person's WhatsApp number</div>
+    <div class="coin-balance-row">
+      <span>Your coin balance</span>
+      <strong id="unlockSheetBalance">🪙 — coins</strong>
+    </div>
+    <div id="unlockInsufficientMsg" style="display:none;background:var(--red-bg);border:1px solid var(--red);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--red);margin-bottom:12px;text-align:center">
+      ⚠️ Not enough coins. <a href="coins.html" style="color:var(--red);font-weight:700;text-decoration:underline">Buy coins →</a>
+    </div>
+    <button class="sheet-confirm-btn" id="unlockConfirmBtn" onclick="confirmUnlock()">Spend <span id="unlockBtnCost">5</span> Coins & Unlock →</button>
+    <div class="unlock-info-box" id="unlockInfoBox">
+      Spending <strong id="unlockCostText">5 coins</strong> reveals their phone number. You can then WhatsApp or call them directly. Once unlocked, you won't need to pay again for the same listing.
+    </div>
+    <div class="sheet-note">Coins never expire · 100% secure</div>
   </div>
-  <div id="unlockInsufficientMsg" style="display:none;background:var(--red-bg);border:1px solid var(--red);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--red);margin-bottom:12px;text-align:center">
-    ⚠️ Not enough coins. <a href="coins.html" style="color:var(--red);font-weight:700;text-decoration:underline">Buy coins →</a>
+
+  <!-- State 2: contact revealed -->
+  <div id="unlockRevealedState" style="display:none">
+    <div class="sheet-title">✅ Contact Unlocked</div>
+    <div style="text-align:center;padding:20px 0 8px">
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:8px">Phone number</div>
+      <div id="revealedPhone" style="font-size:28px;font-weight:800;color:var(--ink);letter-spacing:2px;margin-bottom:20px"></div>
+      <a id="revealedWhatsapp" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:white;border-radius:12px;padding:14px 20px;font-family:var(--font);font-size:15px;font-weight:700;text-decoration:none;margin-bottom:12px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Message on WhatsApp
+      </a>
+      <a id="revealedCall" href="#" style="display:flex;align-items:center;justify-content:center;gap:10px;background:var(--bg2);color:var(--ink2);border:1.5px solid var(--border);border-radius:12px;padding:14px 20px;font-family:var(--font);font-size:15px;font-weight:700;text-decoration:none">
+        📞 Call directly
+      </a>
+    </div>
   </div>
-  <button class="sheet-confirm-btn" id="unlockConfirmBtn" onclick="confirmUnlock()">Spend <span id="unlockBtnCost">5</span> Coins & Unlock →</button>
-  <div class="unlock-info-box" id="unlockInfoBox">
-    Spending <strong id="unlockCostText">5 coins</strong> reveals their phone number. You can then WhatsApp or call them directly. Once unlocked, you won't need to pay again for the same listing.
-  </div>
-  <div class="sheet-note">Coins never expire · 100% secure</div>
 </div>
 
 <!-- ── FILTER SHEET ── -->
@@ -1058,11 +1078,19 @@ function buildUnlockBtn(l, areas) {
     return '<button class="unlock-btn" style="background:var(--bg2);color:var(--ink3);border:1.5px solid var(--border);cursor:default;font-size:12px" onclick="window.location.href=\'listing_detail.html?id=' + l.id + '\'">Your listing</button>';
   }
   if (unlockedListingIds.has(l.id) || getUnlockedListings().includes(l.id)) {
-    return '<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal);cursor:default" onclick="window.location.href=\'listing_detail.html?id=' + l.id + '\'">✓ Contact unlocked — view</button>';
+    return '<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal)" onclick="viewUnlockedContact(\'' + l.id + '\')">✓ Contact unlocked — view</button>';
   }
   const label = l.is_free_contact ? 'Contact for free' : 'Unlock contact';
   const pip = l.is_free_contact ? 'Free!' : UNLOCK_COST + ' 🪙';
   return '<button class="unlock-btn" data-listing-id="' + l.id + '" data-owner-id="' + (l.user_id||'') + '" data-area="' + escHtml(areas) + '" onclick="handleUnlockCard(this)">' + label + '<span class="coin-pip">' + pip + '</span></button>';
+}
+
+async function viewUnlockedContact(listingId) {
+  // Reset sheet to prompt state first in case it was in revealed state
+  document.getElementById('unlockPromptState').style.display = 'block';
+  document.getElementById('unlockRevealedState').style.display = 'none';
+  // Fetch and show contact directly
+  await showUnlockedContact(listingId);
 }
 
 async function handleUnlockCard(btn) {
@@ -1122,6 +1150,9 @@ async function handleUnlock(listingId, area) {
   document.getElementById('unlockSheetBalance').textContent = '🪙 Loading…';
   document.getElementById('unlockInsufficientMsg').style.display = 'none';
   document.getElementById('unlockConfirmBtn').disabled = false;
+  // Always start in prompt state
+  document.getElementById('unlockPromptState').style.display = 'block';
+  document.getElementById('unlockRevealedState').style.display = 'none';
 
   openSheet('unlock');
 
@@ -1229,7 +1260,6 @@ async function confirmUnlock() {
 
 async function showUnlockedContact(listingId) {
   try {
-    // Fetch listing with custom_contact_phone and user_id
     const res = await fetch(
       `${SUPA_URL}/rest/v1/listings?id=eq.${listingId}&select=user_id,custom_contact_phone`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
@@ -1237,39 +1267,41 @@ async function showUnlockedContact(listingId) {
     const [listingData] = await res.json();
     let phone = null;
 
-    if (listingData) {
-      if (listingData.custom_contact_phone) {
-        // Use custom contact phone set by owner
-        phone = listingData.custom_contact_phone;
-      } else if (listingData.user_id) {
-        // Fetch phone from users table
-        const userRes = await fetch(
-          `${SUPA_URL}/rest/v1/users?id=eq.${listingData.user_id}&select=phone`,
-          { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
-        );
-        const [poster] = await userRes.json();
-        if (poster) phone = poster.phone;
-      }
+    if (listingData?.custom_contact_phone) {
+      phone = listingData.custom_contact_phone;
+    } else if (listingData?.user_id) {
+      const userRes = await fetch(
+        `${SUPA_URL}/rest/v1/users?id=eq.${listingData.user_id}&select=phone`,
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
+      );
+      const [poster] = await userRes.json();
+      if (poster) phone = poster.phone;
     }
 
-    closeSheet('unlock');
-
     if (phone) {
-      const formatted = '+91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
-      setTimeout(() => {
-        if (confirm(`Contact revealed!\n\n${formatted}\n\nOpen WhatsApp to message them?`)) {
-          window.open(`https://wa.me/91${phone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`, '_blank');
-        }
-      }, 100);
+      showContactInSheet(phone);
     } else {
-      alert('Contact unlocked! Open the listing to view their number.');
+      // Fallback — go to listing detail if phone unavailable
+      closeSheet('unlock');
       window.location.href = `listing_detail.html?id=${listingId}`;
     }
   } catch(err) {
     closeSheet('unlock');
-    alert('Contact unlocked! Open the listing to view their number.');
     window.location.href = `listing_detail.html?id=${listingId}`;
   }
+}
+
+function showContactInSheet(phone) {
+  const formatted = '+91 ' + String(phone).replace(/(\d{5})(\d{5})/, '$1 $2');
+  document.getElementById('revealedPhone').textContent = formatted;
+  document.getElementById('revealedWhatsapp').href = `https://wa.me/91${phone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`;
+  document.getElementById('revealedCall').href = `tel:+91${phone}`;
+  // Switch sheet state
+  document.getElementById('unlockPromptState').style.display = 'none';
+  document.getElementById('unlockRevealedState').style.display = 'block';
+  // Make sure sheet is open
+  document.getElementById('unlockBackdrop').classList.add('show');
+  document.getElementById('unlockSheet').classList.add('show');
 }
 
 // ── HELPERS ────────────────────────────────────────────────
