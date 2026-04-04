@@ -637,12 +637,7 @@ async function verifyOtp() {
       }).then(r => r.json());
       if (existing && existing.length > 0) {
         userId = existing[0].id;
-        // Ensure 999 coins
-        await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
-          method: 'PATCH',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coins: 999 })
-        });
+        // Use actual coin balance from DB, don't reset
       } else {
         isNewUser = true;
         const created = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
@@ -652,7 +647,8 @@ async function verifyOtp() {
         }).then(r => r.json());
         userId = created[0]?.id;
       }
-      const user = { phone: '1111111100', name: 'Test User', coins: 999, userId, sessionToken: 'test-session-' + Date.now(), joinedAt: Date.now() };
+      const actualCoins = (existing && existing.length > 0) ? existing[0].coins : 999;
+      const user = { phone: '1111111100', name: 'Test User', coins: actualCoins, userId, sessionToken: 'test-session-' + Date.now(), joinedAt: Date.now() };
       saveLoginState(user);
       document.getElementById('welcomeTitle').textContent = isNewUser ? 'Test Account Created! 🧪' : 'Welcome back, Test User!';
       document.getElementById('welcomeSub').textContent = 'Signed in as test user with 999 coins.';
