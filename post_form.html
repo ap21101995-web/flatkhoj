@@ -768,7 +768,8 @@ async function submitListing() {
     if (window._editListingId) {
       formData.updated_at = new Date().toISOString();
       // Add custom contact if owner
-      if (user.isOwner || user.phone === '9538584612') {
+      const editUserPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
+      if (editUserPhone==='9538584612' || user.isOwner===true || user.isOwner==='true') {
         const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
         if (customPhone && customPhone.length === 10) formData.custom_contact_phone = customPhone;
       }
@@ -789,7 +790,9 @@ async function submitListing() {
     formData.updated_at = new Date().toISOString();
 
     // If owner posting on behalf — save custom contact number
-    if (user.isOwner) {
+    const userPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
+    const isAppOwner = userPhone==='9538584612' || user.isOwner===true || user.isOwner==='true';
+    if (isAppOwner) {
       const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
       if (customPhone && customPhone.length === 10) {
         formData.custom_contact_phone = customPhone;
@@ -1286,8 +1289,11 @@ function updateUI(){
   if(step===3){
     // Show custom contact field if owner is logged in
     const user = getUser();
-    if (user && user.isOwner) {
-      document.getElementById('ownerContactField').style.display = 'block';
+    if (user) {
+      const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
+      if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') {
+        document.getElementById('ownerContactField').style.display = 'block';
+      }
     }
     // Show smart delete reminder based on listing type
     const msgs = {
