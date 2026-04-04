@@ -795,13 +795,16 @@ function renderListing(){
     if (pref === 'no') { b.className='broker-banner no-broker'; b.textContent='🚫 Strictly No Brokerage'; }
     else if (pref === 'prefno') { b.className='broker-banner pref-broker'; b.textContent='🤝 Preferably No Brokerage'; }
     else if (pref === 'yes') { b.className='broker-banner ok-broker'; b.textContent='✅ Okay With Brokerage'; }
-    else { b.className='broker-banner no-broker'; b.textContent='🔍 Looking For A Flat'; }
-  } else if (listing.has_brokerage === true) {
+    else { b.style.display='none'; }
+  } else if (listing.has_brokerage === true || listing.has_brokerage === 'true') {
     b.className='broker-banner has-broker';
     b.textContent='⚠ Brokerage Applicable — Fee Will Be Charged';
-  } else {
+  } else if (listing.has_brokerage === false || listing.has_brokerage === 'false') {
     b.className='broker-banner no-broker';
     b.textContent='✓ No Brokerage — Direct From Owner';
+  } else {
+    // has_brokerage is null — hide banner
+    b.style.display = 'none';
   }
 
   // Type, title, location
@@ -818,8 +821,8 @@ function renderListing(){
       document.getElementById('pricePeriod').textContent='/month';
     }
   } else {
-    document.getElementById('listingPrice').textContent='—';
-    document.getElementById('pricePeriod').textContent='Contact to discuss';
+    document.getElementById('listingPrice').textContent='Not specified';
+    document.getElementById('pricePeriod').textContent='';
   }
 
   // Deposit — only for flat listings and PG
@@ -894,11 +897,12 @@ function renderListing(){
     document.getElementById('listingDesc').textContent=listing.description;
   }
 
-  // Poster name — use real name if saved, otherwise generic
-  const posterName = listing.poster_name || 'FlatKhoj User';
-  const posterInitials = posterName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  // Poster name — use real name if saved
+  const posterName = (listing.poster_name && listing.poster_name.trim()) ? listing.poster_name.trim() : null;
+  const displayName = posterName || 'FlatKhoj Member';
+  const posterInitials = displayName.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2) || 'FK';
   document.getElementById('posterAvatar').textContent=posterInitials;
-  document.getElementById('posterName').textContent=posterName;
+  document.getElementById('posterName').textContent=displayName;
 
   // Update coin cost pill
   const costPill = document.getElementById('unlockCostPill');
@@ -914,7 +918,7 @@ function renderListing(){
   const role = roleLabels[listing.listing_type] || 'Member';
   document.getElementById('posterRole').textContent = role;
   document.getElementById('contactNameDisplay').textContent = posterName + ' · ' + role;
-  if (posterName && posterName !== 'FlatKhoj User') {
+  if (posterName) {
     document.getElementById('unlockSheetSub').textContent = `Reveal ${posterName}'s contact number. Once unlocked, you can reach them anytime without paying again.`;
     document.getElementById('unlockRevealSub').textContent = `You can now reach ${posterName} directly on WhatsApp or phone.`;
   }

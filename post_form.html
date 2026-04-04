@@ -759,9 +759,9 @@ function collectFormData() {
   if (type === 'fl') {
     data.listing_type = 'flat_listing';
     data.poster_name = document.getElementById('fl-poster-name')?.value?.trim() || null;
-    data.rent_amount = parseInt(document.querySelector('#f-fl input[placeholder*="rent"]')?.value) || null;
+    data.rent_amount = parseInt(document.querySelector('#f-fl input[type="number"]')?.value) || null;
     const flFtEl = document.querySelector('#f-fl [onclick*="fl-ft"].sel'); const flOther = document.getElementById('fl-other-type')?.value?.trim(); data.flat_type = flFtEl ? (flFtEl.textContent.trim() === 'Other' && flOther ? flOther : flFtEl.textContent.trim()) : null;
-    data.furnishing = document.querySelector('#f-fl .sel[onclick*="furnishing"]')?.textContent?.trim() || null;
+    data.furnishing = document.querySelector('#f-fl .sel[onclick*="fl-furn"]')?.textContent?.trim() || null;
     data.food_preference = document.querySelector('#f-fl .sel[onclick*="fl-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fl .sel[onclick*="fl-gen"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
@@ -790,7 +790,7 @@ function collectFormData() {
     data.room_type = document.querySelector('#f-fm .sel[onclick*="fm-rm"]')?.textContent?.trim() || null;
     data.furnishing = document.querySelector('#f-fm .sel[onclick*="fm-furn"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fm textarea')?.value || null;
-    data.has_brokerage = false;
+    data.has_brokerage = document.getElementById('fm-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fm-available')?.value || null;
   } else if (type === 'pg') {
     data.listing_type = 'pg_listing';
@@ -829,10 +829,10 @@ async function submitListing() {
   btn.disabled = true;
 
   try {
-    // Final limit check — catches all bypass attempts
+    // Final limit check — shows inline blocked screen if exceeded
     if (!window._editListingId) {
       const allowed = await checkPostingLimitsStrict();
-      if (!allowed) { btn.textContent = 'Next →'; btn.disabled = false; return; }
+      if (!allowed) { btn.textContent = window._editListingId ? 'Save Changes' : '🚀 Post Listing — It\'s Free!'; btn.disabled = false; return; }
     }
 
     // Use restored form data if returning from login, otherwise collect fresh
@@ -956,6 +956,28 @@ const LIMITS = {
   pro:   { daily: 8, monthly: 25, label: 'Pro plan' },
 };
 
+function showLimitBlocked(msg, coins) {
+  // Hide all form steps, show the blocked screen
+  document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
+  document.getElementById('nBtn').style.display = 'none';
+  document.getElementById('bBtn').style.display = 'none';
+
+  // Show blocked screen with upgrade options and coin balance
+  document.getElementById('typeGridWrap').style.display = 'none';
+  document.getElementById('limitBlockedScreen').style.display = 'block';
+  document.getElementById('limitBlockedText').innerHTML = msg;
+  if (document.getElementById('userCoinBalance')) {
+    document.getElementById('userCoinBalance').textContent = coins !== undefined ? `Your coin balance: 🪙 ${coins} coins` : '';
+  }
+
+  // Show a back-to-home button at the bottom
+  document.getElementById('nBtn').style.display = 'none';
+  const bBtn = document.getElementById('bBtn');
+  bBtn.style.display = 'block';
+  bBtn.textContent = '← Back to home';
+  bBtn.onclick = () => window.location.replace('index.html');
+}
+
 async function upgradeInline(plan, coinCost) {
   const user = getUser();
   if (!user) { window.location.href = 'login.html?trigger=post'; return; }
@@ -1002,14 +1024,14 @@ async function upgradeInline(plan, coinCost) {
 // Strict version — returns true if allowed, false if blocked. Used before auto-submit.
 async function checkPostingLimitsStrict() {
   const user = getUser();
-  if (!user) return false; // Must be logged in
+  if (!user) return false;
   const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
-  if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return true; // Owner never blocked
+  if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return true;
   try {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const userData = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=posting_plan,posting_plan_expires`, {
+    const userData = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins,posting_plan,posting_plan_expires`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     }).then(r => r.json());
     let plan = userData[0]?.posting_plan || 'free';
@@ -1022,16 +1044,16 @@ async function checkPostingLimitsStrict() {
     ]);
     const todayCount = todayData.length;
     const monthCount = monthData.length;
-    if (todayCount >= limit.daily) {
-      alert(`⚠️ You've already posted ${todayCount} listing${todayCount>1?'s':''} today. Your limit is ${limit.daily} per day.\n\nCome back tomorrow or upgrade your plan.`);
-      return false;
-    }
-    if (monthCount >= limit.monthly) {
-      alert(`⚠️ You've posted ${monthCount} listings this month. Your limit is ${limit.monthly} per month.\n\nUpgrade your plan to post more.`);
+    const coins = userData[0]?.coins || 0;
+    if (todayCount >= limit.daily || monthCount >= limit.monthly) {
+      const msg = todayCount >= limit.daily
+        ? `You have posted ${todayCount} listing${todayCount>1?'s':''} today. Your ${limit.label} allows ${limit.daily} per day.`
+        : `You have posted ${monthCount} listings this month. Your ${limit.label} allows ${limit.monthly} per month.`;
+      showLimitBlocked(msg, coins);
       return false;
     }
     return true;
-  } catch(e) { return true; } // On error, allow — better to allow than block unfairly
+  } catch(e) { return true; }
 }
 
 async function checkPostingLimits() {
@@ -1083,19 +1105,11 @@ async function checkPostingLimits() {
       const msg = dailyBlocked
         ? `You've posted <strong>${todayCount}</strong> listing${todayCount>1?'s':''} today. Your <strong>${limit.label}</strong> allows <strong>${limit.daily} per day</strong>.`
         : `You've posted <strong>${monthCount}</strong> listings this month. Your <strong>${limit.label}</strong> allows <strong>${limit.monthly} per month</strong>.`;
-      document.getElementById('limitBlockedText').innerHTML = msg;
-
-      // Show user's current coin balance
-      try {
-        const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
-          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-        });
-        const coinData = await coinRes.json();
-        const coins = coinData[0]?.coins || 0;
-        document.getElementById('userCoinBalance').textContent = `Your coin balance: 🪙 ${coins} coins`;
-        user.coins = coins;
-        localStorage.setItem('fmh_user', JSON.stringify(user));
-      } catch(e) {}
+      // coins already fetched above from userData
+      const coins = userData[0]?.coins || 0;
+      user.coins = coins;
+      localStorage.setItem('fmh_user', JSON.stringify(user));
+      showLimitBlocked(msg, coins);
       return;
     }
 
@@ -1162,32 +1176,18 @@ window.addEventListener('load', async function() {
         step = 3;
         updateUI();
 
-        // Show a "posting..." overlay instead of step 3 form
-        const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:white;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:var(--font)';
-        overlay.innerHTML = '<div style="font-size:48px">🚀</div><div style="font-size:18px;font-weight:700;color:var(--ink)">Posting your listing…</div><div style="font-size:14px;color:var(--ink3)">You\'re signed in. Publishing now!</div>';
-        document.body.appendChild(overlay);
-
-        // Default to standard contact (user skipped step 3 — standard is fine)
+        // Default to standard contact
         document.getElementById('fc-choice').value = 'paid';
 
-        // Check posting limits AGAIN now that user is logged in
-        // This prevents the bypass where user posts without being logged in
-        overlay.innerHTML = '<div style="font-size:48px">🔍</div><div style="font-size:18px;font-weight:700;color:var(--ink)">Checking your account…</div>';
+        // Check posting limits now that user is logged in (no popup — shows inline if blocked)
         const limitOk = await checkPostingLimitsStrict();
         if (!limitOk) {
-          overlay.remove();
           localStorage.removeItem('fk_post_state');
-          return; // Blocked — checkPostingLimitsStrict already showed the blocked screen
+          return; // showLimitBlocked() already updated the UI
         }
 
-        overlay.innerHTML = '<div style="font-size:48px">🚀</div><div style="font-size:18px;font-weight:700;color:var(--ink)">Posting your listing…</div><div style="font-size:14px;color:var(--ink3)">You\'re signed in. Publishing now!</div>';
-
         // Submit immediately
-        setTimeout(async () => {
-          await submitListing();
-          overlay.remove();
-        }, 800);
+        await submitListing();
       }
     } catch(e) { localStorage.removeItem('fk_post_state'); }
   }
@@ -1228,7 +1228,8 @@ window.addEventListener('load', async function() {
       updateUI(); // This makes the form section visible
 
       // Pre-fill after DOM is ready
-      setTimeout(() => prefillEditForm(listing, t), 150);
+      // Use requestAnimationFrame to ensure DOM has painted before filling
+      requestAnimationFrame(() => requestAnimationFrame(() => prefillEditForm(listing, t)));
 
     } catch(e) { console.error('Edit mode error:', e); }
     // Don't return — let page remain on step 1
@@ -1440,7 +1441,7 @@ function nextStep(){
     const typeMap = { flat_listing:'fl', flat_wanted:'fw', flatmate_wanted:'fm', pg_listing:'pg' };
     const originalType = typeMap[listing.listing_type];
     if(type === originalType){
-      setTimeout(() => prefillEditForm(listing, type), 50);
+      requestAnimationFrame(() => requestAnimationFrame(() => prefillEditForm(listing, type)));
     }
   }
 
