@@ -289,8 +289,8 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
   <div class="success-icon">🎉</div>
   <div class="success-title">Coins added!</div>
   <div class="success-coins" id="successCoins">+50 🪙</div>
-  <div class="success-sub">Your coins have been added to your account. Start unlocking contacts on FlatKhoj!</div>
-  <button class="success-btn" onclick="window.location.href='index.html'">Browse listings →</button>
+  <div class="success-sub" id="successSub">Your coins have been added to your account.</div>
+  <button class="success-btn" id="successReturnBtn" onclick="handleCoinsReturn()">Continue →</button>
 </div>
 
 <script>
@@ -334,15 +334,30 @@ window.onload = async function() {
 
   document.getElementById('balanceAmount').textContent = user.coins || 0;
 
-  // Check for payment return
+  // Read return destination
   const params = new URLSearchParams(window.location.search);
+  const returnTo = params.get('return_to') || '';
+  if (returnTo) {
+    localStorage.setItem('fk_coins_return', returnTo);
+  }
+
+  // Check for payment return
   if (params.get('payment') === 'success') {
     const coins = parseInt(params.get('coins') || '0');
     const orderId = params.get('order_id') || params.get('order');
-    // Poll Supabase until coins are added (webhook may take a few seconds)
     await waitForCoinsUpdate(user, coins, orderId);
   }
 };
+
+function handleCoinsReturn() {
+  const returnTo = localStorage.getItem('fk_coins_return') || '';
+  localStorage.removeItem('fk_coins_return');
+  if (returnTo && returnTo !== 'null') {
+    window.location.replace(returnTo);
+  } else {
+    window.location.replace('index.html');
+  }
+}
 
 // ── PACK SELECTION ─────────────────────────────────────────
 function selectPack(pack, price, coins) {
@@ -409,7 +424,7 @@ async function initiatePayment() {
       const cashfree = Cashfree({ mode: CASHFREE_ENV });
       cashfree.checkout({
         paymentSessionId: order.payment_session_id,
-        returnUrl: `https://flatkhoj.com/coins.html?payment=success&coins=${selectedCoins}&order=${order.order_id}`
+        returnUrl: `https://flatkhoj.com/coins.html?payment=success&coins=${selectedCoins}&order=${order.order_id}&return_to=${encodeURIComponent(localStorage.getItem('fk_coins_return')||'')}`
       });
     };
     document.head.appendChild(script);
@@ -525,6 +540,31 @@ function hideProcessing() { document.getElementById('processingOverlay').classLi
 function showSuccess(coins) {
   hideProcessing();
   document.getElementById('successCoins').textContent = '+' + coins + ' 🪙';
+
+  // Set context-aware button text and subtitle
+  const returnTo = localStorage.getItem('fk_coins_return') || '';
+  const btn = document.getElementById('successReturnBtn');
+  const sub = document.getElementById('successSub');
+  if (returnTo.includes('post_form')) {
+    const context = new URLSearchParams(window.location.search).get('context') || localStorage.getItem('fk_coins_context') || '';
+    if(context === 'upgrade') {
+      btn.textContent = 'Upgrade my posting plan →';
+      sub.textContent = 'Your coins are ready. Go back to upgrade your posting limit.';
+    } else {
+      btn.textContent = 'Continue posting →';
+      sub.textContent = 'Your coins are ready. Continue where you left off.';
+    }
+  } else if (returnTo.includes('listing_detail')) {
+    btn.textContent = 'Go back to listing →';
+    sub.textContent = 'Your coins are ready. You can now unlock this contact.';
+  } else if (returnTo.includes('activity')) {
+    btn.textContent = 'Back to My Activity →';
+    sub.textContent = 'Coins added to your account.';
+  } else {
+    btn.textContent = 'Continue →';
+    sub.textContent = 'Your coins are ready. Start unlocking contacts!';
+  }
+
   document.getElementById('successOverlay').classList.add('show');
   // Update balance display
   const user = getUser();

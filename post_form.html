@@ -876,7 +876,7 @@ async function submitListing() {
       if (currentCoins < 50) {
         btn.textContent = '🚀 Post Listing — It\'s Free!'; btn.disabled = false;
         if (confirm(`You need 50 coins to make your contact free, but you only have ${currentCoins} coins.\n\nWould you like to buy more coins?`)) {
-          window.location.href = 'coins.html';
+          window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
         }
         return;
       }
@@ -976,7 +976,7 @@ async function upgradeInline(plan, coinCost) {
       const needed = coinCost - currentCoins;
       btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
       if (confirm(`You need ${needed} more coins to upgrade.\n\nYour balance: ${currentCoins} coins\nRequired: ${coinCost} coins\n\nGo to Buy Coins page?`)) {
-        window.location.href = 'coins.html';
+        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
       }
       return;
     }

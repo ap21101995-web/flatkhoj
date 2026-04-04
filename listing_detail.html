@@ -664,9 +664,9 @@ function getUser(){try{return JSON.parse(localStorage.getItem('fmh_user'));}catc
 
 function handleUnlockBtn(){
   const user = getUser();
+  const lid = new URLSearchParams(window.location.search).get('id');
   if(!user){
-    // Not logged in — go directly to login
-    window.location.href = 'login.html?trigger=unlock&listing_id=' + listingId;
+    window.location.href = 'login.html?trigger=unlock&listing_id=' + lid;
     return;
   }
   openSheet('unlock');
@@ -985,7 +985,7 @@ async function confirmUnlock(){
         btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;
         closeSheet('unlock');
         if(confirm('You need 5 coins to unlock this contact.\n\nYour balance: ' + currentCoins + ' coins\n\nWould you like to buy more coins?')) {
-          window.location.href = 'coins.html';
+          window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
         }
         return;
       }
@@ -1232,7 +1232,7 @@ async function activateFreeContact() {
 
   if (coins < 50) {
     if (confirm(`You need 50 coins but only have ${coins}. Buy more coins?`)) {
-      window.location.href = 'coins.html';
+      window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
     }
     return;
   }
@@ -1266,7 +1266,7 @@ async function activateFreeContact() {
     document.getElementById('boostArrow').textContent = '✓';
     document.getElementById('boostBtn').onclick = null;
     document.getElementById('boostBtn').style.cursor = 'default';
-    showToast('✅ Free contact activated! You'll get more responses now.');
+    showToast('✅ Free contact activated! You will get more responses now.');
   } catch(e) {
     btn.textContent = '⚡ Pay 50 coins & activate'; btn.disabled = false;
     alert('Failed to activate. Please try again.');
