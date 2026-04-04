@@ -272,8 +272,8 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="field"><div class="field-label">Gender <span class="req">*</span></div><select class="select" id="fw-gender-select"><option value="">Select…</option><option>Male</option><option>Female</option><option>Prefer Not To Say</option></select></div>
       </div>
       <div class="field"><div class="field-label">Food Preference <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fw-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fw-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fw-food')">🍽️ No Veg/Non-Veg Preference</div></div></div>
-      <div class="field"><div class="field-label">Originally From</div><input class="input" type="text" placeholder="e.g. Pune, Maharashtra"><div class="field-hint">Helps build trust with owners</div></div>
-      <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="e.g. I work night shifts, I have a pet, prefer a quiet building…" oninput="cc(this,'fw-cc',300)"></textarea><div class="char-count" id="fw-cc">0 / 300</div></div>
+      <div class="field"><div class="field-label">Originally From</div><input class="input" type="text" placeholder="Optional — e.g. Pune, Maharashtra"><div class="field-hint">Helps build trust with owners</div></div>
+      <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="Optional — e.g. I work night shifts, I have a pet, prefer a quiet building…" oninput="cc(this,'fw-cc',300)"></textarea><div class="char-count" id="fw-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
       <div class="card-title">💼 Brokerage Preference</div>
@@ -299,12 +299,12 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="area-dropdown" id="dd-fl-area"></div>
       </div>
       <div class="area-selected-tag" id="tag-fl-area"><span id="tagval-fl-area"></span><button onclick="clearArea('fl-area')">×</button></div></div>
-      <div class="field"><div class="field-label">Landmark / Building Name</div><input class="input" type="text" placeholder="e.g. Near Infinity Mall, Andheri West"><div class="field-hint">Exact address is only shared after contact is unlocked</div></div>
+      <div class="field"><div class="field-label">Landmark / Building Name</div><input class="input" type="text" placeholder="Optional — e.g. Near Infinity Mall, Andheri West"><div class="field-hint">Exact address is only shared after contact is unlocked</div></div>
       <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-ft')">1 RK</div><div class="pill" onclick="sp(this,'fl-ft')">1 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">2 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">3 BHK</div><div class="pill" onclick="spWithOther(this,'fl-ft','fl-other-type')">Other</div></div><input class="input" id="fl-other-type" type="text" placeholder="e.g. 4 BHK, Bungalow, Studio" style="display:none;margin-top:8px" /></div>
       <div class="field"><div class="field-label">What Is Available? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-av')">Single Room</div><div class="pill" onclick="sp(this,'fl-av')">Double Room</div><div class="pill" onclick="sp(this,'fl-av')">Entire flat</div></div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Monthly rent <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="18000" min="3000" max="400000"></div></div>
-        <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="36000"></div></div>
+        <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="Optional — e.g. 36000"></div></div>
       </div>
       <div class="field-row">
         <div class="field"><div class="field-label">Available from <span class="req">*</span></div><input class="input" type="date" id="fl-available"></div>
@@ -318,7 +318,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field"><div class="field-label">Preferred Tenant Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-tt')">Working Professional</div><div class="pill" onclick="sp(this,'fl-tt')">Student</div><div class="pill" onclick="sp(this,'fl-tt')">Family</div><div class="pill" onclick="sp(this,'fl-tt')">Any</div></div></div>
       <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Gated Society</div><div class="pill" onclick="mp(this)">Security Guard</div><div class="pill" onclick="mp(this)">Swimming Pool</div><div class="pill" onclick="mp(this)">Garden</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Modular Kitchen</div></div></div>
       <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fl-pets')">No</div></div></div>
-      <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="e.g. Quiet building, close to metro, no late night noise…" oninput="cc(this,'fl-cc',300)"></textarea><div class="char-count" id="fl-cc">0 / 300</div></div>
+      <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="Optional — e.g. Quiet building, close to metro, no late night noise…" oninput="cc(this,'fl-cc',300)"></textarea><div class="char-count" id="fl-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
       <div class="card-title">💼 Is Brokerage Involved? <span style="color:var(--red);font-size:11px">Required</span></div>
@@ -326,7 +326,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="broker-opt" id="fl-bno" onclick="sb('fl','no')"><div class="broker-icon">✅</div><div><div class="broker-title">No Brokerage — I Am The Owner</div><div class="broker-desc">Seekers will see a green "No Brokerage" tag</div></div></div>
         <div class="broker-opt" id="fl-byes" onclick="sb('fl','yes')"><div class="broker-icon">💼</div><div><div class="broker-title">Yes — Brokerage Will Be Charged</div><div class="broker-desc">A red brokerage tag will appear so seekers know upfront</div></div></div>
       </div>
-      <div class="broker-amount" id="fl-ba"><div class="field-label" style="margin-top:10px">Brokerage Amount</div><input class="input" type="text" placeholder="e.g. 1 month rent, or ₹10,000 fixed"></div>
+      <div class="broker-amount" id="fl-ba"><div class="field-label" style="margin-top:10px">Brokerage Amount</div><input class="input" type="text" placeholder="Optional — e.g. 1 month rent, or ₹10,000 fixed"></div>
     </div>
     <div class="form-card">
       <div class="card-title">🪙 Contact Unlock Setting</div>
@@ -370,7 +370,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field"><div class="field-label">Preferred Flatmate Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pref')">Working Professional</div><div class="pill" onclick="sp(this,'fm-pref')">Student</div><div class="pill" onclick="sp(this,'fm-pref')">Any</div></div></div>
       <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fm-pets')">No</div></div></div>
       <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Gated Society</div></div></div>
-      <div class="field"><div class="field-label">Describe the house vibe</div><textarea class="textarea" placeholder="e.g. We are 2 working girls, very clean and quiet, chill on weekends…" oninput="cc(this,'fm-cc',300)"></textarea><div class="char-count" id="fm-cc">0 / 300</div></div>
+      <div class="field"><div class="field-label">Describe the house vibe</div><textarea class="textarea" placeholder="Optional — e.g. We are 2 working girls, very clean and quiet, chill on weekends…" oninput="cc(this,'fm-cc',300)"></textarea><div class="char-count" id="fm-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
       <div class="card-title">💼 Is Brokerage Involved?</div>
@@ -399,14 +399,14 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="area-dropdown" id="dd-pg-area"></div>
       </div>
       <div class="area-selected-tag" id="tag-pg-area"><span id="tagval-pg-area"></span><button onclick="clearArea('pg-area')">×</button></div></div>
-      <div class="field"><div class="field-label">Nearby Landmark</div><input class="input" type="text" placeholder="e.g. Near D-Mart, 2 mins from metro"></div>
+      <div class="field"><div class="field-label">Nearby Landmark</div><input class="input" type="text" placeholder="Optional — e.g. Near D-Mart, 2 mins from metro"></div>
       <div class="field"><div class="field-label">PG Is For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-for')">Boys Only</div><div class="pill" onclick="sp(this,'pg-for')">Girls Only</div><div class="pill" onclick="sp(this,'pg-for')">Both Boys & Girls</div></div></div>
       <div class="field"><div class="field-label">Room Types Available <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="mp(this)">Single Room</div><div class="pill" onclick="mp(this)">Double Sharing</div><div class="pill" onclick="mp(this)">Triple Sharing</div></div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Rent Starts From <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="6000" min="2000"></div></div>
-        <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="10000"></div></div>
+        <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="Optional — e.g. 10000"></div></div>
       </div>
-      <div class="field"><div class="field-label">Total Number Of Beds / Capacity</div><input class="input" type="number" placeholder="e.g. 20"></div>
+      <div class="field"><div class="field-label">Total Number Of Beds / Capacity</div><input class="input" type="number" placeholder="Optional — e.g. 20"></div>
     </div>
     <div class="form-card">
       <div class="card-title">🍽️ Food & Meals</div>
@@ -418,7 +418,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field"><div class="field-label">Amenities Provided</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC Rooms</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Laundry</div><div class="pill" onclick="mp(this)">Housekeeping</div><div class="pill" onclick="mp(this)">CCTV Security</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Attached Bathroom</div><div class="pill" onclick="mp(this)">Common Area</div><div class="pill" onclick="mp(this)">Water Purifier</div><div class="pill" onclick="mp(this)">Warden On Premises</div></div></div>
       <div class="field"><div class="field-label">Entry / Curfew Timings</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-curfew')">No Curfew</div><div class="pill" onclick="sp(this,'pg-curfew')">10 PM</div><div class="pill" onclick="sp(this,'pg-curfew')">11 PM</div><div class="pill" onclick="sp(this,'pg-curfew')">12 AM</div><div class="pill" onclick="sp(this,'pg-curfew')">Flexible</div></div></div>
       <div class="field"><div class="field-label">Visitors Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-vis')">Yes</div><div class="pill" onclick="sp(this,'pg-vis')">No</div><div class="pill" onclick="sp(this,'pg-vis')">Day Visits Only</div></div></div>
-      <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="e.g. Walking distance from station, female warden, rooftop area, CCTV on all floors…" oninput="cc(this,'pg-cc',300)"></textarea><div class="char-count" id="pg-cc">0 / 300</div></div>
+      <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="Optional — e.g. Walking distance from station, female warden, rooftop area, CCTV on all floors…" oninput="cc(this,'pg-cc',300)"></textarea><div class="char-count" id="pg-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
       <div class="card-title">💼 Is Brokerage Involved?</div>
@@ -426,7 +426,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="broker-opt" id="pg-bno" onclick="sb('pg','no')"><div class="broker-icon">✅</div><div><div class="broker-title">No — I Am The PG Owner</div><div class="broker-desc">No broker fee will be charged</div></div></div>
         <div class="broker-opt" id="pg-byes" onclick="sb('pg','yes')"><div class="broker-icon">💼</div><div><div class="broker-title">Yes — Brokerage Will Be Charged</div><div class="broker-desc">Amount will be clearly shown on the listing</div></div></div>
       </div>
-      <div class="broker-amount" id="pg-ba"><div class="field-label" style="margin-top:10px">Brokerage Amount</div><input class="input" type="text" placeholder="e.g. ₹5,000 one-time"></div>
+      <div class="broker-amount" id="pg-ba"><div class="field-label" style="margin-top:10px">Brokerage Amount</div><input class="input" type="text" placeholder="Optional — e.g. ₹5,000 one-time"></div>
     </div>
     <div class="form-card">
       <div class="card-title">🪙 Contact Unlock Setting</div>
