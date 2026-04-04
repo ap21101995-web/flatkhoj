@@ -776,12 +776,16 @@ function collectFormData() {
     data.furnishing = document.querySelector('#f-fl .sel[onclick*="fl-furn"]')?.textContent?.trim() || null;
     data.food_preference = document.querySelector('#f-fl .sel[onclick*="fl-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fl .sel[onclick*="fl-gen"]')?.textContent?.trim() || null;
+    data.room_type = document.querySelector('#f-fl .sel[onclick*="fl-av"]')?.textContent?.trim() || null;
+    data.tenant_type = document.querySelector('#f-fl .sel[onclick*="fl-tt"]')?.textContent?.trim() || null;
+    data.pets_allowed = document.querySelector('#f-fl .sel[onclick*="fl-pets"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
     data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fl-available')?.value || null;
   } else if (type === 'fw') {
     data.listing_type = 'flat_wanted';
     data.poster_name = document.getElementById('fw-poster-name')?.value?.trim() || null;
+    data.occupation = document.getElementById('fw-you-are')?.value || null;
     data.rent_amount = parseInt(document.querySelector('#f-fw input[type="number"]')?.value) || null;
     data.food_preference = document.querySelector('#f-fw .sel[onclick*="fw-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.getElementById('fw-gender-select')?.value || null;
@@ -799,8 +803,11 @@ function collectFormData() {
     data.rent_amount = parseInt(document.querySelector('#f-fm input[type="number"]')?.value) || null;
     data.food_preference = document.querySelector('#f-fm .sel[onclick*="fm-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fm .sel[onclick*="fm-gen"]')?.textContent?.trim() || null;
+    data.situation = document.querySelector('#f-fm .sel[onclick*="fm-sit"]')?.textContent?.trim() || null;
     data.room_type = document.querySelector('#f-fm .sel[onclick*="fm-rm"]')?.textContent?.trim() || null;
     data.furnishing = document.querySelector('#f-fm .sel[onclick*="fm-furn"]')?.textContent?.trim() || null;
+    data.tenant_type = document.querySelector('#f-fm .sel[onclick*="fm-pref"]')?.textContent?.trim() || null;
+    data.pets_allowed = document.querySelector('#f-fm .sel[onclick*="fm-pets"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fm textarea')?.value || null;
     data.has_brokerage = document.getElementById('fm-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fm-available')?.value || null;
@@ -808,10 +815,14 @@ function collectFormData() {
     data.listing_type = 'pg_listing';
     data.poster_name = document.getElementById('pg-poster-name')?.value?.trim() || null;
     data.rent_amount = parseInt(document.querySelector('#f-pg input[type="number"]')?.value) || null;
+    data.gender_preference = document.querySelector('#f-pg .sel[onclick*="pg-for"]')?.textContent?.trim() || document.querySelector('#f-pg .sel[onclick*="pg-gen"]')?.textContent?.trim() || null;
+    data.meals_included = document.querySelector('#f-pg .sel[onclick*="pg-meals"]')?.textContent?.trim() || null;
     data.food_preference = document.querySelector('#f-pg .sel[onclick*="pg-food"]')?.textContent?.trim() || null;
-    data.gender_preference = document.querySelector('#f-pg .sel[onclick*="pg-gen"]')?.textContent?.trim() || null;
+    data.curfew = document.querySelector('#f-pg .sel[onclick*="pg-curfew"]')?.textContent?.trim() || null;
+    data.visitors_allowed = document.querySelector('#f-pg .sel[onclick*="pg-vis"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-pg textarea')?.value || null;
     data.has_brokerage = document.getElementById('pg-byes')?.classList.contains('sel-yes') || false;
+    data.available_from = document.getElementById('pg-available')?.value || null;
   }
 
   return data;
@@ -1680,73 +1691,131 @@ function updateUI(){
 }
 
 function prefillEditForm(listing, t) {
-  // Areas — reset and re-add
-  const areaId = t+'-area';
+  // Helper: click a pill by text match within a scope and group
+  function fillPill(scope, group, value) {
+    if (!value) return;
+    const v = value.trim();
+    document.querySelectorAll(`${scope} [onclick*="${group}"]`).forEach(p => {
+      if (p.textContent.trim() === v) sp(p, group);
+    });
+  }
+  // Helper: fill a pill stripping emoji
+  function fillPillFuzzy(scope, group, value) {
+    if (!value) return;
+    const clean = s => s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim();
+    const vClean = clean(value.trim());
+    document.querySelectorAll(`${scope} [onclick*="${group}"]`).forEach(p => {
+      const t = p.textContent.trim();
+      if (t === value.trim() || clean(t) === vClean) sp(p, group);
+    });
+  }
+
+  // ── AREAS ──────────────────────────────────────
+  const areaId = t + '-area';
   areaVals[areaId] = [];
-  if(listing.areas){
+  if (listing.areas) {
     const areas = Array.isArray(listing.areas) ? listing.areas : [listing.areas];
-    areas.forEach(area => { if(areaVals[areaId].length < (areaMax[areaId]||3)) selectArea(area, areaId); });
+    areas.forEach(a => { if (areaVals[areaId].length < (areaMax[areaId] || 3)) selectArea(a, areaId); });
   }
-  // Name
-  const nameEl = document.getElementById(t+'-poster-name');
-  if(nameEl && listing.poster_name) nameEl.value = listing.poster_name;
-  // Rent
-  const rentEl = document.querySelector('#f-'+t+' input[type="number"]');
-  if(rentEl && listing.rent_amount) rentEl.value = listing.rent_amount;
-  // Date
-  const dateEl = document.getElementById(t==='fw' ? 'fw-movein' : t+'-available');
-  if(dateEl && listing.available_from) dateEl.value = listing.available_from;
-  // Flat type
-  if(listing.flat_type){
-    let matched = false;
-    document.querySelectorAll(`#f-${t} [onclick*="${t}-ft"]`).forEach(p => {
-      if(p.textContent.trim()===listing.flat_type){ sp(p, t+'-ft'); matched=true; }
-    });
-    if(!matched){
-      const pills = document.querySelectorAll(`#f-${t} [onclick*="${t}-ft"]`);
-      const otherPill = [...pills].find(p=>p.textContent.trim()==='Other');
-      if(otherPill){ spWithOther(otherPill, t+'-ft', t+'-other-type'); const oi=document.getElementById(t+'-other-type'); if(oi) oi.value=listing.flat_type; }
-    }
-    const ftSel = document.getElementById(t+'-flat-type');
-    if(ftSel) ftSel.value = listing.flat_type;
-  }
-  // Furnishing
-  if(listing.furnishing) document.querySelectorAll(`#f-${t} [onclick*="${t}-furn"]`).forEach(p=>{ if(p.textContent.trim()===listing.furnishing) sp(p,t+'-furn'); });
-  // Food — strip emoji for comparison
-  if(listing.food_preference){
-    const fp = listing.food_preference;
-    const fpClean = fp.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{26FF}]/gu,'').trim();
-    document.querySelectorAll(`#f-${t} [onclick*="${t}-food"], #f-${t} [onclick*="fw-food"]`).forEach(p=>{
-      const pClean = p.textContent.trim().replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{26FF}]/gu,'').trim();
-      if(p.textContent.trim()===fp || pClean===fpClean){
-        const grp = p.getAttribute('onclick').match(/'([^']+)'/)?.[1] || t+'-food';
-        sp(p, grp);
+
+  // ── TEXT INPUTS ─────────────────────────────────
+  const el = (id) => document.getElementById(id);
+  const qs = (sel) => document.querySelector(sel);
+
+  if (el(t+'-poster-name') && listing.poster_name) el(t+'-poster-name').value = listing.poster_name;
+  if (listing.rent_amount) { const r = qs('#f-'+t+' input[type="number"]'); if(r) r.value = listing.rent_amount; }
+
+  // ── DATE ───────────────────────────────────────
+  const dateId = t === 'fw' ? 'fw-movein' : t + '-available';
+  if (el(dateId) && listing.available_from) el(dateId).value = listing.available_from;
+
+  // ── DESCRIPTION ────────────────────────────────
+  const desc = qs('#f-'+t+' textarea');
+  if (desc && listing.description) desc.value = listing.description;
+
+  // ───────── FLAT LISTING (fl) ───────────────────
+  if (t === 'fl') {
+    // Flat type pill
+    if (listing.flat_type) {
+      let matched = false;
+      document.querySelectorAll('#f-fl [onclick*="fl-ft"]').forEach(p => {
+        if (p.textContent.trim() === listing.flat_type) { sp(p, 'fl-ft'); matched = true; }
+      });
+      if (!matched) {
+        const other = [...document.querySelectorAll('#f-fl [onclick*="fl-ft"]')].find(p => p.textContent.trim() === 'Other');
+        if (other) { spWithOther(other, 'fl-ft', 'fl-other-type'); if(el('fl-other-type')) el('fl-other-type').value = listing.flat_type; }
       }
-    });
+    }
+    fillPill('#f-fl', 'fl-av', listing.room_type);          // What is available (Single Room etc)
+    fillPill('#f-fl', 'fl-furn', listing.furnishing);
+    fillPillFuzzy('#f-fl', 'fl-food', listing.food_preference);
+    fillPill('#f-fl', 'fl-gen', listing.gender_preference);
+    fillPill('#f-fl', 'fl-tt', listing.tenant_type);         // Working Professional/Student etc
+    fillPill('#f-fl', 'fl-pets', listing.pets_allowed);
+    // Brokerage
+    if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('fl','yes') : sb('fl','no');
   }
-  // Gender
-  if(listing.gender_preference){
-    const gp = listing.gender_preference;
-    document.querySelectorAll(`#f-${t} [onclick*="${t}-gen"]`).forEach(p=>{
-      if(p.textContent.trim()===gp || p.textContent.includes(gp.replace(' Flatmate','').replace(' only',''))) sp(p,t+'-gen');
-    });
-    const genSel = document.getElementById(t+'-gender-select');
-    if(genSel) genSel.value = gp;
+
+  // ───────── FLAT WANTED (fw) ────────────────────
+  if (t === 'fw') {
+    // You are a
+    if (el('fw-you-are') && listing.occupation) el('fw-you-are').value = listing.occupation;
+    // Gender select
+    if (el('fw-gender-select') && listing.gender_preference) el('fw-gender-select').value = listing.gender_preference;
+    // Stay duration
+    if (el('fw-duration') && listing.stay_duration) el('fw-duration').value = listing.stay_duration;
+    // Food
+    fillPillFuzzy('#f-fw', 'fw-food', listing.food_preference);
+    // Looking for (checkboxes) — room_type is comma-separated e.g. "1 BHK,2 BHK"
+    if (listing.room_type) {
+      const types = listing.room_type.split(',').map(s => s.trim());
+      document.querySelectorAll('#fw-lf-options input[type="checkbox"]').forEach(cb => {
+        const label = cb.closest('label')?.textContent?.trim() || cb.value;
+        if (types.includes(label) || types.includes(cb.value)) cb.checked = true;
+      });
+      updateLFLabel();
+    }
+    // Brokerage
+    if (listing.brokerage_preference) { sbfw(listing.brokerage_preference); }
   }
-  // Situation (fm)
-  if(t==='fm' && listing.situation) document.querySelectorAll(`#f-fm [onclick*="fm-sit"]`).forEach(p=>{ if(p.textContent.trim()===listing.situation) sp(p,'fm-sit'); });
-  // Room type
-  if(listing.room_type) document.querySelectorAll(`#f-${t} [onclick*="${t}-rm"]`).forEach(p=>{ if(p.textContent.trim()===listing.room_type) sp(p,t+'-rm'); });
-  // Brokerage
-  if(t==='fw' && listing.brokerage_preference){ const bc=document.getElementById('fw-broker-choice'); if(bc) bc.value=listing.brokerage_preference; sbfw(listing.brokerage_preference); }
-  if((t==='fl'||t==='pg'||t==='fm') && listing.has_brokerage!==undefined){ listing.has_brokerage ? sb(t,'yes') : sb(t,'no'); }
-  // Description
-  const descEl = document.querySelector('#f-'+t+' textarea');
-  if(descEl && listing.description) descEl.value = listing.description;
-  // Custom contact (owner only)
-  const contactEl = document.getElementById('ownerContactNumber');
-  if(contactEl && listing.custom_contact_phone) contactEl.value = listing.custom_contact_phone;
+
+  // ───────── FLATMATE WANTED (fm) ────────────────
+  if (t === 'fm') {
+    // Flat type select
+    if (el('fm-flat-type') && listing.flat_type) {
+      el('fm-flat-type').value = listing.flat_type;
+      if (el('fm-flat-type').value !== listing.flat_type) {
+        // Custom value — use Other
+        el('fm-flat-type').value = 'Other';
+        if (el('fm-other-type')) el('fm-other-type').value = listing.flat_type;
+        if (el('fm-other-type')) el('fm-other-type').style.display = 'block';
+      }
+    }
+    fillPill('#f-fm', 'fm-sit', listing.situation);
+    fillPill('#f-fm', 'fm-rm', listing.room_type);
+    fillPill('#f-fm', 'fm-furn', listing.furnishing);
+    fillPillFuzzy('#f-fm', 'fm-food', listing.food_preference);
+    fillPill('#f-fm', 'fm-gen', listing.gender_preference);
+    fillPill('#f-fm', 'fm-pref', listing.tenant_type);
+    fillPill('#f-fm', 'fm-pets', listing.pets_allowed);
+    if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('fm','yes') : sb('fm','no');
+  }
+
+  // ───────── PG LISTING (pg) ────────────────────
+  if (t === 'pg') {
+    fillPill('#f-pg', 'pg-for', listing.gender_preference);  // Boys Only / Girls Only / Both
+    fillPill('#f-pg', 'pg-gen', listing.gender_preference);  // fallback
+    fillPill('#f-pg', 'pg-meals', listing.meals_included);
+    fillPillFuzzy('#f-pg', 'pg-food', listing.food_preference);
+    fillPill('#f-pg', 'pg-curfew', listing.curfew);
+    fillPill('#f-pg', 'pg-vis', listing.visitors_allowed);
+    if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('pg','yes') : sb('pg','no');
+  }
+
+  // ── OWNER CONTACT ──────────────────────────────
+  if (el('ownerContactNumber') && listing.custom_contact_phone) el('ownerContactNumber').value = listing.custom_contact_phone;
 }
+
 
 function selectType(t){
   ['fw','fl','fm','pg'].forEach(x=>{document.getElementById('tc-'+x).classList.remove('sel');document.getElementById('ck-'+x).textContent='';});
