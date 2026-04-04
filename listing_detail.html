@@ -460,9 +460,9 @@ body {
     <strong id="coinBalanceNum">🪙 0</strong>
     coins
   </div>
-  <button class="unlock-main-btn" onclick="openSheet('unlock')" id="unlockBtn">
+  <button class="unlock-main-btn" onclick="handleUnlockBtn()" id="unlockBtn">
     Unlock contact
-    <span class="coin-cost">5 coins</span>
+    <span class="coin-cost" id="unlockCostPill">5 coins</span>
   </button>
 </div>
 
@@ -635,6 +635,16 @@ let currentPhoto=0, totalPhotos=0, isSaved=false, touchStartX=0;
 let listing=null, posterPhone=null;
 
 function getUser(){try{return JSON.parse(localStorage.getItem('fmh_user'));}catch(e){return null;}}
+
+function handleUnlockBtn(){
+  const user = getUser();
+  if(!user){
+    // Not logged in — go directly to login
+    window.location.href = 'login.html?trigger=unlock&listing_id=' + listingId;
+    return;
+  }
+  openSheet('unlock');
+}
 
 async function supaGet(path){
   const res=await fetch(`${SUPA_URL}/rest/v1/${path}`,{headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}});
@@ -851,6 +861,10 @@ function renderListing(){
   const posterInitials = posterName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('posterAvatar').textContent=posterInitials;
   document.getElementById('posterName').textContent=posterName;
+
+  // Update coin cost pill
+  const costPill = document.getElementById('unlockCostPill');
+  if(costPill) costPill.textContent = UNLOCK_COST + ' coins';
 
   // Update unlock sheet with real name
   const roleLabels={

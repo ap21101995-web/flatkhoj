@@ -397,12 +397,8 @@ window.onload = function() {
 
   const params = new URLSearchParams(window.location.search);
   triggerContext = params.get('trigger');
-  if (triggerContext && contextMessages[triggerContext]) {
-    const banner = document.getElementById('contextBanner');
-    document.getElementById('ctxIcon').textContent = contextMessages[triggerContext].icon;
-    document.getElementById('ctxText').textContent = contextMessages[triggerContext].text;
-    banner.style.display = 'flex';
-  }
+  // triggerContext stored for post-login redirect, but no banner shown
+  // Users land directly on phone input — no intermediate screen
 };
 
 function getLoginState() {

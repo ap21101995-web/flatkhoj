@@ -537,7 +537,7 @@ body {
         onkeydown="if(event.key==='Escape')closeHomeSearch()">
       <div id="homeSearchDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid #e8e8e4;border-radius:12px;overflow:hidden;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.1);max-height:280px;overflow-y:auto"></div>
     </div>
-    <button class="post-btn" onclick="openPostSheet()">
+    <button class="post-btn" onclick="window.location.href='post_form.html'">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       Post
     </button>
@@ -578,7 +578,7 @@ body {
 <!-- LOGIN NUDGE (shown to logged out users) -->
 <div class="login-nudge" id="loginNudge">
   <div class="nudge-text"><strong>Sign in to unlock contacts</strong><br>Browse freely — sign in only when you want to connect</div>
-  <button class="nudge-btn" onclick="openLoginSheet()">Sign in</button>
+  <button class="nudge-btn" onclick="window.location.href='login.html'">Sign in</button>
 </div>
 
 <!-- FEED -->
@@ -608,7 +608,7 @@ body {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     Home
   </button>
-  <button class="nav-item" onclick="openPostSheet()">
+  <button class="nav-item" onclick="window.location.href='post_form.html'">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
     Post
   </button>
@@ -1059,9 +1059,18 @@ let currentUnlockListingId = null;
 async function handleUnlock(listingId, area) {
   const user = getUser();
   if (!user) {
+    // Not logged in — go directly to login, no intermediate screen
     window.location.href = 'login.html?trigger=unlock&listing_id=' + listingId;
     return;
   }
+
+  // Already unlocked? Go straight to listing detail
+  const cachedUnlocked = getUnlockedListings();
+  if(unlockedListingIds.has(listingId) || cachedUnlocked.includes(listingId)){
+    window.location.href = 'listing_detail.html?id=' + listingId;
+    return;
+  }
+
   currentUnlockListingId = listingId;
   document.getElementById('unlockSub').textContent = `Reveal the contact for this listing in ${area}.`;
 
