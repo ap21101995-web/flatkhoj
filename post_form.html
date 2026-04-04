@@ -769,7 +769,9 @@ async function submitListing() {
   btn.disabled = true;
 
   try {
-    const formData = collectFormData();
+    // Use restored form data if returning from login, otherwise collect fresh
+    const formData = window._restoredFormData || collectFormData();
+    window._restoredFormData = null; // clear after use
 
     // Edit mode — PATCH existing listing
     if (window._editListingId) {
@@ -942,29 +944,30 @@ window.addEventListener('load', async function() {
             if (state.areas[id] && state.areas[id].length > 0) {
               areaVals[id] = state.areas[id];
               renderTags(id);
-              const wrap = document.getElementById('wrap-' + id);
-              if (wrap) {
-                const input = wrap.querySelector('.area-input');
-                const remaining = 3 - areaVals[id].length;
-                if (remaining === 0) { input.placeholder = '3 Areas Selected ✓'; input.disabled = true; input.style.background = 'var(--bg2)'; }
-                else { input.placeholder = `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`; }
-                const tag = document.getElementById('tag-' + id);
-                if (tag) tag.classList.add('show');
-              }
             }
           });
         }
 
-        // Go straight to step 3 — user already filled everything
+        // Restore saved form data
+        if (state.formData) {
+          window._restoredFormData = state.formData;
+        }
+
+        // Show posting screen — submit directly without showing checkboxes again
         step = 3;
         updateUI();
 
-        // Show a clear notice with just the post button visible
-        const notice = document.createElement('div');
-        notice.style.cssText = 'background:#e8f5f3;border:1px solid #0f7b6c;border-radius:10px;padding:14px;font-size:14px;color:#0f7b6c;margin:0 0 16px;line-height:1.6';
-        notice.innerHTML = '✅ <strong>You\'re signed in!</strong><br>Your listing details are saved. Check the boxes below and tap Post to go live.';
-        const activeStep = document.querySelector('.step.active');
-        if (activeStep) activeStep.prepend(notice);
+        // Show a "posting..." overlay instead of step 3 form
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:white;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:var(--font)';
+        overlay.innerHTML = '<div style="font-size:48px">🚀</div><div style="font-size:18px;font-weight:700;color:var(--ink)">Posting your listing…</div><div style="font-size:14px;color:var(--ink3)">You\'re signed in. Publishing now!</div>';
+        document.body.appendChild(overlay);
+
+        // Submit immediately
+        setTimeout(async () => {
+          await submitListing();
+          overlay.remove();
+        }, 800);
       }
     } catch(e) { localStorage.removeItem('fk_post_state'); }
   }
