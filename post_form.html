@@ -916,30 +916,37 @@ async function submitListing() {
 
     // Free contact setting — handle coin deduction
     const fcChoice = document.getElementById('fc-choice')?.value;
+    const alreadyFree = window._editListingId && window._editListingData?.is_free_contact;
     if(fcChoice === 'free') {
-      // Check and deduct 50 coins
-      const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-      });
-      const coinData = await coinRes.json();
-      const currentCoins = coinData[0]?.coins || 0;
-      if (currentCoins < 50) {
-        btn.textContent = '🚀 Post Listing — It\'s Free!'; btn.disabled = false;
-        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
-        return;
+      if (alreadyFree) {
+        // Already paid — just keep it free, no deduction
+        formData.is_free_contact = true;
+      } else {
+        // New free contact — deduct 50 coins
+        const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        });
+        const coinData = await coinRes.json();
+        const currentCoins = coinData[0]?.coins || 0;
+        if (currentCoins < 50) {
+          btn.textContent = window._editListingId ? '💾 Save Changes' : '🚀 Post Listing — It\'s Free!';
+          btn.disabled = false;
+          window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
+          return;
+        }
+        const newCoins = currentCoins - 50;
+        await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coins: newCoins })
+        });
+        user.coins = newCoins;
+        localStorage.setItem('fmh_user', JSON.stringify(user));
+        formData.is_free_contact = true;
       }
-      // Deduct coins first
-      const newCoins = currentCoins - 50;
-      await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-        method: 'PATCH',
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coins: newCoins })
-      });
-      user.coins = newCoins;
-      localStorage.setItem('fmh_user', JSON.stringify(user));
-      formData.is_free_contact = true;
     } else {
-      formData.is_free_contact = false;
+      // Standard — but if listing was already free, keep it free (can't downgrade)
+      formData.is_free_contact = alreadyFree ? true : false;
     }
 
     // If owner posting on behalf — save custom contact number
@@ -1303,8 +1310,25 @@ window.addEventListener('load', async function() {
       step = 2;
       updateUI(); // This makes the form section visible
 
+      // Set up free contact card based on existing listing state
+      if (listing.is_free_contact) {
+        // Already paid 50 coins — lock to free, hide standard option
+        document.getElementById('fc-choice').value = 'free';
+        document.getElementById('fc-paid').style.display = 'none';
+        const freeCard = document.getElementById('fc-free');
+        freeCard.style.border = '2px solid var(--teal)';
+        freeCard.style.background = 'var(--teal-bg)';
+        freeCard.onclick = null;
+        freeCard.style.cursor = 'default';
+        freeCard.querySelector('.broker-title').textContent = '✅ Free contact — already activated';
+        freeCard.querySelector('.broker-desc').textContent = 'You paid 50 coins when posting. Anyone can see your contact for free. This cannot be reversed.';
+      } else {
+        // Not yet free — allow choosing, default to standard
+        document.getElementById('fc-choice').value = 'paid';
+        selectFreeContact('paid');
+      }
+
       // Pre-fill after DOM is ready
-      // Use requestAnimationFrame to ensure DOM has painted before filling
       requestAnimationFrame(() => requestAnimationFrame(() => prefillEditForm(listing, t)));
 
     } catch(e) { console.error('Edit mode error:', e); }
