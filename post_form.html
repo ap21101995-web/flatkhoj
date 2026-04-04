@@ -968,12 +968,23 @@ const LIMITS = {
   pro:   { daily: 8, monthly: 25, label: 'Pro plan' },
 };
 
-function showLimitBlocked(msg, coins) {
-  // Show the full-screen overlay — works regardless of which step user is on
+function showLimitBlocked(msg, coins, currentPlan) {
   const screen = document.getElementById('limitBlockedScreen');
   document.getElementById('limitBlockedText').innerHTML = msg;
   if (coins !== undefined) {
     document.getElementById('userCoinBalance').textContent = `Your current balance: 🪙 ${coins} coins`;
+  }
+  // Hide upgrade options the user already has or doesn't need
+  const basicCard = document.getElementById('basicUpgradeBtn')?.closest('div[style*="border-radius:14px"]');
+  const proCard = document.getElementById('proUpgradeBtn')?.closest('div[style*="border-radius:14px"]');
+  if (currentPlan === 'basic' || currentPlan === 'pro') {
+    // Already on basic — hide it, only show pro
+    if (basicCard) basicCard.style.display = 'none';
+  }
+  if (currentPlan === 'pro') {
+    // Already on pro — hide both, nothing to upgrade to
+    if (proCard) proCard.style.display = 'none';
+    document.getElementById('limitBlockedText').innerHTML = msg + '<br><br>You are on the highest plan. Please wait until tomorrow or next month to post more.';
   }
   screen.style.display = 'block';
   window.scrollTo(0, 0);
@@ -1013,13 +1024,19 @@ async function upgradeInline(plan, coinCost) {
     localStorage.setItem('fmh_user', JSON.stringify(user));
 
     // Success — reload page so limit check runs fresh
-    // Hide blocked screen, reload to fresh state
+    // Hide blocked screen — post directly without reloading
     document.getElementById('limitBlockedScreen').style.display = 'none';
-    // Show a brief success message then reload
     const btn2 = document.getElementById(plan + 'UpgradeBtn');
-    btn2.textContent = '✅ Upgraded! Reloading…';
+    btn2.textContent = '✅ Upgraded! Posting now…';
     btn2.style.background = '#1a7a3c';
-    setTimeout(() => window.location.reload(), 1000);
+    // Set default contact choice if not already set
+    if (!document.getElementById('fc-choice').value) {
+      document.getElementById('fc-choice').value = 'paid';
+    }
+    // Submit the listing directly
+    setTimeout(async () => {
+      await submitListing();
+    }, 500);
 
   } catch(e) {
     btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
@@ -1055,7 +1072,7 @@ async function checkPostingLimitsStrict() {
       const msg = todayCount >= limit.daily
         ? `You have posted ${todayCount} listing${todayCount>1?'s':''} today. Your ${limit.label} allows ${limit.daily} per day.`
         : `You have posted ${monthCount} listings this month. Your ${limit.label} allows ${limit.monthly} per month.`;
-      showLimitBlocked(msg, coins);
+      showLimitBlocked(msg, coins, plan);
       return false;
     }
     return true;
@@ -1105,7 +1122,6 @@ async function checkPostingLimits() {
 
     if (dailyBlocked || monthlyBlocked) {
       document.getElementById('typeGridWrap').style.display = 'none';
-      document.getElementById('limitBlockedScreen').style.display = 'block';
       document.getElementById('limitInfoBanner').style.display = 'none';
       document.getElementById('nBtn').style.display = 'none';
       const msg = dailyBlocked
@@ -1115,7 +1131,7 @@ async function checkPostingLimits() {
       const coins = userData[0]?.coins || 0;
       user.coins = coins;
       localStorage.setItem('fmh_user', JSON.stringify(user));
-      showLimitBlocked(msg, coins);
+      showLimitBlocked(msg, coins, plan);
       return;
     }
 
