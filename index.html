@@ -1037,13 +1037,17 @@ function renderListings(listings, reset) {
         <div class="time-ago">${timeAgo}</div>
       </div>
       <div class="unlock-row">
-        ${(unlockedListingIds.has(l.id) || getUnlockedListings().includes(l.id))
-          ? `<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal);cursor:default" onclick="window.location.href='listing_detail.html?id=${l.id}'">✓ Contact unlocked — view</button>`
-          : `<button class="unlock-btn" data-listing-id="${l.id}" onclick="handleUnlock('${l.id}', '${escHtml(areas)}')">
-            ${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
-            <span class="coin-pip">${l.is_free_contact ? 'Free!' : UNLOCK_COST + ' 🪙'}</span>
-          </button>`
-        }
+        ${(()=>{
+          const loggedUser = getUser();
+          const isOwnListing = loggedUser && l.user_id && loggedUser.userId === l.user_id;
+          const isOwnerAcc = loggedUser && (String(loggedUser.phone||'').replace(/\D/g,'').slice(-10)==='9538584612' || loggedUser.isOwner===true || loggedUser.isOwner==='true');
+          if(isOwnListing || isOwnerAcc) return `<button class="unlock-btn" style="background:var(--bg2);color:var(--ink3);border:1.5px solid var(--border);cursor:default;font-size:12px">Your listing</button>`;
+          if(unlockedListingIds.has(l.id) || getUnlockedListings().includes(l.id)) return \`<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal);cursor:default" onclick="window.location.href='listing_detail.html?id=\${l.id}'">✓ Contact unlocked — view</button>\`;
+          return \`<button class="unlock-btn" data-listing-id="\${l.id}" onclick="handleUnlock('\${l.id}', '\${escHtml(areas)}')">
+            \${l.is_free_contact ? 'Contact for free' : 'Unlock contact'}
+            <span class="coin-pip">\${l.is_free_contact ? 'Free!' : UNLOCK_COST + ' 🪙'}</span>
+          </button>\`;
+        })()}
         <button class="save-btn" onclick="toggleSave(this,'${l.id}')" title="Save" style="${savedListingIds.has(l.id)?'background:#fef6e4;border-color:#e6a817':''}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="${savedListingIds.has(l.id)?'#e6a817':'none'}" stroke="${savedListingIds.has(l.id)?'#e6a817':'#888'}" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         </button>

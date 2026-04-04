@@ -864,10 +864,35 @@ async function submitListing() {
     formData.created_at = new Date().toISOString();
     formData.updated_at = new Date().toISOString();
 
-    // Free contact setting from step 3
+    // Free contact setting — handle coin deduction
     const fcChoice = document.getElementById('fc-choice')?.value;
-    if(fcChoice === 'free') formData.is_free_contact = true;
-    else formData.is_free_contact = false;
+    if(fcChoice === 'free') {
+      // Check and deduct 50 coins
+      const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+      const coinData = await coinRes.json();
+      const currentCoins = coinData[0]?.coins || 0;
+      if (currentCoins < 50) {
+        btn.textContent = '🚀 Post Listing — It\'s Free!'; btn.disabled = false;
+        if (confirm(`You need 50 coins to make your contact free, but you only have ${currentCoins} coins.\n\nWould you like to buy more coins?`)) {
+          window.location.href = 'coins.html';
+        }
+        return;
+      }
+      // Deduct coins first
+      const newCoins = currentCoins - 50;
+      await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coins: newCoins })
+      });
+      user.coins = newCoins;
+      localStorage.setItem('fmh_user', JSON.stringify(user));
+      formData.is_free_contact = true;
+    } else {
+      formData.is_free_contact = false;
+    }
 
     // If owner posting on behalf — save custom contact number
     const userPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);

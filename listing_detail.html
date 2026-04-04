@@ -710,6 +710,18 @@ window.onload=async function(){
     }
     renderListing();
     showOwnerControls();
+
+    // Hide unlock button if this is user's own listing
+    if(user){
+      const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
+      const isOwner = ph==='9538584612' || user.isOwner===true || user.isOwner==='true';
+      const isOwnListing = user.userId && listing.user_id && user.userId === listing.user_id;
+      const isClaimed = listing.claimed_by_user_id && user.userId === listing.claimed_by_user_id;
+      if(isOwner || isOwnListing || isClaimed){
+        // It's your own listing — hide the unlock bottom bar entirely
+        document.getElementById('bottomBar').style.display = 'none';
+      }
+    }
     // Show "listing is live" banner if arriving from new post
     const isNewPost = new URLSearchParams(window.location.search).get('new') === '1';
     if (isNewPost) {
@@ -1284,11 +1296,7 @@ function openSheet(name){document.getElementById(name+'Backdrop').classList.add(
 function closeSheet(name){document.getElementById(name+'Sheet').classList.remove('show');setTimeout(()=>document.getElementById(name+'Backdrop').classList.remove('show'),300);}
 function showToast(msg){const t=document.createElement('div');t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#141414;color:white;padding:10px 20px;border-radius:100px;font-family:var(--font);font-size:13px;font-weight:600;z-index:500;';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
 function goBack() {
-  if (document.referrer && document.referrer !== window.location.href) {
-    window.history.back();
-  } else {
-    window.location.href = 'index.html';
-  }
+  window.history.back();
 }
 
 // When leaving this page, ensure unlock state is saved to localStorage
