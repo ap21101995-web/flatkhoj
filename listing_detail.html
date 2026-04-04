@@ -440,6 +440,32 @@ body {
       <button onclick="editListing()" style="flex:1;padding:12px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">✏️ Edit listing</button>
       <button onclick="deleteListing()" style="padding:12px 16px;background:var(--red-bg);color:var(--red);border:1.5px solid var(--red);border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">🗑️ Delete</button>
     </div>
+
+    <!-- Boost / Free contact option -->
+    <div id="boostSection" style="margin-bottom:12px">
+      <div id="boostBtn" onclick="toggleBoost()" style="background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;cursor:pointer">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:22px">⚡</span>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--ink)" id="boostLabel">Let anyone contact you — no coins needed</div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:2px" id="boostSub">Currently people spend 5 coins to see your number. Pay 50 coins to remove that barrier — get more inquiries.</div>
+            </div>
+          </div>
+          <span style="font-size:18px;color:var(--ink3)" id="boostArrow">›</span>
+        </div>
+      </div>
+      <div id="boostPanel" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:0 0 12px 12px;padding:14px 16px;margin-top:-4px">
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:14px">
+          Right now, anyone interested in your listing must spend <strong>5 coins</strong> to see your phone number.<br><br>
+          If you pay <strong>50 coins upfront</strong>, your contact becomes visible to everyone for free — no coins required on their end. This removes friction and typically brings in significantly more responses.
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="activateFreeContact()" id="boostActivateBtn" style="flex:1;padding:12px;background:var(--gold);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">⚡ Pay 50 coins &amp; activate</button>
+          <button onclick="toggleBoost()" style="padding:12px 16px;background:none;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);font-size:13px;color:var(--ink3);cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    </div>
     <!-- Who unlocked my contact -->
     <div id="unlockersSection" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px">
       <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px">🔓 Who unlocked your contact</div>
@@ -1169,6 +1195,69 @@ async function saveEdit() {
     alert('Failed to save. Please try again.');
   } finally {
     btn.textContent = 'Save changes →'; btn.disabled = false;
+  }
+}
+
+function toggleBoost() {
+  const panel = document.getElementById('boostPanel');
+  const arrow = document.getElementById('boostArrow');
+  const open = panel.style.display === 'block';
+  panel.style.display = open ? 'none' : 'block';
+  arrow.textContent = open ? '›' : '↑';
+}
+
+async function activateFreeContact() {
+  const user = getUser();
+  if (!user) return;
+  const btn = document.getElementById('boostActivateBtn');
+
+  // Check balance
+  const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+  });
+  const data = await res.json();
+  const coins = data[0]?.coins || 0;
+
+  if (coins < 50) {
+    if (confirm(`You need 50 coins but only have ${coins}. Buy more coins?`)) {
+      window.location.href = 'coins.html';
+    }
+    return;
+  }
+
+  if (!confirm('Pay 50 coins to let anyone contact you for free — no coins needed on their end. Confirm?')) return;
+
+  btn.textContent = 'Activating…'; btn.disabled = true;
+
+  try {
+    // Deduct 50 coins
+    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coins: coins - 50 })
+    });
+    // Mark listing as free contact
+    await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_free_contact: true })
+    });
+    listing.is_free_contact = true;
+    user.coins = coins - 50;
+    localStorage.setItem('fmh_user', JSON.stringify(user));
+    // Update UI
+    document.getElementById('boostLabel').textContent = '✅ Anyone can contact you for free';
+    document.getElementById('boostSub').textContent = 'Your contact is visible to everyone — no coins needed on their end.';
+    document.getElementById('boostPanel').style.display = 'none';
+    document.getElementById('boostBtn').style.background = 'var(--teal-bg)';
+    document.getElementById('boostBtn').style.borderColor = 'var(--teal)';
+    document.getElementById('boostArrow').textContent = '✓';
+    document.getElementById('boostBtn').onclick = null;
+    document.getElementById('boostBtn').style.cursor = 'default';
+    showToast('✅ Free contact activated! You'll get more responses now.');
+  } catch(e) {
+    btn.textContent = '⚡ Pay 50 coins & activate'; btn.disabled = false;
+    alert('Failed to activate. Please try again.');
   }
 }
 

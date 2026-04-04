@@ -439,35 +439,58 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 
 <!-- STEP 3: REVIEW -->
 <div class="step" id="step3">
-  <div style="padding:4px 0 16px"><div class="step-heading">Almost Done!</div><div class="step-sub">Check everything before your listing goes live</div></div>
+  <div style="padding:4px 0 16px"><div class="step-heading">Almost Done!</div><div class="step-sub">Last step before your listing goes live</div></div>
+
+  <!-- Free contact choice — MUST select one before posting -->
+  <div class="form-card" id="freeContactCard">
+    <div class="card-title">📞 Make Your Contact Visible</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:14px;line-height:1.6">How do you want people to reach you?</div>
+    <div id="fc-options" style="display:flex;flex-direction:column;gap:10px">
+      <div class="broker-opt" id="fc-paid" onclick="selectFreeContact('paid')" style="cursor:pointer">
+        <div class="broker-icon">🔒</div>
+        <div>
+          <div class="broker-title">Standard — unlock via coins</div>
+          <div class="broker-desc">Interested people spend <strong>5 coins</strong> to see your contact. Free for you.</div>
+        </div>
+      </div>
+      <div class="broker-opt" id="fc-free" onclick="selectFreeContact('free')" style="cursor:pointer">
+        <div class="broker-icon">🌟</div>
+        <div>
+          <div class="broker-title">Make it free — get more responses</div>
+          <div class="broker-desc">Anyone can see your contact without spending coins. <strong>Costs you 50 coins upfront</strong> — but gets significantly more inquiries.</div>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="fc-choice" value="">
+  </div>
+
   <div class="form-card">
-    <div class="card-title">✅ Before You Post</div>
+    <div class="card-title">✅ Confirm Before Posting</div>
     <div style="display:flex;flex-direction:column;gap:14px">
-      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> My area, rent and all details are correct</label>
-      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> I have correctly declared whether brokerage is involved or not</label>
-      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> My phone number is correct — only shared after coins are unlocked</label>
-      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> I agree to FlatKhoj's terms — no fake listings, no spam</label>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" class="post-confirm-cb" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> My area, rent and all details are correct</label>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" class="post-confirm-cb" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> I have correctly declared whether brokerage is involved or not</label>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" class="post-confirm-cb" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> My phone number is correct — only shared after contact is unlocked</label>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;color:var(--ink2)"><input type="checkbox" class="post-confirm-cb" style="margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex-shrink:0"> I agree to FlatKhoj's terms — no fake listings, no spam</label>
     </div>
   </div>
+
   <!-- Owner custom contact number (only shown to owner) -->
   <div id="ownerContactField" style="display:none" class="form-card">
     <div class="card-title">📞 Contact number to show users</div>
-    <div style="font-size:13px;color:var(--ink3);margin-bottom:12px;line-height:1.6">Since you're posting on behalf of someone, enter the number that should be revealed when users unlock this listing. This will override your login number.</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:12px;line-height:1.6">Since you're posting on behalf of someone, enter the number that should be revealed when users unlock this listing.</div>
     <div class="field">
       <div class="field-label">Contact number <span class="req">*</span></div>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:14px;color:var(--ink2);font-weight:600;flex-shrink:0">+91</span>
         <input class="input" type="tel" id="ownerContactNumber" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
       </div>
-      <div class="field-hint">This number will be shown to users who pay coins to unlock this listing</div>
     </div>
   </div>
 
   <div style="background:var(--teal-bg);border:1.5px solid var(--teal);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.7">
-    🎉 <strong>Posting is completely free.</strong> Your listing will stay live for <strong>30 Days</strong> and can be renewed for free anytime.
+    🎉 <strong>Posting is completely free.</strong> Your listing will stay live for <strong>30 days</strong> and can be renewed for free anytime.
   </div>
-  <div style="background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.7;margin-top:12px" id="deleteReminderMsg">
-  </div>
+  <div style="background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.7;margin-top:12px" id="deleteReminderMsg"></div>
 </div>
 
 
@@ -798,6 +821,11 @@ async function submitListing() {
     formData.created_at = new Date().toISOString();
     formData.updated_at = new Date().toISOString();
 
+    // Free contact setting from step 3
+    const fcChoice = document.getElementById('fc-choice')?.value;
+    if(fcChoice === 'free') formData.is_free_contact = true;
+    else formData.is_free_contact = false;
+
     // If owner posting on behalf — save custom contact number
     const userPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
     const isAppOwner = userPhone==='9538584612' || user.isOwner===true || user.isOwner==='true';
@@ -963,6 +991,9 @@ window.addEventListener('load', async function() {
         overlay.innerHTML = '<div style="font-size:48px">🚀</div><div style="font-size:18px;font-weight:700;color:var(--ink)">Posting your listing…</div><div style="font-size:14px;color:var(--ink3)">You\'re signed in. Publishing now!</div>';
         document.body.appendChild(overlay);
 
+        // Default to standard contact (user skipped step 3 — standard is fine)
+        document.getElementById('fc-choice').value = 'paid';
+
         // Submit immediately
         setTimeout(async () => {
           await submitListing();
@@ -1002,18 +1033,21 @@ window.addEventListener('load', async function() {
       const t = typeMap[listing.listing_type];
       if (!t) return;
 
-      // Show step 1 with type pre-selected
+      // Go directly to step 2 with form pre-filled
       selectType(t);
-      step = 1;
-      updateUI();
+      step = 2;
+      updateUI(); // This makes the form section visible
 
-      // Show edit banner on step 1
-      const notice = document.createElement('div');
-      notice.id = 'editNoticeBanner';
-      notice.style.cssText = 'background:#fef6e4;border:1px solid #e6a817;border-radius:10px;padding:12px 14px;font-size:13px;color:#b8860b;margin:16px 0;';
-      notice.innerHTML = '✏️ <strong>Editing listing</strong> — type is pre-selected. Change if needed, then tap Next to edit details.';
-      const step1 = document.getElementById('step1');
-      if (step1) step1.appendChild(notice);
+      // Pre-fill after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        prefillEditForm(listing, t);
+        // Show edit notice at top of step 2
+        const notice = document.createElement('div');
+        notice.style.cssText = 'background:#fef6e4;border:1px solid #e6a817;border-radius:10px;padding:12px 14px;font-size:13px;color:#b8860b;margin:0 0 16px;';
+        notice.innerHTML = '✏️ <strong>Editing your listing</strong> — your previous answers are filled in. Make changes and tap Next.';
+        const activeStep = document.querySelector('.step.active');
+        if (activeStep) activeStep.prepend(notice);
+      }, 100);
 
     } catch(e) { console.error('Edit mode error:', e); }
     // Don't return — let page remain on step 1
@@ -1147,6 +1181,18 @@ function getLookingForValue() {
     return c.value;
   }).filter(Boolean);
   return vals.length > 0 ? vals.join(', ') : null;
+}
+
+function selectFreeContact(choice) {
+  document.getElementById('fc-choice').value = choice;
+  ['fc-paid','fc-free'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.border = '2px solid var(--border)';
+    el.style.background = 'var(--bg)';
+  });
+  const sel = document.getElementById('fc-' + choice);
+  sel.style.border = '2px solid var(--teal)';
+  sel.style.background = 'var(--teal-bg)';
 }
 
 function showOtherInput(select, inputId) {
@@ -1343,8 +1389,14 @@ function nextStep(){
   }
 
   if(step===3){
+    // ── Free contact choice must be made ──
+    if(!document.getElementById('fc-choice').value){
+      alert('Please choose how you want people to reach you — standard or free contact.');
+      document.getElementById('freeContactCard').scrollIntoView({behavior:'smooth'});
+      return;
+    }
     // ── All 4 checkboxes must be checked ──
-    const checkboxes = document.querySelectorAll('#step3 input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('.post-confirm-cb');
     const allChecked = [...checkboxes].every(cb => cb.checked);
     if(!allChecked){
       alert('Please check all 4 boxes to confirm your listing details before posting.');
