@@ -984,7 +984,7 @@ function showLimitBlocked(msg, coins, currentPlan) {
   if (currentPlan === 'pro') {
     // Already on pro — hide both, nothing to upgrade to
     if (proCard) proCard.style.display = 'none';
-    document.getElementById('limitBlockedText').innerHTML = msg + '<br><br>You are on the highest plan. Please wait until tomorrow or next month to post more.';
+    document.getElementById('limitBlockedText').innerHTML = msg;
   }
   screen.style.display = 'block';
   window.scrollTo(0, 0);
@@ -1052,7 +1052,7 @@ async function checkPostingLimitsStrict() {
   if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return true;
   try {
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const window24h = new Date(now.getTime() - 24*60*60*1000).toISOString();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const userData = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins,posting_plan,posting_plan_expires`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
@@ -1061,17 +1061,26 @@ async function checkPostingLimitsStrict() {
     const planExpires = userData[0]?.posting_plan_expires;
     if (plan !== 'free' && planExpires && new Date(planExpires) < new Date()) plan = 'free';
     const limit = LIMITS[plan] || LIMITS.free;
-    const [todayData, monthData] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfDay}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }).then(r => r.json()),
+    const [recentData, monthData] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${window24h}&select=id,created_at&order=created_at.asc`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }).then(r => r.json()),
       fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfMonth}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }).then(r => r.json())
     ]);
-    const todayCount = todayData.length;
+    const recentCount = recentData.length;
     const monthCount = monthData.length;
     const coins = userData[0]?.coins || 0;
-    if (todayCount >= limit.daily || monthCount >= limit.monthly) {
-      const msg = todayCount >= limit.daily
-        ? `You have posted ${todayCount} listing${todayCount>1?'s':''} today. Your ${limit.label} allows ${limit.daily} per day.`
-        : `You have posted ${monthCount} listings this month. Your ${limit.label} allows ${limit.monthly} per month.`;
+    if (recentCount >= limit.daily) {
+      // Calculate when oldest post in window will be 24h old = when next slot opens
+      const oldestPost = new Date(recentData[0].created_at);
+      const nextAllowed = new Date(oldestPost.getTime() + 24*60*60*1000);
+      const hoursLeft = Math.ceil((nextAllowed - now) / (60*60*1000));
+      const minsLeft = Math.ceil((nextAllowed - now) / (60*1000));
+      const waitMsg = hoursLeft >= 1 ? `${hoursLeft} hour${hoursLeft>1?'s':''}` : `${minsLeft} minute${minsLeft>1?'s':''}`;
+      const msg = `You have posted ${recentCount} listing${recentCount>1?'s':''} in the last 24 hours. Your ${limit.label} allows ${limit.daily} per 24 hours.<br><br>You can post again in <strong>${waitMsg}</strong>.`;
+      showLimitBlocked(msg, coins, plan);
+      return false;
+    }
+    if (monthCount >= limit.monthly) {
+      const msg = `You have posted ${monthCount} listings this month. Your ${limit.label} allows ${limit.monthly} per month.`;
       showLimitBlocked(msg, coins, plan);
       return false;
     }
@@ -1089,18 +1098,16 @@ async function checkPostingLimits() {
   if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return;
   try {
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const window24h = new Date(now.getTime() - 24*60*60*1000).toISOString();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     const userRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins,posting_plan,posting_plan_expires`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     });
     const userData = await userRes.json();
-    // Check if plan has expired
     let plan = userData[0]?.posting_plan || 'free';
     const planExpires = userData[0]?.posting_plan_expires;
     if (plan !== 'free' && planExpires && new Date(planExpires) < new Date()) {
-      // Plan expired — reset to free
       plan = 'free';
       fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
         method: 'PATCH',
@@ -1110,11 +1117,12 @@ async function checkPostingLimits() {
     }
     const limit = LIMITS[plan] || LIMITS.free;
 
-    const [todayRes, monthRes] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfDay}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }),
+    const [recentRes, monthRes] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${window24h}&select=id,created_at&order=created_at.asc`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }),
       fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&created_at=gte.${startOfMonth}&select=id`, { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } })
     ]);
-    const todayCount = (await todayRes.json()).length;
+    const recentPosts = await recentRes.json();
+    const todayCount = recentPosts.length;
     const monthCount = (await monthRes.json()).length;
 
     const dailyBlocked = todayCount >= limit.daily;
@@ -1124,10 +1132,17 @@ async function checkPostingLimits() {
       document.getElementById('typeGridWrap').style.display = 'none';
       document.getElementById('limitInfoBanner').style.display = 'none';
       document.getElementById('nBtn').style.display = 'none';
-      const msg = dailyBlocked
-        ? `You've posted <strong>${todayCount}</strong> listing${todayCount>1?'s':''} today. Your <strong>${limit.label}</strong> allows <strong>${limit.daily} per day</strong>.`
-        : `You've posted <strong>${monthCount}</strong> listings this month. Your <strong>${limit.label}</strong> allows <strong>${limit.monthly} per month</strong>.`;
-      // coins already fetched above from userData
+      let msg;
+      if (dailyBlocked) {
+        const oldestPost = new Date(recentPosts[0].created_at);
+        const nextAllowed = new Date(oldestPost.getTime() + 24*60*60*1000);
+        const hoursLeft = Math.ceil((nextAllowed - now) / (60*60*1000));
+        const minsLeft = Math.ceil((nextAllowed - now) / (60*1000));
+        const waitMsg = hoursLeft >= 1 ? `${hoursLeft} hour${hoursLeft>1?'s':''}` : `${minsLeft} minute${minsLeft>1?'s':''}`;
+        msg = `You've posted <strong>${todayCount}</strong> listing${todayCount>1?'s':''} in the last 24 hours. Your <strong>${limit.label}</strong> allows <strong>${limit.daily} per 24 hours</strong>.<br><br>You can post again in <strong>${waitMsg}</strong>.`;
+      } else {
+        msg = `You've posted <strong>${monthCount}</strong> listings this month. Your <strong>${limit.label}</strong> allows <strong>${limit.monthly} per month</strong>.`;
+      }
       const coins = userData[0]?.coins || 0;
       user.coins = coins;
       localStorage.setItem('fmh_user', JSON.stringify(user));
@@ -1140,7 +1155,7 @@ async function checkPostingLimits() {
     const rem_month = limit.monthly - monthCount;
     document.getElementById('limitInfoBanner').style.display = 'block';
     document.getElementById('limitInfoText').innerHTML =
-      `📋 You can post <strong>${rem_day} more listing${rem_day>1?'s':''} today</strong> and <strong>${rem_month} more this month</strong>. &nbsp;<a href="posting_limits.html" style="color:var(--teal);font-weight:700;text-decoration:underline;text-underline-offset:2px">Increase limit</a>`;
+      `📋 You can post <strong>${rem_day} more listing${rem_day>1?'s':''} in the next 24 hours</strong> and <strong>${rem_month} more this month</strong>. &nbsp;<a href="posting_limits.html" style="color:var(--teal);font-weight:700;text-decoration:underline;text-underline-offset:2px">Increase limit</a>`;
   } catch(e) { console.log('Limit check error:', e); }
 }
 
