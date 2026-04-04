@@ -671,7 +671,7 @@ async function verifyOtp() {
       if (triggerContext === 'unlock') cb.textContent = 'Continue to unlock contact →';
       else if (triggerContext === 'post') cb.textContent = 'Continue to post listing →';
       else cb.textContent = 'Start exploring →';
-      goToScreen('screenWelcome');
+      goToScreen('screen3');
     } catch(e) {
       console.error('Test user error:', e);
       btn.classList.remove('loading');
