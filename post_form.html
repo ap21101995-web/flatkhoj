@@ -752,6 +752,28 @@ function getUser() {
 }
 
 // ── COLLECT FORM DATA ──────────────────────────────────────
+// Whitelist of all known DB columns - prevents PATCH/POST failures from unknown columns
+const DB_COLUMNS = new Set([
+  'listing_type','user_id','city','is_active','expires_at','created_at','updated_at',
+  'areas','rent_amount','deposit_amount','flat_type','room_type','furnishing','amenities',
+  'food_preference','gender_preference','tenant_type','pets_allowed',
+  'has_brokerage','brokerage_amount','brokerage_preference',
+  'is_free_contact','free_contact_coins_paid',
+  'title','description','raw_input','photos',
+  'available_from','stay_duration',
+  'poster_name','custom_contact_phone','claimed_by_user_id',
+  'situation','occupation','meals_included','curfew','visitors_allowed',
+  'is_urgent','is_verified','view_count','unlock_count'
+]);
+function sanitizeForDB(data) {
+  const clean = {};
+  for (const key of Object.keys(data)) {
+    if (DB_COLUMNS.has(key)) clean[key] = data[key];
+    else console.log('Skipping unknown DB column:', key);
+  }
+  return clean;
+}
+
 function collectFormData() {
   const data = { listing_type: type };
 
@@ -871,12 +893,17 @@ async function submitListing() {
         const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
         if (customPhone && customPhone.length === 10) formData.custom_contact_phone = customPhone;
       }
+      const cleanData = sanitizeForDB(formData);
       const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${window._editListingId}`, {
         method: 'PATCH',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(cleanData)
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('PATCH error:', res.status, errText);
+        throw new Error('Save failed: ' + errText);
+      }
       window.location.href = `listing_detail.html?id=${window._editListingId}`;
       return;
     }
@@ -926,6 +953,7 @@ async function submitListing() {
     }
 
     // Post directly to Supabase
+    const cleanFormData = sanitizeForDB(formData);
     const res = await fetch(`${SUPA_URL}/rest/v1/listings`, {
       method: 'POST',
       headers: {
@@ -934,7 +962,7 @@ async function submitListing() {
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(cleanFormData)
     });
 
     if (!res.ok) {
@@ -1550,7 +1578,8 @@ function nextStep(){
       if(!document.getElementById('fw-movein')?.value){
         alert('Please select your move-in date.'); return;
       }
-      if(!document.getElementById('fw-you-are')?.value){
+      const youAreVal = document.getElementById('fw-you-are')?.value;
+      if(!youAreVal && !window._editListingId){
         alert('Please select what best describes you (Working Professional, Student, etc.).'); return;
       }
       if(!document.getElementById('fw-gender-select')?.value){
@@ -1570,7 +1599,7 @@ function nextStep(){
     }
 
     if(t === 'fm'){
-      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-sit"]')){
+      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-sit"]') && !window._editListingId){
         alert('Please select what best describes your situation.'); return;
       }
       if(!document.getElementById('fm-flat-type')?.value){
