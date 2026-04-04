@@ -165,7 +165,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <!-- STEP 1: TYPE -->
 <div class="step active" id="step1">
   <div style="padding:4px 0 16px">
-    <div class="step-heading">What Are You Posting?</div>
+    <div class="step-heading">What are you posting?</div>
     <div class="step-sub">Choose the option that best describes your listing</div>
   </div>
 
@@ -854,11 +854,13 @@ const LIMITS = {
 };
 
 async function checkPostingLimits() {
+  // Never apply posting limits in edit mode
+  if (new URLSearchParams(window.location.search).get('edit')) return;
   const user = getUser();
   if (!user) return;
-  
   // Owner has no posting limits
-  if (user.isOwner) return;
+  const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
+  if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return;
   try {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -981,6 +983,12 @@ window.addEventListener('load', async function() {
       // Store listing data globally for pre-fill when user hits Next
       window._editListingId = editId;
       window._editListingData = listing;
+
+      // Ensure type grid is visible (not blocked by limits)
+      document.getElementById('typeGridWrap').style.display = 'block';
+      document.getElementById('limitBlockedScreen').style.display = 'none';
+      document.getElementById('limitInfoBanner').style.display = 'none';
+      if(document.getElementById('nBtn')) document.getElementById('nBtn').style.display = 'block';
 
       // Map type and pre-select on step 1
       const typeMap = { flat_listing:'fl', flat_wanted:'fw', flatmate_wanted:'fm', pg_listing:'pg' };
@@ -1233,7 +1241,7 @@ function updateUI(){
     const msg = document.getElementById('deleteReminderMsg');
     if(msg && type && msgs[type]) msg.innerHTML = msgs[type];
   }
-  const titles=['What Are You Posting?','Listing Details','Review & Post'];
+  const titles=['What are you posting?','Listing Details','Review & Post'];
   document.getElementById('topbarTitle').textContent=titles[step-1];
   document.getElementById('topbarStep').textContent=`Step ${step} Of 3`;
   document.getElementById('pFill').style.width=['33%','66%','100%'][step-1];
