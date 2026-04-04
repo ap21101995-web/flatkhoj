@@ -793,30 +793,39 @@ function onContinue() {
   const returnUrl = params.get('return');
   const listingId = params.get('listing_id');
 
-  if (returnUrl) {
-    // Return to specific URL (e.g. post_form.html with state preserved)
-    window.location.href = returnUrl;
-  } else if (triggerContext === 'post') {
-    // Return to post_form — state is preserved in localStorage
-    window.location.href = 'post_form.html';
+  // Always replace login in history so back button never returns here
+  if (triggerContext === 'post') {
+    window.history.replaceState({}, '', 'post_form.html');
+    window.location.replace(returnUrl || 'post_form.html');
   } else if (triggerContext === 'unlock') {
     if (listingId) {
-      // Return to listing detail with unlock sheet auto-opening
-      window.location.href = 'listing_detail.html?id=' + listingId + '&unlock=1';
+      const dest = 'listing_detail.html?id=' + listingId + '&unlock=1';
+      window.history.replaceState({}, '', dest);
+      window.location.replace(dest);
     } else {
-      // Return to homepage — unlock sheet will need to be re-tapped
-      window.location.href = 'index.html';
+      window.history.replaceState({}, '', 'index.html');
+      window.location.replace('index.html');
     }
   } else if (triggerContext === 'save') {
-    window.history.back();
+    window.history.replaceState({}, '', 'index.html');
+    window.location.replace('index.html');
+  } else if (returnUrl) {
+    window.history.replaceState({}, '', returnUrl);
+    window.location.replace(returnUrl);
   } else {
-    window.location.href = 'index.html';
+    window.history.replaceState({}, '', 'index.html');
+    window.location.replace('index.html');
   }
 }
 function goBack() {
   const active = document.querySelector('.screen.active');
-  if (active.id === 'screen2' || active.id === 'screen-owner') goToScreen('screen1');
-  else window.location.href = 'index.html';
+  if (active.id === 'screen2' || active.id === 'screen-owner') {
+    goToScreen('screen1');
+  } else {
+    // Replace login in history so user goes to index, not back to login
+    window.history.replaceState({}, '', 'index.html');
+    window.location.replace('index.html');
+  }
 }
 </script>
 </body>
