@@ -268,10 +268,10 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="card-title">🙋 About You</div>
       <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="fw-poster-name" placeholder="First name is fine"></div>
       <div class="field-row">
-        <div class="field"><div class="field-label">You Are A <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Working Professional</option><option>Student</option><option>Business Owner</option><option>Other</option></select></div>
+        <div class="field"><div class="field-label">You are a <span class="req">*</span></div><select class="select" id="fw-you-are"><option value="">Select…</option><option>Working Professional</option><option>Student</option><option>Business Owner</option><option>Other</option></select></div>
         <div class="field"><div class="field-label">Gender <span class="req">*</span></div><select class="select" id="fw-gender-select"><option value="">Select…</option><option>Male</option><option>Female</option><option>Prefer Not To Say</option></select></div>
       </div>
-      <div class="field"><div class="field-label">Food Preference <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fw-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fw-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fw-food')">No Veg/Non-Veg Preference</div></div></div>
+      <div class="field"><div class="field-label">Food Preference <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fw-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fw-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fw-food')">🍽️ No Veg/Non-Veg Preference</div></div></div>
       <div class="field"><div class="field-label">Originally From</div><input class="input" type="text" placeholder="e.g. Pune, Maharashtra"><div class="field-hint">Helps build trust with owners</div></div>
       <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="e.g. I work night shifts, I have a pet, prefer a quiet building…" oninput="cc(this,'fw-cc',300)"></textarea><div class="char-count" id="fw-cc">0 / 300</div></div>
     </div>
@@ -313,7 +313,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">🏠 Preferences & Amenities</div>
-      <div class="field"><div class="field-label">Food Preference In House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fl-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fl-food')">No Veg/Non-Veg Preference</div></div></div>
+      <div class="field"><div class="field-label">Food Preference In House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fl-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fl-food')">🍽️ No Veg/Non-Veg Preference</div></div></div>
       <div class="field"><div class="field-label">Preferred Tenant Gender <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-gen')">Male only</div><div class="pill" onclick="sp(this,'fl-gen')">Female only</div><div class="pill" onclick="sp(this,'fl-gen')">Any</div></div></div>
       <div class="field"><div class="field-label">Preferred Tenant Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-tt')">Working Professional</div><div class="pill" onclick="sp(this,'fl-tt')">Student</div><div class="pill" onclick="sp(this,'fl-tt')">Family</div><div class="pill" onclick="sp(this,'fl-tt')">Any</div></div></div>
       <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Gated Society</div><div class="pill" onclick="mp(this)">Security Guard</div><div class="pill" onclick="mp(this)">Swimming Pool</div><div class="pill" onclick="mp(this)">Garden</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Modular Kitchen</div></div></div>
@@ -365,7 +365,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">🏠 House Rules & Vibe</div>
-      <div class="field"><div class="field-label">Food In This House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fm-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fm-food')">No Veg/Non-Veg Preference</div></div></div>
+      <div class="field"><div class="field-label">Food In This House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fm-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fm-food')">🍽️ No Veg/Non-Veg Preference</div></div></div>
       <div class="field"><div class="field-label">Looking For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-gen')">Male Flatmate</div><div class="pill" onclick="sp(this,'fm-gen')">Female Flatmate</div><div class="pill" onclick="sp(this,'fm-gen')">Any Gender</div></div></div>
       <div class="field"><div class="field-label">Preferred Flatmate Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pref')">Working Professional</div><div class="pill" onclick="sp(this,'fm-pref')">Student</div><div class="pill" onclick="sp(this,'fm-pref')">Any</div></div></div>
       <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fm-pets')">No</div></div></div>
@@ -1270,6 +1270,12 @@ function nextStep(){
       }
       if(!document.getElementById('fw-movein')?.value){
         alert('Please select your move-in date.'); return;
+      }
+      if(!document.getElementById('fw-you-are')?.value){
+        alert('Please select what best describes you (Working Professional, Student, etc.).'); return;
+      }
+      if(!document.getElementById('fw-gender-select')?.value){
+        alert('Please select your gender.'); return;
       }
       if(!document.querySelector(`#f-fw [onclick*="'fw-food'"].sel, #f-fw [onclick*='"fw-food"'].sel`)){
         alert('Please select your food preference.'); return;
