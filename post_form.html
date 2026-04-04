@@ -1148,67 +1148,150 @@ function containsAbusiveLanguage(text) {
 }
 
 function nextStep(){
-  if(step===1&&!type){alert('Please select a listing type to continue');return;}
+  if(step===1&&!type){alert('Please select a listing type to continue.');return;}
 
   // Edit mode: when moving from step 1 to 2, pre-fill the form
-  // Only pre-fill if the selected type matches the original listing type
   if(step===1 && window._editListingId && window._editListingData){
     const listing = window._editListingData;
     const typeMap = { flat_listing:'fl', flat_wanted:'fw', flatmate_wanted:'fm', pg_listing:'pg' };
     const originalType = typeMap[listing.listing_type];
     if(type === originalType){
-      // Same type — pre-fill all fields after DOM updates
       setTimeout(() => prefillEditForm(listing, type), 50);
     }
-    // Different type chosen — start fresh (no pre-fill needed)
   }
 
   if(step===2){
-    // Validate name is filled
-    const nameField = document.getElementById(type + '-poster-name');
-    if(nameField && !nameField.value.trim()){
-      alert('Please enter your name before continuing.');
-      nameField.focus();
-      return;
+    const t = type;
+
+    // ── Helper: check if a pill group has a selection ──
+    function pillSelected(group) {
+      return !!document.querySelector(`[onclick*="'${group}'"].sel, [onclick*='"${group}"'].sel`);
+    }
+    function selPill(group) { return pillSelected(group); }
+
+    // ── Area ──
+    const areaId = t + '-area';
+    if(!areaVals[areaId] || areaVals[areaId].length === 0){
+      alert('Please select your area in Mumbai.'); return;
     }
 
-    // Validate budget/rent is filled
-    const rentField = document.querySelector('#f-' + type + ' input[type="number"]');
-    if(rentField && !rentField.value){
-      alert('Please enter a budget or rent amount before continuing.');
-      rentField.focus();
-      return;
+    // ── Name ──
+    const nameEl = document.getElementById(t + '-poster-name');
+    if(nameEl && !nameEl.value.trim()){
+      alert('Please enter your name.'); nameEl.focus(); return;
+    }
+    if(nameEl && containsAbusiveLanguage(nameEl.value)){
+      alert('⚠️ Please use a valid name.'); nameEl.focus(); return;
     }
 
-    const textareas = document.querySelectorAll('#f-'+type+' textarea');
-    const textInputs = document.querySelectorAll('#f-'+type+' input[type="text"]:not([id*="area"]):not([id*="name"]):not([id*="other"])');
-    const allFields = [...textareas, ...textInputs];
+    // ── Rent / Budget ──
+    const rentEl = document.querySelector('#f-' + t + ' input[type="number"]');
+    if(rentEl && !rentEl.value){
+      alert('Please enter a rent or budget amount.'); rentEl.focus(); return;
+    }
 
-    for(const field of allFields){
-      const val = field.value;
-      if(!val) continue;
-      const contactType = containsContactInfo(val);
-      if(contactType){
-        alert(`⚠️ Please remove the ${contactType} from your listing.\n\nYour contact is shared securely when someone unlocks it — adding it here defeats that purpose.`);
-        field.focus();
-        return;
+    // ── Type-specific required fields ──
+    if(t === 'fl'){
+      if(!document.querySelector(`#f-fl [onclick*="'fl-ft'"].sel, #f-fl [onclick*='"fl-ft"'].sel`)){
+        alert('Please select the flat type (1 BHK, 2 BHK, etc.).'); return;
       }
-      if(containsAbusiveLanguage(val)){
-        alert('⚠️ Your description contains inappropriate language.\n\nPlease keep your listing respectful and relevant to housing.');
-        field.focus();
-        return;
+      if(!document.querySelector(`#f-fl [onclick*="'fl-food'"].sel, #f-fl [onclick*='"fl-food"'].sel`)){
+        alert('Please select the food preference.'); return;
+      }
+      if(!document.querySelector(`#f-fl [onclick*="'fl-gen'"].sel, #f-fl [onclick*='"fl-gen"'].sel`)){
+        alert('Please select the preferred tenant gender.'); return;
+      }
+      if(!document.getElementById('fl-available')?.value){
+        alert('Please select the available from date.'); return;
+      }
+      // Brokerage
+      if(!document.getElementById('fl-bno')?.classList.contains('sel-no') && !document.getElementById('fl-byes')?.classList.contains('sel-yes')){
+        alert('Please indicate whether brokerage is involved.'); return;
       }
     }
-    // Check name field for abusive language
-    if(nameField && containsAbusiveLanguage(nameField.value)){
-      alert('⚠️ Please use a valid name.');
-      nameField.focus();
-      return;
+
+    if(t === 'fw'){
+      if(!nameEl?.value.trim()){
+        alert('Please enter your name.'); return;
+      }
+      if(!document.getElementById('fw-movein')?.value){
+        alert('Please select your move-in date.'); return;
+      }
+      if(!document.querySelector(`#f-fw [onclick*="'fw-food'"].sel, #f-fw [onclick*='"fw-food"'].sel`)){
+        alert('Please select your food preference.'); return;
+      }
+      // Looking for (multi-select)
+      if([...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length === 0){
+        alert('Please select what type of accommodation you\'re looking for.'); return;
+      }
+      // Brokerage preference
+      if(!document.getElementById('fw-broker-choice')?.value){
+        alert('Please select your brokerage preference.'); return;
+      }
+    }
+
+    if(t === 'fm'){
+      if(!document.querySelector(`#f-fm [onclick*="'fm-sit'"].sel, #f-fm [onclick*='"fm-sit"'].sel`)){
+        alert('Please select what best describes your situation.'); return;
+      }
+      if(!document.getElementById('fm-flat-type')?.value){
+        alert('Please select the flat type.'); return;
+      }
+      if(!document.querySelector(`#f-fm [onclick*="'fm-rm'"].sel, #f-fm [onclick*='"fm-rm"'].sel`)){
+        alert('Please select the room type available for flatmate.'); return;
+      }
+      if(!document.getElementById('fm-available')?.value){
+        alert('Please select the available from date.'); return;
+      }
+      if(!document.querySelector(`#f-fm [onclick*="'fm-food'"].sel, #f-fm [onclick*='"fm-food"'].sel`)){
+        alert('Please select the food preference in your house.'); return;
+      }
+      if(!document.querySelector(`#f-fm [onclick*="'fm-gen'"].sel, #f-fm [onclick*='"fm-gen"'].sel`)){
+        alert('Please select the gender you\'re looking for.'); return;
+      }
+      // Brokerage
+      if(!document.getElementById('fm-bno')?.classList.contains('sel-no') && !document.getElementById('fm-byes')?.classList.contains('sel-yes')){
+        alert('Please indicate whether brokerage is involved.'); return;
+      }
+    }
+
+    if(t === 'pg'){
+      if(!document.querySelector(`#f-pg [onclick*="'pg-for'"].sel, #f-pg [onclick*='"pg-for"'].sel`)){
+        alert('Please select who the PG is for (Boys/Girls/Both).'); return;
+      }
+      if(!document.querySelector(`#f-pg [onclick*="'pg-food'"].sel, #f-pg [onclick*='"pg-food"'].sel`)){
+        alert('Please select the food type served.'); return;
+      }
+      // Brokerage
+      if(!document.getElementById('pg-bno')?.classList.contains('sel-no') && !document.getElementById('pg-byes')?.classList.contains('sel-yes')){
+        alert('Please indicate whether brokerage is involved.'); return;
+      }
+    }
+
+    // ── Contact info / abusive language check ──
+    const textareas = document.querySelectorAll('#f-'+t+' textarea');
+    const textInputs = document.querySelectorAll('#f-'+t+' input[type="text"]:not([id*="area"]):not([id*="name"]):not([id*="other"])');
+    for(const field of [...textareas, ...textInputs]){
+      const val = field.value; if(!val) continue;
+      const ct = containsContactInfo(val);
+      if(ct){ alert(`⚠️ Please remove the ${ct} from your listing.\n\nYour contact is shared securely when someone unlocks it.`); field.focus(); return; }
+      if(containsAbusiveLanguage(val)){ alert('⚠️ Your description contains inappropriate language.'); field.focus(); return; }
     }
   }
 
-  if(step===3){ submitListing(); return; }
-  step++;updateUI();
+  if(step===3){
+    // ── All 4 checkboxes must be checked ──
+    const checkboxes = document.querySelectorAll('#step3 input[type="checkbox"]');
+    const allChecked = [...checkboxes].every(cb => cb.checked);
+    if(!allChecked){
+      alert('Please check all 4 boxes to confirm your listing details before posting.');
+      return;
+    }
+    submitListing();
+    return;
+  }
+
+  step++; updateUI();
 }
 function prevStep(){
   if(step>1){ step--; updateUI(); }
