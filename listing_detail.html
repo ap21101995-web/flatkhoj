@@ -1273,21 +1273,48 @@ async function activateFreeContact() {
 
 async function deleteListing() {
   const user = getUser();
-  const isAppOwner = user.isOwner === true || user.isOwner === 'true' || user.phone === '9538584612';
-  if (!user || (!isAppOwner && user.userId !== listing.user_id && user.userId !== listing.claimed_by_user_id)) {
-    alert('You can only delete your own listings.');
+  const isAppOwner = user && (user.isOwner === true || user.isOwner === 'true' || String(user.phone||'').replace(/\D/g,'').slice(-10) === '9538584612');
+  if (!user || (!isAppOwner && user.userId !== listing.user_id && user.userId !== listing.claimed_by_user_id)) return;
+
+  // Show inline confirmation inside the delete button area
+  const deleteBtn = document.querySelector('[onclick="deleteListing()"]');
+  if (!deleteBtn) return;
+
+  // If already showing confirm state, proceed with delete
+  if (deleteBtn.getAttribute('data-confirm') === 'true') {
+    deleteBtn.textContent = 'Deleting…';
+    deleteBtn.disabled = true;
+    try {
+      await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: false })
+      });
+      window.location.replace('index.html');
+    } catch(err) {
+      deleteBtn.textContent = '🗑️ Delete';
+      deleteBtn.disabled = false;
+      deleteBtn.removeAttribute('data-confirm');
+      showToast('Failed to delete. Please try again.');
+    }
     return;
   }
-  if (!confirm('Delete this listing? This cannot be undone.')) return;
-  try {
-    await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_active: false })
-    });
-    alert('Listing deleted.');
-    window.location.href = 'index.html';
-  } catch(err) { alert('Failed to delete. Please try again.'); }
+
+  // First click — show confirmation state inline
+  deleteBtn.setAttribute('data-confirm', 'true');
+  deleteBtn.textContent = 'Tap again to confirm';
+  deleteBtn.style.background = 'var(--red)';
+  deleteBtn.style.color = 'white';
+
+  // Auto-reset after 3 seconds if user doesn't confirm
+  setTimeout(() => {
+    if (deleteBtn.getAttribute('data-confirm') === 'true') {
+      deleteBtn.removeAttribute('data-confirm');
+      deleteBtn.textContent = '🗑️ Delete';
+      deleteBtn.style.background = 'var(--red-bg)';
+      deleteBtn.style.color = 'var(--red)';
+    }
+  }, 3000);
 }
 
 function openSheet(name){document.getElementById(name+'Backdrop').classList.add('show');setTimeout(()=>document.getElementById(name+'Sheet').classList.add('show'),10);}
