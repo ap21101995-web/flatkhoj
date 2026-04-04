@@ -1639,8 +1639,12 @@ function nextStep(){
   step++; updateUI();
 }
 function prevStep(){
+  // In edit mode — always go back to the listing, never to step 1
+  if(window._editListingId){
+    window.location.href = 'listing_detail.html?id=' + window._editListingId;
+    return;
+  }
   if(step>1){ step--; updateUI(); }
-  else if(window._editListingId){ window.location.href='listing_detail.html?id='+window._editListingId; }
   else { window.location.href='index.html'; }
 }
 
