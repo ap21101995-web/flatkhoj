@@ -1059,7 +1059,7 @@ let currentUnlockListingId = null;
 async function handleUnlock(listingId, area) {
   const user = getUser();
   if (!user) {
-    window.location.href = 'login.html?trigger=unlock';
+    window.location.href = 'login.html?trigger=unlock&listing_id=' + listingId;
     return;
   }
   currentUnlockListingId = listingId;

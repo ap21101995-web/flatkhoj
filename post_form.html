@@ -745,14 +745,17 @@ function collectFormData() {
 async function submitListing() {
   const user = getUser();
   if (!user) {
-    // Save form state before redirecting to login
-    const state = {
-      type: type,
-      step: step,
-      areas: areaVals,
-      savedAt: Date.now()
-    };
-    localStorage.setItem('fk_post_state', JSON.stringify(state));
+    // Save complete form state before redirecting to login
+    try {
+      const formData = collectFormData();
+      const state = {
+        type: type,
+        formData: formData,
+        areas: areaVals,
+        savedAt: Date.now()
+      };
+      localStorage.setItem('fk_post_state', JSON.stringify(state));
+    } catch(e) {}
     window.location.href = 'login.html?trigger=post&return=post_form.html';
     return;
   }
@@ -922,46 +925,43 @@ window.addEventListener('load', async function() {
 
   // Restore form state if returning from login
   const savedState = localStorage.getItem('fk_post_state');
-  if (savedState) {
+  if (savedState && getUser()) {
     try {
       const state = JSON.parse(savedState);
-      // Only restore if saved less than 30 mins ago
-      if (Date.now() - state.savedAt < 30 * 60 * 1000) {
-        if (state.type) {
-          selectType(state.type);
-          // Restore areas
-          if (state.areas) {
-            Object.keys(state.areas).forEach(id => {
-              if (state.areas[id] && state.areas[id].length > 0) {
-                areaVals[id] = state.areas[id];
-                renderTags(id);
-                const wrap = document.getElementById('wrap-' + id);
-                if (wrap) {
-                  const input = wrap.querySelector('.area-input');
-                  const remaining = 3 - areaVals[id].length;
-                  if (remaining === 0) {
-                    input.placeholder = '3 Areas Selected ✓';
-                    input.disabled = true;
-                    input.style.background = 'var(--bg2)';
-                  } else {
-                    input.placeholder = `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`;
-                  }
-                  const tag = document.getElementById('tag-' + id);
-                  if (tag) tag.classList.add('show');
-                }
+      if (Date.now() - state.savedAt < 30 * 60 * 1000 && state.type) {
+        localStorage.removeItem('fk_post_state');
+        selectType(state.type);
+
+        // Restore areas
+        if (state.areas) {
+          Object.keys(state.areas).forEach(id => {
+            if (state.areas[id] && state.areas[id].length > 0) {
+              areaVals[id] = state.areas[id];
+              renderTags(id);
+              const wrap = document.getElementById('wrap-' + id);
+              if (wrap) {
+                const input = wrap.querySelector('.area-input');
+                const remaining = 3 - areaVals[id].length;
+                if (remaining === 0) { input.placeholder = '3 Areas Selected ✓'; input.disabled = true; input.style.background = 'var(--bg2)'; }
+                else { input.placeholder = `Add ${remaining} More Area${remaining > 1 ? 's' : ''} (Optional)`; }
+                const tag = document.getElementById('tag-' + id);
+                if (tag) tag.classList.add('show');
               }
-            });
-          }
-          step = 3;
-          updateUI();
-          // Show a notice
-          const notice = document.createElement('div');
-          notice.style.cssText = 'background:#e8f5f3;border:1px solid #0f7b6c;border-radius:10px;padding:12px 14px;font-size:13px;color:#0f7b6c;margin:0 0 16px;';
-          notice.innerHTML = '✓ <strong>Your details were saved.</strong> Review and post your listing!';
-          document.querySelector('.step.active').prepend(notice);
+            }
+          });
         }
+
+        // Go straight to step 3 — user already filled everything
+        step = 3;
+        updateUI();
+
+        // Show a clear notice with just the post button visible
+        const notice = document.createElement('div');
+        notice.style.cssText = 'background:#e8f5f3;border:1px solid #0f7b6c;border-radius:10px;padding:14px;font-size:14px;color:#0f7b6c;margin:0 0 16px;line-height:1.6';
+        notice.innerHTML = '✅ <strong>You\'re signed in!</strong><br>Your listing details are saved. Check the boxes below and tap Post to go live.';
+        const activeStep = document.querySelector('.step.active');
+        if (activeStep) activeStep.prepend(notice);
       }
-      localStorage.removeItem('fk_post_state');
     } catch(e) { localStorage.removeItem('fk_post_state'); }
   }
 

@@ -791,11 +791,23 @@ function goToScreen(id) {
 function onContinue() {
   const params = new URLSearchParams(window.location.search);
   const returnUrl = params.get('return');
+  const listingId = params.get('listing_id');
+
   if (returnUrl) {
+    // Return to specific URL (e.g. post_form.html with state preserved)
     window.location.href = returnUrl;
   } else if (triggerContext === 'post') {
+    // Return to post_form — state is preserved in localStorage
     window.location.href = 'post_form.html';
   } else if (triggerContext === 'unlock') {
+    if (listingId) {
+      // Return to listing detail with unlock sheet auto-opening
+      window.location.href = 'listing_detail.html?id=' + listingId + '&unlock=1';
+    } else {
+      // Return to homepage — unlock sheet will need to be re-tapped
+      window.location.href = 'index.html';
+    }
+  } else if (triggerContext === 'save') {
     window.history.back();
   } else {
     window.location.href = 'index.html';

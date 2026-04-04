@@ -680,6 +680,11 @@ window.onload=async function(){
       document.getElementById('newPostBanner').style.display = 'block';
       window.history.replaceState({}, '', `listing_detail.html?id=${listingId}`);
     }
+    // Auto-open unlock sheet if returning from login
+    if (new URLSearchParams(window.location.search).get('unlock') === '1') {
+      window.history.replaceState({}, '', `listing_detail.html?id=${listingId}`);
+      setTimeout(() => openSheet('unlock'), 600);
+    }
     fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({view_count:(listing.view_count||0)+1})});
 
     // Restore saved state from Supabase
@@ -912,7 +917,7 @@ function renderListing(){
 
 async function confirmUnlock(){
   const user=getUser();
-  if(!user){window.location.href='login.html?trigger=unlock';return;}
+  if(!user){window.location.href='login.html?trigger=unlock&listing_id='+listing.id;return;}
   const btn=document.querySelector('.confirm-unlock-btn');
   btn.textContent='Unlocking…';btn.disabled=true;
   try{
