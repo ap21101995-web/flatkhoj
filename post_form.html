@@ -231,23 +231,28 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="field"><div class="field-label">Move-in date <span class="req">*</span></div><input class="input" type="date" id="fw-movein"></div>
       </div>
       <div class="field"><div class="field-label">Looking For <span class="req">*</span></div>
-        <div style="position:relative">
-          <select class="select" id="fw-looking-for" multiple size="1" onchange="handleLookingFor()" style="display:none"></select>
-          <div id="fw-lf-display" onclick="toggleLFDropdown()" class="input" style="cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
-            <span id="fw-lf-label" style="color:var(--ink3)">Select all that apply…</span>
-            <span style="color:var(--ink3)">▾</span>
+        <div style="position:relative" id="fw-lf-wrap">
+          <div id="fw-lf-display" onclick="toggleLFDropdown(event)" class="input" style="cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+            <span id="fw-lf-label" style="color:var(--ink3)">Tap to select — up to 3 options</span>
+            <span style="color:var(--ink3);font-size:18px">▾</span>
           </div>
-          <div id="fw-lf-options" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:2px solid var(--teal);border-radius:12px;z-index:100;overflow:hidden;margin-top:4px;box-shadow:0 4px 20px rgba(0,0,0,0.1)">
-            <label class="fw-lf-opt"><input type="checkbox" value="Single occupancy"> Single occupancy</label>
-            <label class="fw-lf-opt"><input type="checkbox" value="Double occupancy"> Double occupancy</label>
-            <label class="fw-lf-opt"><input type="checkbox" value="Entire 1 RK"> Entire 1 RK</label>
-            <label class="fw-lf-opt"><input type="checkbox" value="Entire 1 BHK"> Entire 1 BHK</label>
-            <label class="fw-lf-opt"><input type="checkbox" value="Entire 2 BHK"> Entire 2 BHK</label>
-            <label class="fw-lf-opt"><input type="checkbox" value="Any / Flexible"> Any / Flexible</label>
-            <label class="fw-lf-opt"><input type="checkbox" value="Other" onchange="toggleLFOther(this)"> Other</label>
+          <div id="fw-lf-options" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:2px solid var(--teal);border-radius:12px;z-index:200;overflow:hidden;margin-top:4px;box-shadow:0 8px 30px rgba(0,0,0,0.15)">
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Single occupancy" onchange="updateLFLabel()"> Single occupancy</label>
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Double occupancy" onchange="updateLFLabel()"> Double occupancy</label>
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Entire 1 RK" onchange="updateLFLabel()"> Entire 1 RK</label>
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Entire 1 BHK" onchange="updateLFLabel()"> Entire 1 BHK</label>
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Entire 2 BHK" onchange="updateLFLabel()"> Entire 2 BHK</label>
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Any / Flexible" onchange="updateLFLabel()"> Any / Flexible</label>
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Other" onchange="toggleLFOther(this)"> Other (type below)</label>
+            <div id="fw-lf-other-wrap" style="display:none;padding:8px 14px 4px">
+              <input class="input" id="fw-lf-other" type="text" placeholder="e.g. 1.5 BHK, Studio…" maxlength="10" oninput="updateLFLabel()" style="font-size:13px">
+              <div style="font-size:11px;color:var(--ink3);margin-top:4px">Max 10 characters</div>
+            </div>
+            <div style="padding:10px 14px;border-top:1px solid var(--border)">
+              <button type="button" onclick="closeLFDropdown()" style="width:100%;padding:10px;background:var(--teal);color:white;border:none;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">OK — Done Selecting</button>
+            </div>
           </div>
         </div>
-        <input class="input" id="fw-lf-other" type="text" placeholder="Describe what you're looking for…" style="display:none;margin-top:8px">
       </div>
       <div class="field"><div class="field-label">Stay Duration</div>
         <select class="select" id="fw-duration">
@@ -1054,29 +1059,78 @@ window.addEventListener('load', async function() {
   }
 });
 
-function toggleLFDropdown() {
+function toggleLFDropdown(e) {
+  if(e) e.stopPropagation();
   const opts = document.getElementById('fw-lf-options');
   opts.style.display = opts.style.display === 'none' ? 'block' : 'none';
 }
 
-function handleLookingFor() {
-  const checked = [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].map(c => c.value).filter(v => v !== 'Other');
-  const label = document.getElementById('fw-lf-label');
-  label.style.color = checked.length > 0 ? 'var(--ink)' : 'var(--ink3)';
-  label.textContent = checked.length > 0 ? checked.join(', ') : 'Select all that apply…';
+function closeLFDropdown() {
+  document.getElementById('fw-lf-options').style.display = 'none';
 }
+
+function updateLFLabel() {
+  const allCheckboxes = [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]')];
+  const checked = allCheckboxes.filter(c => c.checked);
+
+  // Enforce max 3 selections
+  if(checked.length > 3) {
+    // Uncheck the last one that was just checked
+    const last = checked[checked.length - 1];
+    last.checked = false;
+    alert('You can select up to 3 options.');
+    return;
+  }
+
+  const vals = checked.map(c => {
+    if(c.value === 'Other') {
+      const other = document.getElementById('fw-lf-other')?.value?.trim();
+      return other || 'Other';
+    }
+    return c.value;
+  });
+  const label = document.getElementById('fw-lf-label');
+  const remaining = 3 - checked.length;
+  if(vals.length > 0) {
+    label.textContent = vals.join(', ') + (remaining > 0 ? ` (${remaining} more allowed)` : '');
+    label.style.color = 'var(--ink)';
+  } else {
+    label.textContent = 'Tap to select — up to 3 options';
+    label.style.color = 'var(--ink3)';
+  }
+
+  // Disable unchcked boxes if 3 already selected
+  allCheckboxes.forEach(cb => {
+    if(!cb.checked) cb.disabled = checked.length >= 3;
+  });
+}
+
+function handleLookingFor() { updateLFLabel(); }
 
 function toggleLFOther(checkbox) {
-  document.getElementById('fw-lf-other').style.display = checkbox.checked ? 'block' : 'none';
-  handleLookingFor();
+  const wrap = document.getElementById('fw-lf-other-wrap');
+  wrap.style.display = checkbox.checked ? 'block' : 'none';
+  if(!checkbox.checked) document.getElementById('fw-lf-other').value = '';
+  updateLFLabel();
 }
 
-// Close Looking For dropdown when clicking outside
+function getLookingForValue() {
+  const checked = [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')];
+  const vals = checked.map(c => {
+    if(c.value === 'Other') {
+      const other = document.getElementById('fw-lf-other')?.value?.trim();
+      return other || null;
+    }
+    return c.value;
+  }).filter(Boolean);
+  return vals.length > 0 ? vals.join(', ') : null;
+}
+
+// Close dropdown when clicking outside
 document.addEventListener('click', function(e) {
-  const display = document.getElementById('fw-lf-display');
-  const opts = document.getElementById('fw-lf-options');
-  if (opts && display && !display.contains(e.target) && !opts.contains(e.target)) {
-    opts.style.display = 'none';
+  const wrap = document.getElementById('fw-lf-wrap');
+  if(wrap && !wrap.contains(e.target)) {
+    closeLFDropdown();
   }
 });
 
