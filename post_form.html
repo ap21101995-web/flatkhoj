@@ -350,7 +350,6 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="area-selected-tag" id="tag-fl-area"><span id="tagval-fl-area"></span><button onclick="clearArea('fl-area')">×</button></div></div>
       <div class="field"><div class="field-label">Landmark / Building Name</div><input class="input" type="text" placeholder="Optional — e.g. Near Infinity Mall, Andheri West"><div class="field-hint">Exact address is only shared after contact is unlocked</div></div>
       <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-ft')">1 RK</div><div class="pill" onclick="sp(this,'fl-ft')">1 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">2 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">3 BHK</div><div class="pill" onclick="spWithOther(this,'fl-ft','fl-other-type')">Other</div></div><input class="input" id="fl-other-type" type="text" placeholder="e.g. 4 BHK, Bungalow, Studio" style="display:none;margin-top:8px" /></div>
-      <div class="field"><div class="field-label">What Is Available? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-av')">Single Room</div><div class="pill" onclick="sp(this,'fl-av')">Double Room</div><div class="pill" onclick="sp(this,'fl-av')">Entire flat</div></div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Monthly rent <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="18000" min="3000" max="400000"></div></div>
         <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="Optional — e.g. 36000"></div></div>
@@ -798,7 +797,7 @@ function collectFormData() {
     data.furnishing = document.querySelector('#f-fl .sel[onclick*="fl-furn"]')?.textContent?.trim() || null;
     data.food_preference = document.querySelector('#f-fl .sel[onclick*="fl-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fl .sel[onclick*="fl-gen"]')?.textContent?.trim() || null;
-    data.room_type = document.querySelector('#f-fl .sel[onclick*="fl-av"]')?.textContent?.trim() || null;
+    data.room_type = 'Entire flat'; // flat_listing always means entire flat
     data.tenant_type = document.querySelector('#f-fl .sel[onclick*="fl-tt"]')?.textContent?.trim() || null;
     data.pets_allowed = document.querySelector('#f-fl .sel[onclick*="fl-pets"]')?.textContent?.trim() || null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
@@ -1532,8 +1531,20 @@ function containsAbusiveLanguage(text) {
   });
 }
 
+// Scroll to an element and briefly highlight it
+function scrollToRequired(el) {
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.style.outline = '2.5px solid var(--teal)';
+  el.style.borderRadius = '8px';
+  setTimeout(() => { el.style.outline = ''; }, 2000);
+}
+
 function nextStep(){
-  if(step===1&&!type){alert('Please select a listing type to continue.');return;}
+  if(step===1&&!type){
+    document.getElementById('typeGridWrap').scrollIntoView({behavior:'smooth'});
+    return;
+  }
 
   // Edit mode: when moving from step 1 to 2, pre-fill the form
   if(step===1 && window._editListingId && window._editListingData){
@@ -1548,115 +1559,104 @@ function nextStep(){
   if(step===2){
     const t = type;
 
-    // ── Helper: check if a pill group has a selection ──
-    function pillSelected(group) {
-      return !!document.querySelector(`[onclick*="'${group}'"].sel, [onclick*='"${group}"'].sel`);
-    }
-    function selPill(group) { return pillSelected(group); }
-
     // ── Area ──
     const areaId = t + '-area';
     if(!areaVals[areaId] || areaVals[areaId].length === 0){
-      alert('Please select your area in Mumbai.'); return;
+      scrollToRequired(document.getElementById(t+'-area-wrap') || document.querySelector('#f-'+t+' .area-tag-wrap'));
+      return;
     }
 
     // ── Name ──
     const nameEl = document.getElementById(t + '-poster-name');
     if(nameEl && !nameEl.value.trim()){
-      alert('Please enter your name.'); nameEl.focus(); return;
+      scrollToRequired(nameEl); nameEl.focus(); return;
     }
     if(nameEl && containsAbusiveLanguage(nameEl.value)){
-      alert('⚠️ Please use a valid name.'); nameEl.focus(); return;
+      scrollToRequired(nameEl); nameEl.focus(); return;
     }
 
     // ── Rent / Budget ──
     const rentEl = document.querySelector('#f-' + t + ' input[type="number"]');
     if(rentEl && !rentEl.value){
-      alert('Please enter a rent or budget amount.'); rentEl.focus(); return;
+      scrollToRequired(rentEl); rentEl.focus(); return;
     }
 
-    // ── Type-specific required fields ──
+    // ── flat_listing required fields ──
     if(t === 'fl'){
       if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-ft"]')){
-        alert('Please select the flat type (1 BHK, 2 BHK, etc.).'); return;
+        scrollToRequired(document.querySelector('#f-fl [onclick*="fl-ft"]')?.closest('.pill-wrap')); return;
       }
       if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-food"]')){
-        alert('Please select the food preference.'); return;
+        scrollToRequired(document.querySelector('#f-fl [onclick*="fl-food"]')?.closest('.pill-wrap')); return;
       }
       if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-gen"]')){
-        alert('Please select the preferred tenant gender.'); return;
+        scrollToRequired(document.querySelector('#f-fl [onclick*="fl-gen"]')?.closest('.pill-wrap')); return;
       }
       if(!document.getElementById('fl-available')?.value){
-        alert('Please select the available from date.'); return;
+        scrollToRequired(document.getElementById('fl-available')); document.getElementById('fl-available').focus(); return;
       }
-      // Brokerage
       if(!document.getElementById('fl-bno')?.classList.contains('sel-no') && !document.getElementById('fl-byes')?.classList.contains('sel-yes')){
-        alert('Please indicate whether brokerage is involved.'); return;
+        scrollToRequired(document.getElementById('fl-byes')?.closest('.field')); return;
       }
     }
 
+    // ── flat_wanted required fields ──
     if(t === 'fw'){
-      if(!nameEl?.value.trim()){
-        alert('Please enter your name.'); return;
-      }
       if(!document.getElementById('fw-movein')?.value){
-        alert('Please select your move-in date.'); return;
+        scrollToRequired(document.getElementById('fw-movein')); document.getElementById('fw-movein').focus(); return;
       }
-      const youAreVal = document.getElementById('fw-you-are')?.value;
-      if(!youAreVal && !window._editListingId){
-        alert('Please select what best describes you (Working Professional, Student, etc.).'); return;
+      if(!document.getElementById('fw-you-are')?.value && !window._editListingId){
+        scrollToRequired(document.getElementById('fw-you-are')); document.getElementById('fw-you-are').focus(); return;
       }
       if(!document.getElementById('fw-gender-select')?.value){
-        alert('Please select your gender.'); return;
+        scrollToRequired(document.getElementById('fw-gender-select')); document.getElementById('fw-gender-select').focus(); return;
       }
       if(!document.querySelector('#f-fw .pill.sel[onclick*="fw-food"]')){
-        alert('Please select your food preference.'); return;
+        scrollToRequired(document.querySelector('#f-fw [onclick*="fw-food"]')?.closest('.pill-wrap')); return;
       }
-      // Looking for (multi-select)
       if([...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length === 0){
-        alert('Please select what type of accommodation you\'re looking for.'); return;
+        scrollToRequired(document.getElementById('fw-lf-wrap')); return;
       }
-      // Brokerage preference
       if(!document.getElementById('fw-broker-choice')?.value){
-        alert('Please select your brokerage preference.'); return;
+        scrollToRequired(document.querySelector('#f-fw .broker-opt')); return;
       }
     }
 
+    // ── flatmate_wanted required fields ──
     if(t === 'fm'){
       if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-sit"]') && !window._editListingId){
-        alert('Please select what best describes your situation.'); return;
+        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-sit"]')?.closest('.pill-wrap')); return;
       }
       if(!document.getElementById('fm-flat-type')?.value){
-        alert('Please select the flat type.'); return;
+        scrollToRequired(document.getElementById('fm-flat-type')); document.getElementById('fm-flat-type').focus(); return;
       }
       if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-rm"]')){
-        alert('Please select the room type available for flatmate.'); return;
+        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-rm"]')?.closest('.pill-wrap')); return;
       }
       if(!document.getElementById('fm-available')?.value){
-        alert('Please select the available from date.'); return;
+        scrollToRequired(document.getElementById('fm-available')); document.getElementById('fm-available').focus(); return;
       }
       if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-food"]')){
-        alert('Please select the food preference in your house.'); return;
+        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-food"]')?.closest('.pill-wrap')); return;
       }
       if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-gen"]')){
-        alert("Please select the gender you're looking for."); return;
+        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-gen"]')?.closest('.pill-wrap')); return;
       }
-      // Brokerage
       if(!document.getElementById('fm-bno')?.classList.contains('sel-no') && !document.getElementById('fm-byes')?.classList.contains('sel-yes')){
-        alert('Please indicate whether brokerage is involved.'); return;
+        scrollToRequired(document.getElementById('fm-byes')?.closest('.field')); return;
       }
     }
 
+    // ── pg_listing required fields ──
     if(t === 'pg'){
       if(!document.querySelector('#f-pg .pill.sel[onclick*="pg-for"]')){
-        alert('Please select who the PG is for (Boys/Girls/Both).'); return;
+        scrollToRequired(document.querySelector('#f-pg [onclick*="pg-for"]')?.closest('.pill-wrap')); return;
       }
       if(!document.querySelector('#f-pg .pill.sel[onclick*="pg-food"]')){
-        alert('Please select the food type served.'); return;
+        scrollToRequired(document.querySelector('#f-pg [onclick*="pg-food"]')?.closest('.pill-wrap')); return;
       }
-      // Brokerage
       if(!document.getElementById('pg-bno')?.classList.contains('sel-no') && !document.getElementById('pg-byes')?.classList.contains('sel-yes')){
-        alert('Please indicate whether brokerage is involved.'); return;
+        scrollToRequired(document.getElementById('pg-byes')?.closest('.field')); return;
       }
     }
 
@@ -1666,23 +1666,22 @@ function nextStep(){
     for(const field of [...textareas, ...textInputs]){
       const val = field.value; if(!val) continue;
       const ct = containsContactInfo(val);
-      if(ct){ alert(`⚠️ Please remove the ${ct} from your listing.\n\nYour contact is shared securely when someone unlocks it.`); field.focus(); return; }
-      if(containsAbusiveLanguage(val)){ alert('⚠️ Your description contains inappropriate language.'); field.focus(); return; }
+      if(ct){ scrollToRequired(field); field.focus(); return; }
+      if(containsAbusiveLanguage(val)){ scrollToRequired(field); field.focus(); return; }
     }
   }
 
   if(step===3){
     // ── Free contact choice must be made ──
     if(!document.getElementById('fc-choice').value){
-      alert('Please choose how you want people to reach you — standard or free contact.');
-      document.getElementById('freeContactCard').scrollIntoView({behavior:'smooth'});
+      scrollToRequired(document.getElementById('freeContactCard'));
       return;
     }
     // ── All 4 checkboxes must be checked ──
     const checkboxes = document.querySelectorAll('.post-confirm-cb');
-    const allChecked = [...checkboxes].every(cb => cb.checked);
-    if(!allChecked){
-      alert('Please check all 4 boxes to confirm your listing details before posting.');
+    const firstUnchecked = [...checkboxes].find(cb => !cb.checked);
+    if(firstUnchecked){
+      scrollToRequired(firstUnchecked.closest('label'));
       return;
     }
     submitListing();
@@ -1808,7 +1807,6 @@ function prefillEditForm(listing, t) {
         if (other) { spWithOther(other, 'fl-ft', 'fl-other-type'); if(el('fl-other-type')) el('fl-other-type').value = listing.flat_type; }
       }
     }
-    fillPill('#f-fl', 'fl-av', listing.room_type);          // What is available (Single Room etc)
     fillPill('#f-fl', 'fl-furn', listing.furnishing);
     fillPillFuzzy('#f-fl', 'fl-food', listing.food_preference);
     fillPill('#f-fl', 'fl-gen', listing.gender_preference);
