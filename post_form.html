@@ -744,7 +744,7 @@ const DB_COLUMNS = new Set([
   'is_free_contact','free_contact_coins_paid',
   'title','description','raw_input','photos',
   'available_from','stay_duration',
-  'poster_name','custom_contact_phone','claimed_by_user_id',
+  'poster_name','custom_contact_phone','claimed_by_user_id','posted_by_owner',
   'situation','occupation','meals_included','curfew','visitors_allowed',
   'is_urgent','is_verified','view_count','unlock_count'
 ]);
@@ -992,13 +992,14 @@ async function submitListing() {
       formData.is_free_contact = alreadyFree ? true : false;
     }
 
-    // If owner posting on behalf — save custom contact number
+    // If owner posting on behalf — save custom contact number and mark as owner-posted
     const userPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
     const isAppOwner = userPhone==='9538584612' || user.isOwner===true || user.isOwner==='true';
     if (isAppOwner) {
       const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
       if (customPhone && customPhone.length === 10) {
         formData.custom_contact_phone = customPhone;
+        formData.posted_by_owner = true; // So we know this was posted on behalf of someone
       }
     }
 
