@@ -107,6 +107,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('listings',this)"><span>🏠</span> Listings</div>
     <div class="nav-item" onclick="go('users',this)"><span>👥</span> Users</div>
+    <div class="nav-item" onclick="go('usermgmt',this)"><span>⚙️</span> User Management</div>
     <div class="nav-section">Analytics</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
     <div class="nav-item" onclick="go('unlocks',this)"><span>🔓</span> Contact Unlocks</div>
@@ -161,6 +162,73 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
 
     <!-- COIN PURCHASES -->
+    <div class="page" id="pg-usermgmt">
+      <div class="topbar"><div class="topbar-title">⚙️ User Management</div></div>
+      <div style="padding:24px">
+        <!-- Search user -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--ink2)">Find User by Phone</div>
+          <div style="display:flex;gap:10px">
+            <input id="mgmt-phone" class="linput" style="margin:0;flex:1;max-width:260px" placeholder="10-digit phone number" maxlength="10" type="tel">
+            <button class="btn btn-teal" onclick="findUserForMgmt()">Search →</button>
+          </div>
+        </div>
+        <div id="mgmt-result" style="display:none">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px">
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px" id="mgmt-name"></div>
+            <div style="font-size:13px;color:var(--ink3)" id="mgmt-meta"></div>
+          </div>
+          <!-- Coins -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:12px">🪙 Coins</div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input id="mgmt-coins-amount" type="number" class="linput" style="margin:0;width:120px" placeholder="Amount">
+              <button class="btn btn-teal" onclick="adjustCoins('add')">+ Add Coins</button>
+              <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red)" onclick="adjustCoins('set')">Set Balance</button>
+              <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red)" onclick="adjustCoins('deduct')">- Deduct Coins</button>
+            </div>
+          </div>
+          <!-- Posting plan -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:12px">📋 Posting Plan</div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <select id="mgmt-plan" class="linput" style="margin:0;width:160px">
+                <option value="free">Free (1/day, 3/month)</option>
+                <option value="basic">Basic (3/day, 10/month)</option>
+                <option value="pro">Pro (8/day, 25/month)</option>
+              </select>
+              <input id="mgmt-plan-days" type="number" class="linput" style="margin:0;width:100px" placeholder="Days" value="30">
+              <button class="btn btn-teal" onclick="setPostingPlan()">Set Plan</button>
+              <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red)" onclick="resetPostingPlan()">Reset to Free</button>
+            </div>
+          </div>
+          <!-- Ban / Unban -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:12px">🚫 Account Status</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red)" onclick="banUser()">Ban User</button>
+              <button class="btn btn-teal" onclick="unbanUser()">Unban User</button>
+            </div>
+          </div>
+          <!-- Claim listing -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px">🔗 Claim a Listing for This User</div>
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Assign an existing listing to this user (for posts made on their behalf)</div>
+            <div style="display:flex;gap:10px">
+              <input id="mgmt-listing-id" class="linput" style="margin:0;flex:1" placeholder="Listing ID (UUID)">
+              <button class="btn btn-teal" onclick="claimListing()">Assign →</button>
+            </div>
+          </div>
+          <!-- User's posts -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px">
+            <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:12px">🏠 Their Listings</div>
+            <div id="mgmt-posts" style="font-size:13px;color:var(--ink3)">—</div>
+          </div>
+        </div>
+        <div id="mgmt-notfound" style="display:none;color:var(--red);font-size:14px;padding:12px">User not found.</div>
+      </div>
+    </div>
+
     <div class="page" id="pg-coinpurchases">
       <div class="table-card">
         <div class="table-header">
@@ -243,7 +311,7 @@ function go(page, el) {
   document.getElementById('pg-' + page).classList.add('active');
   const titles = { dashboard:'Dashboard', listings:'All Listings', users:'All Users', coinpurchases:'Coin Purchases', unlocks:'Contact Unlocks', reports:'Reports', support:'Support' };
   document.getElementById('topbarTitle').textContent = titles[page] || page;
-  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
+  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
   if (loaders[page]) loaders[page]();
 }
 
@@ -582,6 +650,106 @@ async function loadSupport() {
     });
   } catch(e) { console.error('Support:', e); }
 }
+// ── USER MANAGEMENT ────────────────────────────────────────
+let mgmtUser = null;
+
+async function findUserForMgmt() {
+  const phone = document.getElementById('mgmt-phone').value.trim().replace(/\D/g,'').slice(-10);
+  if (phone.length !== 10) { toast('Enter a valid 10-digit number', 'error'); return; }
+  document.getElementById('mgmt-result').style.display = 'none';
+  document.getElementById('mgmt-notfound').style.display = 'none';
+  try {
+    const users = await supaGet('users?phone=eq.'+phone+'&select=*');
+    if (!users.length) { document.getElementById('mgmt-notfound').style.display = 'block'; return; }
+    mgmtUser = users[0];
+    document.getElementById('mgmt-name').textContent = '+91 ' + mgmtUser.phone;
+    const plan = mgmtUser.posting_plan || 'free';
+    const planExp = mgmtUser.posting_plan_expires ? new Date(mgmtUser.posting_plan_expires).toLocaleDateString('en-IN') : '—';
+    document.getElementById('mgmt-meta').innerHTML =
+      `🪙 <strong>${mgmtUser.coins||0} coins</strong> &nbsp;·&nbsp; 
+       Plan: <strong>${plan}</strong> (expires ${planExp}) &nbsp;·&nbsp; 
+       ${mgmtUser.is_banned ? '<span style="color:var(--red)">🚫 BANNED</span>' : '<span style="color:var(--green)">✅ Active</span>'} &nbsp;·&nbsp;
+       Joined: ${new Date(mgmtUser.created_at).toLocaleDateString('en-IN')}`;
+    document.getElementById('mgmt-plan').value = plan;
+    // Load their posts
+    const posts = await supaGet('listings?user_id=eq.'+mgmtUser.id+'&order=created_at.desc&select=id,listing_type,areas,is_active,rent_amount,claimed_by_user_id');
+    const postsEl = document.getElementById('mgmt-posts');
+    if (!posts.length) { postsEl.textContent = 'No listings found.'; }
+    else {
+      postsEl.innerHTML = posts.map(p => {
+        const area = Array.isArray(p.areas) ? p.areas[0] : (p.areas || '—');
+        const type = {flat_listing:'Flat Listing', flat_wanted:'Flat Wanted', flatmate_wanted:'Flatmate Wanted', pg_listing:'PG'}[p.listing_type] || p.listing_type;
+        const status = p.is_active ? '<span style="color:var(--green)">Active</span>' : '<span style="color:var(--ink3)">Deleted</span>';
+        const claimed = p.claimed_by_user_id ? '<span style="color:var(--teal-light)"> · Claimed</span>' : '';
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div><span style="font-weight:600">${type}</span> · ${area} · ₹${p.rent_amount||'?'} ${claimed}</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            ${status}
+            <button class="btn" style="padding:4px 10px;font-size:11px" onclick="navigator.clipboard.writeText('${p.id}');toast('ID copied','success')">Copy ID</button>
+            <a href="listing_detail.html?id=${p.id}" target="_blank" class="btn btn-teal" style="padding:4px 10px;font-size:11px;text-decoration:none">View</a>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('mgmt-result').style.display = 'block';
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function adjustCoins(action) {
+  if (!mgmtUser) return;
+  const amount = parseInt(document.getElementById('mgmt-coins-amount').value);
+  if (isNaN(amount) || amount < 0) { toast('Enter a valid amount', 'error'); return; }
+  let newCoins;
+  if (action === 'add') newCoins = (mgmtUser.coins || 0) + amount;
+  else if (action === 'deduct') newCoins = Math.max(0, (mgmtUser.coins || 0) - amount);
+  else newCoins = amount; // set
+  await supaPatch('users', 'id=eq.'+mgmtUser.id, { coins: newCoins });
+  mgmtUser.coins = newCoins;
+  toast(`✅ Coins updated: ${newCoins}`, 'success');
+  findUserForMgmt();
+}
+
+async function setPostingPlan() {
+  if (!mgmtUser) return;
+  const plan = document.getElementById('mgmt-plan').value;
+  const days = parseInt(document.getElementById('mgmt-plan-days').value) || 30;
+  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  await supaPatch('users', 'id=eq.'+mgmtUser.id, { posting_plan: plan, posting_plan_expires: plan === 'free' ? null : expires });
+  toast(`✅ Plan set to ${plan} for ${days} days`, 'success');
+  findUserForMgmt();
+}
+
+async function resetPostingPlan() {
+  if (!mgmtUser) return;
+  await supaPatch('users', 'id=eq.'+mgmtUser.id, { posting_plan: 'free', posting_plan_expires: null });
+  toast('✅ Reset to Free plan', 'success');
+  findUserForMgmt();
+}
+
+async function banUser() {
+  if (!mgmtUser) return;
+  await supaPatch('users', 'id=eq.'+mgmtUser.id, { is_banned: true });
+  toast('User banned', 'error');
+  findUserForMgmt();
+}
+
+async function unbanUser() {
+  if (!mgmtUser) return;
+  await supaPatch('users', 'id=eq.'+mgmtUser.id, { is_banned: false });
+  toast('✅ User unbanned', 'success');
+  findUserForMgmt();
+}
+
+async function claimListing() {
+  if (!mgmtUser) return;
+  const listingId = document.getElementById('mgmt-listing-id').value.trim();
+  if (!listingId) { toast('Enter a listing ID', 'error'); return; }
+  await supaPatch('listings', 'id=eq.'+listingId, { claimed_by_user_id: mgmtUser.id });
+  toast('✅ Listing assigned to this user', 'success');
+  findUserForMgmt();
+}
+
+
 </script>
 </body>
 </html>

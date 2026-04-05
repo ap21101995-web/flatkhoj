@@ -1943,7 +1943,10 @@ function prefillEditForm(listing, t) {
 
 
 function selectType(t){
-  ['fw','fl','fm','pg'].forEach(x=>{document.getElementById('tc-'+x).classList.remove('sel');document.getElementById('ck-'+x).textContent='';});
+  ['fw','fl','fm','pg'].forEach(x=>{
+    const tc=document.getElementById('tc-'+x); if(tc) tc.classList.remove('sel');
+    const ck=document.getElementById('ck-'+x); if(ck) ck.textContent='';
+  });
   document.getElementById('tc-'+t).classList.add('sel');
   document.getElementById('ck-'+t).textContent='✓';
   type=t;
