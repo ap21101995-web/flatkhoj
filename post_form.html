@@ -364,7 +364,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field"><div class="field-label">Food Preference In House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fl-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fl-food')">🍽️ No Veg/Non-Veg Preference</div></div></div>
       <div class="field"><div class="field-label">Preferred Tenant Gender <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-gen')">Male only</div><div class="pill" onclick="sp(this,'fl-gen')">Female only</div><div class="pill" onclick="sp(this,'fl-gen')">Any</div></div></div>
       <div class="field"><div class="field-label">Preferred Tenant Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-tt')">Working Professional</div><div class="pill" onclick="sp(this,'fl-tt')">Student</div><div class="pill" onclick="sp(this,'fl-tt')">Family</div><div class="pill" onclick="sp(this,'fl-tt')">Any</div></div></div>
-      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Gated Society</div><div class="pill" onclick="mp(this)">Security Guard</div><div class="pill" onclick="mp(this)">Swimming Pool</div><div class="pill" onclick="mp(this)">Garden</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Modular Kitchen</div></div></div>
+      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap" id="fl-amenities"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Gated Society</div><div class="pill" onclick="mp(this)">Security Guard</div><div class="pill" onclick="mp(this)">Swimming Pool</div><div class="pill" onclick="mp(this)">Garden</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Modular Kitchen</div></div></div>
       <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fl-pets')">No</div></div></div>
       <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="Optional — e.g. Quiet building, close to metro, no late night noise…" oninput="cc(this,'fl-cc',300)"></textarea><div class="char-count" id="fl-cc">0 / 300</div></div>
     </div>
@@ -413,7 +413,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field"><div class="field-label">Looking For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-gen')">Male Flatmate</div><div class="pill" onclick="sp(this,'fm-gen')">Female Flatmate</div><div class="pill" onclick="sp(this,'fm-gen')">Any Gender</div></div></div>
       <div class="field"><div class="field-label">Preferred Flatmate Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pref')">Working Professional</div><div class="pill" onclick="sp(this,'fm-pref')">Student</div><div class="pill" onclick="sp(this,'fm-pref')">Any</div></div></div>
       <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fm-pets')">No</div></div></div>
-      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Gated Society</div></div></div>
+      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap" id="fm-amenities"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Gated Society</div></div></div>
       <div class="field"><div class="field-label">Describe the house vibe</div><textarea class="textarea" placeholder="Optional — e.g. We are 2 working girls, very clean and quiet, chill on weekends…" oninput="cc(this,'fm-cc',300)"></textarea><div class="char-count" id="fm-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
@@ -441,7 +441,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="area-selected-tag" id="tag-pg-area"><span id="tagval-pg-area"></span><button onclick="clearArea('pg-area')">×</button></div></div>
       <div class="field"><div class="field-label">Nearby Landmark</div><input class="input" type="text" placeholder="Optional — e.g. Near D-Mart, 2 mins from metro"></div>
       <div class="field"><div class="field-label">PG Is For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-for')">Boys Only</div><div class="pill" onclick="sp(this,'pg-for')">Girls Only</div><div class="pill" onclick="sp(this,'pg-for')">Both Boys & Girls</div></div></div>
-      <div class="field"><div class="field-label">Room Types Available <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="mp(this)">Single Room</div><div class="pill" onclick="mp(this)">Double Sharing</div><div class="pill" onclick="mp(this)">Triple Sharing</div></div></div>
+      <div class="field"><div class="field-label">Room Types Available <span class="req">*</span></div><div class="pill-wrap" id="pg-room-types"><div class="pill" onclick="mp(this)">Single Room</div><div class="pill" onclick="mp(this)">Double Sharing</div><div class="pill" onclick="mp(this)">Triple Sharing</div></div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Rent Starts From <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="6000" min="2000"></div></div>
         <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="Optional — e.g. 10000"></div></div>
@@ -455,7 +455,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">🏨 Amenities & Rules</div>
-      <div class="field"><div class="field-label">Amenities Provided</div><div class="pill-wrap"><div class="pill" onclick="mp(this)">AC Rooms</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Laundry</div><div class="pill" onclick="mp(this)">Housekeeping</div><div class="pill" onclick="mp(this)">CCTV Security</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Attached Bathroom</div><div class="pill" onclick="mp(this)">Common Area</div><div class="pill" onclick="mp(this)">Water Purifier</div><div class="pill" onclick="mp(this)">Warden On Premises</div></div></div>
+      <div class="field"><div class="field-label">Amenities Provided</div><div class="pill-wrap" id="pg-amenities"><div class="pill" onclick="mp(this)">AC Rooms</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Laundry</div><div class="pill" onclick="mp(this)">Housekeeping</div><div class="pill" onclick="mp(this)">CCTV Security</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Attached Bathroom</div><div class="pill" onclick="mp(this)">Common Area</div><div class="pill" onclick="mp(this)">Water Purifier</div><div class="pill" onclick="mp(this)">Warden On Premises</div></div></div>
       <div class="field"><div class="field-label">Entry / Curfew Timings</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-curfew')">No Curfew</div><div class="pill" onclick="sp(this,'pg-curfew')">10 PM</div><div class="pill" onclick="sp(this,'pg-curfew')">11 PM</div><div class="pill" onclick="sp(this,'pg-curfew')">12 AM</div><div class="pill" onclick="sp(this,'pg-curfew')">Flexible</div></div></div>
       <div class="field"><div class="field-label">Visitors Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-vis')">Yes</div><div class="pill" onclick="sp(this,'pg-vis')">No</div><div class="pill" onclick="sp(this,'pg-vis')">Day Visits Only</div></div></div>
       <div class="field"><div class="field-label">Anything else to mention?</div><textarea class="textarea" placeholder="Optional — e.g. Walking distance from station, female warden, rooftop area, CCTV on all floors…" oninput="cc(this,'pg-cc',300)"></textarea><div class="char-count" id="pg-cc">0 / 300</div></div>
@@ -796,6 +796,8 @@ function collectFormData() {
     data.room_type = 'Entire flat'; // flat_listing always means entire flat
     data.tenant_type = document.querySelector('#f-fl .sel[onclick*="fl-tt"]')?.textContent?.trim() || null;
     const flPets = document.querySelector('#f-fl .sel[onclick*="fl-pets"]')?.textContent?.trim(); data.pets_allowed = flPets ? flPets.includes('Yes') : null;
+    data.amenities = [...(document.querySelectorAll('#fl-amenities .pill.sel') || [])].map(p => p.textContent.trim()).filter(Boolean);
+    if (data.amenities.length === 0) data.amenities = null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
     data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fl-available')?.value || null;
@@ -825,6 +827,8 @@ function collectFormData() {
     data.furnishing = document.querySelector('#f-fm .sel[onclick*="fm-furn"]')?.textContent?.trim() || null;
     data.tenant_type = document.querySelector('#f-fm .sel[onclick*="fm-pref"]')?.textContent?.trim() || null;
     const fmPets = document.querySelector('#f-fm .sel[onclick*="fm-pets"]')?.textContent?.trim(); data.pets_allowed = fmPets ? fmPets.includes('Yes') : null;
+    data.amenities = [...(document.querySelectorAll('#fm-amenities .pill.sel') || [])].map(p => p.textContent.trim()).filter(Boolean);
+    if (data.amenities.length === 0) data.amenities = null;
     data.description = document.querySelector('#f-fm textarea')?.value || null;
     data.has_brokerage = document.getElementById('fm-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fm-available')?.value || null;
@@ -837,6 +841,9 @@ function collectFormData() {
     data.food_preference = document.querySelector('#f-pg .sel[onclick*="pg-food"]')?.textContent?.trim() || null;
     data.curfew = document.querySelector('#f-pg .sel[onclick*="pg-curfew"]')?.textContent?.trim() || null;
     data.visitors_allowed = document.querySelector('#f-pg .sel[onclick*="pg-vis"]')?.textContent?.trim() || null;
+    data.room_type = [...(document.querySelectorAll('#pg-room-types .pill.sel') || [])].map(p => p.textContent.trim()).filter(Boolean).join(', ') || null;
+    data.amenities = [...(document.querySelectorAll('#pg-amenities .pill.sel') || [])].map(p => p.textContent.trim()).filter(Boolean);
+    if (data.amenities.length === 0) data.amenities = null;
     data.description = document.querySelector('#f-pg textarea')?.value || null;
     data.has_brokerage = document.getElementById('pg-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('pg-available')?.value || null;
@@ -881,14 +888,46 @@ async function submitListing() {
 
     // Edit mode — PATCH existing listing
     if (window._editListingId) {
-      formData.updated_at = new Date().toISOString();
+      // Start with ORIGINAL data so nothing vanishes if prefill didn't work perfectly
+      const original = window._editListingData || {};
+      // Merge: original fields first, then override with whatever DOM has
+      const domData = collectFormData();
+      const merged = Object.assign({}, original);
+
+      // Only override with DOM values that are actually set (not null/empty)
+      const domKeys = ['poster_name','rent_amount','flat_type','furnishing','food_preference',
+        'gender_preference','description','has_brokerage','available_from','areas','room_type',
+        'tenant_type','situation','occupation','stay_duration','brokerage_preference',
+        'meals_included','curfew','visitors_allowed','amenities'];
+      domKeys.forEach(k => {
+        const v = domData[k];
+        // Boolean false is valid, empty array is not
+        if (v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)) {
+          merged[k] = v;
+        }
+      });
+
+      // pets_allowed: DOM value takes priority if user touched it, else keep original
+      if (domData.pets_allowed !== null && domData.pets_allowed !== undefined) {
+        merged.pets_allowed = domData.pets_allowed;
+      }
+
+      // Remove fields that should never be PATCHed
+      delete merged.id; delete merged.user_id; delete merged.created_at;
+      delete merged.is_active; delete merged.expires_at; delete merged.city;
+      delete merged.photos; delete merged.view_count; delete merged.unlock_count;
+      delete merged.is_free_contact; delete merged.claimed_by_user_id;
+
+      merged.updated_at = new Date().toISOString();
+
       // Add custom contact if owner
       const editUserPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
       if (editUserPhone==='9538584612' || user.isOwner===true || user.isOwner==='true') {
         const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
-        if (customPhone && customPhone.length === 10) formData.custom_contact_phone = customPhone;
+        if (customPhone && customPhone.length === 10) merged.custom_contact_phone = customPhone;
       }
-      const cleanData = sanitizeForDB(formData);
+
+      const cleanData = sanitizeForDB(merged);
       const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${window._editListingId}`, {
         method: 'PATCH',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
@@ -897,7 +936,7 @@ async function submitListing() {
       if (!res.ok) {
         const errText = await res.text();
         console.error('PATCH error:', res.status, errText);
-        throw new Error('Save failed: ' + errText);
+        throw new Error(errText);
       }
       window.location.href = `listing_detail.html?id=${window._editListingId}`;
       return;
@@ -1584,10 +1623,24 @@ function nextStep(){
   if(step===2){
     const t = type;
 
-    // Use the ordered required checks — scroll to FIRST unfilled required field
-    if (!allRequiredDone(t)) {
+    // In edit mode, original data is already valid — only block if user cleared a required field
+    if (!window._editListingId && !allRequiredDone(t)) {
       scrollToFirstFailing();
       return;
+    }
+    // In edit mode: only block if a required field is clearly empty in both DOM AND original data
+    if (window._editListingId) {
+      const orig = window._editListingData || {};
+      const checks = getRequiredChecks(t);
+      for (const check of checks) {
+        if (!check.test()) {
+          // Check if original data would cover this field
+          const hasOrigData = orig.areas?.length > 0 && orig.poster_name && orig.rent_amount;
+          if (!hasOrigData) { scrollToRequired(check.el()); return; }
+          // Otherwise trust original data will be merged in
+          break;
+        }
+      }
     }
 
     // ── Contact info / abusive language check ──
@@ -1744,6 +1797,12 @@ function prefillEditForm(listing, t) {
     fillPill('#f-fl', 'fl-gen', listing.gender_preference);
     fillPill('#f-fl', 'fl-tt', listing.tenant_type);         // Working Professional/Student etc
     if (listing.pets_allowed === true) { const p = document.querySelector('#f-fl [onclick*="fl-pets"]'); if(p) sp(p,'fl-pets'); } else if (listing.pets_allowed === false) { const pills = document.querySelectorAll('#f-fl [onclick*="fl-pets"]'); if(pills[1]) sp(pills[1],'fl-pets'); }
+    // Amenities
+    if (listing.amenities && Array.isArray(listing.amenities)) {
+      document.querySelectorAll('#fl-amenities .pill').forEach(p => {
+        if (listing.amenities.includes(p.textContent.trim())) p.classList.add('sel');
+      });
+    }
     // Brokerage
     if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('fl','yes') : sb('fl','no');
   }
@@ -1790,6 +1849,12 @@ function prefillEditForm(listing, t) {
     fillPill('#f-fm', 'fm-gen', listing.gender_preference);
     fillPill('#f-fm', 'fm-pref', listing.tenant_type);
     if (listing.pets_allowed === true) { const p = document.querySelector('#f-fm [onclick*="fm-pets"]'); if(p) sp(p,'fm-pets'); } else if (listing.pets_allowed === false) { const pills = document.querySelectorAll('#f-fm [onclick*="fm-pets"]'); if(pills[1]) sp(pills[1],'fm-pets'); }
+    // Amenities
+    if (listing.amenities && Array.isArray(listing.amenities)) {
+      document.querySelectorAll('#fm-amenities .pill').forEach(p => {
+        if (listing.amenities.includes(p.textContent.trim())) p.classList.add('sel');
+      });
+    }
     if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('fm','yes') : sb('fm','no');
   }
 
@@ -1801,6 +1866,19 @@ function prefillEditForm(listing, t) {
     fillPillFuzzy('#f-pg', 'pg-food', listing.food_preference);
     fillPill('#f-pg', 'pg-curfew', listing.curfew);
     fillPill('#f-pg', 'pg-vis', listing.visitors_allowed);
+    // Room types (pg)
+    if (listing.room_type) {
+      const types = listing.room_type.split(',').map(s => s.trim());
+      document.querySelectorAll('#pg-room-types .pill').forEach(p => {
+        if (types.includes(p.textContent.trim())) p.classList.add('sel');
+      });
+    }
+    // Amenities
+    if (listing.amenities && Array.isArray(listing.amenities)) {
+      document.querySelectorAll('#pg-amenities .pill').forEach(p => {
+        if (listing.amenities.includes(p.textContent.trim())) p.classList.add('sel');
+      });
+    }
     if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('pg','yes') : sb('pg','no');
   }
 
@@ -1930,6 +2008,8 @@ function getRequiredChecks(t) {
       el: () => document.querySelector('#f-pg input[type="number"]') },
     { test: () => pillSel('#f-pg [onclick*="pg-for"]'),
       el: () => document.querySelector('#f-pg [onclick*="pg-for"]')?.closest('.field') },
+    { test: () => document.querySelectorAll('#pg-room-types .pill.sel').length > 0,
+      el: () => document.getElementById('pg-room-types') },
     { test: () => pillSel('#f-pg [onclick*="pg-food"]'),
       el: () => document.querySelector('#f-pg [onclick*="pg-food"]')?.closest('.field') },
     { test: () => brokerOk('pg'),
@@ -1953,6 +2033,8 @@ function getFirstFailing(t) {
 function updateNextBtn() {
   const btn = document.getElementById('nBtn');
   if (!btn) return;
+  // In edit mode, button is always active (original data is valid)
+  if (window._editListingId) { btn.classList.remove('disabled-look'); return; }
   if (step === 1) {
     type ? btn.classList.remove('disabled-look') : btn.classList.add('disabled-look');
     return;
