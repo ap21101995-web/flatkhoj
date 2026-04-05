@@ -302,7 +302,7 @@ body {
 
 <!-- TOP BAR -->
 <header class="topbar">
-  <button class="back-btn" onclick="history.back()">
+  <button class="back-btn" onclick="window.location.href = new URLSearchParams(window.location.search).get('return') || 'index.html'">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
   </button>
   <div class="topbar-title">Add photos</div>
@@ -449,14 +449,45 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const MAX_PHOTOS = 3;
 let photos = []; // { file, preview, url }
 let listingId = null;
+let returnUrl = 'index.html?posted=1';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; }
 }
 
-window.onload = function() {
+window.onload = async function() {
   const params = new URLSearchParams(window.location.search);
   listingId = params.get('listing_id');
+  const isEdit = params.get('edit') === '1';
+  returnUrl = params.get('return') || 'index.html?posted=1';
+
+  if (isEdit) {
+    // Edit mode UI tweaks
+    document.querySelector('.topbar-title').textContent = 'Edit photos';
+    document.querySelector('.topbar-step').textContent = '';
+    document.querySelector('.progress-wrap').style.display = 'none';
+    document.getElementById('skipText').innerHTML =
+      '<span class="skip-link" onclick="skipPhotos()">Done — go back to listing</span>';
+    document.getElementById('continueBtn').textContent = 'Save photos →';
+
+    // Load existing photos from DB
+    if (listingId) {
+      try {
+        const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}&select=photos`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        });
+        const [data] = await res.json();
+        const existingUrls = data?.photos || [];
+        if (existingUrls.length > 0) {
+          // Show existing photos as already-uploaded (no file, just URL)
+          existingUrls.forEach(url => {
+            photos.push({ file: null, preview: url, url: url, existing: true });
+          });
+          renderGrid();
+        }
+      } catch(e) {}
+    }
+  }
 };
 
 // ── PHOTO MODERATION ───────────────────────────────────────
@@ -540,12 +571,14 @@ function renderPhotos() {
 
   if (photos.length > 0) {
     section.style.display = 'block';
-    continueBtn.textContent = `Upload & post listing →`;
+    const isEdit = new URLSearchParams(window.location.search).get('edit') === '1';
+    continueBtn.textContent = isEdit ? 'Save photos →' : 'Upload & post listing →';
     continueBtn.className = 'continue-btn with-photos';
     document.getElementById('photoNudge').style.display = 'none';
   } else {
     section.style.display = 'none';
-    continueBtn.textContent = 'Post without photos';
+    const isEdit2 = new URLSearchParams(window.location.search).get('edit') === '1';
+    continueBtn.textContent = isEdit2 ? 'Done — no photos' : 'Post without photos';
     continueBtn.className = 'continue-btn no-photos';
     document.getElementById('photoNudge').style.display = 'flex';
   }
@@ -559,12 +592,13 @@ function removePhoto(index) {
   renderPhotos();
 }
 
-function skipPhotos() { handleContinue(); }
+// Alias for edit mode
+function renderGrid() { renderPhotos(); }
 
-// ── UPLOAD TO CLOUDINARY WITH AI MODERATION ────────────────
+// ── UPLOAD TO CLOUDINARY ────────────────────────────────────
 async function uploadToCloudinary(file, index, total) {
   const btn = document.getElementById('continueBtn');
-  btn.textContent = `Checking photo ${index + 1} of ${total}…`;
+  btn.textContent = `Uploading photo ${index + 1} of ${total}…`;
 
   const formData = new FormData();
   formData.append('file', file);
@@ -584,25 +618,17 @@ async function uploadToCloudinary(file, index, total) {
 
   const data = await res.json();
   if (!data.secure_url) throw new Error('No URL returned');
-
   return data.secure_url;
 }
 
 function skipPhotos() {
-  window.location.href = 'index.html?posted=1';
+  window.location.href = returnUrl;
 }
 
 // ── HANDLE CONTINUE ────────────────────────────────────────
 async function handleContinue() {
-  if (photos.length === 0) {
-    window.location.href = 'index.html?posted=1';
-    return;
-  }
-
   if (CLOUDINARY_CLOUD_NAME === 'YOUR_CLOUD_NAME') {
-    // Demo mode — no real upload
-    // Redirect to homepage after posting
-    window.location.href = 'index.html?posted=1';
+    window.location.href = returnUrl;
     return;
   }
 
@@ -610,58 +636,56 @@ async function handleContinue() {
   btn.disabled = true;
 
   try {
-    const uploadedUrls = [];
+    // Separate existing URLs (already on Cloudinary) from new files to upload
+    const existingUrls = photos.filter(p => p.existing && p.url).map(p => p.url);
+    const newPhotos = photos.filter(p => !p.existing && p.file);
+    const uploadedUrls = [...existingUrls];
 
-    for (let i = 0; i < photos.length; i++) {
+    for (let i = 0; i < newPhotos.length; i++) {
       try {
-        const url = await uploadToCloudinary(photos[i].file, i, photos.length);
+        const url = await uploadToCloudinary(newPhotos[i].file, i, newPhotos.length);
         uploadedUrls.push(url);
       } catch(err) {
         if (err.message === 'MODERATION_REJECTED') {
           btn.disabled = false;
-          btn.textContent = 'Upload & post listing →';
-          // Show inline error instead of alert
-          let errDiv = document.getElementById('uploadErrorMsg');
-          if (!errDiv) { errDiv = document.createElement('div'); errDiv.id = 'uploadErrorMsg'; errDiv.style.cssText = 'background:#fde8e8;border:1px solid var(--red);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);margin-top:12px'; const btn2 = document.getElementById('continueBtn'); btn2.parentNode.insertBefore(errDiv, btn2.nextSibling); }
-          errDiv.textContent = `Photo ${i + 1} was rejected — it may contain inappropriate content. Please remove it and try again.`;
+          btn.textContent = 'Save photos →';
+          showUploadError(`Photo ${i + 1} was rejected — it may contain inappropriate content. Please remove it.`);
           return;
         }
         throw err;
       }
     }
 
-    btn.textContent = 'Saving listing…';
+    btn.textContent = 'Saving…';
 
-    // Update listing in Supabase with photo URLs
     if (listingId) {
       await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`, {
         method: 'PATCH',
-        headers: {
-          'apikey': SUPA_KEY,
-          'Authorization': `Bearer ${SUPA_KEY}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ photos: uploadedUrls })
       });
     }
 
-    // Redirect to homepage after posting
-    window.location.href = 'index.html?posted=1';
+    window.location.href = returnUrl;
 
   } catch(err) {
     console.error('Upload error:', err);
     btn.disabled = false;
     btn.textContent = 'Try again →';
-    // Show inline error — no popup
-    let errDiv = document.getElementById('uploadErrorMsg');
-    if (!errDiv) {
-      errDiv = document.createElement('div');
-      errDiv.id = 'uploadErrorMsg';
-      errDiv.style.cssText = 'background:#fde8e8;border:1px solid var(--red);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);margin-top:12px;text-align:center';
-      btn.parentNode.insertBefore(errDiv, btn.nextSibling);
-    }
-    errDiv.innerHTML = '⚠️ Upload failed. Please check your connection and try again, or <button onclick="skipPhotos()" style="background:none;border:none;color:var(--red);font-weight:700;cursor:pointer;font-family:var(--font);font-size:13px;text-decoration:underline">post without photos</button>.';
+    showUploadError('Upload failed. Check your connection and try again.');
   }
+}
+
+function showUploadError(msg) {
+  let errDiv = document.getElementById('uploadErrorMsg');
+  if (!errDiv) {
+    errDiv = document.createElement('div');
+    errDiv.id = 'uploadErrorMsg';
+    errDiv.style.cssText = 'background:#fde8e8;border:1px solid var(--red);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);margin-top:12px;text-align:center';
+    const btn = document.getElementById('continueBtn');
+    btn.parentNode.insertBefore(errDiv, btn.nextSibling);
+  }
+  errDiv.innerHTML = msg + ' Or <button onclick="skipPhotos()" style="background:none;border:none;color:var(--red);font-weight:700;cursor:pointer;font-family:var(--font);font-size:13px;text-decoration:underline">go back without saving.</button>';
 }
 </script>
 </body>
