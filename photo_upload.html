@@ -571,43 +571,25 @@ async function uploadToCloudinary(file, index, total) {
   formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   formData.append('folder', 'flatkhoj/listings');
 
-  // Cloudinary transformations:
-  // 1. e_blur_faces — blur any faces
-  // 2. e_ocr_text — detects and removes text overlays (phone numbers, watermarks)
-  // 3. w_1200,h_900,c_limit — resize to reasonable size
-  // 4. q_auto — auto quality
-  // 5. f_auto — auto format
-  formData.append('transformation', JSON.stringify([
-    { width: 1200, height: 900, crop: 'limit', quality: 'auto', fetch_format: 'auto' },
-    { effect: 'pixelate_region:20', gravity: 'ocr_text' } // pixelate detected text
-  ]));
-
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
     { method: 'POST', body: formData }
   );
 
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message || 'Upload failed');
+    let errMsg = 'Upload failed';
+    try { const err = await res.json(); errMsg = err.error?.message || errMsg; } catch(e) {}
+    throw new Error(errMsg);
   }
 
   const data = await res.json();
+  if (!data.secure_url) throw new Error('No URL returned');
 
-  // Check moderation result
-  if (data.moderation && data.moderation[0]) {
-    const mod = data.moderation[0];
-    if (mod.status === 'rejected') {
-      throw new Error('MODERATION_REJECTED');
-    }
-  }
+  return data.secure_url;
+}
 
-  // Return URL with text-pixelation transformation applied
-  // This ensures phone numbers and watermarks visible in image are blurred
-  const urlParts = data.secure_url.split('/upload/');
-  const moderatedUrl = urlParts[0] + '/upload/e_pixelate_region:15,g_ocr_text/' + urlParts[1];
-
-  return moderatedUrl;
+function skipPhotos() {
+  window.location.href = 'index.html?posted=1';
 }
 
 // ── HANDLE CONTINUE ────────────────────────────────────────
@@ -638,7 +620,10 @@ async function handleContinue() {
         if (err.message === 'MODERATION_REJECTED') {
           btn.disabled = false;
           btn.textContent = 'Upload & post listing →';
-          alert(`Photo ${i + 1} was rejected — it may contain inappropriate content or text overlays. Please remove it and try again.`);
+          // Show inline error instead of alert
+          let errDiv = document.getElementById('uploadErrorMsg');
+          if (!errDiv) { errDiv = document.createElement('div'); errDiv.id = 'uploadErrorMsg'; errDiv.style.cssText = 'background:#fde8e8;border:1px solid var(--red);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);margin-top:12px'; const btn2 = document.getElementById('continueBtn'); btn2.parentNode.insertBefore(errDiv, btn2.nextSibling); }
+          errDiv.textContent = `Photo ${i + 1} was rejected — it may contain inappropriate content. Please remove it and try again.`;
           return;
         }
         throw err;
@@ -666,8 +651,16 @@ async function handleContinue() {
   } catch(err) {
     console.error('Upload error:', err);
     btn.disabled = false;
-    btn.textContent = 'Upload & post listing →';
-    alert('Upload failed. Please check your connection and try again, or post without photos.');
+    btn.textContent = 'Try again →';
+    // Show inline error — no popup
+    let errDiv = document.getElementById('uploadErrorMsg');
+    if (!errDiv) {
+      errDiv = document.createElement('div');
+      errDiv.id = 'uploadErrorMsg';
+      errDiv.style.cssText = 'background:#fde8e8;border:1px solid var(--red);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);margin-top:12px;text-align:center';
+      btn.parentNode.insertBefore(errDiv, btn.nextSibling);
+    }
+    errDiv.innerHTML = '⚠️ Upload failed. Please check your connection and try again, or <button onclick="skipPhotos()" style="background:none;border:none;color:var(--red);font-weight:700;cursor:pointer;font-family:var(--font);font-size:13px;text-decoration:underline">post without photos</button>.';
   }
 }
 </script>

@@ -1744,6 +1744,7 @@ function updateUI(){
   // In edit mode, title shows Edit Listing
   if(window._editListingId) document.getElementById('topbarTitle').textContent='Edit Listing';
   window.scrollTo({top:0,behavior:'smooth'});
+  if(typeof updateNextBtn==='function') updateNextBtn();
 }
 
 function prefillEditForm(listing, t) {
@@ -1882,6 +1883,7 @@ function selectType(t){
   document.getElementById('tc-'+t).classList.add('sel');
   document.getElementById('ck-'+t).textContent='✓';
   type=t;
+  if(typeof updateNextBtn==='function') updateNextBtn();
 }
 
 function sp(el,group){
@@ -1913,6 +1915,111 @@ function sb(prefix,choice){
 
 function tfc(checkbox,coinId){document.getElementById(coinId).classList.toggle('show',checkbox.checked);}
 function cc(el,id,max){const n=el.value.length;document.getElementById(id).textContent=`${n} / ${max}`;document.getElementById(id).style.color=n>max*0.9?'var(--red)':'var(--ink3)';}
+
+// ── DYNAMIC NEXT BUTTON STATE ───────────────────────────────
+// Required fields per listing type
+const REQUIRED_CHECKS = {
+  fl: () => {
+    const t = 'fl';
+    return (
+      (areaVals[t+'-area']||[]).length > 0 &&
+      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
+      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
+      !!document.querySelector('#f-fl .pill.sel[onclick*="fl-ft"]') &&
+      !!document.querySelector('#f-fl .pill.sel[onclick*="fl-food"]') &&
+      !!document.querySelector('#f-fl .pill.sel[onclick*="fl-gen"]') &&
+      !!document.getElementById('fl-available')?.value &&
+      (document.getElementById('fl-bno')?.classList.contains('sel-no') || document.getElementById('fl-byes')?.classList.contains('sel-yes'))
+    );
+  },
+  fw: () => {
+    const t = 'fw';
+    return (
+      (areaVals[t+'-area']||[]).length > 0 &&
+      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
+      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
+      !!document.getElementById('fw-movein')?.value &&
+      !!document.getElementById('fw-gender-select')?.value &&
+      !!document.querySelector('#f-fw .pill.sel[onclick*="fw-food"]') &&
+      [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length > 0 &&
+      !!document.getElementById('fw-broker-choice')?.value
+    );
+  },
+  fm: () => {
+    const t = 'fm';
+    return (
+      (areaVals[t+'-area']||[]).length > 0 &&
+      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
+      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
+      !!document.getElementById('fm-flat-type')?.value &&
+      !!document.querySelector('#f-fm .pill.sel[onclick*="fm-rm"]') &&
+      !!document.getElementById('fm-available')?.value &&
+      !!document.querySelector('#f-fm .pill.sel[onclick*="fm-food"]') &&
+      !!document.querySelector('#f-fm .pill.sel[onclick*="fm-gen"]') &&
+      (document.getElementById('fm-bno')?.classList.contains('sel-no') || document.getElementById('fm-byes')?.classList.contains('sel-yes'))
+    );
+  },
+  pg: () => {
+    const t = 'pg';
+    return (
+      (areaVals[t+'-area']||[]).length > 0 &&
+      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
+      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
+      !!document.querySelector('#f-pg .pill.sel[onclick*="pg-for"]') &&
+      !!document.querySelector('#f-pg .pill.sel[onclick*="pg-food"]') &&
+      (document.getElementById('pg-bno')?.classList.contains('sel-no') || document.getElementById('pg-byes')?.classList.contains('sel-yes'))
+    );
+  }
+};
+
+function updateNextBtn() {
+  const btn = document.getElementById('nBtn');
+  if (!btn) return;
+  if (step === 1) {
+    // Dim until type selected
+    if (type) btn.classList.remove('disabled-look');
+    else btn.classList.add('disabled-look');
+    return;
+  }
+  if (step === 2 && type && REQUIRED_CHECKS[type]) {
+    if (REQUIRED_CHECKS[type]()) btn.classList.remove('disabled-look');
+    else btn.classList.add('disabled-look');
+    return;
+  }
+  // Step 3 — always active (choices shown inline)
+  btn.classList.remove('disabled-look');
+}
+
+// Watch all relevant inputs for changes
+function attachWatchers() {
+  // Watch any input/select/change in step 2
+  document.getElementById('step2')?.addEventListener('input', updateNextBtn);
+  document.getElementById('step2')?.addEventListener('change', updateNextBtn);
+  // Watch pill clicks — they dispatch no native event, so we hook into sp()
+  // updateNextBtn is called from pill clicks via the patched sp/sb functions
+}
+
+// Patch sp() and sb() and sbfw() to also call updateNextBtn
+const _origSp = sp;
+window.sp = function(el, group) { _origSp(el, group); updateNextBtn(); };
+const _origSb = sb;
+window.sb = function(prefix, choice) { _origSb(prefix, choice); updateNextBtn(); };
+const _origSbfw = sbfw;
+window.sbfw = function(choice) { _origSbfw(choice); updateNextBtn(); };
+// Also patch selectArea
+const _origSelectArea = selectArea;
+window.selectArea = function(area, id) { _origSelectArea(area, id); updateNextBtn(); };
+// And fw checkboxes
+document.addEventListener('change', function(e) {
+  if (e.target.type === 'checkbox') updateNextBtn();
+});
+
+// Initial state
+document.addEventListener('DOMContentLoaded', function() {
+  attachWatchers();
+  updateNextBtn();
+});
+
 </script>
 </body>
 </html>
