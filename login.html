@@ -660,6 +660,15 @@ async function verifyOtp() {
       };
       saveLoginState(user);
 
+      // Auto-claim listings posted on behalf of this number
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/auto-claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ phone: '1111111100', userId: userId })
+        });
+      } catch(e) {}
+
       document.getElementById('welcomeTitle').textContent = 'Welcome, Test User! 🧪';
       document.getElementById('welcomeSub').textContent = `Signed in with ${coins} coins available.`;
       document.getElementById('coinsAwarded').style.display = 'none';
@@ -704,24 +713,15 @@ async function verifyOtp() {
       saveLoginState(user);
 
       // Auto-claim listings posted by owner on behalf of this user
-      // (listings where custom_contact_phone matches this user's phone)
       try {
-        const claimRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/listings?custom_contact_phone=eq.${phoneNumber}&claimed_by_user_id=is.null&select=id`,
-          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
-        const toClaimListings = await claimRes.json();
-        if (toClaimListings && toClaimListings.length > 0) {
-          // Claim all these listings for this user
-          for (const listing of toClaimListings) {
-            await fetch(`${SUPABASE_URL}/rest/v1/listings?id=eq.${listing.id}`, {
-              method: 'PATCH',
-              headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ claimed_by_user_id: data.userId })
-            });
-          }
-          console.log(`Auto-claimed ${toClaimListings.length} listing(s) for ${phoneNumber}`);
-        }
+        await fetch(`${SUPABASE_URL}/functions/v1/auto-claim`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ phone: phoneNumber, userId: data.userId })
+        });
       } catch(e) { console.log('Auto-claim error (non-fatal):', e); }
 
       if (data.isNewUser) {
