@@ -1145,6 +1145,11 @@ function showOwnerControls() {
       if (listing && photoTypes.includes(listing.listing_type)) {
         document.getElementById('editPhotosBtn').style.display = 'block';
       }
+      // Hide boost section if contact is already free (paid, can't undo)
+      if (listing && listing.is_free_contact) {
+        const bs = document.getElementById('boostSection');
+        if (bs) bs.style.display = 'none';
+      }
     } else {
       ctrl.setAttribute('style', 'display:none');
     }
