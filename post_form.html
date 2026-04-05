@@ -1559,105 +1559,10 @@ function nextStep(){
   if(step===2){
     const t = type;
 
-    // ── Area ──
-    const areaId = t + '-area';
-    if(!areaVals[areaId] || areaVals[areaId].length === 0){
-      scrollToRequired(document.getElementById(t+'-area-wrap') || document.querySelector('#f-'+t+' .area-tag-wrap'));
+    // Use the ordered required checks — scroll to FIRST unfilled required field
+    if (!allRequiredDone(t)) {
+      scrollToFirstFailing();
       return;
-    }
-
-    // ── Name ──
-    const nameEl = document.getElementById(t + '-poster-name');
-    if(nameEl && !nameEl.value.trim()){
-      scrollToRequired(nameEl); nameEl.focus(); return;
-    }
-    if(nameEl && containsAbusiveLanguage(nameEl.value)){
-      scrollToRequired(nameEl); nameEl.focus(); return;
-    }
-
-    // ── Rent / Budget ──
-    const rentEl = document.querySelector('#f-' + t + ' input[type="number"]');
-    if(rentEl && !rentEl.value){
-      scrollToRequired(rentEl); rentEl.focus(); return;
-    }
-
-    // ── flat_listing required fields ──
-    if(t === 'fl'){
-      if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-ft"]')){
-        scrollToRequired(document.querySelector('#f-fl [onclick*="fl-ft"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-food"]')){
-        scrollToRequired(document.querySelector('#f-fl [onclick*="fl-food"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.querySelector('#f-fl .pill.sel[onclick*="fl-gen"]')){
-        scrollToRequired(document.querySelector('#f-fl [onclick*="fl-gen"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.getElementById('fl-available')?.value){
-        scrollToRequired(document.getElementById('fl-available')); document.getElementById('fl-available').focus(); return;
-      }
-      if(!document.getElementById('fl-bno')?.classList.contains('sel-no') && !document.getElementById('fl-byes')?.classList.contains('sel-yes')){
-        scrollToRequired(document.getElementById('fl-byes')?.closest('.field')); return;
-      }
-    }
-
-    // ── flat_wanted required fields ──
-    if(t === 'fw'){
-      if(!document.getElementById('fw-movein')?.value){
-        scrollToRequired(document.getElementById('fw-movein')); document.getElementById('fw-movein').focus(); return;
-      }
-      if(!document.getElementById('fw-you-are')?.value && !window._editListingId){
-        scrollToRequired(document.getElementById('fw-you-are')); document.getElementById('fw-you-are').focus(); return;
-      }
-      if(!document.getElementById('fw-gender-select')?.value){
-        scrollToRequired(document.getElementById('fw-gender-select')); document.getElementById('fw-gender-select').focus(); return;
-      }
-      if(!document.querySelector('#f-fw .pill.sel[onclick*="fw-food"]')){
-        scrollToRequired(document.querySelector('#f-fw [onclick*="fw-food"]')?.closest('.pill-wrap')); return;
-      }
-      if([...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length === 0){
-        scrollToRequired(document.getElementById('fw-lf-wrap')); return;
-      }
-      if(!document.getElementById('fw-broker-choice')?.value){
-        scrollToRequired(document.querySelector('#f-fw .broker-opt')); return;
-      }
-    }
-
-    // ── flatmate_wanted required fields ──
-    if(t === 'fm'){
-      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-sit"]') && !window._editListingId){
-        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-sit"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.getElementById('fm-flat-type')?.value){
-        scrollToRequired(document.getElementById('fm-flat-type')); document.getElementById('fm-flat-type').focus(); return;
-      }
-      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-rm"]')){
-        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-rm"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.getElementById('fm-available')?.value){
-        scrollToRequired(document.getElementById('fm-available')); document.getElementById('fm-available').focus(); return;
-      }
-      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-food"]')){
-        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-food"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.querySelector('#f-fm .pill.sel[onclick*="fm-gen"]')){
-        scrollToRequired(document.querySelector('#f-fm [onclick*="fm-gen"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.getElementById('fm-bno')?.classList.contains('sel-no') && !document.getElementById('fm-byes')?.classList.contains('sel-yes')){
-        scrollToRequired(document.getElementById('fm-byes')?.closest('.field')); return;
-      }
-    }
-
-    // ── pg_listing required fields ──
-    if(t === 'pg'){
-      if(!document.querySelector('#f-pg .pill.sel[onclick*="pg-for"]')){
-        scrollToRequired(document.querySelector('#f-pg [onclick*="pg-for"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.querySelector('#f-pg .pill.sel[onclick*="pg-food"]')){
-        scrollToRequired(document.querySelector('#f-pg [onclick*="pg-food"]')?.closest('.pill-wrap')); return;
-      }
-      if(!document.getElementById('pg-bno')?.classList.contains('sel-no') && !document.getElementById('pg-byes')?.classList.contains('sel-yes')){
-        scrollToRequired(document.getElementById('pg-byes')?.closest('.field')); return;
-      }
     }
 
     // ── Contact info / abusive language check ──
@@ -1917,109 +1822,137 @@ function tfc(checkbox,coinId){document.getElementById(coinId).classList.toggle('
 function cc(el,id,max){const n=el.value.length;document.getElementById(id).textContent=`${n} / ${max}`;document.getElementById(id).style.color=n>max*0.9?'var(--red)':'var(--ink3)';}
 
 // ── DYNAMIC NEXT BUTTON STATE ───────────────────────────────
-// Required fields per listing type
-const REQUIRED_CHECKS = {
-  fl: () => {
-    const t = 'fl';
-    return (
-      (areaVals[t+'-area']||[]).length > 0 &&
-      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
-      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
-      !!document.querySelector('#f-fl .pill.sel[onclick*="fl-ft"]') &&
-      !!document.querySelector('#f-fl .pill.sel[onclick*="fl-food"]') &&
-      !!document.querySelector('#f-fl .pill.sel[onclick*="fl-gen"]') &&
-      !!document.getElementById('fl-available')?.value &&
-      (document.getElementById('fl-bno')?.classList.contains('sel-no') || document.getElementById('fl-byes')?.classList.contains('sel-yes'))
-    );
-  },
-  fw: () => {
-    const t = 'fw';
-    return (
-      (areaVals[t+'-area']||[]).length > 0 &&
-      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
-      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
-      !!document.getElementById('fw-movein')?.value &&
-      !!document.getElementById('fw-gender-select')?.value &&
-      !!document.querySelector('#f-fw .pill.sel[onclick*="fw-food"]') &&
-      [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length > 0 &&
-      !!document.getElementById('fw-broker-choice')?.value
-    );
-  },
-  fm: () => {
-    const t = 'fm';
-    return (
-      (areaVals[t+'-area']||[]).length > 0 &&
-      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
-      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
-      !!document.getElementById('fm-flat-type')?.value &&
-      !!document.querySelector('#f-fm .pill.sel[onclick*="fm-rm"]') &&
-      !!document.getElementById('fm-available')?.value &&
-      !!document.querySelector('#f-fm .pill.sel[onclick*="fm-food"]') &&
-      !!document.querySelector('#f-fm .pill.sel[onclick*="fm-gen"]') &&
-      (document.getElementById('fm-bno')?.classList.contains('sel-no') || document.getElementById('fm-byes')?.classList.contains('sel-yes'))
-    );
-  },
-  pg: () => {
-    const t = 'pg';
-    return (
-      (areaVals[t+'-area']||[]).length > 0 &&
-      !!document.getElementById(t+'-poster-name')?.value?.trim() &&
-      !!document.querySelector('#f-'+t+' input[type="number"]')?.value &&
-      !!document.querySelector('#f-pg .pill.sel[onclick*="pg-for"]') &&
-      !!document.querySelector('#f-pg .pill.sel[onclick*="pg-food"]') &&
-      (document.getElementById('pg-bno')?.classList.contains('sel-no') || document.getElementById('pg-byes')?.classList.contains('sel-yes'))
-    );
+// Each check: { test: fn→bool, el: fn→element to scroll to }
+// Order matters — first failing check gets scrolled to
+function getRequiredChecks(t) {
+  const brokerOk = (prefix) =>
+    document.getElementById(prefix+'-bno')?.classList.contains('sel-no') ||
+    document.getElementById(prefix+'-byes')?.classList.contains('sel-yes');
+
+  const area = {
+    test: () => (areaVals[t+'-area']||[]).length > 0,
+    el: () => document.querySelector('#f-'+t+' .area-tag-input') || document.querySelector('#f-'+t+' input[placeholder*="area" i]')
+  };
+  const name = {
+    test: () => !!document.getElementById(t+'-poster-name')?.value?.trim(),
+    el: () => document.getElementById(t+'-poster-name')
+  };
+  const rent = {
+    test: () => !!document.querySelector('#f-'+t+' input[type="number"]')?.value,
+    el: () => document.querySelector('#f-'+t+' input[type="number"]')
+  };
+
+  const checks = {
+    fl: [
+      area, name, rent,
+      { test: () => !!document.querySelector('#f-fl .pill.sel[onclick*="fl-ft"]'),
+        el: () => document.querySelector('#f-fl [onclick*="fl-ft"]')?.closest('.field') },
+      { test: () => !!document.querySelector('#f-fl .pill.sel[onclick*="fl-food"]'),
+        el: () => document.querySelector('#f-fl [onclick*="fl-food"]')?.closest('.field') },
+      { test: () => !!document.querySelector('#f-fl .pill.sel[onclick*="fl-gen"]'),
+        el: () => document.querySelector('#f-fl [onclick*="fl-gen"]')?.closest('.field') },
+      { test: () => !!document.getElementById('fl-available')?.value,
+        el: () => document.getElementById('fl-available') },
+      { test: () => brokerOk('fl'),
+        el: () => document.getElementById('fl-bno')?.closest('.field') || document.getElementById('fl-bno') }
+    ],
+    fw: [
+      area, name, rent,
+      { test: () => !!document.getElementById('fw-movein')?.value,
+        el: () => document.getElementById('fw-movein') },
+      { test: () => !!document.getElementById('fw-you-are')?.value,
+        el: () => document.getElementById('fw-you-are') },
+      { test: () => !!document.getElementById('fw-gender-select')?.value,
+        el: () => document.getElementById('fw-gender-select') },
+      { test: () => !!document.querySelector('#f-fw .pill.sel[onclick*="fw-food"]'),
+        el: () => document.querySelector('#f-fw [onclick*="fw-food"]')?.closest('.field') },
+      { test: () => [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length > 0,
+        el: () => document.getElementById('fw-lf-wrap') },
+      { test: () => !!document.getElementById('fw-broker-choice')?.value,
+        el: () => document.querySelector('#f-fw .broker-opt') }
+    ],
+    fm: [
+      area, name, rent,
+      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-sit"]'),
+        el: () => document.querySelector('#f-fm [onclick*="fm-sit"]')?.closest('.field') },
+      { test: () => !!document.getElementById('fm-flat-type')?.value,
+        el: () => document.getElementById('fm-flat-type') },
+      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-rm"]'),
+        el: () => document.querySelector('#f-fm [onclick*="fm-rm"]')?.closest('.field') },
+      { test: () => !!document.getElementById('fm-available')?.value,
+        el: () => document.getElementById('fm-available') },
+      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-food"]'),
+        el: () => document.querySelector('#f-fm [onclick*="fm-food"]')?.closest('.field') },
+      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-gen"]'),
+        el: () => document.querySelector('#f-fm [onclick*="fm-gen"]')?.closest('.field') },
+      { test: () => brokerOk('fm'),
+        el: () => document.getElementById('fm-bno')?.closest('.field') || document.getElementById('fm-bno') }
+    ],
+    pg: [
+      area, name, rent,
+      { test: () => !!document.querySelector('#f-pg .pill.sel[onclick*="pg-for"]'),
+        el: () => document.querySelector('#f-pg [onclick*="pg-for"]')?.closest('.field') },
+      { test: () => !!document.querySelector('#f-pg .pill.sel[onclick*="pg-food"]'),
+        el: () => document.querySelector('#f-pg [onclick*="pg-food"]')?.closest('.field') },
+      { test: () => brokerOk('pg'),
+        el: () => document.getElementById('pg-bno')?.closest('.field') || document.getElementById('pg-bno') }
+    ]
+  };
+  return checks[t] || [];
+}
+
+function getFirstFailing(t) {
+  if (!t) return null;
+  for (const check of getRequiredChecks(t)) {
+    if (!check.test()) return check.el();
   }
-};
+  return null; // all passing
+}
+
+function allRequiredDone(t) {
+  if (!t) return false;
+  return getRequiredChecks(t).every(c => c.test());
+}
 
 function updateNextBtn() {
   const btn = document.getElementById('nBtn');
   if (!btn) return;
   if (step === 1) {
-    // Dim until type selected
-    if (type) btn.classList.remove('disabled-look');
-    else btn.classList.add('disabled-look');
+    type ? btn.classList.remove('disabled-look') : btn.classList.add('disabled-look');
     return;
   }
-  if (step === 2 && type && REQUIRED_CHECKS[type]) {
-    if (REQUIRED_CHECKS[type]()) btn.classList.remove('disabled-look');
-    else btn.classList.add('disabled-look');
+  if (step === 2 && type) {
+    allRequiredDone(type) ? btn.classList.remove('disabled-look') : btn.classList.add('disabled-look');
     return;
   }
-  // Step 3 — always active (choices shown inline)
   btn.classList.remove('disabled-look');
+}
+
+// Called from nextStep BEFORE validation — scroll to first failing field
+function scrollToFirstFailing() {
+  if (step !== 2 || !type) return false;
+  const el = getFirstFailing(type);
+  if (el) { scrollToRequired(el); return true; }
+  return false;
 }
 
 // Watch all relevant inputs for changes
 function attachWatchers() {
-  // Watch any input/select/change in step 2
   document.getElementById('step2')?.addEventListener('input', updateNextBtn);
   document.getElementById('step2')?.addEventListener('change', updateNextBtn);
-  // Watch pill clicks — they dispatch no native event, so we hook into sp()
-  // updateNextBtn is called from pill clicks via the patched sp/sb functions
 }
 
-// Patch sp() and sb() and sbfw() to also call updateNextBtn
-const _origSp = sp;
-window.sp = function(el, group) { _origSp(el, group); updateNextBtn(); };
-const _origSb = sb;
-window.sb = function(prefix, choice) { _origSb(prefix, choice); updateNextBtn(); };
-const _origSbfw = sbfw;
-window.sbfw = function(choice) { _origSbfw(choice); updateNextBtn(); };
-// Also patch selectArea
-const _origSelectArea = selectArea;
-window.selectArea = function(area, id) { _origSelectArea(area, id); updateNextBtn(); };
-// And fw checkboxes
-document.addEventListener('change', function(e) {
-  if (e.target.type === 'checkbox') updateNextBtn();
-});
+// Patch sp(), sb(), sbfw(), selectArea() to trigger updateNextBtn
+const _origSp = window.sp; window.sp = function(el,g){_origSp(el,g);updateNextBtn();};
+const _origSb = window.sb; window.sb = function(p,c){_origSb(p,c);updateNextBtn();};
+const _origSbfw = window.sbfw; window.sbfw = function(c){_origSbfw(c);updateNextBtn();};
+const _origSA = window.selectArea; window.selectArea = function(a,id){_origSA(a,id);updateNextBtn();};
+document.addEventListener('change', e => { if(e.target.type==='checkbox') updateNextBtn(); });
 
-// Initial state
 document.addEventListener('DOMContentLoaded', function() {
   attachWatchers();
   updateNextBtn();
 });
-
 </script>
 </body>
 </html>
