@@ -1073,7 +1073,10 @@ let currentUnlockListingId = null;
 
 function buildUnlockBtn(l, areas) {
   const user = getUser();
-  const isOwn = user && l.user_id && user.userId === l.user_id;
+  const isOwn = user && (
+    (l.user_id && user.userId === l.user_id) ||
+    (l.claimed_by_user_id && user.userId === l.claimed_by_user_id)
+  );
   if (isOwn) {
     return '<button class="unlock-btn" style="background:var(--bg2);color:var(--ink3);border:1.5px solid var(--border);cursor:default;font-size:12px" onclick="window.location.href=\'listing_detail.html?id=' + l.id + '\'">Your listing</button>';
   }
