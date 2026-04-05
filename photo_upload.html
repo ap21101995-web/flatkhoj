@@ -502,40 +502,88 @@ async function moderatePhoto(base64Data, mediaType) {
   } catch(e) { return { allowed: true, issues: [] }; }
 }
 
+// Show inline error under upload area
+function showPhotoError(msg) {
+  let errDiv = document.getElementById('photoCheckError');
+  if (!errDiv) {
+    errDiv = document.createElement('div');
+    errDiv.id = 'photoCheckError';
+    errDiv.style.cssText = 'background:#fde8e8;border:1.5px solid var(--red);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);margin:12px 0;line-height:1.6';
+    document.getElementById('uploadArea').insertAdjacentElement('afterend', errDiv);
+  }
+  errDiv.innerHTML = msg;
+  errDiv.style.display = 'block';
+  setTimeout(() => { if(errDiv) errDiv.style.display = 'none'; }, 6000);
+}
+
 // ── HANDLE FILE SELECTION ──────────────────────────────────
 function handleFiles(input) {
   const files = Array.from(input.files);
   const remaining = MAX_PHOTOS - photos.length;
-  if (remaining <= 0) { alert(`Maximum ${MAX_PHOTOS} photos allowed.`); return; }
+  if (remaining <= 0) {
+    showPhotoError(`Maximum ${MAX_PHOTOS} photos allowed. Remove a photo first.`);
+    return;
+  }
   const toAdd = files.slice(0, remaining);
 
   toAdd.forEach(file => {
-    if (file.size > 5 * 1024 * 1024) { alert('Photo too large. Max 5MB per photo.'); return; }
-    if (!file.type.startsWith('image/')) { alert('Only image files are allowed.'); return; }
+    if (file.size > 5 * 1024 * 1024) {
+      showPhotoError(`⚠️ <strong>${file.name}</strong> is too large. Maximum 5MB per photo.`);
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      showPhotoError('⚠️ Only image files (JPG, PNG, HEIC) are allowed.');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = async e => {
       const base64Full = e.target.result;
       const base64Data = base64Full.split(',')[1];
 
-      // Show checking message
+      // Show checking state
       const btn = document.getElementById('continueBtn');
       const origText = btn.textContent;
       btn.textContent = '🔍 Checking photo…';
       btn.disabled = true;
 
+      // Show a temporary "checking" thumbnail
+      const tempId = 'temp_' + Date.now();
+      const tempThumb = document.createElement('div');
+      tempThumb.id = tempId;
+      tempThumb.className = 'photo-thumb';
+      tempThumb.style.opacity = '0.5';
+      tempThumb.innerHTML = `<img src="${base64Full}" alt="Checking…"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);border-radius:10px;color:white;font-size:12px;font-weight:700">Checking…</div>`;
+      document.getElementById('photoSection').style.display = 'block';
+      document.getElementById('photoGrid').appendChild(tempThumb);
+
       const modResult = await moderatePhoto(base64Data, file.type);
 
+      // Remove temp thumbnail
+      document.getElementById(tempId)?.remove();
       btn.textContent = origText;
       btn.disabled = false;
 
       if (!modResult.allowed) {
-        let msg = '⚠️ This photo cannot be uploaded:\n\n';
-        if (modResult.has_phone_number || modResult.has_contact_info) msg += '📞 Phone number or contact info detected.\n';
-        if (modResult.has_watermark_with_text) msg += '🏷️ Watermark with text/contact info detected.\n';
-        if (modResult.has_inappropriate_content) msg += '🚫 Inappropriate content detected.\n';
-        msg += '\nPlease remove the contact info or watermark and upload again.';
-        alert(msg);
+        const issues = [];
+        if (modResult.has_phone_number || modResult.has_contact_info)
+          issues.push('📞 Phone number or contact info detected');
+        if (modResult.has_watermark_with_text)
+          issues.push('🏷️ Watermark or broker text detected');
+        if (modResult.has_inappropriate_content)
+          issues.push('🚫 Inappropriate or offensive content detected');
+        if (!modResult.is_relevant_property_photo && issues.length === 0)
+          issues.push('🏠 This does not appear to be a property photo');
+        if (issues.length === 0) issues.push('Photo failed verification');
+        showPhotoError('⚠️ <strong>Photo rejected:</strong><br>' + issues.join('<br>') + '<br><br>Please upload a clear property photo without any contact info.');
+        if (photos.length > 0) renderPhotos(); else document.getElementById('photoSection').style.display = 'none';
+        return;
+      }
+
+      // Also check if it's actually a property photo
+      if (modResult.is_relevant_property_photo === false) {
+        showPhotoError("🏠 <strong>Photo rejected:</strong> This does not appear to be a property photo. Please upload photos of the flat, room, or building.");
+        if (photos.length > 0) renderPhotos(); else document.getElementById('photoSection').style.display = 'none';
         return;
       }
 

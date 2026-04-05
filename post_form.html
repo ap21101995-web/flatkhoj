@@ -876,6 +876,19 @@ async function submitListing() {
   btn.disabled = true;
 
   try {
+    // Final abusive language gate — catches all submit paths including edit
+    const t = type;
+    const allTextFields = [...document.querySelectorAll('#f-'+t+' textarea, #f-'+t+' input[type="text"]:not([id*="area"]):not([id*="name"]):not([id*="other"])')]
+      .map(f => f.value).filter(Boolean);
+    for (const val of allTextFields) {
+      if (containsAbusiveLanguage(val) || containsContactInfo(val)) {
+        btn.textContent = window._editListingId ? '💾 Save Changes' : "🚀 Post Listing — It's Free!";
+        btn.disabled = false;
+        showToast('⚠️ Please remove inappropriate language or contact info from your listing.');
+        return;
+      }
+    }
+
     // Final limit check — shows inline blocked screen if exceeded
     if (!window._editListingId) {
       const allowed = await checkPostingLimitsStrict();
@@ -1545,8 +1558,16 @@ function spWithOther(el, group, otherId) {
 
 function containsPhoneNumber(text) {
   if (!text) return false;
-  // Indian phone numbers in various formats
-  return /(\+91|91)?[\s\-\.]?[6-9]\d{4}[\s\-\.]?\d{5}/.test(text.replace(/\s/g,''));
+  const clean = text.replace(/[\s\-\.\(\)]/g, '');
+  // Indian mobile: 10 digits starting 6-9, with or without +91/91
+  if (/(\+91|91)?[6-9]\d{9}/.test(clean)) return true;
+  // Any 10+ consecutive digits
+  if (/\d{10,}/.test(clean)) return true;
+  // Spaced formats like "98765 43210" or "9876 543210"
+  if (/[6-9]\d{4}[\s\-\.]\d{5}/.test(text)) return true;
+  // Written hints: "call", "whatsapp", "ping" followed by digits
+  if (/(call|ping|msg|text|reach|contact|whatsapp|watsapp|wp|wa)[\s\-:]*[\d\s\-\.]{8,}/i.test(text)) return true;
+  return false;
 }
 
 function containsContactInfo(text) {
@@ -1555,25 +1576,52 @@ function containsContactInfo(text) {
   if (/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/.test(text)) return 'email address';
   // Phone numbers
   if (containsPhoneNumber(text)) return 'phone number';
-  // WhatsApp mentions with numbers
-  if (/whatsapp|whats.?app|wa\.me/i.test(text) && /\d{7,}/.test(text)) return 'WhatsApp contact';
-  // Instagram/social handles with contact intent
-  if (/(instagram|insta|ig|facebook|fb|twitter|telegram)\s*[:@]\s*\w+/i.test(text)) return 'social media handle';
+  // WhatsApp / contact hints
+  if (/whatsapp|whats.?app|watsapp|wa\.me|wa number/i.test(text)) return 'WhatsApp contact';
+  // Social media handles with intent
+  if (/(instagram|insta|ig|facebook|fb|twitter|telegram|snapchat)\s*[:@\/]\s*\w+/i.test(text)) return 'social media handle';
+  // UPI / payment IDs (often used as contact)
+  if (/[a-zA-Z0-9.\-_]+@(upi|paytm|gpay|phonepe|okaxis|okhdfcbank|okicici|oksbi)/i.test(text)) return 'UPI ID';
+  // Direct link patterns
+  if (/(t\.me\/|wa\.me\/|bit\.ly\/|tinyurl)/i.test(text)) return 'contact link';
   return false;
 }
 
 function containsAbusiveLanguage(text) {
   if (!text) return false;
+  const lower = text.toLowerCase().replace(/[\s\-_\.]+/g,''); // collapse spaces/dashes for variant detection
+  const normal = text.toLowerCase();
   const abusive = [
-    'fuck','shit','bastard','bitch','asshole','damn','crap','bloody',
-    'madarchod','behenchod','chutiya','gaandu','randi','saala','harami',
-    'bhosdi','lund','bhosdike','chut','lavda','bc','mc','mc bc',
-    'kamina','kamine','haramzada','suar','kutte','kutta'
+    // English
+    'fuck','fuk','fvck','fucc','sh1t','shit','bastard','bitch','b1tch','asshole','ass hole',
+    'damn','crap','cunt','cock','dick','pussy','whore','slut','nigger','nigga',
+    // Hindi — standard spellings
+    'madarchod','maadarchod','maderchod','motherfucker',
+    'behenchod','behanchod','benchod','bc',
+    'chutiya','chootiya','chutiye','chutiyo',
+    'gaandu','gandu','gaand','gaandd',
+    'randi','raand','randibaaz',
+    'saala','sala','saale',
+    'harami','haraami',
+    'bhosdi','bhosdike','bhosdiwale','bhosdiwala',
+    'lund','lauda','lavda','lawda',
+    'chut','choot',
+    'kamina','kamine','kameena',
+    'haramzada','haramzaada','haramkhor',
+    'suar','suwar','kutte','kutta','kuttey',
+    'bakwas','ghatiya','nalayak',
+    'mc','mmc','mch',
+    // Marathi/other regional
+    'aila','aicha','aaicha','ghanta','bhosdya','bhosdich',
+    'rand','raand','randa',
+    'gadha','gadhe','ullu',
+    // Generic abusive patterns
+    'sex','sexy','porn','nude','naked','xxx',
   ];
-  const lower = text.toLowerCase();
+  // Check both collapsed and normal forms
   return abusive.some(word => {
-    const regex = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b','i');
-    return regex.test(lower);
+    const w = word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    return lower.includes(word) || normal.includes(word) || new RegExp(w,'i').test(normal);
   });
 }
 
@@ -1643,14 +1691,24 @@ function nextStep(){
       }
     }
 
-    // ── Contact info / abusive language check ──
+    // ── Contact info / abusive language check (always runs, including edit mode) ──
     const textareas = document.querySelectorAll('#f-'+t+' textarea');
     const textInputs = document.querySelectorAll('#f-'+t+' input[type="text"]:not([id*="area"]):not([id*="name"]):not([id*="other"])');
     for(const field of [...textareas, ...textInputs]){
       const val = field.value; if(!val) continue;
       const ct = containsContactInfo(val);
       if(ct){ scrollToRequired(field); field.focus(); return; }
-      if(containsAbusiveLanguage(val)){ scrollToRequired(field); field.focus(); return; }
+      if(containsAbusiveLanguage(val)){
+        scrollToRequired(field); field.focus();
+        // Show inline message below the field
+        let errMsg = field.parentNode.querySelector('.abuse-err');
+        if(!errMsg){ errMsg=document.createElement('div'); errMsg.className='abuse-err'; errMsg.style.cssText='color:var(--red);font-size:12px;margin-top:6px;font-weight:600'; field.parentNode.appendChild(errMsg); }
+        errMsg.textContent='⚠️ Please remove inappropriate language before posting.';
+        setTimeout(()=>{ if(errMsg) errMsg.remove(); }, 4000);
+        return;
+      }
+      // Clear any previous error
+      field.parentNode.querySelector('.abuse-err')?.remove();
     }
   }
 
@@ -1674,8 +1732,9 @@ function nextStep(){
   step++; updateUI();
 }
 function prevStep(){
-  // In edit mode — always go back to the listing, never to step 1
   if(window._editListingId){
+    // Edit mode: step 3 → step 2 (questionnaire), step 2 → back to listing
+    if(step === 3){ step = 2; updateUI(); return; }
     window.location.href = 'listing_detail.html?id=' + window._editListingId;
     return;
   }
