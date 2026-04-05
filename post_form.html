@@ -356,7 +356,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       </div>
       <div class="field-row">
         <div class="field"><div class="field-label">Available from <span class="req">*</span></div><input class="input" type="date" id="fl-available"></div>
-        <div class="field"><div class="field-label">Furnishing <span class="req">*</span></div><select class="select"><option value="">Select…</option><option>Fully furnished</option><option>Semi-furnished</option><option>Unfurnished</option></select></div>
+        <div class="field"><div class="field-label">Furnishing <span class="req">*</span></div><select class="select" id="fl-furn-select"><option value="">Select…</option><option>Fully furnished</option><option>Semi-furnished</option><option>Unfurnished</option></select></div>
       </div>
     </div>
     <div class="form-card">
@@ -794,7 +794,7 @@ function collectFormData() {
     data.poster_name = document.getElementById('fl-poster-name')?.value?.trim() || null;
     data.rent_amount = parseInt(document.querySelector('#f-fl input[type="number"]')?.value) || null;
     const flFtEl = document.querySelector('#f-fl [onclick*="fl-ft"].sel'); const flOther = document.getElementById('fl-other-type')?.value?.trim(); data.flat_type = flFtEl ? (flFtEl.textContent.trim() === 'Other' && flOther ? flOther : flFtEl.textContent.trim()) : null;
-    data.furnishing = document.querySelector('#f-fl .sel[onclick*="fl-furn"]')?.textContent?.trim() || null;
+    data.furnishing = document.getElementById('fl-furn-select')?.value || null;
     data.food_preference = document.querySelector('#f-fl .sel[onclick*="fl-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fl .sel[onclick*="fl-gen"]')?.textContent?.trim() || null;
     data.room_type = 'Entire flat'; // flat_listing always means entire flat
@@ -1094,7 +1094,7 @@ async function checkPostingLimitsStrict() {
   const user = getUser();
   if (!user) return false;
   const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
-  if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return true;
+  if (ph==='9538584612' || ph==='1111111100' || user.isOwner===true || user.isOwner==='true') return true; // test user unlimited
   try {
     const now = new Date();
     const window24h = new Date(now.getTime() - 24*60*60*1000).toISOString();
@@ -1140,7 +1140,7 @@ async function checkPostingLimits() {
   if (!user) return;
   // Owner has no posting limits
   const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
-  if (ph==='9538584612' || user.isOwner===true || user.isOwner==='true') return;
+  if (ph==='9538584612' || ph==='1111111100' || user.isOwner===true || user.isOwner==='true') return;
   try {
     const now = new Date();
     const window24h = new Date(now.getTime() - 24*60*60*1000).toISOString();
@@ -1534,10 +1534,18 @@ function containsAbusiveLanguage(text) {
 // Scroll to an element and briefly highlight it
 function scrollToRequired(el) {
   if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  el.style.outline = '2.5px solid var(--teal)';
-  el.style.borderRadius = '8px';
-  setTimeout(() => { el.style.outline = ''; }, 2000);
+  // Small delay ensures any CSS transitions are complete
+  setTimeout(() => {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const target = el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' ? el : el;
+    target.style.outline = '2.5px solid var(--teal)';
+    target.style.borderRadius = '8px';
+    setTimeout(() => { target.style.outline = ''; target.style.borderRadius = ''; }, 2500);
+    // Focus inputs
+    if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+      el.focus();
+    }
+  }, 50);
 }
 
 function nextStep(){
@@ -1713,7 +1721,8 @@ function prefillEditForm(listing, t) {
         if (other) { spWithOther(other, 'fl-ft', 'fl-other-type'); if(el('fl-other-type')) el('fl-other-type').value = listing.flat_type; }
       }
     }
-    fillPill('#f-fl', 'fl-furn', listing.furnishing);
+    // Furnishing select (fl uses select, not pills)
+    if (el('fl-furn-select') && listing.furnishing) el('fl-furn-select').value = listing.furnishing;
     fillPillFuzzy('#f-fl', 'fl-food', listing.food_preference);
     fillPill('#f-fl', 'fl-gen', listing.gender_preference);
     fillPill('#f-fl', 'fl-tt', listing.tenant_type);         // Working Professional/Student etc
@@ -1822,83 +1831,98 @@ function tfc(checkbox,coinId){document.getElementById(coinId).classList.toggle('
 function cc(el,id,max){const n=el.value.length;document.getElementById(id).textContent=`${n} / ${max}`;document.getElementById(id).style.color=n>max*0.9?'var(--red)':'var(--ink3)';}
 
 // ── DYNAMIC NEXT BUTTON STATE ───────────────────────────────
-// Each check: { test: fn→bool, el: fn→element to scroll to }
-// Order matters — first failing check gets scrolled to
+function brokerOk(prefix) {
+  return document.getElementById(prefix+'-bno')?.classList.contains('sel-no') ||
+         document.getElementById(prefix+'-byes')?.classList.contains('sel-yes');
+}
+
+function pillSel(selector) {
+  return !!document.querySelector(selector + '.sel');
+}
+
+// Returns ordered array of {test, el} for each required field
 function getRequiredChecks(t) {
-  const brokerOk = (prefix) =>
-    document.getElementById(prefix+'-bno')?.classList.contains('sel-no') ||
-    document.getElementById(prefix+'-byes')?.classList.contains('sel-yes');
+  if (t === 'fl') return [
+    { test: () => (areaVals['fl-area']||[]).length > 0,
+      el: () => document.querySelector('#f-fl .area-wrap') },
+    { test: () => !!document.getElementById('fl-poster-name')?.value?.trim(),
+      el: () => document.getElementById('fl-poster-name') },
+    { test: () => !!document.querySelector('#f-fl input[type="number"]')?.value,
+      el: () => document.querySelector('#f-fl input[type="number"]') },
+    { test: () => pillSel('#f-fl [onclick*="fl-ft"]'),
+      el: () => document.querySelector('#f-fl [onclick*="fl-ft"]')?.closest('.field') },
+    { test: () => !!document.getElementById('fl-available')?.value,
+      el: () => document.getElementById('fl-available') },
+    { test: () => !!document.getElementById('fl-furn-select')?.value,
+      el: () => document.getElementById('fl-furn-select') },
+    { test: () => pillSel('#f-fl [onclick*="fl-food"]'),
+      el: () => document.querySelector('#f-fl [onclick*="fl-food"]')?.closest('.field') },
+    { test: () => pillSel('#f-fl [onclick*="fl-gen"]'),
+      el: () => document.querySelector('#f-fl [onclick*="fl-gen"]')?.closest('.field') },
+    { test: () => brokerOk('fl'),
+      el: () => document.getElementById('fl-bno') },
+  ];
+  if (t === 'fw') return [
+    { test: () => (areaVals['fw-area']||[]).length > 0,
+      el: () => document.querySelector('#f-fw .area-wrap') },
+    { test: () => !!document.getElementById('fw-poster-name')?.value?.trim(),
+      el: () => document.getElementById('fw-poster-name') },
+    { test: () => !!document.querySelector('#f-fw input[type="number"]')?.value,
+      el: () => document.querySelector('#f-fw input[type="number"]') },
+    { test: () => !!document.getElementById('fw-movein')?.value,
+      el: () => document.getElementById('fw-movein') },
+    { test: () => !!document.getElementById('fw-you-are')?.value,
+      el: () => document.getElementById('fw-you-are') },
+    { test: () => !!document.getElementById('fw-gender-select')?.value,
+      el: () => document.getElementById('fw-gender-select') },
+    { test: () => pillSel('#f-fw [onclick*="fw-food"]'),
+      el: () => document.querySelector('#f-fw [onclick*="fw-food"]')?.closest('.field') },
+    { test: () => [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length > 0,
+      el: () => document.getElementById('fw-lf-wrap') },
+    { test: () => !!document.getElementById('fw-broker-choice')?.value,
+      el: () => document.querySelector('#f-fw .broker-toggle') || document.querySelector('#f-fw .broker-opt') },
+  ];
+  if (t === 'fm') return [
+    { test: () => (areaVals['fm-area']||[]).length > 0,
+      el: () => document.querySelector('#f-fm .area-wrap') },
+    { test: () => pillSel('#f-fm [onclick*="fm-sit"]'),
+      el: () => document.querySelector('#f-fm [onclick*="fm-sit"]')?.closest('.field') },
+    { test: () => !!document.getElementById('fm-poster-name')?.value?.trim(),
+      el: () => document.getElementById('fm-poster-name') },
+    { test: () => !!document.getElementById('fm-flat-type')?.value,
+      el: () => document.getElementById('fm-flat-type') },
+    { test: () => !!document.querySelector('#f-fm input[type="number"]')?.value,
+      el: () => document.querySelector('#f-fm input[type="number"]') },
+    { test: () => pillSel('#f-fm [onclick*="fm-rm"]'),
+      el: () => document.querySelector('#f-fm [onclick*="fm-rm"]')?.closest('.field') },
+    { test: () => !!document.getElementById('fm-available')?.value,
+      el: () => document.getElementById('fm-available') },
+    { test: () => pillSel('#f-fm [onclick*="fm-food"]'),
+      el: () => document.querySelector('#f-fm [onclick*="fm-food"]')?.closest('.field') },
+    { test: () => pillSel('#f-fm [onclick*="fm-gen"]'),
+      el: () => document.querySelector('#f-fm [onclick*="fm-gen"]')?.closest('.field') },
+    { test: () => brokerOk('fm'),
+      el: () => document.getElementById('fm-bno') },
+  ];
+  if (t === 'pg') return [
+    { test: () => (areaVals['pg-area']||[]).length > 0,
+      el: () => document.querySelector('#f-pg .area-wrap') },
+    { test: () => !!document.getElementById('pg-poster-name')?.value?.trim(),
+      el: () => document.getElementById('pg-poster-name') },
+    { test: () => !!document.querySelector('#f-pg input[type="number"]')?.value,
+      el: () => document.querySelector('#f-pg input[type="number"]') },
+    { test: () => pillSel('#f-pg [onclick*="pg-for"]'),
+      el: () => document.querySelector('#f-pg [onclick*="pg-for"]')?.closest('.field') },
+    { test: () => pillSel('#f-pg [onclick*="pg-food"]'),
+      el: () => document.querySelector('#f-pg [onclick*="pg-food"]')?.closest('.field') },
+    { test: () => brokerOk('pg'),
+      el: () => document.getElementById('pg-bno') },
+  ];
+  return [];
+}
 
-  const area = {
-    test: () => (areaVals[t+'-area']||[]).length > 0,
-    el: () => document.querySelector('#f-'+t+' .area-tag-input') || document.querySelector('#f-'+t+' input[placeholder*="area" i]')
-  };
-  const name = {
-    test: () => !!document.getElementById(t+'-poster-name')?.value?.trim(),
-    el: () => document.getElementById(t+'-poster-name')
-  };
-  const rent = {
-    test: () => !!document.querySelector('#f-'+t+' input[type="number"]')?.value,
-    el: () => document.querySelector('#f-'+t+' input[type="number"]')
-  };
-
-  const checks = {
-    fl: [
-      area, name, rent,
-      { test: () => !!document.querySelector('#f-fl .pill.sel[onclick*="fl-ft"]'),
-        el: () => document.querySelector('#f-fl [onclick*="fl-ft"]')?.closest('.field') },
-      { test: () => !!document.querySelector('#f-fl .pill.sel[onclick*="fl-food"]'),
-        el: () => document.querySelector('#f-fl [onclick*="fl-food"]')?.closest('.field') },
-      { test: () => !!document.querySelector('#f-fl .pill.sel[onclick*="fl-gen"]'),
-        el: () => document.querySelector('#f-fl [onclick*="fl-gen"]')?.closest('.field') },
-      { test: () => !!document.getElementById('fl-available')?.value,
-        el: () => document.getElementById('fl-available') },
-      { test: () => brokerOk('fl'),
-        el: () => document.getElementById('fl-bno')?.closest('.field') || document.getElementById('fl-bno') }
-    ],
-    fw: [
-      area, name, rent,
-      { test: () => !!document.getElementById('fw-movein')?.value,
-        el: () => document.getElementById('fw-movein') },
-      { test: () => !!document.getElementById('fw-you-are')?.value,
-        el: () => document.getElementById('fw-you-are') },
-      { test: () => !!document.getElementById('fw-gender-select')?.value,
-        el: () => document.getElementById('fw-gender-select') },
-      { test: () => !!document.querySelector('#f-fw .pill.sel[onclick*="fw-food"]'),
-        el: () => document.querySelector('#f-fw [onclick*="fw-food"]')?.closest('.field') },
-      { test: () => [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]:checked')].length > 0,
-        el: () => document.getElementById('fw-lf-wrap') },
-      { test: () => !!document.getElementById('fw-broker-choice')?.value,
-        el: () => document.querySelector('#f-fw .broker-opt') }
-    ],
-    fm: [
-      area, name, rent,
-      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-sit"]'),
-        el: () => document.querySelector('#f-fm [onclick*="fm-sit"]')?.closest('.field') },
-      { test: () => !!document.getElementById('fm-flat-type')?.value,
-        el: () => document.getElementById('fm-flat-type') },
-      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-rm"]'),
-        el: () => document.querySelector('#f-fm [onclick*="fm-rm"]')?.closest('.field') },
-      { test: () => !!document.getElementById('fm-available')?.value,
-        el: () => document.getElementById('fm-available') },
-      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-food"]'),
-        el: () => document.querySelector('#f-fm [onclick*="fm-food"]')?.closest('.field') },
-      { test: () => !!document.querySelector('#f-fm .pill.sel[onclick*="fm-gen"]'),
-        el: () => document.querySelector('#f-fm [onclick*="fm-gen"]')?.closest('.field') },
-      { test: () => brokerOk('fm'),
-        el: () => document.getElementById('fm-bno')?.closest('.field') || document.getElementById('fm-bno') }
-    ],
-    pg: [
-      area, name, rent,
-      { test: () => !!document.querySelector('#f-pg .pill.sel[onclick*="pg-for"]'),
-        el: () => document.querySelector('#f-pg [onclick*="pg-for"]')?.closest('.field') },
-      { test: () => !!document.querySelector('#f-pg .pill.sel[onclick*="pg-food"]'),
-        el: () => document.querySelector('#f-pg [onclick*="pg-food"]')?.closest('.field') },
-      { test: () => brokerOk('pg'),
-        el: () => document.getElementById('pg-bno')?.closest('.field') || document.getElementById('pg-bno') }
-    ]
-  };
-  return checks[t] || [];
+function allRequiredDone(t) {
+  return t && getRequiredChecks(t).every(c => c.test());
 }
 
 function getFirstFailing(t) {
@@ -1906,12 +1930,7 @@ function getFirstFailing(t) {
   for (const check of getRequiredChecks(t)) {
     if (!check.test()) return check.el();
   }
-  return null; // all passing
-}
-
-function allRequiredDone(t) {
-  if (!t) return false;
-  return getRequiredChecks(t).every(c => c.test());
+  return null;
 }
 
 function updateNextBtn() {
@@ -1928,7 +1947,6 @@ function updateNextBtn() {
   btn.classList.remove('disabled-look');
 }
 
-// Called from nextStep BEFORE validation — scroll to first failing field
 function scrollToFirstFailing() {
   if (step !== 2 || !type) return false;
   const el = getFirstFailing(type);
@@ -1936,19 +1954,17 @@ function scrollToFirstFailing() {
   return false;
 }
 
-// Watch all relevant inputs for changes
 function attachWatchers() {
   document.getElementById('step2')?.addEventListener('input', updateNextBtn);
   document.getElementById('step2')?.addEventListener('change', updateNextBtn);
 }
 
-// Patch sp(), sb(), sbfw(), selectArea() to trigger updateNextBtn
+// Patch interactive functions to trigger button update
 const _origSp = window.sp; window.sp = function(el,g){_origSp(el,g);updateNextBtn();};
 const _origSb = window.sb; window.sb = function(p,c){_origSb(p,c);updateNextBtn();};
 const _origSbfw = window.sbfw; window.sbfw = function(c){_origSbfw(c);updateNextBtn();};
 const _origSA = window.selectArea; window.selectArea = function(a,id){_origSA(a,id);updateNextBtn();};
 document.addEventListener('change', e => { if(e.target.type==='checkbox') updateNextBtn(); });
-
 document.addEventListener('DOMContentLoaded', function() {
   attachWatchers();
   updateNextBtn();
