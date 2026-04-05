@@ -467,9 +467,15 @@ body {
       </div>
     </div>
     <!-- Who unlocked my contact -->
-    <div id="unlockersSection" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px">🔓 Who unlocked your contact</div>
-      <div id="unlockersList" style="font-size:13px;color:var(--ink3)">Loading…</div>
+    <div id="unlockersSection" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div onclick="toggleUnlockers()" style="display:flex;align-items:center;justify-content:space-between;padding:14px;cursor:pointer">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink2)">🔓 Who unlocked your contact</div>
+          <div id="unlockersCount" style="font-size:12px;color:var(--ink3);margin-top:2px">Loading…</div>
+        </div>
+        <div id="unlockersChevron" style="font-size:18px;color:var(--ink3);transition:transform 0.2s">›</div>
+      </div>
+      <div id="unlockersList" style="display:none;padding:0 14px 14px"></div>
     </div>
   </div>
 
@@ -1138,31 +1144,73 @@ function showOwnerControls() {
 }
 
 
+function toggleUnlockers() {
+  const list = document.getElementById('unlockersList');
+  const chevron = document.getElementById('unlockersChevron');
+  const open = list.style.display === 'block';
+  list.style.display = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(90deg)';
+}
+
 async function loadUnlockers() {
-  const wrap = document.getElementById('unlockersList');
+  const countEl = document.getElementById('unlockersCount');
+  const listEl = document.getElementById('unlockersList');
   try {
     const unlocks = await supaGet(`contact_unlocks?listing_id=eq.${listing.id}&order=created_at.desc&select=*`);
     if (!unlocks || unlocks.length === 0) {
-      wrap.innerHTML = '<span style="color:var(--ink3)">No one has unlocked your contact yet.</span>';
+      countEl.textContent = 'No one yet — share your listing to get responses!';
+      listEl.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:8px 0">No one has unlocked your contact yet.</div>';
       return;
     }
-    // Fetch user phones
+    countEl.textContent = `${unlocks.length} person${unlocks.length > 1 ? 's' : ''} interested`;
+
+    // Fetch unlocker phones
     const userIds = [...new Set(unlocks.map(u => u.unlocker_user_id).filter(Boolean))];
     let userMap = {};
     if (userIds.length > 0) {
       const users = await supaGet(`users?id=in.(${userIds.join(',')})&select=id,phone`);
       users.forEach(u => userMap[u.id] = u.phone);
     }
-    wrap.innerHTML = unlocks.map(u => {
-      const phone = userMap[u.unlocker_user_id] ? '+91 ' + userMap[u.unlocker_user_id] : 'Unknown';
-      const time = (() => { const diff=Date.now()-new Date(u.created_at).getTime(); const m=Math.floor(diff/60000); if(m<60)return m+'m ago'; const h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; })();
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="font-weight:600;color:var(--ink)">${phone}</div>
-        <div style="font-size:12px;color:var(--ink3)">${time}</div>
+
+    const timeAgo = (ts) => {
+      const diff = Date.now() - new Date(ts).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ago';
+      return Math.floor(h / 24) + 'd ago';
+    };
+
+    listEl.innerHTML = unlocks.map((u, i) => {
+      const phone = userMap[u.unlocker_user_id];
+      const formatted = phone ? '+91 ' + String(phone).replace(/(\d{5})(\d{5})/, '$1 $2') : null;
+      const time = timeAgo(u.created_at);
+      return `<div style="padding:10px 0;${i < unlocks.length - 1 ? 'border-bottom:1px solid var(--border)' : ''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${phone ? '8px' : '0'}">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--ink)">${formatted || 'FlatKhoj User'}</div>
+            <div style="font-size:12px;color:var(--ink3);margin-top:2px">Unlocked ${time}</div>
+          </div>
+          ${phone ? `<div style="display:flex;gap:8px">
+            <a href="https://wa.me/91${phone}?text=Hi! I saw you unlocked my listing on FlatKhoj. Are you still looking?" target="_blank"
+               style="display:flex;align-items:center;gap:5px;background:#25D366;color:white;border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:12px;font-weight:700;text-decoration:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+            <a href="tel:+91${phone}" style="display:flex;align-items:center;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:12px;font-weight:700;color:var(--ink);text-decoration:none">
+              📞 Call
+            </a>
+          </div>` : ''}
+        </div>
       </div>`;
-    }).join('') + `<div style="font-size:12px;color:var(--ink3);margin-top:8px;text-align:right">${unlocks.length} person${unlocks.length>1?'s':''} unlocked your contact</div>`;
+    }).join('');
+
+    // Auto-expand if there are unlocks
+    document.getElementById('unlockersList').style.display = 'block';
+    document.getElementById('unlockersChevron').style.transform = 'rotate(90deg)';
   } catch(e) {
-    wrap.innerHTML = '<span style="color:var(--ink3)">Could not load</span>';
+    countEl.textContent = 'Could not load';
+    listEl.innerHTML = '<div style="font-size:13px;color:var(--ink3)">Failed to load. Please refresh.</div>';
   }
 }
 
