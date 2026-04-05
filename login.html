@@ -805,7 +805,7 @@ function goToScreen(id) {
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-function onContinue() {
+async function onContinue() {
   const params = new URLSearchParams(window.location.search);
   const returnUrl = params.get('return');
   const listingId = params.get('listing_id');
@@ -816,7 +816,25 @@ function onContinue() {
     window.location.replace(returnUrl || 'post_form.html');
   } else if (triggerContext === 'unlock') {
     if (listingId) {
-      const dest = 'listing_detail.html?id=' + listingId + '&unlock=1';
+      // Check if this listing now belongs to the user (auto-claimed) — if so, don't charge
+      let isOwn = false;
+      try {
+        const user = getUser();
+        if (user) {
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/listings?id=eq.${listingId}&select=user_id,claimed_by_user_id`,
+            { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+          );
+          const [listing] = await res.json();
+          if (listing) {
+            isOwn = listing.user_id === user.userId || listing.claimed_by_user_id === user.userId;
+          }
+        }
+      } catch(e) {}
+      // If it's their own listing, just view it — no unlock
+      const dest = isOwn
+        ? 'listing_detail.html?id=' + listingId
+        : 'listing_detail.html?id=' + listingId + '&unlock=1';
       window.history.replaceState({}, '', dest);
       window.location.replace(dest);
     } else {

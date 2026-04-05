@@ -737,10 +737,18 @@ window.onload=async function(){
       document.getElementById('newPostBanner').style.display = 'block';
       window.history.replaceState({}, '', `listing_detail.html?id=${listingId}`);
     }
-    // Auto-open unlock sheet if returning from login
+    // Auto-open unlock sheet if returning from login — but only if not own listing
     if (new URLSearchParams(window.location.search).get('unlock') === '1') {
       window.history.replaceState({}, '', `listing_detail.html?id=${listingId}`);
-      setTimeout(() => openSheet('unlock'), 600);
+      const userCheck = getUser();
+      const isOwnAfterClaim = userCheck && (
+        listing.user_id === userCheck.userId ||
+        listing.claimed_by_user_id === userCheck.userId
+      );
+      if (!isOwnAfterClaim) {
+        setTimeout(() => openSheet('unlock'), 600);
+      }
+      // If it's their own listing, the bottom bar is already hidden — nothing to do
     }
     fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({view_count:(listing.view_count||0)+1})});
 
