@@ -861,7 +861,15 @@ function markAsUnlocked(listingId) {
 // ── LOAD LISTINGS FROM SUPABASE ────────────────────────────
 
 // ── LOAD LISTINGS FROM SUPABASE ────────────────────────────
-let _fetchedListings = []; // full result from DB
+
+// ── FEED STATE ─────────────────────────────────────────────
+let allListings = [];
+let _fetchedListings = [];
+let currentOffset = 0;
+const PAGE_SIZE = 20;
+let activeFilter = 'all';
+let activeArea = 'all';
+let activeAreaCoords = null;
 
 async function loadListings(reset = true) {
   if (reset) {
