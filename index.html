@@ -1033,7 +1033,13 @@ function renderListings(listings, reset) {
       <div class="type-label">${typeLabel}</div>
       <div class="broker-tag ${brokerClass} dot">${brokerText}</div>
       <div class="card-header">
-        <div class="card-title">${escHtml(l.title || l.description?.slice(0,80) || 'Listing in ' + areas)}</div>
+        <div class="card-title">${escHtml(l.title || (() => {
+          if (l.listing_type === 'flat_wanted') {
+            const what = l.room_type ? l.room_type : 'a flat';
+            return 'Looking for ' + what + ' in ' + areas;
+          }
+          return l.description?.slice(0,80) || 'Listing in ' + areas;
+        })())}</div>
         <div class="card-price">${price}<div class="per">${period}</div></div>
       </div>
       <div class="card-location">
@@ -1350,7 +1356,7 @@ const POPULAR_AREAS = [
   'Azad Nagar','DN Nagar','Veera Desai','Hiranandani','Chandivali',
   'Kalyan West','Dombivli','Kharghar','Nerul','Belapur','Airoli',
   'Tardeo','Malabar Hill','Peddar Road','Parel','Sewri','Dharavi',
-  'Bhayander','Nalasopara','Naigaon','Grant Road','Sakinaka','Vakola'
+  'Bhayander','Nalasopara','Naigaon','Grant Road','Sakinaka','Vakola','Marol','Marol Naka','Chakala'
 ];
 
 function homeAreaSearch(input) {
