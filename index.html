@@ -1029,17 +1029,22 @@ function renderListings(listings, reset) {
         window.location.href = 'listing_detail.html?id=' + l.id;
       }
     };
+    // Build card title
+    let cardTitle;
+    if (l.title) {
+      cardTitle = l.title;
+    } else if (l.listing_type === 'flat_wanted') {
+      const what = l.room_type ? l.room_type : 'a flat';
+      cardTitle = 'Looking for ' + what + ' in ' + areas;
+    } else {
+      cardTitle = l.description?.slice(0,80) || 'Listing in ' + areas;
+    }
+
     card.innerHTML = `
       <div class="type-label">${typeLabel}</div>
       <div class="broker-tag ${brokerClass} dot">${brokerText}</div>
       <div class="card-header">
-        <div class="card-title">${escHtml(l.title || (() => {
-          if (l.listing_type === 'flat_wanted') {
-            const what = l.room_type ? l.room_type : 'a flat';
-            return 'Looking for ' + what + ' in ' + areas;
-          }
-          return l.description?.slice(0,80) || 'Listing in ' + areas;
-        })())}</div>
+        <div class="card-title">${escHtml(cardTitle)}</div>
         <div class="card-price">${price}<div class="per">${period}</div></div>
       </div>
       <div class="card-location">
