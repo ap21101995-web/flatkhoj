@@ -992,6 +992,7 @@ function renderListings(listings, reset) {
   };
 
   listings.forEach(l => {
+    try {
     const areas = Array.isArray(l.areas) ? l.areas.join(' / ') : l.areas || 'Mumbai';
     const price = l.rent_amount ? `₹${l.rent_amount.toLocaleString('en-IN')}` : 'Price on request';
     const period = l.listing_type === 'flat_wanted' ? 'budget' : '/mo';
@@ -1075,6 +1076,9 @@ function renderListings(listings, reset) {
       </div>
     `;
     document.getElementById('feed').appendChild(card);
+    } catch(cardErr) {
+      console.error('Card render error for listing', l.id, cardErr);
+    }
   });
   markOwnListings();
 }
