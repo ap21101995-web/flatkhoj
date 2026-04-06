@@ -1014,10 +1014,10 @@ function renderListings(listings, reset) {
 
     const tags = [];
     if (l.flat_type) tags.push(l.flat_type);
-    if (l.room_type) tags.push(l.room_type);
+    if (l.room_type && l.listing_type !== 'flat_listing') tags.push(l.room_type);
     if (l.furnishing) tags.push(l.furnishing);
     if (l.food_preference) tags.push(l.food_preference);
-    if (l.gender_preference && l.gender_preference !== 'Any') tags.push(l.gender_preference);
+    if (l.gender_preference) tags.push(l.gender_preference);
 
     const tagsHTML = tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('');
 
