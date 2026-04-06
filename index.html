@@ -859,99 +859,73 @@ function markAsUnlocked(listingId) {
 }
 
 // ── LOAD LISTINGS FROM SUPABASE ────────────────────────────
-let allListings = [];
-let currentOffset = 0;
-const PAGE_SIZE = 20;
-let activeFilter = 'all';
-let activeArea = 'all';
-let activeAreaCoords = null;
+
+// ── LOAD LISTINGS FROM SUPABASE ────────────────────────────
+let _fetchedListings = []; // full result from DB
 
 async function loadListings(reset = true) {
-  if (reset) { currentOffset = 0; allListings = []; }
+  if (reset) {
+    currentOffset = 0;
+    allListings = [];
+    _fetchedListings = [];
+    // Clear only listing cards, not structural divs
+    const feed = document.getElementById('feed');
+    [...feed.children].forEach(c => {
+      if (!c.id) c.remove(); // only remove cards (they have no id)
+    });
+  }
 
-  const feed = document.getElementById('feed');
   document.getElementById('feedLoading').style.display = 'block';
   document.getElementById('feedEmpty').style.display = 'none';
   document.getElementById('loadMoreWrap').style.display = 'none';
 
   try {
-    let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&limit=100`;
-
+    let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&limit=200`;
     if (activeFilter !== 'all') url += `&listing_type=eq.${activeFilter}`;
 
     const res = await fetch(url, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     });
 
-    if (!res.ok) {
-      console.error('Supabase error:', res.status);
-      throw new Error('Query failed');
-    }
+    if (!res.ok) throw new Error('Fetch failed: ' + res.status);
 
     let listings = await res.json();
+    if (!Array.isArray(listings)) throw new Error('Bad response');
 
-    if (!Array.isArray(listings)) {
-      console.error('Unexpected response:', listings);
-      throw new Error('Invalid response');
-    }
-
-    // Filter and sort by area client-side
+    // Area filter
     if (activeArea && activeArea !== 'all') {
       const areaLower = activeArea.toLowerCase();
-      const searchCoords = activeAreaCoords || getAreaCoords(activeArea);
-
-      // Separate exact matches from others
-      const exactMatches = listings.filter(l => {
-        if (!l.areas) return false;
+      const exact = listings.filter(l => {
         const areas = Array.isArray(l.areas) ? l.areas : [l.areas];
-        return areas.some(a => a.toLowerCase().includes(areaLower));
+        return areas.some(a => a && a.toLowerCase().includes(areaLower));
       });
-
       const others = listings.filter(l => {
-        if (!l.areas) return true;
         const areas = Array.isArray(l.areas) ? l.areas : [l.areas];
-        return !areas.some(a => a.toLowerCase().includes(areaLower));
+        return !areas.some(a => a && a.toLowerCase().includes(areaLower));
       });
-
-      // Sort others by distance if we have coords
-      if (searchCoords) {
-        others.sort((a, b) => {
-          const coordsA = getListingCoords(a);
-          const coordsB = getListingCoords(b);
-          const distA = coordsA ? getDistance(searchCoords.lat, searchCoords.lng, coordsA.lat, coordsA.lng) : 999;
-          const distB = coordsB ? getDistance(searchCoords.lat, searchCoords.lng, coordsB.lat, coordsB.lng) : 999;
-          return distA - distB;
-        });
-      }
-
-      // Combine: exact matches first, then sorted by proximity
-      listings = [...exactMatches, ...others];
-
-      if (exactMatches.length === 0 && searchCoords) {
-        // No exact matches — show proximity message
-        document.querySelector('.stats-text').innerHTML =
-          `No listings in <strong>${activeArea}</strong> — showing nearest listings`;
-      }
+      listings = [...exact, ...others];
     }
 
-    // Apply pagination
-    const page = listings.slice(currentOffset, currentOffset + PAGE_SIZE);
+    _fetchedListings = listings;
     document.getElementById('feedLoading').style.display = 'none';
 
-    if (page.length === 0 && currentOffset === 0) {
+    if (listings.length === 0) {
       document.getElementById('feedEmpty').style.display = 'block';
       document.querySelector('.stats-text').innerHTML = 'No listings found';
       return;
     }
 
-    allListings = [...allListings, ...page];
-    renderListings(page, reset);
+    // Render first page
+    const page = listings.slice(0, PAGE_SIZE);
+    allListings = [...page];
+    currentOffset = PAGE_SIZE;
+    renderListings(page);
 
-    document.querySelector('.stats-text').innerHTML = `Showing <strong>${allListings.length} listing${allListings.length !== 1 ? 's' : ''}</strong> · Mumbai`;
+    document.querySelector('.stats-text').innerHTML =
+      `Showing <strong>${allListings.length}</strong> of <strong>${listings.length}</strong> listing${listings.length !== 1 ? 's' : ''}`;
 
-    if (listings.length > currentOffset + PAGE_SIZE) {
+    if (listings.length > PAGE_SIZE) {
       document.getElementById('loadMoreWrap').style.display = 'block';
-      currentOffset += PAGE_SIZE;
     }
 
   } catch(err) {
@@ -959,30 +933,29 @@ async function loadListings(reset = true) {
     document.getElementById('feedLoading').style.display = 'none';
     document.getElementById('feedEmpty').style.display = 'block';
     document.getElementById('feedEmpty').innerHTML = `
-      <div style="font-size:40px;margin-bottom:12px">😕</div>
-      <div style="font-size:16px;font-weight:700;color:#141414;margin-bottom:8px">Something went wrong</div>
-      <div style="font-size:14px;color:#888;margin-bottom:20px">Could not load listings. Please try again.</div>
-      <button onclick="loadListings()" style="background:#0f7b6c;color:white;border:none;border-radius:12px;padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer">Try again</button>
+      <div style="font-size:36px;margin-bottom:12px">😕</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px">Could not load listings</div>
+      <div style="font-size:13px;color:#888;margin-bottom:16px">${err.message}</div>
+      <button onclick="loadListings()" style="background:#0f7b6c;color:white;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Retry →</button>
     `;
   }
 }
 
-function loadMoreListings() { loadListings(false); }
-
-// ── RENDER LISTING CARDS ────────────────────────────────────
-function renderListings(listings, reset) {
-  const feed = document.getElementById('feed');
-  if (reset) {
-    feed.innerHTML = `
-      <div id="feedLoading" style="display:none;text-align:center;padding:40px 20px;color:#888;font-size:14px">Loading listings…</div>
-      <div id="feedEmpty" style="display:none;text-align:center;padding:40px 20px">
-        <div style="font-size:40px;margin-bottom:12px">🏠</div>
-        <div style="font-size:16px;font-weight:700;color:#141414;margin-bottom:8px">No listings yet</div>
-        <div style="font-size:14px;color:#888;margin-bottom:20px">Be the first to post a listing in Mumbai!</div>
-        <button onclick="window.location.href='post_form.html'" style="background:#0f7b6c;color:white;border:none;border-radius:12px;padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer">Post a listing →</button>
-      </div>
-    `;
+function loadMoreListings() {
+  if (currentOffset >= _fetchedListings.length) return;
+  const page = _fetchedListings.slice(currentOffset, currentOffset + PAGE_SIZE);
+  allListings = [...allListings, ...page];
+  currentOffset += PAGE_SIZE;
+  renderListings(page);
+  document.querySelector('.stats-text').innerHTML =
+    `Showing <strong>${allListings.length}</strong> of <strong>${_fetchedListings.length}</strong> listing${_fetchedListings.length !== 1 ? 's' : ''}`;
+  if (currentOffset >= _fetchedListings.length) {
+    document.getElementById('loadMoreWrap').style.display = 'none';
   }
+}
+
+function renderListings(listings) {
+  const feed = document.getElementById('feed');
 
   const typeLabels = {
     flat_listing: '🏠 Flat listing',
@@ -993,93 +966,97 @@ function renderListings(listings, reset) {
 
   listings.forEach(l => {
     try {
-    const areas = Array.isArray(l.areas) ? l.areas.join(' / ') : l.areas || 'Mumbai';
-    const price = l.rent_amount ? `₹${l.rent_amount.toLocaleString('en-IN')}` : 'Price on request';
-    const period = l.listing_type === 'flat_wanted' ? 'budget' : '/mo';
-    const typeLabel = typeLabels[l.listing_type] || l.listing_type;
-    let brokerClass, brokerText;
-    if (l.listing_type === 'flat_wanted') {
-      const pref = l.brokerage_preference;
-      if (pref === 'no') { brokerClass = 'no-broker'; brokerText = '🚫 No Brokerage'; }
-      else if (pref === 'prefno') { brokerClass = 'pref-broker'; brokerText = '🤝 Prefer No Brokerage'; }
-      else if (pref === 'yes') { brokerClass = 'ok-broker'; brokerText = '✅ Okay With Brokerage'; }
-      else { brokerClass = 'no-broker'; brokerText = 'Looking For Flat'; }
-    } else {
-      brokerClass = l.has_brokerage ? 'has-broker' : 'no-broker';
-      brokerText = l.has_brokerage ? 'Brokerage Applicable' : 'No Brokerage';
-    }
-    const timeAgo = getTimeAgo(l.created_at);
-    const name = l.poster_name || '';
-    const initials = name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : getInitials(l.user_id);
-    const avatarColor = getColor(l.user_id);
+      const areas = Array.isArray(l.areas) ? l.areas.join(' / ') : (l.areas || 'Mumbai');
+      const price = l.rent_amount ? `₹${l.rent_amount.toLocaleString('en-IN')}` : 'Price on request';
+      const period = l.listing_type === 'flat_wanted' ? 'budget' : '/mo';
+      const typeLabel = typeLabels[l.listing_type] || l.listing_type;
 
-    const tags = [];
-    if (l.flat_type) tags.push(l.flat_type);
-    if (l.room_type && l.listing_type !== 'flat_listing') tags.push(l.room_type);
-    if (l.furnishing) tags.push(l.furnishing);
-    if (l.food_preference) tags.push(l.food_preference);
-    if (l.gender_preference) tags.push(l.gender_preference);
-
-    const tagsHTML = tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('');
-
-    const card = document.createElement('div');
-    card.className = 'listing-card';
-    card.style.cursor = 'pointer';
-    card.onclick = function(e) {
-      if (!e.target.closest('.unlock-btn') && !e.target.closest('.save-btn')) {
-        window.location.href = 'listing_detail.html?id=' + l.id;
+      let brokerClass, brokerText;
+      if (l.listing_type === 'flat_wanted') {
+        const pref = l.brokerage_preference;
+        if (pref === 'no') { brokerClass = 'no-broker'; brokerText = '🚫 No Brokerage'; }
+        else if (pref === 'prefno') { brokerClass = 'pref-broker'; brokerText = '🤝 Prefer No Brokerage'; }
+        else if (pref === 'yes') { brokerClass = 'ok-broker'; brokerText = '✅ Okay With Brokerage'; }
+        else { brokerClass = 'no-broker'; brokerText = 'Looking For Flat'; }
+      } else {
+        brokerClass = l.has_brokerage ? 'has-broker' : 'no-broker';
+        brokerText = l.has_brokerage ? 'Brokerage Applicable' : 'No Brokerage';
       }
-    };
-    // Build card title
-    let cardTitle;
-    if (l.title) {
-      cardTitle = l.title;
-    } else if (l.listing_type === 'flat_wanted') {
-      const what = l.room_type ? l.room_type : 'a flat';
-      cardTitle = 'Looking for ' + what + ' in ' + areas;
-    } else {
-      cardTitle = l.description?.slice(0,80) || 'Listing in ' + areas;
-    }
 
-    card.innerHTML = `
-      <div class="type-label">${typeLabel}</div>
-      <div class="broker-tag ${brokerClass} dot">${brokerText}</div>
-      <div class="card-header">
-        <div class="card-title">${escHtml(cardTitle)}</div>
-        <div class="card-price">${price}<div class="per">${period}</div></div>
-      </div>
-      <div class="card-location">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        ${escHtml(areas)}, Mumbai
-      </div>
-      ${tagsHTML ? `<div class="card-tags">${tagsHTML}</div>` : ''}
-      <div class="card-footer">
-        <div class="poster-row">
-          <div class="avatar" style="background:${avatarColor}">${initials}</div>
-          <div>
-            <div class="poster-name">${escHtml(l.poster_name || 'FlatKhoj Member')}</div>
-            <div class="poster-role">${
-              l.listing_type === 'flat_wanted' ? 'Looking For Flat' :
-              l.listing_type === 'flatmate_wanted' ? 'Looking for flatmate' :
-              l.listing_type === 'pg_listing' ? 'PG Owner' :
-              l.has_brokerage ? 'Broker' : 'Owner'
-            }</div>
-          </div>
+      const timeAgo = getTimeAgo(l.created_at);
+      const name = l.poster_name || '';
+      const initials = name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : getInitials(l.user_id);
+      const avatarColor = getColor(l.user_id);
+
+      const tags = [];
+      if (l.flat_type) tags.push(l.flat_type);
+      if (l.room_type && l.listing_type !== 'flat_listing') tags.push(l.room_type);
+      if (l.furnishing) tags.push(l.furnishing);
+      if (l.food_preference) tags.push(l.food_preference);
+      if (l.gender_preference) tags.push(l.gender_preference);
+      const tagsHTML = tags.slice(0,4).map(t => `<span class="card-tag">${escHtml(t)}</span>`).join('');
+
+      let cardTitle;
+      if (l.title) {
+        cardTitle = l.title;
+      } else if (l.listing_type === 'flat_wanted') {
+        const what = l.room_type ? l.room_type : 'a flat';
+        cardTitle = 'Looking for ' + what + ' in ' + areas;
+      } else {
+        cardTitle = l.description ? l.description.slice(0,80) : ('Listing in ' + areas);
+      }
+
+      const card = document.createElement('div');
+      card.className = 'listing-card';
+      card.dataset.listingId = l.id;
+      card.style.cursor = 'pointer';
+      card.onclick = function(e) {
+        if (!e.target.closest('.unlock-btn') && !e.target.closest('.save-btn')) {
+          window.location.href = 'listing_detail.html?id=' + l.id;
+        }
+      };
+
+      card.innerHTML = `
+        <div class="type-label">${typeLabel}</div>
+        <div class="broker-tag ${brokerClass} dot">${brokerText}</div>
+        <div class="card-header">
+          <div class="card-title">${escHtml(cardTitle)}</div>
+          <div class="card-price">${price}<div class="per">${period}</div></div>
         </div>
-        <div class="time-ago">${timeAgo}</div>
-      </div>
-      <div class="unlock-row">
-        ${buildUnlockBtn(l, areas)}
-        <button class="save-btn" onclick="toggleSave(this,'${l.id}')" title="Save" style="${savedListingIds.has(l.id)?'background:#fef6e4;border-color:#e6a817':''}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="${savedListingIds.has(l.id)?'#e6a817':'none'}" stroke="${savedListingIds.has(l.id)?'#e6a817':'#888'}" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        </button>
-      </div>
-    `;
-    document.getElementById('feed').appendChild(card);
+        <div class="card-location">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${escHtml(areas)}, Mumbai
+        </div>
+        ${tagsHTML ? `<div class="card-tags">${tagsHTML}</div>` : ''}
+        <div class="card-footer">
+          <div class="poster-row">
+            <div class="avatar" style="background:${avatarColor}">${initials}</div>
+            <div>
+              <div class="poster-name">${escHtml(l.poster_name || 'FlatKhoj Member')}</div>
+              <div class="poster-role">${
+                l.listing_type === 'flat_wanted' ? 'Looking For Flat' :
+                l.listing_type === 'flatmate_wanted' ? 'Looking for Flatmate' :
+                l.listing_type === 'pg_listing' ? 'PG Owner' :
+                l.has_brokerage ? 'Broker' : 'Owner'
+              }</div>
+            </div>
+          </div>
+          <div class="time-ago">${timeAgo}</div>
+        </div>
+        <div class="unlock-row">
+          ${buildUnlockBtn(l, areas)}
+          <button class="save-btn" onclick="toggleSave(this,'${l.id}')" title="Save" style="${savedListingIds.has(l.id)?'background:var(--gold-bg);border-color:var(--gold)':''}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="${savedListingIds.has(l.id)?'#e6a817':'none'}" stroke="${savedListingIds.has(l.id)?'#e6a817':'currentColor'}" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </div>
+      `;
+
+      feed.appendChild(card);
     } catch(cardErr) {
-      console.error('Card render error for listing', l.id, cardErr);
+      console.error('Card error for listing', l?.id, cardErr);
     }
   });
+
   markOwnListings();
 }
 
