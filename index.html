@@ -1010,6 +1010,8 @@ function renderListings(listings) {
       } else if (l.listing_type === 'flat_wanted') {
         const what = l.room_type ? l.room_type : 'a flat';
         cardTitle = 'Looking for ' + what + ' in ' + areas;
+      } else if (l.listing_type === 'flatmate_wanted') {
+        cardTitle = 'Flatmate wanted in ' + areas;
       } else {
         cardTitle = l.description ? l.description.slice(0,80) : ('Listing in ' + areas);
       }
@@ -1515,12 +1517,12 @@ async function loadAreaChips() {
   }
 }
 
-// Load area chips and listings on page load
-loadAreaChips();
-
-// Fetch saved AND unlocked listings from Supabase before rendering cards
+// Global sets — must be declared before anything uses them
 let savedListingIds = new Set();
 let unlockedListingIds = new Set();
+
+// Load area chips (non-blocking — don't await)
+loadAreaChips();
 
 async function fetchUserData() {
   const user = getUser();
@@ -1552,8 +1554,11 @@ async function fetchUserData() {
 
 // Re-fetch when user navigates back — fires on BOTH cached and fresh loads
 window.addEventListener('pageshow', async function(e) {
-  await fetchUserData();
-  loadListings();
+  // Only reload on back/forward cache restore, not on initial load
+  if (e.persisted) {
+    await fetchUserData();
+    loadListings();
+  }
 });
 
 // Also re-fetch on focus (when switching back from another tab/app)
