@@ -51,41 +51,41 @@ body {
   position: sticky; top: 0; z-index: 50;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
-  padding: 0 16px;
+  padding: 0 12px;
 }
 .topbar-inner {
   display: flex; align-items: center;
-  height: 52px; gap: 12px;
+  height: 52px; gap: 8px;
 }
 .logo {
-  font-size: 17px; font-weight: 700; color: var(--ink);
+  font-size: 15px; font-weight: 700; color: var(--ink);
   letter-spacing: -0.3px; white-space: nowrap;
-  text-decoration: none;
+  text-decoration: none; flex-shrink: 0;
 }
 .logo span { color: var(--teal); }
 .search-wrap {
-  flex: 1;
+  flex: 1; min-width: 0;
   display: flex; align-items: center;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 100px;
-  padding: 0 14px; height: 38px; gap: 8px;
+  padding: 0 10px; height: 36px; gap: 6px;
 }
 .search-wrap svg { flex-shrink:0; }
 .search-wrap input {
   border: none; background: transparent;
-  font-family: var(--font); font-size: 14px;
+  font-family: var(--font); font-size: 13px;
   color: var(--ink); flex: 1; outline: none;
-  min-width: 0;
+  min-width: 0; width: 0;
 }
 .search-wrap input::placeholder { color: var(--ink3); }
 .post-btn {
   background: var(--teal); color: white;
   border: none; border-radius: 100px;
-  padding: 0 14px; height: 36px;
-  font-family: var(--font); font-size: 13px; font-weight: 600;
+  padding: 0 12px; height: 34px;
+  font-family: var(--font); font-size: 12px; font-weight: 700;
   cursor: pointer; white-space: nowrap;
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: 4px;
   text-decoration: none;
   transition: background 0.15s;
   flex-shrink: 0;
@@ -537,8 +537,8 @@ body {
         onkeydown="if(event.key==='Escape')closeHomeSearch()">
       <div id="homeSearchDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid #e8e8e4;border-radius:12px;overflow:hidden;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.1);max-height:280px;overflow-y:auto"></div>
     </div>
-    <div id="navCoinBadge" style="display:none;align-items:center;gap:5px;background:#fffbee;border:1.5px solid #e6a817;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700;color:#b07d00;cursor:pointer" onclick="window.location.href='coins.html'">
-      🪙 <span id="navCoinCount">0</span>
+    <div id="navCoinBadge" style="display:none;align-items:center;gap:3px;background:#fffbee;border:1.5px solid #e6a817;border-radius:20px;padding:4px 9px;font-size:12px;font-weight:700;color:#b07d00;cursor:pointer;flex-shrink:0;white-space:nowrap" onclick="window.location.href='coins.html'">
+      🪙<span id="navCoinCount">0</span>
     </div>
     <button class="post-btn" onclick="window.location.href='post_form.html'">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -1095,8 +1095,8 @@ function buildUnlockBtn(l, areas) {
   if (user) {
     return '<button class="unlock-btn" data-listing-id="' + l.id + '" data-owner-id="' + (l.user_id||'') + '" data-area="' + escHtml(areas) + '" onclick="handleUnlockCard(this)">Unlock contact <span class="coin-pip">' + UNLOCK_COST + ' 🪙</span></button>';
   }
-  // Not logged in: just "Unlock contact" — no coin numbers
-  return '<button class="unlock-btn" data-listing-id="' + l.id + '" data-owner-id="' + (l.user_id||'') + '" data-area="' + escHtml(areas) + '" onclick="handleUnlockCard(this)">Unlock contact</button>';
+  // Not logged in: just "Unlock Contact" — no coin numbers
+  return '<button class="unlock-btn" data-listing-id="' + l.id + '" data-owner-id="' + (l.user_id||'') + '" data-area="' + escHtml(areas) + '" onclick="handleUnlockCard(this)">Unlock Contact</button>';
 }
 
 async function viewUnlockedContact(listingId) {
