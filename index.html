@@ -554,7 +554,6 @@ body {
     <button class="filter-chip" onclick="setFilter(this,'flatwanted')">🔍 Flat Wanted</button>
     <button class="filter-chip" onclick="setFilter(this,'flatlisting')">🏠 Flat Listing</button>
     <button class="filter-chip" onclick="setFilter(this,'flatmate')">👥 Flatmate Wanted</button>
-    <button class="filter-chip" onclick="setFilter(this,'pg')">🏨 PG Listing</button>
     <button class="filter-chip teal-active" onclick="openFilterSheet()">⚙ More Filters</button>
     <button class="filter-chip" onclick="setFilter(this,'nobroker')" style="border-color:#0f7b6c;color:#0f7b6c">✓ No Broker</button>
   </div>
@@ -706,7 +705,6 @@ body {
       <div class="filter-pill" onclick="toggleFPill(this,'ftype')">Flat Wanted</div>
       <div class="filter-pill" onclick="toggleFPill(this,'ftype')">Flat Listing</div>
       <div class="filter-pill" onclick="toggleFPill(this,'ftype')">Flatmate Wanted</div>
-      <div class="filter-pill" onclick="toggleFPill(this,'ftype')">PG Listing</div>
     </div>
   </div>
 
@@ -1016,7 +1014,7 @@ function renderListings(listings) {
       } else if (l.listing_type === 'flatmate_wanted') {
         cardTitle = 'Flatmate wanted in ' + areas;
       } else {
-        cardTitle = l.description ? l.description.slice(0,80) : ('Listing in ' + areas);
+        cardTitle = l.description ? l.description.slice(0,80) : (l.listing_type === 'flat_listing' ? 'Flat available in ' + areas : 'Listing in ' + areas);
       }
 
       const card = document.createElement('div');
