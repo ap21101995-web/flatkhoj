@@ -698,27 +698,47 @@ window.onload=async function(){
     const listings=await supaGet(`listings?id=eq.${listingId}&select=*`);
     if(!listings||listings.length===0){window.location.href='index.html';return;}
     listing=listings[0];
-    // Use custom contact phone if set by owner, otherwise use poster's login phone
-    if (listing.custom_contact_phone) {
-      posterPhone = listing.custom_contact_phone;
-    } else {
-      const users=await supaGet(`users?id=eq.${listing.user_id}&select=phone`);
-      if(users&&users.length>0) posterPhone=users[0].phone;
-    }
-    const user=getUser();
-    if(user){
-      // Check localStorage first for instant display
-      const cachedUnlocked = JSON.parse(localStorage.getItem('fk_unlocked') || '[]');
-      if(cachedUnlocked.includes(listingId)) {
-        showAlreadyUnlocked();
-      } else {
-        // Verify with Supabase
-        const unlocks=await supaGet(`contact_unlocks?unlocker_user_id=eq.${user.userId}&listing_id=eq.${listingId}`);
-        if(unlocks&&unlocks.length>0) showAlreadyUnlocked();
-      }
-    }
+
+    // ── RENDER IMMEDIATELY — don't wait for secondary fetches ──
     renderListing();
     showOwnerControls();
+
+    const user=getUser();
+
+    // ── SECONDARY FETCHES IN PARALLEL — non-blocking ──
+    const secondaryWork = async () => {
+      // Get poster phone and unlock status simultaneously
+      const tasks = [];
+
+      // Phone fetch (only if no custom phone)
+      if (!listing.custom_contact_phone) {
+        tasks.push(
+          supaGet(`users?id=eq.${listing.user_id}&select=phone`)
+            .then(users => { if(users&&users.length>0) posterPhone=users[0].phone; })
+            .catch(()=>{})
+        );
+      } else {
+        posterPhone = listing.custom_contact_phone;
+      }
+
+      // Unlock status — check localStorage first (instant), verify DB silently
+      if (user) {
+        const cachedUnlocked = JSON.parse(localStorage.getItem('fk_unlocked') || '[]');
+        if (cachedUnlocked.includes(listingId)) {
+          showAlreadyUnlocked();
+        } else {
+          tasks.push(
+            supaGet(`contact_unlocks?unlocker_user_id=eq.${user.userId}&listing_id=eq.${listingId}`)
+              .then(unlocks => { if(unlocks&&unlocks.length>0) showAlreadyUnlocked(); })
+              .catch(()=>{})
+          );
+        }
+      }
+
+      await Promise.all(tasks);
+    };
+
+    secondaryWork(); // fire and forget — page already rendered
 
     // Hide unlock button if this is user's own listing
     if(user){
