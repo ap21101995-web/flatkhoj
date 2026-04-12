@@ -560,11 +560,16 @@ function handleFiles(input) {
       const base64Full = e.target.result;
       const base64Data = base64Full.split(',')[1];
 
-      // Show checking state
+      // Show checking state (only for non-owners)
       const btn = document.getElementById('continueBtn');
       const origText = btn.textContent;
-      btn.textContent = '🔍 Checking photo…';
-      btn.disabled = true;
+      const _uCheck = getUser();
+      const _phCheck = String(_uCheck?.phone||'').replace(/\D/g,'').slice(-10);
+      const isOwnerCheck = _phCheck === '9538584612' || _uCheck?.isOwner === true || _uCheck?.isOwner === 'true';
+      if (!isOwnerCheck) {
+        btn.textContent = '🔍 Checking photo…';
+        btn.disabled = true;
+      }
 
       // Show a temporary "checking" thumbnail
       const tempId = 'temp_' + Date.now();
@@ -575,6 +580,21 @@ function handleFiles(input) {
       tempThumb.innerHTML = `<img src="${base64Full}" alt="Checking…"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);border-radius:10px;color:white;font-size:12px;font-weight:700">Checking…</div>`;
       document.getElementById('photoSection').style.display = 'block';
       document.getElementById('photoGrid').appendChild(tempThumb);
+
+      // Owner bypass — skip all moderation checks
+      const _u = getUser();
+      const _ph = String(_u?.phone||'').replace(/\D/g,'').slice(-10);
+      const isOwnerUpload = _ph === '9538584612' || _u?.isOwner === true || _u?.isOwner === 'true';
+
+      if (isOwnerUpload) {
+        // Owner: skip checking, add directly
+        document.getElementById(tempId)?.remove();
+        btn.textContent = origText;
+        btn.disabled = false;
+        photos.push({ file, preview: base64Full, url: null });
+        renderPhotos();
+        return;
+      }
 
       const modResult = await moderatePhoto(base64Data, file.type);
 
