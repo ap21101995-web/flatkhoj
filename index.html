@@ -816,6 +816,49 @@ if (new URLSearchParams(window.location.search).get('posted') === '1') {
 const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
 
+// ── COINS — single source of truth ────────────────────────
+async function refreshCoins(forceDB = true) {
+  const user = getUser();
+  if (!user) return 0;
+  let coins = user.coins || 0;
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const data = await res.json();
+    if (data[0]?.coins !== undefined) {
+      coins = data[0].coins;
+      user.coins = coins;
+      localStorage.setItem('fmh_user', JSON.stringify(user));
+    }
+  } catch(e) {}
+  updateCoinDisplays(coins);
+  return coins;
+}
+
+function updateCoinDisplays(coins) {
+  // Nav badge (index)
+  const navCount = document.getElementById('navCoinCount');
+  if (navCount) { navCount.textContent = coins; }
+  const navBadge = document.getElementById('navCoinBadge');
+  if (navBadge) navBadge.style.display = getUser() ? 'flex' : 'none';
+
+  // Unlock sheet balance (index + listing_detail)
+  document.querySelectorAll('#unlockSheetBalance, #unlockCoinBalance').forEach(el => {
+    el.textContent = '🪙 ' + coins + ' coins';
+  });
+
+  // Coin balance bar (listing_detail)
+  const coinBalanceNum = document.getElementById('coinBalanceNum');
+  if (coinBalanceNum) coinBalanceNum.textContent = '🪙 ' + coins;
+  const coinBalanceBar = document.getElementById('coinBalanceBar');
+  if (coinBalanceBar) coinBalanceBar.style.display = 'flex';
+
+  // Activity page
+  const coinBalanceEl = document.getElementById('coinBalance');
+  if (coinBalanceEl) coinBalanceEl.textContent = coins + ' 🪙';
+}
+
 function getUser() {
   try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; }
 }
@@ -1347,80 +1390,139 @@ function escHtml(str) {
 
 // ── HOME SEARCH BAR ────────────────────────────────────────
 const POPULAR_AREAS = [
-  'Nariman Point','Churchgate','Marine Drive','Marine Lines','Colaba','Cuffe Parade',
-  'Fort','Ballard Estate','CSMT','Mandvi','Kalbadevi','Girgaon',
-  'Charni Road','Grant Road','Tardeo','Breach Candy','Peddar Road','Nepean Sea Road',
-  'Kemp Corner','Malabar Hill','Walkeshwar','Banganga','Cumballa Hill','Altamount Road',
-  'Carmichael Road','Warden Road','Bhulabhai Desai Road','August Kranti Marg','Colaba Causeway','Gateway of India',
-  'World Trade Centre Area','NCPA Area','Byculla','Mazgaon','Dockyard Road','Sandhurst Road',
-  'Reay Road','Cotton Green','Sewri','Chunabhatti','Sion','Antop Hill',
-  'Anik','Mahul','Dadar West','Dadar','Dadar East','Dadar TT',
-  'Shivaji Park','Cadell Road','Mahim','Mahim West','Mahim East','Prabhadevi',
-  'Worli','Worli Sea Face','Worli Naka','Lower Parel','Parel','Parel Village',
-  'NM Joshi Marg','Lalbaug','Jacob Circle','Matunga West','Matunga East','Matunga',
-  'King Circle','Sion Koliwada','Hindmata','Dharavi','Matunga Labour Camp','Bandra West',
-  'Bandra','Bandra East','Bandra Reclamation','Bandra Hill Road','Bandra Bandstand','Bandra Carter Road',
-  'Bandra Pali Hill','Bandra Linking Road','Bandra Fair','Reclamation Bandra','Khar West','Khar',
-  'Khar East','Khar Danda','Santacruz West','Santacruz','Santacruz East','Kalina',
-  'Vakola','Vile Parle West','Vile Parle','Vile Parle East','Juhu','Juhu Scheme',
-  'JVPD Scheme','Parle East','Parle','Parle West','BKC','Bandra Kurla Complex',
-  'Kalanagar','Khernagar','MMRDA Colony','Andheri West','Andheri','Lokhandwala',
-  'Versova','Four Bungalows','Seven Bungalows','DN Nagar','Azad Nagar','Oshiwara',
-  'JP Road','Gilbert Hill','Lal Bahadur Shastri Road Andheri','JVLR','Andheri East','MIDC Andheri',
-  'SEEPZ','Marol','Marol Naka','Chakala','Sahar','Sahar Village',
-  'Kondivita','Mahakali Caves Road','Sher-E-Punjab','Jogeshwari West','Jogeshwari','Jogeshwari East',
-  'Gundavali','Jogeshwari Vikhroli Link Road','Powai','Hiranandani Gardens','Chandivali','Saki Naka',
-  'Sakinaka','Asalpha','Ghatkopar West','Ghatkopar','Ghatkopar East','Pant Nagar',
-  'Jawahar Nagar Ghatkopar','Ramabai Colony','Subhash Nagar Ghatkopar','Laxmi Nagar Ghatkopar','Vidyavihar West','Vidyavihar',
-  'Vidyavihar East','Ghatkopar Station','Vikhroli West','Vikhroli','Vikhroli East','Kanjurmarg',
-  'Kanjurmarg West','Kanjurmarg East','Kurla West','Kurla','Kurla East','Kurla Station',
-  'LBS Road Kurla','Nehru Nagar Kurla','Kurla Market','Prakash Nagar Kurla','Bandra Terminus Area','Chembur',
-  'Chembur Camp','Chembur Naka','Chembur Colony','Sindhi Society','Govandi','Govandi East',
-  'Deonar','Trombay','R C Marg','Shivaji Nagar Govandi','Cheetah Camp','Mankhurd',
-  'Tilak Nagar','Nehru Nagar Chembur','Amar Mahal','Goregaon West','Goregaon','Goregaon East',
-  'Film City','Aarey Colony','NESCO','MHB Colony Goregaon','Film City Road','Pahadi Goregaon',
-  'Raheja Vihar','Malad West','Malad','Malad East','Malvani','Marve',
-  'Madh Island','Erangal','Malad Link Road','Mindspace','Penkarpada','Poisar',
-  'Orlem','Marve Road','Kandivali West','Kandivali','Kandivali East','Charkop',
-  'Akurli Road','Thakur Village','Thakur Complex','Samata Nagar Kandivali','Poisar Kandivali','Borivali West',
-  'Borivali','Borivali East','Mandpeshwar','Eksar Road','Shimpoli','IC Colony',
-  'Rajendra Nagar Borivali','Vasant Vihar Borivali','Dahisar West','Dahisar','Dahisar East','Anand Nagar Dahisar',
-  'Dahisar Check Naka','Mira Road','Mira Road East','Bhayandar West','Bhayandar','Bhayandar East',
-  'Mira Bhayandar','Kashimira','Shanti Park Mira Road','Golden Nest Mira Road','Bhayander Station','Uttan',
-  'Gorai','Vasai West','Vasai','Vasai East','Vasai Road','Vasai Station',
-  'Virar West','Virar','Virar East','Virar Station','Nalasopara West','Nalasopara',
-  'Nalasopara East','Naigaon West','Naigaon','Naigaon East','Pelhar','Achole',
-  'Palghar','Boisar','Dahanu','Gholvad','Kelve Road','Manor',
-  'Wada','Mulund West','Mulund','Mulund East','Nahur','Bhandup West',
-  'Bhandup','Bhandup East','Ram Nagar Mulund','Veena Nagar Mulund','LBS Road Mulund','Thane West',
-  'Thane','Thane East','Naupada','Vartak Nagar','Wagle Estate','Majiwada',
-  'Manpada','Kapurbawdi','Panchpakhadi','Uthalsar','Brahmand','Kolshet',
-  'Teen Haath Naka','Charai','Dhokali','Patlipada','Tembhi Naka','Vasant Vihar Thane',
-  'Pokhran Road 1','Pokhran Road 2','Hiranandani Estate Thane','Gaimukh','Owale','Khidkali',
-  'Ghodbunder Road','Lakeshore Greens Thane','Eastern Express Highway Thane','Kopri','Shreyas Colony','Mumbra',
-  'Diva','Kalwa','Airoli Junction','Digha','Shil Road','Kalyan West',
-  'Kalyan','Kalyan East','Kalyan Station Area','Mokadam','Adharpada','Saraswati Nagar Kalyan',
-  'Ganesh Nagar Kalyan','Ambedkar Nagar Kalyan','Shahad','Ambivli','Vithalwadi','Kopar',
-  'Titwala','Khadavli','Dombivli West','Dombivli','Dombivli East','Dombivli Station',
-  'Thakurli','Dombivli MIDC','Sagaon','Manjarli','Lodha Palava','New Town Dombivli',
-  'Ulhasnagar 1','Ulhasnagar 2','Ulhasnagar 3','Ulhasnagar 4','Ulhasnagar 5','Ambernath West',
-  'Ambernath','Ambernath East','Badlapur West','Badlapur','Badlapur East','Bhiwandi',
-  'Narpoli','Anjur','Kalher','Kasheli','Airoli','Airoli Sector 1',
-  'Airoli Sector 4','Airoli Sector 6','Airoli Sector 7','Ghansoli','Rabale','Kopar Khairane',
-  'Turbhe','Mahape','Navi Mumbai MIDC','Vashi','Vashi Sector 1','Vashi Sector 2',
-  'Vashi Sector 3','Vashi Sector 4','Vashi Sector 5','Vashi Sector 6','Vashi Sector 7','Vashi Sector 8',
-  'Vashi Sector 9','Vashi Sector 10','Vashi Station','Sanpada','Juinagar','Nerul',
+  'Colaba','Cuffe Parade','Nariman Point','Churchgate','Fort','Ballard Estate',
+  'CSMT','Mandvi','Kalbadevi','Girgaon','Charni Road','Marine Drive',
+  'Marine Lines','Colaba Causeway','Gateway of India','Regal Cinema Area','Afghan Church Area','World Trade Centre',
+  'NCPA','Sassoon Dock','Navy Nagar','Backbay Reclamation','Wodehouse Road','Walton Road',
+  'Merewether Road','Arthur Bunder Road','Cooperage','Cross Maidan','Azad Maidan','Cusrow Baug',
+  'Grant Road','Grant Road West','Grant Road East','Tardeo','Breach Candy','Peddar Road',
+  'Nepean Sea Road','Kemp Corner','August Kranti Marg','Bhulabhai Desai Road','Warden Road','Carmichael Road',
+  'Cumballa Hill','Altamount Road','Nana Chowk','Gamdevi','Kemps Corner','Teen Batti',
+  'Malabar Hill','Walkeshwar','Banganga','Ridge Road','Laburnum Road','Byculla',
+  'Byculla West','Byculla East','Mazgaon','Dockyard Road','Sandhurst Road','Dongri',
+  'Pydhonie','Nagpada','Bhendi Bazaar','Clare Road','Arthur Road','Nesbit Road',
+  'Cotton Green','Reay Road','Sewri','Sewri West','Sewri East','Wadala',
+  'Wadala West','Wadala East','Worli','Worli Sea Face','Worli Naka','Worli Village',
+  'Annie Besant Road','Prabhadevi','Lower Parel','Lower Parel West','Senapati Bapat Marg','Delisle Road',
+  'Tulsi Pipe Road','Kamala Mills','Phoenix Mills Area','Elphinstone Road','Currey Road','Parel',
+  'Parel Village','NM Joshi Marg','Lalbaug','Jacob Circle','Bhoiwada','Naigaum',
+  'Curry Road','Chinchpokli','Dadar West','Dadar','Dadar East','Dadar TT',
+  'Shivaji Park','Cadell Road','Gokhale Road','Ranade Road','LJ Road Dadar','Dadar Chowpatty',
+  'Hindu Colony','Ruia College Area','Chaityabhoomi','Five Gardens','Kirti College Area','Saraswat Colony',
+  'Portugese Church Area','Mahim','Mahim West','Mahim East','Mahim Causeway','Lady Jamshedji Road',
+  'SV Road Mahim','Dharavi','Dharavi Main Road','90 Feet Road Dharavi','60 Feet Road Dharavi','Matunga',
+  'Matunga West','Matunga East','King Circle','Ruia Park','Hindu Colony Matunga','Telang Road',
+  'Sion','Sion West','Sion East','Sion Koliwada','Sion Hospital Area','Antop Hill',
+  'Anik','Mahul','Bandra West','Bandra','Bandra East','Bandra Bandstand',
+  'Bandra Carter Road','Bandra Hill Road','Bandra Pali Hill','Bandra Linking Road','Bandra Reclamation','Chapel Road',
+  'Turner Road','Mount Mary','Perry Road','Waroda Road','St Andrews Road','Union Park',
+  'Waterfield Road','Ranwar','Ranwar Village','Pali Village','Pali Naka','Pali Market',
+  'Chuim Village','Bandra Bazar','National Library Road','Bandra Fort','Khernagar','MMRDA Colony',
+  'Kalanagar','BKC','Bandra Kurla Complex','Kalina','Vakola','Vakola Market',
+  'Vakola Bridge','Vakola Pipeline Road','Khar West','Khar','Khar East','Khar Danda',
+  'Khar Road','16th Road Khar','17th Road Khar','20th Road Khar','Linking Road Khar','Santacruz West',
+  'Santacruz','Santacruz East','Santacruz Station','Tilak Road Santacruz','Juhu Tara Road','Navpada Santacruz',
+  'Vile Parle West','Vile Parle','Vile Parle East','Parle East','Parle','Parle West',
+  'Irla','Irla Market','Juhu Scheme','JVPD Scheme','Nehru Road Vile Parle','SV Road Vile Parle',
+  'Navpada Vile Parle','Samarth Nagar','Bhakti Vedanta Marg','Navpada','Railway Colony Vile Parle','Juhu',
+  'Juhu Beach','Juhu Chowpatty','Juhu Versova Link Road','Shastri Nagar Juhu','Airport Road Juhu','Andheri West',
+  'Andheri','Lokhandwala','Lokhandwala Market','Lokhandwala Complex','Versova','Versova Beach',
+  'Four Bungalows','Seven Bungalows','DN Nagar','Azad Nagar','Oshiwara','Lower Oshiwara',
+  'Upper Oshiwara','Oshiwara Market','Oshiwara Colony','Oshiwara Depot Area','Lal Bahadur Shastri Road','JP Road',
+  'JP Nagar','Gilbert Hill','Andheri Station West','Andheri Station','Amboli','Amboli Naka',
+  'Sher E Punjab','Bharat Nagar Andheri','Milind Nagar','MHADA Colony Andheri','Infinity Mall Area','D N Nagar Metro',
+  'Andheri East','MIDC Andheri','SEEPZ','Marol','Marol Naka','Chakala',
+  'Chakala Metro','Sahar','Sahar Village','Sahar Road','Sahar Market','Kondivita',
+  'Kondivita Village','Mahakali Caves Road','Andheri Kurla Road','Western Express Highway Andheri','JB Nagar','JB Nagar Metro',
+  'Airport Road','Vinobha Bhave Nagar','CSIA Area','Nehru Nagar Andheri','Laxmi Nagar Andheri','Saidham Nagar',
+  'Mahananda Dairy Area','Bhavani Nagar','Jogeshwari West','Jogeshwari','Jogeshwari East','Gundavali',
+  'JVLR','Jogeshwari Vikhroli Link Road','Ram Mandir Road','Jogeshwari Station','Hanuman Nagar Jogeshwari','Shree Nagar Jogeshwari',
+  'Kanchpada','Ekta Nagar Jogeshwari','Mogra Village','Mogra Naka','Goregaon West','Goregaon',
+  'Goregaon East','Film City','Aarey Colony','NESCO','MHB Colony Goregaon','Pahadi Goregaon',
+  'Raheja Vihar','Film City Road','Bangur Nagar','Bangur Nagar West','Bangur Nagar East','Jawahar Nagar Goregaon',
+  'Shastri Nagar Goregaon','Motilal Nagar','Motilal Nagar 1','Motilal Nagar 2','Motilal Nagar 3','New Link Road Goregaon',
+  'Link Road Goregaon','Dindoshi','Dindoshi Village','Nagari Niwara','Oberoi Garden City','Western Express Highway Goregaon',
+  'Malad West','Malad','Malad East','Malvani','Marve','Madh Island',
+  'Erangal','Malad Link Road','Mindspace','Penkarpada','Poisar','Orlem',
+  'Marve Road','IC Colony Malad','Chincholi Bunder','Evershine Nagar','Evershine City','Liberty Garden',
+  'SVP Nagar','Yashodham','Yashodham Complex','Kurar Village','Kurar','Vazira Naka',
+  'Chadha Colony','Chadha Market','Sadguru Nagar','Dahanukarwadi','Kandivali West','Kandivali',
+  'Kandivali East','Charkop','Akurli Road','Thakur Village','Thakur Complex','Thakur Nagar',
+  'Samata Nagar','Mahavir Nagar Kandivali','Poisar Kandivali','Shankar Lane','Shankar Nagar','Charkop Village',
+  'Charkop Sector 1','Charkop Sector 2','Charkop Sector 3','Charkop Sector 4','Charkop Sector 5','Charkop Sector 6',
+  'Charkop Sector 7','Charkop Sector 8','Akurli Naka','Ganesh Nagar Kandivali','Qureshi Nagar','Gokul Township',
+  'Lokhandwala Kandivali','Rahul Nagar','Borivali West','Borivali','Borivali East','IC Colony Borivali',
+  'Mandpeshwar','Eksar Road Borivali','Shimpoli','Rajendra Nagar Borivali','Vasant Vihar Borivali','Borivali Station',
+  'SV Road Borivali','New Link Road Borivali','Shimpoli Road','Chandavarkar Road','Eksar Village','Govind Nagar Borivali',
+  'Nutan Nagar','Suresh Nagar','Ayre Road','National Park Borivali','Dahisar West','Dahisar',
+  'Dahisar East','Dahisar Check Naka','Dahisar Station','Anand Nagar Dahisar','SV Road Dahisar','Rawalpada',
+  'Francis D Souza Road','Bhatwadi','Kulupwadi','Kulupwadi Road','Pimpripada Dahisar','Milan Nagar Dahisar',
+  'Ganesh Nagar Dahisar','Powai','Hiranandani Gardens','Hiranandani Powai','Chandivali','Chandivali Farm Road',
+  'Saki Naka','Sakinaka','Asalpha','Asalpha Village','Saki Vihar Road','Powai Lake',
+  'IIT Bombay Area','NITIE Area','Central Avenue Powai','New Powai','Rambaug Colony Powai','Ghatkopar West',
+  'Ghatkopar','Ghatkopar East','Ghatkopar Station','Pant Nagar','Jawahar Nagar Ghatkopar','Ramabai Colony',
+  'Subhash Nagar Ghatkopar','Laxmi Nagar Ghatkopar','Vidyavihar West','Vidyavihar','Vidyavihar East','Rajawadi',
+  'LBS Road Ghatkopar','Asalpha Ghatkopar','Garodia Nagar','Khairani Road','Vinayak Nagar','Majas Depot Area',
+  'Tagore Nagar','Sonapur Lane','Tilak Nagar Ghatkopar','Vikhroli West','Vikhroli','Vikhroli East',
+  'Vikhroli Station','Tagore Nagar Vikhroli','Godrej Colony Vikhroli','Kannamwar Nagar','Kannamwar Nagar 1','Kannamwar Nagar 2',
+  'Parksite Colony','Kanjurmarg West','Kanjurmarg','Kanjurmarg East','Kanjurmarg Station','Nityanand Nagar',
+  'LBS Road Kanjurmarg','Bhandup West','Bhandup','Bhandup East','Bhandup Station','Nahur',
+  'Nahur West','Sonapur Bhandup','Ram Nagar Bhandup','Mulund West','Mulund','Mulund East',
+  'Mulund Station','Nahur Mulund','Ram Nagar Mulund','Veena Nagar','LBS Road Mulund','MG Road Mulund',
+  'Mulund Colony','Mulund Check Naka','Bharat Nagar Mulund','Shantinagar Mulund','Sarvodaya Nagar','Kurla West',
+  'Kurla','Kurla East','Kurla Station','LBS Road Kurla','Nehru Nagar Kurla','Kurla Market',
+  'Prakash Nagar Kurla','Vidyanagari Marg','Ghatla','Safed Pool','CST Road Kurla','Tilak Nagar Kurla',
+  'Azad Nagar Kurla','Chembur','Chembur Camp','Chembur Naka','Chembur Colony','Sindhi Society',
+  'R C Marg','Tilak Nagar','Amar Mahal','Nehru Nagar Chembur','Diamond Garden Area','Pestom Sagar',
+  'Pestom Sagar Colony','Chembur Station','Kamgar Nagar Chembur','Govandi','Govandi East','Govandi Station',
+  'Deonar','Trombay','Shivaji Nagar Govandi','Cheetah Camp','Mankhurd','Mankhurd Station',
+  'Natwar Parekh Colony','Mahul Road','Thane West','Thane','Thane East','Naupada',
+  'Vartak Nagar','Wagle Estate','Majiwada','Manpada','Kapurbawdi','Panchpakhadi',
+  'Uthalsar','Brahmand','Kolshet','Teen Haath Naka','Charai','Dhokali',
+  'Patlipada','Tembhi Naka','Vasant Vihar Thane','Pokhran Road 1','Pokhran Road 2','Hiranandani Estate Thane',
+  'Gaimukh','Owale','Khidkali','Ghodbunder Road','Kopri','Shreyas Colony',
+  'Jambli Naka','Vikrant Circle','Savarkar Nagar Thane','Ram Maruti Road','Ramnagar Thane','Agra Road Thane',
+  'Thane Station','Shivai Nagar','Balkum','Balkum Naka','Khopat','Upvan Lake Area',
+  'Yeoor','Yeoor Hills','Parsik Hill','Teen Haath Naka Thane','Eastern Express Highway Thane','Kalwa',
+  'Kalwa Station','Mumbra','Mumbra Station','Kausa','Shilphata','Diva',
+  'Diva Station','Digha','Shil Road','Shil Phata','Mira Road','Mira Road East',
+  'Mira Road Station','Bhayandar West','Bhayandar','Bhayandar East','Bhayandar Station','Mira Bhayandar',
+  'Kashimira','Shanti Park Mira Road','Golden Nest Mira Road','Anand Nagar Mira Road','Shanti Nagar Mira Road','Bharat Nagar Mira Road',
+  'Sai Baba Nagar Mira Road','Santosh Nagar Mira Road','Poonam Garden','Poonam Sagar','Beverly Park','Vijay Park',
+  'Gaurav Woods','Geeta Nagar Mira Road','Nalasopara West','Nalasopara','Nalasopara East','Nalasopara Station',
+  'Naigaon West','Naigaon','Naigaon East','Naigaon Station','Vasai West','Vasai',
+  'Vasai East','Vasai Road','Vasai Station','Pelhar','Achole','Manikpur',
+  'Sopara','Virar West','Virar','Virar East','Virar Station','Arnala',
+  'Navghar','Papdy','Kalyan West','Kalyan','Kalyan East','Kalyan Station',
+  'Mokadam','Adharpada','Ganesh Nagar Kalyan','Birla College Area Kalyan','Shahad','Ambivli',
+  'Vithalwadi','Kopar','Titwala','Dombivli West','Dombivli','Dombivli East',
+  'Dombivli Station','Thakurli','Dombivli MIDC','Sagaon','Manjarli','Lodha Palava',
+  'Nandivali','Ramnagar Dombivli','Vasant Vihar Dombivli','Shastri Nagar Dombivli','Ulhasnagar 1','Ulhasnagar 2',
+  'Ulhasnagar 3','Ulhasnagar 4','Ulhasnagar 5','Ambernath West','Ambernath','Ambernath East',
+  'Badlapur West','Badlapur','Badlapur East','Bhiwandi','Narpoli','Anjur',
+  'Kalher','Kasheli','Padgha','Airoli','Airoli Sector 1','Airoli Sector 2',
+  'Airoli Sector 3','Airoli Sector 4','Airoli Sector 5','Airoli Sector 6','Airoli Sector 7','Airoli Sector 8',
+  'Digha Airoli','Ghansoli','Ghansoli Sector 1','Ghansoli Sector 2','Ghansoli Sector 3','Rabale',
+  'Rabale MIDC','Kopar Khairane','Turbhe','Turbhe MIDC','Mahape','Pawne',
+  'TTC MIDC','Vashi','Vashi Sector 1','Vashi Sector 2','Vashi Sector 3','Vashi Sector 4',
+  'Vashi Sector 5','Vashi Sector 6','Vashi Sector 7','Vashi Sector 8','Vashi Sector 9','Vashi Sector 10',
+  'Vashi Sector 12','Vashi Sector 15','Vashi Sector 17','Vashi Station','Sanpada','Sanpada Sector 1',
+  'Sanpada Sector 2','Sanpada Sector 3','Sanpada Sector 4','Sanpada Sector 5','Juinagar','Nerul',
   'Nerul Sector 1','Nerul Sector 2','Nerul Sector 4','Nerul Sector 6','Nerul Sector 9','Nerul Sector 12',
-  'Nerul Sector 20','Belapur','CBD Belapur','Sector 11 Belapur','Sector 15 Belapur','Seawoods',
-  'Seawoods Darave','Palm Beach Road','Kharghar','Kharghar Sector 1','Kharghar Sector 3','Kharghar Sector 4',
-  'Kharghar Sector 6','Kharghar Sector 7','Kharghar Sector 10','Kharghar Sector 12','Kharghar Sector 15','Kharghar Sector 18',
-  'Kharghar Sector 20','Kamothe','Kalamboli','Kamothe Sector 1','Kamothe Sector 4','Kamothe Sector 7',
-  'Panvel','Old Panvel','New Panvel','Panvel Station','Khandeshwar','Ulwe',
-  'Sector 1 Ulwe','Sector 6 Ulwe','Sector 8 Ulwe','Sector 17 Ulwe','Taloja','Taloja MIDC',
-  'Pushpak Nagar','Dronagiri','Karanjade','Khopoli','Khopoli MIDC','Karjat',
-  'Kasara','Murbad','Pen','Roha','SV Road','LBS Road',
-  'Western Express Highway','Eastern Express Highway','Andheri Kurla Road','Link Road','New Link Road','Veera Desai Road',
-  'Saki Vihar Road','Aarey Road',
+  'Nerul Sector 15','Nerul Sector 20','Nerul Sector 21','Nerul Sector 24','Nerul Sector 25','Nerul Station',
+  'Belapur','CBD Belapur','Belapur Sector 8','Belapur Sector 11','Belapur Sector 12','Belapur Sector 15',
+  'Belapur Station','Seawoods','Seawoods Darave','Seawoods Station','Palm Beach Road','Kharghar',
+  'Kharghar Sector 1','Kharghar Sector 2','Kharghar Sector 3','Kharghar Sector 4','Kharghar Sector 5','Kharghar Sector 6',
+  'Kharghar Sector 7','Kharghar Sector 9','Kharghar Sector 10','Kharghar Sector 12','Kharghar Sector 13','Kharghar Sector 15',
+  'Kharghar Sector 18','Kharghar Sector 20','Kharghar Sector 23','Kharghar Sector 25','Kharghar Sector 27','Kharghar Station',
+  'Kharghar Hills','Central Park Kharghar','Kamothe','Kamothe Sector 1','Kamothe Sector 4','Kamothe Sector 6',
+  'Kamothe Sector 7','Kamothe Sector 8','Kamothe Sector 20','Kalamboli','Kalamboli Sector 1','Kalamboli Sector 2',
+  'Panvel','Old Panvel','New Panvel','Panvel Station','Khandeshwar','Khanda Colony Panvel',
+  'Roadpali','Karanjade','Ulwe','Ulwe Sector 1','Ulwe Sector 5','Ulwe Sector 6',
+  'Ulwe Sector 8','Ulwe Sector 12','Ulwe Sector 17','Ulwe Sector 19','Taloja','Taloja MIDC',
+  'Pushpak Nagar','Dronagiri','Khopoli','Karjat','Kasara','Pen',
+  'Roha','Nagothane','Palghar','Boisar','Dahanu','Wada',
+  'Shahapur','Murbad',
 ];
 
 function homeAreaSearch(input) {
@@ -1612,28 +1714,8 @@ async function fetchUserData() {
       }
     } catch(e) {}
   }
-  // Show coin balance in nav if logged in
-  const navUser = getUser();
-  if (navUser) {
-    const badge = document.getElementById('navCoinBadge');
-    const count = document.getElementById('navCoinCount');
-    if (badge && count) {
-      count.textContent = navUser.coins || 0;
-      badge.style.display = 'flex';
-      // Refresh from DB silently
-      try {
-        const cr = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${navUser.userId}&select=coins`, {
-          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-        });
-        const cd = await cr.json();
-        if (cd[0]?.coins !== undefined) {
-          count.textContent = cd[0].coins;
-          navUser.coins = cd[0].coins;
-          localStorage.setItem('fmh_user', JSON.stringify(navUser));
-        }
-      } catch(e) {}
-    }
-  }
+  // Refresh coin balance from DB and update all displays
+  if (getUser()) await refreshCoins();
 }
 
 // Initial load

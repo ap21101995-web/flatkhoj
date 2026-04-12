@@ -130,6 +130,49 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
 
+// ── COINS — single source of truth ────────────────────────
+async function refreshCoins(forceDB = true) {
+  const user = getUser();
+  if (!user) return 0;
+  let coins = user.coins || 0;
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const data = await res.json();
+    if (data[0]?.coins !== undefined) {
+      coins = data[0].coins;
+      user.coins = coins;
+      localStorage.setItem('fmh_user', JSON.stringify(user));
+    }
+  } catch(e) {}
+  updateCoinDisplays(coins);
+  return coins;
+}
+
+function updateCoinDisplays(coins) {
+  // Nav badge (index)
+  const navCount = document.getElementById('navCoinCount');
+  if (navCount) { navCount.textContent = coins; }
+  const navBadge = document.getElementById('navCoinBadge');
+  if (navBadge) navBadge.style.display = getUser() ? 'flex' : 'none';
+
+  // Unlock sheet balance (index + listing_detail)
+  document.querySelectorAll('#unlockSheetBalance, #unlockCoinBalance').forEach(el => {
+    el.textContent = '🪙 ' + coins + ' coins';
+  });
+
+  // Coin balance bar (listing_detail)
+  const coinBalanceNum = document.getElementById('coinBalanceNum');
+  if (coinBalanceNum) coinBalanceNum.textContent = '🪙 ' + coins;
+  const coinBalanceBar = document.getElementById('coinBalanceBar');
+  if (coinBalanceBar) coinBalanceBar.style.display = 'flex';
+
+  // Activity page
+  const coinBalanceEl = document.getElementById('coinBalance');
+  if (coinBalanceEl) coinBalanceEl.textContent = coins + ' 🪙';
+}
+
 function getUser() { try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; } }
 
 const typeLabels = {
