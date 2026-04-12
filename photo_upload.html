@@ -464,9 +464,6 @@ function goBack() {
   if (isEdit && returnParam) {
     // Edit mode — return to listing
     window.location.replace(returnParam);
-  } else if (lid) {
-    // New post flow — listing already exists, go to it
-    window.location.replace('listing_detail.html?id=' + lid + '?new=1');
   } else {
     window.location.replace('index.html');
   }
@@ -480,7 +477,7 @@ window.onload = async function() {
   if (isEdit) {
     returnUrl = params.get('return') || (listingId ? 'listing_detail.html?id=' + listingId : 'index.html');
   } else {
-    returnUrl = listingId ? 'listing_detail.html?id=' + listingId + '&new=1' : 'index.html?posted=1';
+    returnUrl = 'index.html?posted=1';
   }
 
   if (isEdit) {
