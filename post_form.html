@@ -1083,7 +1083,7 @@ async function submitListing() {
       // For listing types that support photos, go to photo upload first
       const photoTypes = ['flat_listing', 'flatmate_wanted', 'pg_listing'];
       if (photoTypes.includes(type === 'fl' ? 'flat_listing' : type === 'fm' ? 'flatmate_wanted' : type === 'pg' ? 'pg_listing' : type)) {
-        window.location.href = `photo_upload.html?listing_id=${newId}&new=1`;
+        window.location.replace(`photo_upload.html?listing_id=${newId}&new=1`);
       } else {
         // flat_wanted — go to homepage with success message
         window.location.href = `index.html?posted=1`;
