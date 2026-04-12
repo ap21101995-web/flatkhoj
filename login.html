@@ -323,7 +323,8 @@ body {
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:40px;margin-bottom:12px">📱</div>
       <div class="screen-title">Enter OTP</div>
-      <div class="otp-sent-to">Sent to <strong id="sentToNumber">+91 98200 00000</strong></div>
+      <div class="otp-sent-to">Check <strong>WhatsApp</strong> on <strong id="sentToNumber">+91 98200 00000</strong></div>
+      <div style="font-size:12px;color:var(--ink3);text-align:center;margin-bottom:4px">The 6-digit OTP was sent via WhatsApp — not SMS</div>
     </div>
 
     <div class="otp-wrap">
@@ -371,7 +372,7 @@ body {
     <div class="success-sub" id="welcomeSub">
       You're signed in. As a welcome gift, you've received <strong>5 free coins</strong> to get started.
     </div>
-    <div class="coins-awarded" id="coinsAwarded">🪙 11 free coins added to your account</div>
+    <div class="coins-awarded" id="coinsAwarded">🪙 8 free coins added to your account</div>
     <button class="continue-btn" id="continueBtn" onclick="onContinue()">Continue →</button>
   </div>
 </div>
@@ -726,7 +727,7 @@ async function verifyOtp() {
 
       if (data.isNewUser) {
         document.getElementById('welcomeTitle').textContent = 'Welcome to FlatKhoj! 🎉';
-        document.getElementById('welcomeSub').innerHTML = "You're signed in. As a welcome gift, you've received <strong>11 free coins</strong> to get started — enough to unlock 2 contacts right away!";
+        document.getElementById('welcomeSub').innerHTML = "You're signed in. As a welcome gift, you've received <strong>8 free coins</strong> to get started!";
         document.getElementById('coinsAwarded').style.display = 'inline-block';
       } else {
         document.getElementById('welcomeTitle').textContent = 'Welcome back!';
