@@ -311,7 +311,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">🙋 Flat Seeker's Profile</div>
-      <div class="field"><div class="field-label">Seeker's Name <span class="req">*</span></div><input class="input" type="text" id="fw-poster-name" placeholder="First name is fine"></div>
+      <div class="field"><div class="field-label">Seeker's Name <span class="req">*</span></div><input class="input" type="text" id="fw-poster-name" placeholder="First name is fine" oninput="validateName(this)"></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Seeker's Occupation <span class="req">*</span></div><select class="select" id="fw-you-are"><option value="">Select…</option><option>Working Professional</option><option>Student</option><option>Business Owner</option><option>Other</option></select></div>
         <div class="field"><div class="field-label">Seeker's Gender <span class="req">*</span></div><select class="select" id="fw-gender-select"><option value="">Select…</option><option>Male</option><option>Female</option><option>Prefer Not To Say</option></select></div>
@@ -335,7 +335,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your Flat</div><div class="step-sub">Seekers will see these details before contacting you</div></div>
     <div class="form-card">
       <div class="card-title">📍 Location & Property</div>
-      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="fl-poster-name" placeholder="First name is fine"></div>
+      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="fl-poster-name" placeholder="First name is fine" oninput="validateName(this)"></div>
       <div class="field"><div class="field-label">Flat's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-fl-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input class="area-input" type="text" placeholder="Type your flat's area in Mumbai" oninput="areaSearch(this,'fl-area')" onfocus="areaSearch(this,'fl-area')" autocomplete="off">
@@ -382,7 +382,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     </div>
     <div class="form-card">
       <div class="card-title">📍 Flat Details</div>
-      <div class="field"><div class="field-label">Contact Name <span class="req">*</span></div><input class="input" type="text" id="fm-poster-name" placeholder="First name is fine"></div>
+      <div class="field"><div class="field-label">Contact Name <span class="req">*</span></div><input class="input" type="text" id="fm-poster-name" placeholder="First name is fine" oninput="validateName(this)"></div>
       <div class="field"><div class="field-label">Your Flat's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-fm-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input class="area-input" type="text" placeholder="Type your area in Mumbai" oninput="areaSearch(this,'fm-area')" onfocus="areaSearch(this,'fm-area')" autocomplete="off">
@@ -424,7 +424,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
     <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your PG</div><div class="step-sub">Help people find the right paying guest accommodation</div></div>
     <div class="form-card">
       <div class="card-title">📍 PG Details</div>
-      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="pg-poster-name" placeholder="First name is fine"></div>
+      <div class="field"><div class="field-label">Your Name <span class="req">*</span></div><input class="input" type="text" id="pg-poster-name" placeholder="First name is fine" oninput="validateName(this)"></div>
       <div class="field"><div class="field-label">PG Name <span style="color:var(--ink3);font-weight:400;font-size:11px">(Optional)</span></div><input class="input" type="text" placeholder="e.g. Sunshine PG — leave blank if no name"><div class="field-hint">Don't have a name? No problem — just leave it blank. We'll auto-generate a title like "PG available in Andheri West for girls"</div></div>
       <div class="field"><div class="field-label">PG's Area <span class="req">*</span></div><div class="area-wrap" id="wrap-pg-area">
         <svg class="area-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -863,6 +863,83 @@ function showToast(msg, duration) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), duration || 3000);
+}
+
+function validateName(input) {
+  const val = input.value.trim();
+  let errId = input.id + '-err';
+  let errEl = document.getElementById(errId);
+
+  if (!errEl) {
+    errEl = document.createElement('div');
+    errEl.id = errId;
+    errEl.style.cssText = 'color:var(--red);font-size:12px;margin-top:4px;font-weight:600';
+    input.parentNode.appendChild(errEl);
+  }
+
+  // Empty check
+  if (!val) {
+    errEl.textContent = '';
+    input.style.borderColor = '';
+    return false; // empty but don't show error yet (shown on submit attempt)
+  }
+
+  // 4+ consecutive digits = suspicious
+  const digitsOnly = val.replace(/[\s\-\+\(\)]/g, '');
+  if (/\d{4,}/.test(digitsOnly)) {
+    errEl.textContent = '⚠️ Looks like a number — please enter a name only.';
+    input.style.borderColor = 'var(--red)';
+    input.value = input.value.replace(/\d/g, ''); // strip digits as they type
+    return false;
+  }
+
+  // Mostly numbers
+  if (val.length > 0 && (val.replace(/[^0-9]/g,'').length / val.length) > 0.4) {
+    errEl.textContent = '⚠️ Name should not contain numbers.';
+    input.style.borderColor = 'var(--red)';
+    return false;
+  }
+
+  // Too short (1 char)
+  if (val.length < 2) {
+    errEl.textContent = '⚠️ Please enter a valid name.';
+    input.style.borderColor = 'var(--red)';
+    return false;
+  }
+
+  // Valid
+  errEl.textContent = '';
+  input.style.borderColor = '';
+  return true;
+}
+
+// Call on all name fields to validate before proceeding
+function validateAllNames() {
+  const nameIds = [type + '-poster-name'];
+  for (const id of nameIds) {
+    const el = document.getElementById(id);
+    if (!el || el.closest('[style*="display:none"]')) continue;
+    const val = el.value.trim();
+    if (!val || val.length < 2) {
+      el.style.borderColor = 'var(--red)';
+      scrollToRequired(el);
+      let errEl = document.getElementById(el.id + '-err');
+      if (!errEl) {
+        errEl = document.createElement('div');
+        errEl.id = el.id + '-err';
+        errEl.style.cssText = 'color:var(--red);font-size:12px;margin-top:4px;font-weight:600';
+        el.parentNode.appendChild(errEl);
+      }
+      errEl.textContent = '⚠️ Please enter a name.';
+      el.focus();
+      return false;
+    }
+    if (!validateName(el)) {
+      scrollToRequired(el);
+      return false;
+    }
+  }
+  return true;
 }
 
 function sanitizeForDB(data) {
@@ -1804,6 +1881,17 @@ function nextStep(){
         }
       }
     }
+
+    // ── Name field validation ──
+    const nameField = document.getElementById(type + '-poster-name');
+    if (nameField && !validateName(nameField)) {
+      scrollToRequired(nameField);
+      nameField.focus();
+      return;
+    }
+
+    // ── Name validation — cannot be a number or empty ──
+    if (!validateAllNames()) return;
 
     // ── Contact info / abusive language check (always runs, including edit mode) ──
     const textareas = document.querySelectorAll('#f-'+t+' textarea');
