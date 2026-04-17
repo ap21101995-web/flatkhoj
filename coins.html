@@ -491,45 +491,57 @@ async function addCoinsToAccount(coins, amount, orderId) {
   if (!user) return;
 
   try {
-    // Get current coins
-    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-    });
-    const data = await res.json();
-    const currentCoins = data[0]?.coins || 0;
-    const newCoins = currentCoins + coins;
-
-    // Update coins
-    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ coins: newCoins })
-    });
-
-    // Log transaction
-    await fetch(`${SUPA_URL}/rest/v1/coin_transactions`, {
+    // Call the webhook manually to credit coins — uses service role key
+    const res = await fetch(`${SUPA_URL}/functions/v1/payment-webhook`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        user_id: user.userId,
-        type: 'purchase',
-        amount: coins,
-        balance_after: newCoins,
-        description: `Bought ${coins} coins for ₹${amount}`,
-        order_id: orderId,
-        created_at: new Date().toISOString()
+        data: {
+          order: { order_id: orderId, order_amount: amount },
+          payment: { payment_status: 'SUCCESS' }
+        }
       })
     });
 
-    // Update local storage
+    // Fetch fresh balance from DB
+    await new Promise(r => setTimeout(r, 1000)); // small wait for DB to update
+    const balRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const balData = await balRes.json();
+    const newCoins = balData[0]?.coins || (user.coins + coins);
     user.coins = newCoins;
     localStorage.setItem('fmh_user', JSON.stringify(user));
+    document.getElementById('balanceAmount').textContent = newCoins;
 
     showSuccess(coins);
 
   } catch(err) {
     console.error('Failed to add coins:', err);
-    alert('Payment received but coins not added. Please contact support.');
+    // Fallback: update directly
+    try {
+      const r2 = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+      const d2 = await r2.json();
+      const cur = d2[0]?.coins || user.coins || 0;
+      const newBal = cur + coins;
+      await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coins: newBal })
+      });
+      user.coins = newBal;
+      localStorage.setItem('fmh_user', JSON.stringify(user));
+      document.getElementById('balanceAmount').textContent = newBal;
+      showSuccess(coins);
+    } catch(e2) {
+      alert('Payment received but coins not added. Please contact support with your order ID: ' + orderId);
+    }
   }
 }
 
