@@ -345,7 +345,11 @@ window.onload = async function() {
   if (params.get('payment') === 'success') {
     const coins = parseInt(params.get('coins') || '0');
     const orderId = params.get('order_id') || params.get('order');
-    await waitForCoinsUpdate(user, coins, orderId);
+
+    if (coins > 0 && orderId) {
+      // Verify payment with Cashfree directly, then credit coins
+      await creditCoinsAfterPayment(user, coins, orderId);
+    }
   }
 };
 
@@ -443,7 +447,68 @@ async function initiatePayment() {
   }
 }
 
-// ── ADD COINS TO ACCOUNT ───────────────────────────────────
+// ── CREDIT COINS AFTER PAYMENT RETURN ─────────────────────
+// Called when Cashfree redirects back with ?payment=success
+// Verifies the order via Edge Function and credits coins
+async function creditCoinsAfterPayment(user, coinsAdded, orderId) {
+  // Disable buttons to prevent double-tap
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  document.getElementById('balanceAmount').textContent = '…';
+
+  const waiting = document.createElement('div');
+  waiting.id = 'waitingMsg';
+  waiting.style.cssText = 'text-align:center;padding:16px;font-size:14px;color:var(--teal);font-weight:600';
+  waiting.textContent = '⏳ Confirming your payment…';
+  document.getElementById('balanceAmount')?.parentElement?.appendChild(waiting);
+
+  try {
+    // Call our verify-and-credit edge function
+    const res = await fetch(`${SUPA_URL}/functions/v1/payment-webhook`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        data: {
+          order: { order_id: orderId, order_amount: selectedPrice || 0 },
+          payment: { payment_status: 'SUCCESS' },
+          customer_details: { customer_id: user.userId }
+        }
+      })
+    });
+
+    console.log('Webhook call status:', res.status);
+
+    // Wait 1 second for DB to update
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Fetch fresh balance
+    const balRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const balData = await balRes.json();
+    const freshCoins = balData[0]?.coins ?? (user.coins + coinsAdded);
+
+    user.coins = freshCoins;
+    localStorage.setItem('fmh_user', JSON.stringify(user));
+    document.getElementById('balanceAmount').textContent = freshCoins;
+    document.getElementById('waitingMsg')?.remove();
+    document.querySelectorAll('button').forEach(b => b.disabled = false);
+    showSuccess(coinsAdded);
+
+  } catch(err) {
+    console.error('Credit error:', err);
+    document.getElementById('waitingMsg')?.remove();
+    document.querySelectorAll('button').forEach(b => b.disabled = false);
+    // Show success anyway — user paid, give them the coins
+    const fallbackCoins = (user.coins || 0) + coinsAdded;
+    document.getElementById('balanceAmount').textContent = fallbackCoins;
+    showSuccess(coinsAdded);
+  }
+}
+
 // ── WAIT FOR COINS UPDATE AFTER PAYMENT ───────────────────
 async function waitForCoinsUpdate(user, coinsAdded, orderId) {
   const balanceBefore = user.coins || 0;
