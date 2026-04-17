@@ -378,7 +378,6 @@ async function initiatePayment() {
   if (!user) { window.location.href = 'login.html?trigger=coins'; return; }
 
   if (CASHFREE_APP_ID === 'YOUR_CASHFREE_APP_ID') {
-    // Demo mode — simulate payment for testing
     showProcessing();
     setTimeout(() => {
       hideProcessing();
@@ -387,10 +386,13 @@ async function initiatePayment() {
     return;
   }
 
+  if (!selectedPack) { alert('Please select a coin pack first.'); return; }
+
   showProcessing();
 
   try {
-    // Create order via Supabase Edge Function (we'll build this)
+    console.log('Calling create-order...', { userId: user.userId, coins: selectedCoins, amount: selectedPrice });
+
     const res = await fetch(`${SUPA_URL}/functions/v1/create-order`, {
       method: 'POST',
       headers: {
@@ -407,31 +409,37 @@ async function initiatePayment() {
       })
     });
 
+    console.log('create-order response status:', res.status);
     const order = await res.json();
+    console.log('create-order response:', JSON.stringify(order));
     hideProcessing();
 
     if (!order.payment_session_id) {
-      alert('Failed to create order. Please try again.');
+      alert('Failed to create order: ' + (order.error || JSON.stringify(order)));
       return;
     }
 
     // Load Cashfree SDK and open payment
     const script = document.createElement('script');
-    script.src = CASHFREE_ENV === 'production'
-      ? 'https://sdk.cashfree.com/js/v3/cashfree.js'
-      : 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
     script.onload = function() {
+      console.log('Cashfree SDK loaded, opening checkout...');
       const cashfree = Cashfree({ mode: CASHFREE_ENV });
       cashfree.checkout({
         paymentSessionId: order.payment_session_id,
         returnUrl: `https://flatkhoj.com/coins.html?payment=success&coins=${selectedCoins}&order=${order.order_id}&return_to=${encodeURIComponent(localStorage.getItem('fk_coins_return')||'')}`
       });
     };
+    script.onerror = function() {
+      hideProcessing();
+      alert('Failed to load payment SDK. Please check your internet connection.');
+    };
     document.head.appendChild(script);
 
   } catch(err) {
     hideProcessing();
-    alert('Payment failed. Please try again.');
+    console.error('initiatePayment error:', err);
+    alert('Payment error: ' + err.message);
   }
 }
 
