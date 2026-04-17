@@ -1078,6 +1078,7 @@ async function confirmUnlock(){
       // Sync to localStorage
       user.coins = newCoins;
       localStorage.setItem('fmh_user', JSON.stringify(user));
+      updateCoinDisplays(newCoins);
 
       // Update all coin displays on this page
       document.querySelectorAll('.coin-balance strong, #unlockCoinBalance').forEach(el => {
@@ -1394,6 +1395,7 @@ async function activateFreeContact() {
     listing.is_free_contact = true;
     user.coins = coins - 50;
     localStorage.setItem('fmh_user', JSON.stringify(user));
+    updateCoinDisplays(coins - 50);
     // Update UI
     document.getElementById('boostLabel').textContent = '✅ Anyone can contact you for free';
     document.getElementById('boostSub').textContent = 'Your contact is visible to everyone — no coins needed on their end.';
