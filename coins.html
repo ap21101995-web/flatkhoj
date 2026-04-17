@@ -449,6 +449,9 @@ async function waitForCoinsUpdate(user, coinsAdded, orderId) {
   const balanceBefore = user.coins || 0;
   const expectedMin = balanceBefore + coinsAdded;
 
+  // Disable all buttons to prevent loops
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+
   // Show waiting message
   document.getElementById('balanceAmount').textContent = '…';
   const waiting = document.createElement('div');
@@ -457,9 +460,9 @@ async function waitForCoinsUpdate(user, coinsAdded, orderId) {
   waiting.textContent = '⏳ Confirming your payment…';
   document.getElementById('balanceAmount').parentElement.appendChild(waiting);
 
-  // Poll up to 15 times (30 seconds)
-  for (let i = 0; i < 15; i++) {
-    await new Promise(r => setTimeout(r, 2000));
+  // Poll every 1 second, up to 10 times (10 seconds)
+  for (let i = 0; i < 10; i++) {
+    await new Promise(r => setTimeout(r, 1000));
     try {
       const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
@@ -468,19 +471,20 @@ async function waitForCoinsUpdate(user, coinsAdded, orderId) {
       const freshCoins = data[0]?.coins || 0;
 
       if (freshCoins >= expectedMin) {
-        // Coins updated! Sync to localStorage
         user.coins = freshCoins;
         localStorage.setItem('fmh_user', JSON.stringify(user));
         document.getElementById('balanceAmount').textContent = freshCoins;
         document.getElementById('waitingMsg')?.remove();
+        document.querySelectorAll('button').forEach(b => b.disabled = false);
         showSuccess(coinsAdded);
         return;
       }
     } catch(e) {}
   }
 
-  // Timeout — show success anyway and refresh balance
+  // Timeout — fetch final balance and show success anyway
   document.getElementById('waitingMsg')?.remove();
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
   try {
     const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
