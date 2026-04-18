@@ -114,6 +114,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
     <div class="nav-item" onclick="go('unlocks',this)"><span>🔓</span> Contact Unlocks</div>
     <div class="nav-section">Moderation</div>
+    <div class="nav-item" onclick="go('sold',this)"><span>🔴</span> Sold Reports</div>
     <div class="nav-item" onclick="go('reports',this)"><span>🚩</span> Reports <span class="nav-badge" id="rbadge" style="display:none">0</span></div>
     <div class="nav-item" onclick="go('support',this)"><span>💬</span> Support</div>
   </div>
@@ -326,6 +327,23 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
 
     <!-- REPORTS -->
+    <div class="page" id="pg-sold">
+      <div class="topbar"><div class="topbar-title">🔴 Sold Reports</div></div>
+      <div style="padding:24px">
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:16px">Listings marked as Sold/Taken by users. Review and remove if confirmed.</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;background:var(--bg2);border-radius:10px;overflow:hidden" id="soldTable">
+          <tr style="background:var(--bg3)">
+            <th style="padding:10px 16px;text-align:left;color:var(--ink2)">Listing</th>
+            <th style="padding:10px 16px;text-align:left;color:var(--ink2)">Poster</th>
+            <th style="padding:10px 16px;text-align:left;color:var(--ink2)">Reported By</th>
+            <th style="padding:10px 16px;text-align:left;color:var(--ink2)">Sold At</th>
+            <th style="padding:10px 16px;text-align:left;color:var(--ink2)">Actions</th>
+          </tr>
+        </table>
+        <div id="soldEmpty" style="display:none;text-align:center;padding:32px;color:var(--ink3)">No sold reports yet.</div>
+      </div>
+    </div>
+
     <div class="page" id="pg-reports">
       <div class="table-card">
         <div class="table-header"><div class="ttitle">Reports</div></div>
@@ -386,7 +404,7 @@ function go(page, el) {
   document.getElementById('pg-' + page).classList.add('active');
   const titles = { dashboard:'Dashboard', listings:'All Listings', users:'All Users', coinpurchases:'Coin Purchases', unlocks:'Contact Unlocks', reports:'Reports', support:'Support' };
   document.getElementById('topbarTitle').textContent = titles[page] || page;
-  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, unlookup:()=>{}, useractivity:loadUserActivity, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
+  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, unlookup:()=>{}, useractivity:loadUserActivity, sold:loadSoldReports, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
   if (loaders[page]) loaders[page]();
 }
 
@@ -830,6 +848,92 @@ async function claimListing() {
   findUserForMgmt();
 }
 
+
+async function loadSoldReports() {
+  try {
+    const listings = await supaGet('listings?is_sold=eq.true&order=sold_at.desc&select=*');
+    const table = document.getElementById('soldTable');
+    while (table.rows.length > 1) table.deleteRow(1);
+    if (!listings.length) {
+      document.getElementById('soldEmpty').style.display = 'block';
+      return;
+    }
+    document.getElementById('soldEmpty').style.display = 'none';
+    for (const l of listings) {
+      const area = Array.isArray(l.areas) ? l.areas[0] : (l.areas || '—');
+      const type = {flat_listing:'Flat',flat_wanted:'Flat Wanted',flatmate_wanted:'Flatmate',pg_listing:'PG'}[l.listing_type] || l.listing_type;
+      let reporterPhone = '—';
+      if (l.sold_reported_by) {
+        try { const r = await supaGet('users?id=eq.'+l.sold_reported_by+'&select=phone'); if(r.length) reporterPhone = '+91 '+r[0].phone; } catch(e) {}
+      }
+      let posterPhone = '—';
+      if (l.user_id) {
+        try { const p = await supaGet('users?id=eq.'+l.user_id+'&select=phone'); if(p.length) posterPhone = '+91 '+p[0].phone; } catch(e) {}
+      }
+      const row = table.insertRow();
+      row.innerHTML = `
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
+          <a href="listing_detail.html?id=${l.id}" target="_blank" style="color:var(--teal-light);font-weight:600">${type} in ${area}</a>
+          <div style="font-size:11px;color:var(--ink3)">₹${l.rent_amount||'—'}</div>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border)">${posterPhone}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--red)">${reporterPhone}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${l.sold_at ? timeAgo(l.sold_at) : '—'}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
+          <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red);font-size:12px" onclick="removeSoldListing('${l.id}', this)">Remove Listing</button>
+          <button class="btn btn-teal" style="font-size:12px;margin-left:6px" onclick="unsoldListing('${l.id}', this)">Not Sold</button>
+        </td>`;
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function removeSoldListing(id, btn) {
+  btn.textContent = 'Removing…'; btn.disabled = true;
+  try {
+    // Get listing to find reporter and unlock cost
+    const listings = await supaGet('listings?id=eq.'+id+'&select=sold_reported_by,is_sold');
+    const listing = listings[0];
+
+    // Deactivate listing
+    await supaPatch('listings', 'id=eq.'+id, { is_active: false });
+
+    // Refund coins to ALL users who unlocked this listing
+    const unlocks = await supaGet('contact_unlocks?listing_id=eq.'+id+'&select=unlocker_user_id,coins_spent');
+    let refundCount = 0;
+    for (const unlock of unlocks) {
+      try {
+        const users = await supaGet('users?id=eq.'+unlock.unlocker_user_id+'&select=id,phone,coins');
+        if (!users.length) continue;
+        const user = users[0];
+        const refundAmount = unlock.coins_spent || 5;
+        const newCoins = (user.coins || 0) + refundAmount;
+        await supaPatch('users', 'id=eq.'+user.id, { coins: newCoins });
+        await fetch(`${SUPA_URL}/rest/v1/coin_transactions`, {
+          method: 'POST',
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            type: 'admin_credit',
+            amount: refundAmount,
+            balance_after: newCoins,
+            description: 'Refund — listing was sold/taken when contact was unlocked',
+            created_at: new Date().toISOString()
+          })
+        });
+        refundCount++;
+      } catch(e) {}
+    }
+    toast('Listing removed · ' + refundCount + ' user(s) refunded', 'success');
+    loadSoldReports();
+  } catch(e) { btn.textContent = 'Remove Listing'; btn.disabled = false; toast('Error: '+e.message, 'error'); }
+}
+
+async function unsoldListing(id, btn) {
+  btn.textContent = 'Updating…'; btn.disabled = true;
+  await supaPatch('listings', 'id=eq.'+id, { is_sold: false, sold_reported_by: null, sold_at: null });
+  toast('Marked as active', 'success');
+  loadSoldReports();
+}
 
 async function lookupUnlocks() {
   const phone = document.getElementById('lookup-phone').value.trim().replace(/\D/g,'').slice(-10);

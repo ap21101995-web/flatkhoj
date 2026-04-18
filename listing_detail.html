@@ -1006,6 +1006,14 @@ function renderListing(){
   // Posted time
   document.getElementById('postedTime').textContent=`Posted ${getTimeAgo(listing.created_at)} · Expires in ${getDaysLeft(listing.expires_at)} days`;
 
+  // Show sold banner if marked as sold
+  if (listing.is_sold) {
+    const soldBanner = document.createElement('div');
+    soldBanner.style.cssText = 'background:#fde8e8;border:1.5px solid var(--red);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--red);font-weight:700;text-align:center;margin-bottom:12px';
+    soldBanner.innerHTML = '🔴 This listing has been marked as <strong>Sold/Taken</strong> — contact may no longer be available.';
+    document.querySelector('.listing-detail-wrap')?.prepend(soldBanner);
+  }
+
   // Free contact
   if(listing.is_free_contact){
     const btn=document.getElementById('unlockBtn');
@@ -1136,6 +1144,26 @@ function showAlreadyUnlocked(){
   document.getElementById('unlockStep1').style.display='none';
   document.getElementById('unlockStep2').style.display='block';
   if(posterPhone)document.querySelector('.contact-number').textContent='+91 '+posterPhone.replace(/(\d{5})(\d{5})/,'$1 $2');
+}
+
+async function reportAsSold() {
+  const user = getUser();
+  if (!user) { showToast('Please log in first.'); return; }
+  if (!listing) return;
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_sold: true, sold_reported_by: user.userId, sold_at: new Date().toISOString() })
+    });
+    showToast('✅ Marked as sold. Admin will review and process refund if applicable.');
+    closeSheet('unlock');
+    // Show red banner immediately
+    const soldBanner = document.createElement('div');
+    soldBanner.style.cssText = 'background:#fde8e8;border:1.5px solid var(--red);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--red);font-weight:700;text-align:center;margin-bottom:12px';
+    soldBanner.innerHTML = '🔴 This listing has been marked as <strong>Sold/Taken</strong> — contact may no longer be available.';
+    document.querySelector('.listing-detail-wrap')?.prepend(soldBanner);
+  } catch(e) { showToast('Failed to mark as sold. Please try again.'); }
 }
 
 function openWhatsApp(){if(!posterPhone)return;window.open(`https://wa.me/91${posterPhone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`,'_blank');}

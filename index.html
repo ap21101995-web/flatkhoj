@@ -933,7 +933,8 @@ async function loadListings(reset = true) {
 
   try {
     let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&limit=200`;
-    if (activeFilter !== 'all') url += `&listing_type=eq.${activeFilter}`;
+    if (activeFilter !== 'all' && activeFilter !== 'nobroker') url += `&listing_type=eq.${activeFilter}`;
+    if (activeFilter === 'nobroker') url += `&has_brokerage=eq.false`;
 
     const res = await fetch(url, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
@@ -1064,6 +1065,10 @@ function renderListings(listings) {
       card.className = 'listing-card';
       card.dataset.listingId = l.id;
       card.style.cursor = 'pointer';
+      if (l.is_sold) {
+        card.style.borderColor = '#e05252';
+        card.style.background = 'rgba(224,82,82,0.04)';
+      }
       card.onclick = function(e) {
         if (!e.target.closest('.unlock-btn') && !e.target.closest('.save-btn')) {
           window.location.href = 'listing_detail.html?id=' + l.id;
@@ -1072,6 +1077,7 @@ function renderListings(listings) {
 
       card.innerHTML = `
         <div class="type-label">${typeLabel}</div>
+        ${l.is_sold ? '<div style="display:inline-block;background:#fde8e8;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px">🔴 Sold/Taken</div>' : ''}
         <div class="broker-tag ${brokerClass} dot">${brokerText}</div>
         <div class="card-header">
           <div class="card-title">${escHtml(cardTitle)}</div>
@@ -1707,7 +1713,11 @@ async function fetchUserData() {
       const [savedData, unlockedData] = await Promise.all([savedRes.json(), unlockedRes.json()]);
       if (Array.isArray(savedData)) savedListingIds = new Set(savedData.map(d => d.listing_id));
       if (Array.isArray(unlockedData)) {
-        unlockedListingIds = new Set(unlockedData.map(d => d.listing_id));
+        // Merge DB unlocks WITH localStorage (in case DB insert failed previously)
+        const dbUnlocks = new Set(unlockedData.map(d => d.listing_id));
+        const localUnlocks = getUnlockedListings();
+        localUnlocks.forEach(id => dbUnlocks.add(id));
+        unlockedListingIds = dbUnlocks;
         localStorage.setItem('fk_unlocked', JSON.stringify([...unlockedListingIds]));
       }
     } catch(e) {}
