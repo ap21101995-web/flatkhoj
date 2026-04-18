@@ -1379,15 +1379,17 @@ async function reportListingAsSold() {
 async function showUnlockedContact(listingId) {
   try {
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/listings?id=eq.${listingId}&select=user_id,custom_contact_phone`,
+      `${SUPA_URL}/rest/v1/listings?id=eq.${listingId}&select=user_id,custom_contact_phone,posted_by_owner`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
     );
     const [listingData] = await res.json();
     let phone = null;
 
     if (listingData?.custom_contact_phone) {
+      // Always use custom contact phone if set (owner posted on behalf of someone)
       phone = listingData.custom_contact_phone;
-    } else if (listingData?.user_id) {
+    } else if (listingData?.user_id && !listingData?.posted_by_owner) {
+      // Only fall back to user's own phone if NOT posted by owner on behalf of someone
       const userRes = await fetch(
         `${SUPA_URL}/rest/v1/users?id=eq.${listingData.user_id}&select=phone`,
         { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
@@ -1395,6 +1397,7 @@ async function showUnlockedContact(listingId) {
       const [poster] = await userRes.json();
       if (poster) phone = poster.phone;
     }
+    // If posted_by_owner=true but no custom_contact_phone, don't reveal owner's number
 
     if (phone) {
       showContactInSheet(phone);

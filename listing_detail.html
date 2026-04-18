@@ -753,16 +753,18 @@ window.onload=async function(){
       // Get poster phone and unlock status simultaneously
       const tasks = [];
 
-      // Phone fetch (only if no custom phone)
-      if (!listing.custom_contact_phone) {
+      // Phone fetch — only fall back to user phone if NOT posted by owner on behalf of someone
+      if (listing.custom_contact_phone) {
+        posterPhone = listing.custom_contact_phone;
+      } else if (!listing.posted_by_owner) {
+        // Regular user's own listing — use their login phone
         tasks.push(
           supaGet(`users?id=eq.${listing.user_id}&select=phone`)
             .then(users => { if(users&&users.length>0) posterPhone=users[0].phone; })
             .catch(()=>{})
         );
-      } else {
-        posterPhone = listing.custom_contact_phone;
       }
+      // If posted_by_owner=true but no custom_contact_phone — don't reveal owner's number
 
       // Unlock status — check localStorage first (instant), verify DB silently
       if (user) {
