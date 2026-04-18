@@ -615,6 +615,8 @@ async function viewUserDetail(userId, phone) {
 }
 
 // ── COIN PURCHASES ────────────────────────────────────────
+const coinToRupees = {15:20, 30:30, 50:40, 100:70, 200:125};
+
 async function loadCoinPurchases() {
   try {
     const purchases = await supaGet('coin_transactions?type=eq.purchase&order=created_at.desc&select=*');
@@ -622,15 +624,19 @@ async function loadCoinPurchases() {
     const users = uids.length > 0 ? await supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : [];
     const uMap = {}; users.forEach(u=>uMap[u.id]=u.phone);
     const totalCoins = purchases.reduce((s,p)=>s+(p.amount||0),0);
-    document.getElementById('totalCoinsInfo').textContent = purchases.length+' transactions · '+totalCoins+' total coins sold';
+    const totalRupees = purchases.reduce((s,p)=>s+(coinToRupees[p.amount]||0),0);
+    document.getElementById('totalCoinsInfo').textContent = 
+      purchases.length+' transactions · '+totalCoins+' coins sold · ₹'+totalRupees+' total revenue';
     const t = document.getElementById('coinpurchasesTable');
-    t.innerHTML = '<tr><th>User Phone</th><th>Coins Bought</th><th>Order ID</th><th>When</th></tr>';
-    if (!purchases.length) { t.innerHTML += '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink3)">No purchases yet</td></tr>'; return; }
+    t.innerHTML = '<tr><th>User Phone</th><th>Coins Bought</th><th>Amount Paid</th><th>Order ID</th><th>When</th></tr>';
+    if (!purchases.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No purchases yet</td></tr>'; return; }
     purchases.forEach(p => {
       const phone = uMap[p.user_id] ? '+91 '+uMap[p.user_id] : 'Unknown';
+      const rupees = coinToRupees[p.amount] ? '₹'+coinToRupees[p.amount] : '—';
       t.innerHTML += `<tr>
         <td style="font-weight:600">${phone}</td>
         <td><span class="badge b-purchase">${p.amount} coins</span></td>
+        <td style="font-weight:700;color:var(--green)">${rupees}</td>
         <td style="font-size:12px;color:var(--ink3);font-family:monospace">${p.order_id||'—'}</td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(p.created_at)}</td>
       </tr>`;

@@ -552,8 +552,8 @@ body {
   <div class="filter-inner">
     <button class="filter-chip active" onclick="setFilter(this,'all')">All</button>
     <button class="filter-chip" onclick="setFilter(this,'flatwanted')">🔍 Flat Wanted</button>
-    <button class="filter-chip" onclick="setFilter(this,'flatlisting')">🏠 Flat Listing</button>
     <button class="filter-chip" onclick="setFilter(this,'flatmate')">👥 Flatmate Wanted</button>
+    <button class="filter-chip" onclick="setFilter(this,'flatlisting')">🏠 Flat Listing</button>
     <button class="filter-chip teal-active" onclick="openFilterSheet()">⚙ More Filters</button>
     <button class="filter-chip" onclick="setFilter(this,'nobroker')" style="border-color:#0f7b6c;color:#0f7b6c">✓ No Broker</button>
   </div>
@@ -1295,12 +1295,10 @@ async function confirmUnlock() {
       })
     });
 
-    // Sync fresh balance to localStorage
+    // Sync fresh balance to localStorage and update ALL coin displays
     user.coins = newCoins;
     localStorage.setItem('fmh_user', JSON.stringify(user));
-    
-    // Update coin display in unlock sheet
-    document.getElementById('unlockSheetBalance').textContent = '🪙 ' + newCoins + ' coins';
+    updateCoinDisplays(newCoins);
 
     // Mark as unlocked in memory and update card
     markAsUnlocked(currentUnlockListingId);
