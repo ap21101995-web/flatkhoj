@@ -1779,7 +1779,7 @@ window.addEventListener('pageshow', async function(e) {
   }
 });
 
-// Also re-fetch on focus (when switching back from another tab/app)
+// Re-fetch on focus and update all card buttons
 window.addEventListener('focus', async function() {
   const user = getUser();
   if (!user) return;
@@ -1789,23 +1789,30 @@ window.addEventListener('focus', async function() {
     });
     const data = await res.json();
     if (Array.isArray(data)) {
-      unlockedListingIds = new Set(data.map(d => d.listing_id));
-      localStorage.setItem('fk_unlocked', JSON.stringify([...unlockedListingIds]));
-      // Update any visible cards without full re-render
-      document.querySelectorAll('.unlock-btn[data-listing-id]').forEach(btn => {
-        const id = btn.getAttribute('data-listing-id');
-        if (unlockedListingIds.has(id)) {
+      // Merge with localStorage
+      const local = getUnlockedListings();
+      const merged = new Set([...data.map(d => d.listing_id), ...local]);
+      unlockedListingIds = merged;
+      localStorage.setItem('fk_unlocked', JSON.stringify([...merged]));
+      // Update ALL unlock buttons on visible cards
+      document.querySelectorAll('[data-listing-id]').forEach(card => {
+        const id = card.dataset.listingId;
+        if (!id) return;
+        const btn = card.querySelector('.unlock-btn');
+        if (!btn) return;
+        if (merged.has(id)) {
           btn.style.background = 'var(--teal-bg)';
           btn.style.color = 'var(--teal)';
           btn.style.border = '1.5px solid var(--teal)';
-          btn.style.cursor = 'default';
+          btn.style.cursor = 'pointer';
           btn.innerHTML = '✓ Contact unlocked — view';
-          btn.onclick = () => window.location.href = `listing_detail.html?id=${id}`;
+          btn.onclick = function() { viewUnlockedContact(id); };
         }
       });
     }
   } catch(e) {}
 });
+
 
 // Hide login nudge if already logged in
 const _user = getUser();
