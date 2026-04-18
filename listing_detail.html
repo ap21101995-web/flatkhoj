@@ -1168,7 +1168,7 @@ async function reportAsSold() {
   } catch(e) { showToast('Failed to mark as sold. Please try again.'); }
 }
 
-function openWhatsApp(){if(!posterPhone)return;window.open(`https://wa.me/91${posterPhone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`,'_blank');}
+function openWhatsApp(){if(!posterPhone)return;window.open(`https://wa.me/91${posterPhone}?text=Hi, I saw your listing on FlatKhoj.com and I'm interested.`,'_blank');}
 function makeCall(){if(!posterPhone)return;window.location.href=`tel:+91${posterPhone}`;}
 
 async function submitReport(reason){

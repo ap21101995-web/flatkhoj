@@ -1443,7 +1443,7 @@ async function showUnlockedContact(listingId) {
 function showContactInSheet(phone) {
   const formatted = '+91 ' + String(phone).replace(/(\d{5})(\d{5})/, '$1 $2');
   document.getElementById('revealedPhone').textContent = formatted;
-  document.getElementById('revealedWhatsapp').href = `https://wa.me/91${phone}?text=Hi, I saw your listing on FlatKhoj and I'm interested.`;
+  document.getElementById('revealedWhatsapp').href = `https://wa.me/91${phone}?text=Hi, I saw your listing on FlatKhoj.com and I'm interested.`;
   document.getElementById('revealedCall').href = `tel:+91${phone}`;
   // Switch sheet state
   document.getElementById('unlockPromptState').style.display = 'none';
