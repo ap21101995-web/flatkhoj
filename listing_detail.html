@@ -756,7 +756,7 @@ window.onload=async function(){
       // Phone fetch — only fall back to user phone if NOT posted by owner on behalf of someone
       if (listing.custom_contact_phone) {
         posterPhone = listing.custom_contact_phone;
-      } else if (!listing.posted_by_owner) {
+      } else if (listing.posted_by_owner !== true) {
         // Regular user's own listing — use their login phone
         tasks.push(
           supaGet(`users?id=eq.${listing.user_id}&select=phone`)

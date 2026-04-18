@@ -904,7 +904,6 @@ function markAsUnlocked(listingId) {
       btn.style.cursor = 'pointer';
       btn.innerHTML = '✓ Contact unlocked — view';
       btn.onclick = function(e) { e.stopPropagation(); viewUnlockedContact(listingId); };
-      btn.removeAttribute('data-listing-id');
     }
   }
 }
@@ -1141,7 +1140,7 @@ function buildUnlockBtn(l, areas) {
     return '<button class="unlock-btn" style="background:var(--bg2);color:var(--ink3);border:1.5px solid var(--border);cursor:default;font-size:12px" onclick="window.location.href=\'listing_detail.html?id=' + l.id + '\'">Your listing</button>';
   }
   if (unlockedListingIds.has(l.id) || getUnlockedListings().includes(l.id)) {
-    return '<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal)" onclick="viewUnlockedContact(\'' + l.id + '\')">✓ Contact unlocked — view</button>';
+    return '<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal)" data-unlocked-id="' + l.id + '" onclick="event.stopPropagation();viewUnlockedContact(\'' + l.id + '\')">✓ Contact unlocked — view</button>';
   }
   if (l.is_free_contact) {
     return '<button class="unlock-btn" data-listing-id="' + l.id + '" data-owner-id="' + (l.user_id||'') + '" data-area="' + escHtml(areas) + '" onclick="handleUnlockCard(this)">Contact for free <span class="coin-pip">Free!</span></button>';
@@ -1193,7 +1192,8 @@ function markOwnListings() {
       btn.style.border = '1.5px solid var(--teal)';
       btn.style.cursor = 'pointer';
       btn.innerHTML = '✓ Contact unlocked — view';
-      btn.onclick = function(e) { e.stopPropagation(); viewUnlockedContact(listingId); };
+      const lid = listingId;
+      btn.onclick = function(e) { e.stopPropagation(); viewUnlockedContact(lid); };
       return;
     }
 
@@ -1388,8 +1388,8 @@ async function showUnlockedContact(listingId) {
     if (listingData?.custom_contact_phone) {
       // Always use custom contact phone if set (owner posted on behalf of someone)
       phone = listingData.custom_contact_phone;
-    } else if (listingData?.user_id && !listingData?.posted_by_owner) {
-      // Only fall back to user's own phone if NOT posted by owner on behalf of someone
+    } else if (listingData?.user_id && listingData?.posted_by_owner !== true) {
+      // Fall back to poster's phone unless explicitly marked as posted by owner on behalf
       const userRes = await fetch(
         `${SUPA_URL}/rest/v1/users?id=eq.${listingData.user_id}&select=phone`,
         { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }}
@@ -1397,7 +1397,7 @@ async function showUnlockedContact(listingId) {
       const [poster] = await userRes.json();
       if (poster) phone = poster.phone;
     }
-    // If posted_by_owner=true but no custom_contact_phone, don't reveal owner's number
+    // Only block if posted_by_owner === true AND no custom_contact_phone
 
     if (phone) {
       showContactInSheet(phone);
