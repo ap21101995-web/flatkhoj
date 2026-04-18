@@ -1183,10 +1183,21 @@ async function submitListing() {
     const isAppOwner = userPhone==='9538584612' || user.isOwner===true || user.isOwner==='true';
     if (isAppOwner) {
       const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
-      if (customPhone && customPhone.length === 10) {
-        formData.custom_contact_phone = customPhone;
-        formData.posted_by_owner = true; // So we know this was posted on behalf of someone
+      if (!customPhone || customPhone.length !== 10 || !/^[6-9]\d{9}$/.test(customPhone)) {
+        // Hard block — owner MUST enter a valid contact number
+        btn.textContent = "🚀 Post Listing — It's Free!";
+        btn.disabled = false;
+        const input = document.getElementById('ownerContactNumber');
+        if (input) {
+          input.style.borderColor = 'var(--red)';
+          input.focus();
+          scrollToRequired(input);
+        }
+        showToast('⚠️ Please enter the contact number to show to users.');
+        return;
       }
+      formData.custom_contact_phone = customPhone;
+      formData.posted_by_owner = true;
     }
 
     // Post directly to Supabase
@@ -1919,6 +1930,27 @@ function nextStep(){
     if(!document.getElementById('fc-choice').value){
       scrollToRequired(document.getElementById('freeContactCard'));
       return;
+    }
+    // ── Owner must enter contact number if posting on behalf ──
+    const ownerContactField = document.getElementById('ownerContactField');
+    if (ownerContactField && ownerContactField.style.display !== 'none') {
+      const ownerPhone = document.getElementById('ownerContactNumber')?.value?.trim();
+      if (!ownerPhone || ownerPhone.length !== 10 || !/^[6-9]\d{9}$/.test(ownerPhone)) {
+        const input = document.getElementById('ownerContactNumber');
+        input.style.borderColor = 'var(--red)';
+        scrollToRequired(input);
+        let errEl = document.getElementById('owner-phone-err');
+        if (!errEl) {
+          errEl = document.createElement('div');
+          errEl.id = 'owner-phone-err';
+          errEl.style.cssText = 'color:var(--red);font-size:12px;margin-top:4px;font-weight:600';
+          input.parentNode.appendChild(errEl);
+        }
+        errEl.textContent = '⚠️ Please enter a valid 10-digit mobile number.';
+        return;
+      }
+      document.getElementById('ownerContactNumber').style.borderColor = '';
+      document.getElementById('owner-phone-err')?.remove();
     }
     // ── All 4 checkboxes must be checked ──
     const checkboxes = document.querySelectorAll('.post-confirm-cb');
