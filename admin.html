@@ -108,6 +108,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="nav-item" onclick="go('listings',this)"><span>🏠</span> Listings</div>
     <div class="nav-item" onclick="go('users',this)"><span>👥</span> Users</div>
     <div class="nav-item" onclick="go('usermgmt',this)"><span>⚙️</span> User Management</div>
+    <div class="nav-item" onclick="go('unlookup',this)"><span>🔍</span> Unlock Lookup</div>
+    <div class="nav-item" onclick="go('useractivity',this)"><span>👁️</span> User Activity</div>
     <div class="nav-section">Analytics</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
     <div class="nav-item" onclick="go('unlocks',this)"><span>🔓</span> Contact Unlocks</div>
@@ -229,6 +231,79 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <div class="page" id="pg-unlookup">
+      <div class="topbar"><div class="topbar-title">🔍 Unlock Lookup</div></div>
+      <div style="padding:24px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--ink2)">Enter phone number to see all contacts they unlocked</div>
+          <div style="display:flex;gap:10px">
+            <input id="lookup-phone" class="linput" style="margin:0;flex:1;max-width:260px" placeholder="10-digit phone number" maxlength="10" type="tel">
+            <button class="btn btn-teal" onclick="lookupUnlocks()">Search →</button>
+          </div>
+        </div>
+        <div id="lookup-result" style="display:none">
+          <div id="lookup-user-info" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;font-size:14px"></div>
+          <div id="lookup-table-wrap" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse;font-size:13px" id="lookup-table">
+              <tr style="background:var(--bg3)">
+                <th style="padding:10px 16px;text-align:left;color:var(--ink2);font-weight:600">Listing</th>
+                <th style="padding:10px 16px;text-align:left;color:var(--ink2);font-weight:600">Contact Revealed</th>
+                <th style="padding:10px 16px;text-align:left;color:var(--ink2);font-weight:600">Coins Spent</th>
+                <th style="padding:10px 16px;text-align:left;color:var(--ink2);font-weight:600">When</th>
+              </tr>
+            </table>
+          </div>
+          <div id="lookup-empty" style="display:none;text-align:center;padding:32px;color:var(--ink3);font-size:14px">No unlocks found for this number.</div>
+        </div>
+        <div id="lookup-notfound" style="display:none;color:var(--red);font-size:14px;padding:12px">User not found.</div>
+      </div>
+    </div>
+
+    <div class="page" id="pg-useractivity">
+      <div class="topbar"><div class="topbar-title">👁️ User Activity</div></div>
+      <div style="padding:24px">
+
+        <!-- All users list -->
+        <div id="ua-users-panel">
+          <div style="font-size:13px;color:var(--ink3);margin-bottom:16px">Click any user to see their full activity</div>
+          <div id="ua-users-list" style="display:flex;flex-direction:column;gap:8px">
+            <div style="color:var(--ink3);font-size:13px">Loading users…</div>
+          </div>
+        </div>
+
+        <!-- User detail panel -->
+        <div id="ua-detail-panel" style="display:none">
+          <button onclick="document.getElementById('ua-users-panel').style.display='block';document.getElementById('ua-detail-panel').style.display='none'" 
+            style="background:none;border:none;color:var(--teal-light);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:16px;padding:0">← Back to all users</button>
+          
+          <!-- User header -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+            <div style="font-size:16px;font-weight:700" id="ua-phone"></div>
+            <div style="font-size:12px;color:var(--ink3);margin-top:4px" id="ua-meta"></div>
+          </div>
+
+          <!-- Coin transactions -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--ink2)">🪙 Coin Transactions</div>
+            <div id="ua-transactions" style="font-size:13px"></div>
+          </div>
+
+          <!-- Unlocked contacts -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--ink2)">🔓 Contacts Unlocked</div>
+            <div id="ua-unlocks" style="font-size:13px"></div>
+          </div>
+
+          <!-- Their listings -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--ink2)">🏠 Their Listings</div>
+            <div id="ua-listings" style="font-size:13px"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <div class="page" id="pg-coinpurchases">
       <div class="table-card">
         <div class="table-header">
@@ -311,7 +386,7 @@ function go(page, el) {
   document.getElementById('pg-' + page).classList.add('active');
   const titles = { dashboard:'Dashboard', listings:'All Listings', users:'All Users', coinpurchases:'Coin Purchases', unlocks:'Contact Unlocks', reports:'Reports', support:'Support' };
   document.getElementById('topbarTitle').textContent = titles[page] || page;
-  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
+  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, unlookup:()=>{}, useractivity:loadUserActivity, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
   if (loaders[page]) loaders[page]();
 }
 
@@ -749,6 +824,217 @@ async function claimListing() {
   findUserForMgmt();
 }
 
+
+async function lookupUnlocks() {
+  const phone = document.getElementById('lookup-phone').value.trim().replace(/\D/g,'').slice(-10);
+  if (phone.length !== 10) { toast('Enter a valid 10-digit number', 'error'); return; }
+
+  document.getElementById('lookup-result').style.display = 'none';
+  document.getElementById('lookup-notfound').style.display = 'none';
+
+  try {
+    // Find user
+    const users = await supaGet('users?phone=eq.' + phone + '&select=id,phone,coins,created_at');
+    if (!users.length) { document.getElementById('lookup-notfound').style.display = 'block'; return; }
+    const user = users[0];
+
+    // Get all unlocks by this user
+    const unlocks = await supaGet('contact_unlocks?unlocker_user_id=eq.' + user.id + '&order=created_at.desc&select=*');
+
+    // Show user info
+    document.getElementById('lookup-user-info').innerHTML =
+      `<strong>+91 ${user.phone}</strong> &nbsp;·&nbsp; 🪙 ${user.coins || 0} coins &nbsp;·&nbsp; Joined: ${new Date(user.created_at).toLocaleDateString('en-IN')} &nbsp;·&nbsp; <strong>${unlocks.length} contact${unlocks.length !== 1 ? 's' : ''} unlocked</strong>`;
+
+    // Get listing details for each unlock
+    const table = document.getElementById('lookup-table');
+    // Remove old rows (keep header)
+    while (table.rows.length > 1) table.deleteRow(1);
+
+    if (!unlocks.length) {
+      document.getElementById('lookup-empty').style.display = 'block';
+      document.getElementById('lookup-table-wrap').style.display = 'none';
+    } else {
+      document.getElementById('lookup-empty').style.display = 'none';
+      document.getElementById('lookup-table-wrap').style.display = 'block';
+
+      // Fetch listing + contact info for each unlock
+      for (const u of unlocks) {
+        let listingInfo = '—';
+        let contactInfo = '—';
+        try {
+          const listings = await supaGet('listings?id=eq.' + u.listing_id + '&select=listing_type,areas,poster_name,custom_contact_phone,user_id');
+          if (listings.length) {
+            const l = listings[0];
+            const area = Array.isArray(l.areas) ? l.areas[0] : (l.areas || '—');
+            const type = {flat_listing:'Flat', flat_wanted:'Flat Wanted', flatmate_wanted:'Flatmate', pg_listing:'PG'}[l.listing_type] || l.listing_type;
+            listingInfo = `<a href="listing_detail.html?id=${u.listing_id}" target="_blank" style="color:var(--teal-light);text-decoration:underline">${type} in ${area}${l.poster_name ? ' · ' + l.poster_name : ''}</a>`;
+
+            // Get contact phone
+            if (l.custom_contact_phone) {
+              contactInfo = '+91 ' + l.custom_contact_phone;
+            } else if (l.user_id) {
+              try {
+                const ownerData = await supaGet('users?id=eq.' + l.user_id + '&select=phone');
+                if (ownerData.length) contactInfo = '+91 ' + ownerData[0].phone;
+              } catch(e) {}
+            }
+          }
+        } catch(e) {}
+
+        const row = table.insertRow();
+        row.innerHTML = `
+          <td style="padding:10px 16px;border-bottom:1px solid var(--border)">${listingInfo}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-weight:700;color:var(--teal-light)">${contactInfo}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--gold)">${u.coins_spent || 5} 🪙</td>
+          <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--ink3);font-size:12px">${timeAgo(u.created_at)}</td>
+        `;
+      }
+    }
+
+    document.getElementById('lookup-result').style.display = 'block';
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ── USER ACTIVITY ───────────────────────────────────────────
+async function loadUserActivity() {
+  try {
+    const users = await supaGet('users?select=*&order=created_at.desc');
+    const list = document.getElementById('ua-users-list');
+    if (!users.length) { list.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:12px">No users yet.</div>'; return; }
+    list.innerHTML = users.map(u => {
+      const plan = u.posting_plan || 'free';
+      const planBadge = plan !== 'free' ? `<span style="background:var(--teal-bg);color:var(--teal-light);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">${plan}</span>` : '';
+      const banned = u.is_banned ? '<span style="background:var(--red-bg);color:var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">BANNED</span>' : '';
+      return `<div onclick="showUserActivity('${u.id}','${u.phone}')" 
+        style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background 0.15s"
+        onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+        <div>
+          <div style="font-weight:700;font-size:14px">+91 ${u.phone}</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:2px">Joined ${timeAgo(u.created_at)} ${planBadge} ${banned}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700;color:var(--gold)">🪙 ${u.coins || 0}</div>
+          <div style="font-size:11px;color:var(--ink3)">balance</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function showUserActivity(userId, phone) {
+  document.getElementById('ua-users-panel').style.display = 'none';
+  document.getElementById('ua-detail-panel').style.display = 'block';
+  document.getElementById('ua-phone').textContent = '+91 ' + phone;
+  document.getElementById('ua-meta').textContent = 'Loading…';
+
+  try {
+    // Fetch all data in parallel
+    const [userData, transactions, unlocks, listings] = await Promise.all([
+      supaGet('users?id=eq.' + userId + '&select=*'),
+      supaGet('coin_transactions?user_id=eq.' + userId + '&order=created_at.desc&select=*'),
+      supaGet('contact_unlocks?unlocker_user_id=eq.' + userId + '&order=created_at.desc&select=*'),
+      supaGet('listings?user_id=eq.' + userId + '&order=created_at.desc&select=id,listing_type,areas,is_active,rent_amount,claimed_by_user_id,poster_name')
+    ]);
+
+    const u = userData[0];
+    const totalPurchased = transactions.filter(t => t.type === 'purchase').reduce((s,t) => s + (t.amount||0), 0);
+    const totalSpent = transactions.filter(t => t.type === 'unlock_contact').reduce((s,t) => s + Math.abs(t.amount||0), 0);
+
+    document.getElementById('ua-meta').innerHTML = 
+      `🪙 <strong>${u.coins || 0} coins</strong> balance &nbsp;·&nbsp; 
+       Bought: <strong>${totalPurchased} coins</strong> &nbsp;·&nbsp; 
+       Spent: <strong>${totalSpent} coins</strong> &nbsp;·&nbsp;
+       Plan: <strong>${u.posting_plan || 'free'}</strong> &nbsp;·&nbsp;
+       Joined: ${new Date(u.created_at).toLocaleDateString('en-IN')}
+       ${u.is_banned ? ' &nbsp;·&nbsp; <span style="color:var(--red);font-weight:700">BANNED</span>' : ''}`;
+
+    // Transactions
+    const txEl = document.getElementById('ua-transactions');
+    if (!transactions.length) {
+      txEl.innerHTML = '<div style="padding:12px 16px;color:var(--ink3)">No transactions.</div>';
+    } else {
+      txEl.innerHTML = transactions.map(t => {
+        const color = t.amount > 0 ? 'var(--green)' : 'var(--red)';
+        const sign = t.amount > 0 ? '+' : '';
+        const typeLabel = {signup_bonus:'Signup Bonus', purchase:'Purchase', unlock_contact:'Unlock', admin_credit:'Admin Credit', admin_debit:'Admin Debit', purchase_pending:'Purchase Pending'}[t.type] || t.type;
+        return `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600;font-size:13px">${typeLabel}</div>
+            <div style="font-size:11px;color:var(--ink3)">${t.description || '—'} · ${timeAgo(t.created_at)}</div>
+          </div>
+          <div style="font-weight:700;color:${color};white-space:nowrap">${sign}${t.amount} 🪙</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Unlocks
+    const unlockEl = document.getElementById('ua-unlocks');
+    if (!unlocks.length) {
+      unlockEl.innerHTML = '<div style="padding:12px 16px;color:var(--ink3)">No contacts unlocked.</div>';
+    } else {
+      // Fetch listing info for each unlock
+      const listingIds = [...new Set(unlocks.map(u => u.listing_id).filter(Boolean))];
+      const ulListings = listingIds.length ? await supaGet('listings?id=in.(' + listingIds.join(',') + ')&select=id,areas,listing_type,user_id,custom_contact_phone') : [];
+      const ulMap = {};
+      for (const l of ulListings) {
+        const area = Array.isArray(l.areas) ? l.areas[0] : (l.areas || '—');
+        const type = {flat_listing:'Flat',flat_wanted:'Flat Wanted',flatmate_wanted:'Flatmate',pg_listing:'PG'}[l.listing_type] || l.listing_type;
+        let contact = l.custom_contact_phone ? '+91 ' + l.custom_contact_phone : '—';
+        if (!l.custom_contact_phone && l.user_id) {
+          try {
+            const ownerData = await supaGet('users?id=eq.' + l.user_id + '&select=phone');
+            if (ownerData.length) contact = '+91 ' + ownerData[0].phone;
+          } catch(e) {}
+        }
+        ulMap[l.id] = { area, type, contact };
+      }
+      unlockEl.innerHTML = unlocks.map(u => {
+        const info = ulMap[u.listing_id] || {};
+        return `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600;font-size:13px">${info.type || '—'} in ${info.area || '—'}</div>
+            <div style="font-size:11px;color:var(--ink3)">${timeAgo(u.created_at)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:var(--teal-light);font-size:13px">${info.contact || '—'}</div>
+            <div style="font-size:11px;color:var(--gold)">${u.coins_spent || 5} 🪙 spent</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // Listings
+    const listingsEl = document.getElementById('ua-listings');
+    // Also check claimed listings
+    const claimedListings = await supaGet('listings?claimed_by_user_id=eq.' + userId + '&order=created_at.desc&select=id,listing_type,areas,is_active,rent_amount,poster_name');
+    const allListings = [...listings, ...claimedListings.filter(cl => !listings.find(l => l.id === cl.id))];
+
+    if (!allListings.length) {
+      listingsEl.innerHTML = '<div style="padding:12px 16px;color:var(--ink3)">No listings.</div>';
+    } else {
+      listingsEl.innerHTML = allListings.map(l => {
+        const area = Array.isArray(l.areas) ? l.areas[0] : (l.areas || '—');
+        const type = {flat_listing:'Flat Listing',flat_wanted:'Flat Wanted',flatmate_wanted:'Flatmate Wanted',pg_listing:'PG'}[l.listing_type] || l.listing_type;
+        const status = l.is_active ? '<span style="color:var(--green);font-weight:700">Active</span>' : '<span style="color:var(--ink3)">Deleted</span>';
+        const claimed = claimedListings.find(cl => cl.id === l.id) ? ' · <span style="color:var(--teal-light)">Claimed</span>' : '';
+        return `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600;font-size:13px">${type} in ${area}${l.poster_name ? ' · ' + l.poster_name : ''}</div>
+            <div style="font-size:11px;color:var(--ink3)">₹${l.rent_amount || '—'} ${claimed}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            ${status}
+            <a href="listing_detail.html?id=${l.id}" target="_blank" class="btn btn-teal" style="padding:4px 10px;font-size:11px;text-decoration:none">View</a>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+  } catch(e) { 
+    console.error(e);
+    document.getElementById('ua-meta').textContent = 'Error loading data.';
+  }
+}
 
 </script>
 </body>
