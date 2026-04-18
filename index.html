@@ -1154,10 +1154,12 @@ function buildUnlockBtn(l, areas) {
 }
 
 async function viewUnlockedContact(listingId) {
-  // Reset sheet to prompt state first in case it was in revealed state
-  document.getElementById('unlockPromptState').style.display = 'block';
+  currentUnlockListingId = listingId;
+  // Hide prompt, show loading in revealed state
+  document.getElementById('unlockPromptState').style.display = 'none';
   document.getElementById('unlockRevealedState').style.display = 'none';
-  // Fetch and show contact directly
+  openSheet('unlock');
+  // Fetch and show contact directly in revealed state
   await showUnlockedContact(listingId);
 }
 
@@ -1172,6 +1174,32 @@ async function handleUnlockCard(btn) {
     window.location.href = 'listing_detail.html?id=' + listingId;
     return;
   }
+
+  // Check if free contact — skip coin deduction, show contact directly
+  const isFreeBtn = btn.textContent.includes('free') || btn.textContent.includes('Free');
+  if (isFreeBtn) {
+    if (!user) {
+      window.location.href = 'login.html?trigger=unlock&listing_id=' + listingId;
+      return;
+    }
+    currentUnlockListingId = listingId;
+    document.getElementById('unlockPromptState').style.display = 'block';
+    document.getElementById('unlockRevealedState').style.display = 'none';
+    openSheet('unlock');
+    // Mark as unlocked without charging
+    markAsUnlocked(listingId);
+    await showUnlockedContact(listingId);
+    // Record unlock with 0 coins
+    try {
+      await fetch(`${SUPA_URL}/rest/v1/contact_unlocks`, {
+        method: 'POST',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unlocker_user_id: user.userId, listing_id: listingId, listing_user_id: ownerId||'', coins_spent: 0, created_at: new Date().toISOString() })
+      });
+    } catch(e) {}
+    return;
+  }
+
   await handleUnlock(listingId, area);
 }
 
