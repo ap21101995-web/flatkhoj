@@ -893,18 +893,20 @@ function markAsUnlocked(listingId) {
     unlocked.push(listingId);
     localStorage.setItem('fk_unlocked', JSON.stringify(unlocked));
   }
-  // Update card button on homepage if visible
-  document.querySelectorAll(`[onclick*="handleUnlock('${listingId}'"]`).forEach(btn => {
-    const row = btn.closest('.unlock-row');
-    if (row) {
+  // Update card button using data-listing-id selector
+  const card = document.querySelector(`[data-listing-id="${listingId}"]`);
+  if (card) {
+    const btn = card.querySelector('.unlock-btn');
+    if (btn) {
       btn.style.background = 'var(--teal-bg)';
       btn.style.color = 'var(--teal)';
       btn.style.border = '1.5px solid var(--teal)';
-      btn.style.cursor = 'default';
+      btn.style.cursor = 'pointer';
       btn.innerHTML = '✓ Contact unlocked — view';
-      btn.onclick = () => window.location.href = `listing_detail.html?id=${listingId}`;
+      btn.onclick = function(e) { e.stopPropagation(); viewUnlockedContact(listingId); };
+      btn.removeAttribute('data-listing-id');
     }
-  });
+  }
 }
 
 // ── LOAD LISTINGS FROM SUPABASE ────────────────────────────
@@ -1174,19 +1176,37 @@ async function handleUnlockCard(btn) {
   await handleUnlock(listingId, area);
 }
 
-// Mark own listing buttons after cards render
+// Mark own listing buttons and unlocked contacts after cards render
 function markOwnListings() {
   const user = getUser();
   if (!user) return;
-  document.querySelectorAll('.unlock-btn[data-owner-id]').forEach(btn => {
-    if (btn.getAttribute('data-owner-id') === user.userId) {
+
+  document.querySelectorAll('[data-listing-id]').forEach(card => {
+    const listingId = card.dataset.listingId;
+    const btn = card.querySelector('.unlock-btn');
+    if (!btn || !listingId) return;
+
+    // Check if already unlocked
+    if (unlockedListingIds.has(listingId) || getUnlockedListings().includes(listingId)) {
+      btn.style.background = 'var(--teal-bg)';
+      btn.style.color = 'var(--teal)';
+      btn.style.border = '1.5px solid var(--teal)';
+      btn.style.cursor = 'pointer';
+      btn.innerHTML = '✓ Contact unlocked — view';
+      btn.onclick = function(e) { e.stopPropagation(); viewUnlockedContact(listingId); };
+      return;
+    }
+
+    // Check if own listing
+    const ownerId = btn.getAttribute('data-owner-id');
+    if (ownerId === user.userId) {
       btn.textContent = 'Your listing';
       btn.style.background = 'var(--bg2)';
       btn.style.color = 'var(--ink3)';
       btn.style.border = '1.5px solid var(--border)';
       btn.style.cursor = 'default';
       btn.style.fontSize = '12px';
-      btn.onclick = () => window.location.href = 'listing_detail.html?id=' + btn.getAttribute('data-listing-id');
+      btn.onclick = function(e) { e.stopPropagation(); window.location.href = 'listing_detail.html?id=' + listingId; };
     }
   });
 }
