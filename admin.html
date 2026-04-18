@@ -505,9 +505,16 @@ async function loadListings() {
     ]);
     const unlockMap = {};
     unlocks.forEach(u => { unlockMap[u.listing_id] = (unlockMap[u.listing_id]||0)+1; });
+
+    // Fetch poster phone for every listing
+    const userIds = [...new Set(listings.map(l => l.user_id).filter(Boolean))];
+    const posterUsers = userIds.length ? await supaGet('users?id=in.('+userIds.join(',')+')'+'&select=id,phone') : [];
+    const posterMap = {};
+    posterUsers.forEach(u => posterMap[u.id] = u.phone);
+
     const typeMap = {flat_listing:'Flat',flat_wanted:'Wanted',flatmate_wanted:'Flatmate',pg_listing:'PG'};
     const t = document.getElementById('listingsTable');
-    t.innerHTML = '<tr><th>Area / Type</th><th>Custom Phone</th><th>Rent</th><th>Unlocks</th><th>Posted</th><th>Status</th><th>Actions</th></tr>';
+    t.innerHTML = '<tr><th>Area / Type</th><th>Poster\'s Phone</th><th>Contact Shown to Users</th><th>Rent</th><th>Unlocks</th><th>Posted</th><th>Status</th><th>Actions</th></tr>';
     listings.forEach(l => {
       const areas = Array.isArray(l.areas) ? l.areas.join(', ') : l.areas||'Mumbai';
       const price = l.rent_amount ? 'Rs.'+l.rent_amount.toLocaleString('en-IN') : '-';
@@ -515,9 +522,14 @@ async function loadListings() {
       const unlockBtn = uc > 0
         ? `<button class="btn btn-teal" onclick="viewListingUnlockers('${l.id}','${areas.replace(/'/g,"\\'")}')">View ${uc}</button>`
         : '<span style="color:var(--ink3)">None</span>';
+      const posterPhone = posterMap[l.user_id] ? '+91 '+posterMap[l.user_id] : '—';
+      const contactShown = l.custom_contact_phone
+        ? '+91 '+l.custom_contact_phone
+        : (l.posted_by_owner === true ? '<span style="color:var(--red);font-weight:700">⚠️ Missing</span>' : posterPhone);
       t.innerHTML += `<tr>
-        <td><div style="font-weight:600">${areas}</div><div style="font-size:11px;color:var(--ink3)">${typeMap[l.listing_type]||l.listing_type}</div></td>
-        <td style="color:var(--gold);font-size:12px">${l.custom_contact_phone?'+91 '+l.custom_contact_phone:'—'}</td>
+        <td><div style="font-weight:600">${areas}</div><div style="font-size:11px;color:var(--ink3)">${typeMap[l.listing_type]||l.listing_type}${l.poster_name?' · '+l.poster_name:''}</div></td>
+        <td style="font-size:12px;color:var(--ink2)">${posterPhone}</td>
+        <td style="font-size:12px;font-weight:700;color:var(--gold)">${contactShown}</td>
         <td>${price}</td>
         <td>${unlockBtn}</td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.created_at)}</td>
