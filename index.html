@@ -1030,17 +1030,7 @@ function renderListings(listings) {
       const period = l.listing_type === 'flat_wanted' ? 'budget' : '/mo';
       const typeLabel = typeLabels[l.listing_type] || l.listing_type;
 
-      let brokerClass, brokerText;
-      if (l.listing_type === 'flat_wanted') {
-        const pref = l.brokerage_preference;
-        if (pref === 'no') { brokerClass = 'no-broker'; brokerText = '🚫 No Brokerage'; }
-        else if (pref === 'prefno') { brokerClass = 'pref-broker'; brokerText = '🤝 Prefer No Brokerage'; }
-        else if (pref === 'yes') { brokerClass = 'ok-broker'; brokerText = '✅ Okay With Brokerage'; }
-        else { brokerClass = 'no-broker'; brokerText = 'Looking For Flat'; }
-      } else {
-        brokerClass = l.has_brokerage ? 'has-broker' : 'no-broker';
-        brokerText = l.has_brokerage ? 'Brokerage Applicable' : 'No Brokerage';
-      }
+
 
       const timeAgo = getTimeAgo(l.created_at);
       const name = l.poster_name || '';
@@ -1084,7 +1074,6 @@ function renderListings(listings) {
       card.innerHTML = `
         <div class="type-label">${typeLabel}</div>
         ${l.is_sold ? '<div style="display:inline-block;background:#fde8e8;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px">🔴 Sold/Taken</div>' : ''}
-        <div class="broker-tag ${brokerClass} dot">${brokerText}</div>
         <div class="card-header">
           <div class="card-title">${escHtml(cardTitle)}</div>
           <div class="card-price">${price}<div class="per">${period}</div></div>
