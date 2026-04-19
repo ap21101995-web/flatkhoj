@@ -682,13 +682,30 @@ async function loadUnlocks() {
     const lids = [...new Set(unlocks.map(u=>u.listing_id).filter(Boolean))];
     const [users, listings] = await Promise.all([
       uids.length > 0 ? supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : Promise.resolve([]),
-      lids.length > 0 ? supaGet('listings?id=in.('+lids.join(',')+')&select=id,areas,listing_type,custom_contact_phone') : Promise.resolve([])
+      lids.length > 0 ? supaGet('listings?id=in.('+lids.join(',')+')&select=id,areas,listing_type,custom_contact_phone,user_id,posted_by_owner') : Promise.resolve([])
     ]);
     const uMap = {}; users.forEach(u=>uMap[u.id]=u.phone);
-    const lMap = {}; listings.forEach(l=>lMap[l.id]={area:Array.isArray(l.areas)?l.areas[0]:l.areas||'Unknown', phone:l.custom_contact_phone});
+
+    // Also fetch poster phones for listings that have no custom_contact_phone
+    const posterUserIds = [...new Set(listings.filter(l => !l.custom_contact_phone && l.user_id).map(l => l.user_id))];
+    const posterUsers = posterUserIds.length ? await supaGet('users?id=in.('+posterUserIds.join(',')+')'+'&select=id,phone') : [];
+    const posterMap = {}; posterUsers.forEach(u => posterMap[u.id] = u.phone);
+
+    const lMap = {};
+    listings.forEach(l => {
+      const area = Array.isArray(l.areas) ? l.areas[0] : l.areas || 'Unknown';
+      let phone = null;
+      if (l.custom_contact_phone) {
+        phone = l.custom_contact_phone;
+      } else if (l.posted_by_owner !== true && posterMap[l.user_id]) {
+        phone = posterMap[l.user_id];
+      }
+      lMap[l.id] = { area, phone };
+    });
+
     document.getElementById('totalUnlocksInfo').textContent = unlocks.length+' total unlock'+(unlocks.length!==1?'s':'');
     const t = document.getElementById('unlocksTable');
-    t.innerHTML = '<tr><th>Unlocked By</th><th>Listing Area</th><th>Listing Phone</th><th>Coins Paid</th><th>When</th></tr>';
+    t.innerHTML = '<tr><th>Unlocked By</th><th>Listing Area</th><th>Contact Revealed</th><th>Coins Paid</th><th>When</th></tr>';
     if (!unlocks.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No unlocks yet</td></tr>'; return; }
     unlocks.forEach(u => {
       const phone = uMap[u.unlocker_user_id] ? '+91 '+uMap[u.unlocker_user_id] : 'Unknown';
@@ -696,7 +713,7 @@ async function loadUnlocks() {
       t.innerHTML += `<tr>
         <td style="font-weight:600">${phone}</td>
         <td>${lInfo.area||'—'}</td>
-        <td style="color:var(--gold);font-size:12px">${lInfo.phone?'+91 '+lInfo.phone:'—'}</td>
+        <td style="color:var(--gold);font-weight:700;font-size:13px">${lInfo.phone?'+91 '+lInfo.phone:'—'}</td>
         <td><span class="badge b-unlock">${u.coins_spent||5} coins</span></td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
       </tr>`;
