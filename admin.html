@@ -749,15 +749,37 @@ async function loadReports() {
 }
 
 async function resolveReport(id, action, btn) {
-  if (action==='remove') {
-    const reports = await supaGet('reports?id=eq.'+id+'&select=listing_id');
-    if (reports[0]?.listing_id) await supaPatch('listings','id=eq.'+reports[0].listing_id,{is_active:false});
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    if (action === 'remove') {
+      const reports = await supaGet('reports?id=eq.'+id+'&select=listing_id');
+      if (reports[0]?.listing_id) await supaPatch('listings','id=eq.'+reports[0].listing_id,{is_active:false});
+    }
+    const ok = await supaPatch('reports','id=eq.'+id,{status:'resolved',resolved_at:new Date().toISOString()});
+    if (!ok) {
+      // Try with service role via direct fetch
+      const r2 = await fetch(`${SUPA_URL}/rest/v1/reports?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': `Bearer ${SUPA_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({status:'resolved', resolved_at: new Date().toISOString()})
+      });
+      console.log('Patch status:', r2.status, await r2.text());
+    }
+    const row = btn.closest('tr');
+    row.cells[3].innerHTML = '<span class="badge b-ok">Resolved</span>';
+    row.cells[4].innerHTML = '<span style="font-size:12px;color:var(--ink3)">Done</span>';
+    toast(action==='remove'?'Listing removed':'Dismissed','ok');
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = action === 'remove' ? 'Remove listing' : 'Dismiss';
+    toast('Failed: ' + e.message, 'error');
   }
-  await supaPatch('reports','id=eq.'+id,{status:'resolved',resolved_at:new Date().toISOString()});
-  const row = btn.closest('tr');
-  row.cells[3].innerHTML = '<span class="badge b-ok">Resolved</span>';
-  row.cells[4].innerHTML = '<span style="font-size:12px;color:var(--ink3)">Done</span>';
-  toast(action==='remove'?'Listing removed':'Dismissed','ok');
 }
 
 // ── SUPPORT ───────────────────────────────────────────────
