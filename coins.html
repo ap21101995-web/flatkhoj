@@ -448,10 +448,7 @@ async function initiatePayment() {
 }
 
 // ── CREDIT COINS AFTER PAYMENT RETURN ─────────────────────
-// Called when Cashfree redirects back with ?payment=success
-// Verifies the order via Edge Function and credits coins
 async function creditCoinsAfterPayment(user, coinsAdded, orderId) {
-  // Disable buttons to prevent double-tap
   document.querySelectorAll('button').forEach(b => b.disabled = true);
   document.getElementById('balanceAmount').textContent = '…';
 
@@ -461,52 +458,42 @@ async function creditCoinsAfterPayment(user, coinsAdded, orderId) {
   waiting.textContent = '⏳ Confirming your payment…';
   document.getElementById('balanceAmount')?.parentElement?.appendChild(waiting);
 
-  try {
-    // Call our verify-and-credit edge function
-    const res = await fetch(`${SUPA_URL}/functions/v1/payment-webhook`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${SUPA_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        data: {
-          order: { order_id: orderId, order_amount: selectedPrice || 0 },
-          payment: { payment_status: 'SUCCESS' },
-          customer_details: { customer_id: user.userId }
-        }
-      })
-    });
-
-    console.log('Webhook call status:', res.status);
-
-    // Wait 1 second for DB to update
+  // Poll DB for up to 10 seconds — Cashfree webhook will credit coins
+  for (let i = 0; i < 10; i++) {
     await new Promise(r => setTimeout(r, 1000));
+    try {
+      const balRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+      const balData = await balRes.json();
+      const freshCoins = balData[0]?.coins ?? user.coins;
+      if (freshCoins >= (user.coins + coinsAdded)) {
+        // Coins credited by webhook
+        user.coins = freshCoins;
+        localStorage.setItem('fmh_user', JSON.stringify(user));
+        document.getElementById('balanceAmount').textContent = freshCoins;
+        document.getElementById('waitingMsg')?.remove();
+        document.querySelectorAll('button').forEach(b => b.disabled = false);
+        showSuccess(coinsAdded);
+        return;
+      }
+    } catch(e) {}
+  }
 
-    // Fetch fresh balance
+  // Timeout — show current balance anyway
+  document.getElementById('waitingMsg')?.remove();
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
+  try {
     const balRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     });
     const balData = await balRes.json();
-    const freshCoins = balData[0]?.coins ?? (user.coins + coinsAdded);
-
+    const freshCoins = balData[0]?.coins ?? user.coins;
     user.coins = freshCoins;
     localStorage.setItem('fmh_user', JSON.stringify(user));
     document.getElementById('balanceAmount').textContent = freshCoins;
-    document.getElementById('waitingMsg')?.remove();
-    document.querySelectorAll('button').forEach(b => b.disabled = false);
-    showSuccess(coinsAdded);
-
-  } catch(err) {
-    console.error('Credit error:', err);
-    document.getElementById('waitingMsg')?.remove();
-    document.querySelectorAll('button').forEach(b => b.disabled = false);
-    // Show success anyway — user paid, give them the coins
-    const fallbackCoins = (user.coins || 0) + coinsAdded;
-    document.getElementById('balanceAmount').textContent = fallbackCoins;
-    showSuccess(coinsAdded);
-  }
+  } catch(e) {}
+  showSuccess(coinsAdded);
 }
 
 // ── WAIT FOR COINS UPDATE AFTER PAYMENT ───────────────────
