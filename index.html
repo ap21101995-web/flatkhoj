@@ -1320,6 +1320,8 @@ async function confirmUnlock() {
 
     if (existing.length > 0) {
       // Already unlocked — mark and show contact
+      btn.innerHTML = 'Spend <span id="unlockBtnCost">' + UNLOCK_COST + '</span> Coins & Unlock →';
+      btn.disabled = false;
       markAsUnlocked(currentUnlockListingId);
       await showUnlockedContact(currentUnlockListingId);
       return;
@@ -1360,7 +1362,9 @@ async function confirmUnlock() {
     localStorage.setItem('fmh_user', JSON.stringify(user));
     updateCoinDisplays(newCoins);
 
-    // Mark as unlocked in memory and update card
+    // Re-enable btn and mark as unlocked
+    btn.innerHTML = 'Spend <span id="unlockBtnCost">' + UNLOCK_COST + '</span> Coins & Unlock →';
+    btn.disabled = false;
     markAsUnlocked(currentUnlockListingId);
 
     await showUnlockedContact(currentUnlockListingId);
@@ -1451,8 +1455,8 @@ function showContactInSheet(phone) {
   document.getElementById('unlockPromptState').style.display = 'none';
   document.getElementById('unlockRevealedState').style.display = 'block';
   // Make sure sheet is open
-  document.getElementById('unlockBackdrop').classList.add('show');
-  document.getElementById('unlockSheet').classList.add('show');
+  document.getElementById('unlockBackdrop').classList.add('open');
+  document.getElementById('unlockSheet').classList.add('open');
 }
 
 // ── HELPERS ────────────────────────────────────────────────
