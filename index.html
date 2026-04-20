@@ -938,7 +938,8 @@ async function loadListings(reset = true) {
   document.getElementById('loadMoreWrap').style.display = 'none';
 
   try {
-    let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc`;
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&created_at=gte.${thirtyDaysAgo}`;
     if (activeFilter !== 'all' && activeFilter !== 'nobroker') url += `&listing_type=eq.${activeFilter}`;
     if (activeFilter === 'nobroker') url += `&has_brokerage=eq.false`;
 
@@ -984,8 +985,7 @@ async function loadListings(reset = true) {
     currentOffset = PAGE_SIZE;
     renderListings(page);
 
-    document.querySelector('.stats-text').innerHTML =
-      `Showing <strong>${allListings.length}</strong> of <strong>${listings.length}</strong> listing${listings.length !== 1 ? 's' : ''}`;
+    document.querySelector('.stats-text').innerHTML = `Recent listings (${listings.length})`;
 
     if (listings.length > PAGE_SIZE) {
       document.getElementById('loadMoreWrap').style.display = 'block';
