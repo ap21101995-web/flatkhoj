@@ -222,10 +222,10 @@ async function loadMyPosts(user) {
     // Fetch both posts created by user AND posts claimed by user (posted on their behalf)
     const [myRes, claimedRes] = await Promise.all([
       fetch(`${SUPA_URL}/rest/v1/listings?user_id=eq.${user.userId}&order=created_at.desc&select=*`, {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range': '0-9999' }
       }),
       fetch(`${SUPA_URL}/rest/v1/listings?claimed_by_user_id=eq.${user.userId}&order=created_at.desc&select=*`, {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range': '0-9999' }
       })
     ]);
 
@@ -275,8 +275,8 @@ async function loadMyPosts(user) {
 async function loadUnlockedContacts(user) {
   const wrap = document.getElementById('unlockedWrap');
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&order=created_at.desc&select=*,listings(listing_type,areas,description,rent_amount)`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    const res = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&order=created_at.desc&select=*,listings(listing_type,areas,description,rent_amount,is_active)`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range': '0-9999' }
     });
     const unlocks = await res.json();
     if (!Array.isArray(unlocks) || unlocks.length === 0) {
@@ -291,19 +291,23 @@ async function loadUnlockedContacts(user) {
     wrap.innerHTML = '';
     unlocks.forEach(u => {
       const l = u.listings;
-      if (!l) return;
-      const areas = Array.isArray(l.areas) ? l.areas.join(', ') : l.areas || 'Mumbai';
+      // Show even if listing is deleted — user paid for it
+      const areas = l ? (Array.isArray(l.areas) ? l.areas.join(', ') : l.areas || 'Mumbai') : 'Mumbai';
+      const typeLabel = l ? (typeLabels[l.listing_type] || l.listing_type) : 'Listing';
+      const description = l?.description?.slice(0,80) || 'Listing in ' + areas;
+      const isDeleted = !l || l.is_active === false;
       const div = document.createElement('div');
       div.className = 'activity-card';
       div.onclick = () => window.location.href = `listing_detail.html?id=${u.listing_id}`;
       div.innerHTML = `
-        <div class="activity-type">${typeLabels[l.listing_type] || l.listing_type}</div>
-        <div class="activity-title">${l.description?.slice(0,80) || 'Listing in ' + areas}</div>
+        <div class="activity-type">${typeLabel}</div>
+        <div class="activity-title">${description}</div>
         <div class="activity-meta">
           <span>📍 ${areas}</span>
-          ${l.rent_amount ? `<span>₹${l.rent_amount.toLocaleString('en-IN')}/mo</span>` : ''}
+          ${l?.rent_amount ? `<span>₹${l.rent_amount.toLocaleString('en-IN')}/mo</span>` : ''}
           <span>${timeAgo(u.created_at)}</span>
           <span class="activity-tag" style="background:var(--teal-bg);color:var(--teal)">🔓 Unlocked</span>
+          ${isDeleted ? '<span class="activity-tag" style="background:var(--red-bg);color:var(--red)">Expired</span>' : ''}
         </div>`;
       wrap.appendChild(div);
     });
