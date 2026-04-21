@@ -147,7 +147,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div class="table-card">
         <div class="table-header">
           <div class="ttitle">All Listings</div>
-          <input class="filter-input" placeholder="Search area…" oninput="filterTable('listingsTable',this.value)">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="filter-input" placeholder="Search area…" oninput="filterTable('listingsTable',this.value)">
+            <input class="filter-input" id="phoneSearchInput" placeholder="Search by contact number…" type="tel" maxlength="10" oninput="filterListingsByPhone(this.value)" style="width:200px">
+          </div>
         </div>
         <table id="listingsTable"></table>
       </div>
@@ -438,6 +441,18 @@ function showModal(title, sub, bodyHtml) {
   </div>`;
   m.onclick = e => { if(e.target===m) m.remove(); };
   document.body.appendChild(m);
+}
+
+function filterListingsByPhone(val) {
+  const q = val.trim().replace(/\D/g, '');
+  const rows = document.querySelectorAll('#listingsTable tr');
+  rows.forEach((row, i) => {
+    if (i === 0) return; // skip header
+    if (!q) { row.style.display = ''; return; }
+    const posterPhone = row.cells[1]?.textContent?.replace(/\D/g,'') || '';
+    const contactPhone = row.cells[2]?.textContent?.replace(/\D/g,'') || '';
+    row.style.display = (posterPhone.includes(q) || contactPhone.includes(q)) ? '' : 'none';
+  });
 }
 
 function filterTable(tableId, q) {
@@ -795,7 +810,7 @@ async function loadSupport() {
         <td>${c.subject}</td>
         <td><span class="badge ${c.status==='open'?'b-pending">Open':'b-ok">Resolved'}</span></td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(c.updated_at)}</td>
-        <td><a href="support_admin.html" target="_blank" class="btn btn-ghost">Open chat</a></td>
+        <td><a href="support_admin.html" class="btn btn-ghost">Open chat →</a></td>
       </tr>`;
     });
   } catch(e) { console.error('Support:', e); }
