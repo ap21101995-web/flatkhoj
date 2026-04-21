@@ -938,8 +938,8 @@ async function loadListings(reset = true) {
   document.getElementById('loadMoreWrap').style.display = 'none';
 
   try {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&created_at=gte.${thirtyDaysAgo}`;
+    const now = new Date().toISOString();
+    let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&expires_at=gte.${now}`;
     if (activeFilter !== 'all' && activeFilter !== 'nobroker') url += `&listing_type=eq.${activeFilter}`;
     if (activeFilter === 'nobroker') url += `&has_brokerage=eq.false`;
 

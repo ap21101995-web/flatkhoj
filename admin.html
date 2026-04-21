@@ -541,6 +541,7 @@ async function loadListings() {
       const contactShown = l.custom_contact_phone
         ? '+91 '+l.custom_contact_phone
         : (l.posted_by_owner === true ? '<span style="color:var(--red);font-weight:700">⚠️ Missing</span>' : posterPhone);
+      const isExpired = l.expires_at && new Date(l.expires_at) < new Date();
       t.innerHTML += `<tr>
         <td><div style="font-weight:600">${areas}</div><div style="font-size:11px;color:var(--ink3)">${typeMap[l.listing_type]||l.listing_type}${l.poster_name?' · '+l.poster_name:''}</div></td>
         <td style="font-size:12px;color:var(--ink2)">${posterPhone}</td>
@@ -548,7 +549,7 @@ async function loadListings() {
         <td>${price}</td>
         <td>${unlockBtn}</td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.created_at)}</td>
-        <td><span class="badge ${l.is_active?'b-ok">Live':'b-red">Off'}</span></td>
+        <td><span class="badge ${isExpired?'b-red">Expired':l.is_active?'b-ok">Live':'b-red">Off'}</span></td>
         <td>
           <button class="btn btn-ghost" style="margin-right:4px" onclick="window.open('listing_detail.html?id=${l.id}','_blank')">View</button>
           <button class="btn btn-red" onclick="removeListing('${l.id}',this)">Remove</button>
