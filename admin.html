@@ -372,7 +372,12 @@ const ADMIN_PW = 'Owner_Aditya_2026';
 
 async function supaGet(path) {
   const r = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
-    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Range': '0-9999',
+      'Prefer': 'count=none'
+    }
   });
   return r.json();
 }
