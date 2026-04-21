@@ -1200,7 +1200,7 @@ async function handleUnlockCard(btn) {
       await fetch(`${SUPA_URL}/rest/v1/contact_unlocks`, {
         method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unlocker_user_id: user.userId, listing_id: listingId, listing_user_id: ownerId||'', coins_spent: 0, created_at: new Date().toISOString() })
+        body: JSON.stringify({ unlocker_user_id: user.userId, listing_id: listingId, listing_user_id: null, coins_spent: 0, created_at: new Date().toISOString() })
       });
     } catch(e) {}
     return;
@@ -1349,17 +1349,18 @@ async function confirmUnlock() {
     });
 
     // Record unlock
-    await fetch(`${SUPA_URL}/rest/v1/contact_unlocks`, {
+    const unlockRes = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks`, {
       method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         unlocker_user_id: user.userId,
         listing_id: currentUnlockListingId,
-        listing_user_id: 'unknown',
+        listing_user_id: null,
         coins_spent: UNLOCK_COST,
         created_at: new Date().toISOString()
       })
     });
+    if (!unlockRes.ok) console.error('Unlock record failed:', await unlockRes.text());
 
     // Sync fresh balance to localStorage and update ALL coin displays
     user.coins = newCoins;
