@@ -1200,7 +1200,7 @@ async function handleUnlockCard(btn) {
       await fetch(`${SUPA_URL}/rest/v1/contact_unlocks`, {
         method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unlocker_user_id: user.userId, listing_id: listingId, listing_user_id: null, coins_spent: 0, created_at: new Date().toISOString() })
+        body: JSON.stringify({ unlocker_user_id: user.userId, listing_id: listingId, listing_user_id: ownerId || user.userId, coins_spent: 0, created_at: new Date().toISOString() })
       });
     } catch(e) {}
     return;
@@ -1348,14 +1348,21 @@ async function confirmUnlock() {
       body: JSON.stringify({ coins: newCoins })
     });
 
-    // Record unlock
+    // Record unlock — fetch listing owner id first
+    let listingOwnerId = user.userId; // fallback
+    try {
+      const lr = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${currentUnlockListingId}&select=user_id`,
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }});
+      const ld = await lr.json();
+      if (ld[0]?.user_id) listingOwnerId = ld[0].user_id;
+    } catch(e) {}
     const unlockRes = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks`, {
       method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         unlocker_user_id: user.userId,
         listing_id: currentUnlockListingId,
-        listing_user_id: null,
+        listing_user_id: listingOwnerId,
         coins_spent: UNLOCK_COST,
         created_at: new Date().toISOString()
       })
