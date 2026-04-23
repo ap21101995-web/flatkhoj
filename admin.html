@@ -992,9 +992,15 @@ async function loadSoldReports() {
         <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--red)">${reporterPhone}</td>
         <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${l.sold_at ? timeAgo(l.sold_at) : '—'}</td>
         <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
-          <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red);font-size:12px" onclick="removeSoldListing('${l.id}', this)">Remove Listing</button>
-          <button class="btn btn-teal" style="font-size:12px;margin-left:6px" onclick="unsoldListing('${l.id}', this)">Not Sold</button>
+          <button class="btn sold-remove-btn" data-id="${l.id}" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red);font-size:12px">Remove Listing</button>
+          <button class="btn btn-teal sold-notsold-btn" data-id="${l.id}" style="font-size:12px;margin-left:6px">Not Sold</button>
         </td>`;
+
+      // Attach events directly to the buttons
+      const removeBtn = row.querySelector('.sold-remove-btn');
+      const notSoldBtn = row.querySelector('.sold-notsold-btn');
+      removeBtn.addEventListener('click', function() { removeSoldListing(l.id, this); });
+      notSoldBtn.addEventListener('click', function() { unsoldListing(l.id, this); });
     }
   } catch(e) { console.error(e); }
 }
