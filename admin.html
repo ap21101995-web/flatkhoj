@@ -375,10 +375,10 @@ async function supaGet(path) {
     headers: {
       'apikey': SUPA_KEY,
       'Authorization': `Bearer ${SUPA_KEY}`,
-      'Range': '0-9999',
       'Prefer': 'count=none'
     }
   });
+  if (!r.ok) { console.error('supaGet failed:', path, r.status); return []; }
   return r.json();
 }
 async function supaPatch(table, query, data) {
@@ -540,11 +540,12 @@ async function refreshBadges() {
     if (rb) { rb.textContent = rep.length; rb.style.display = rep.length > 0 ? 'inline' : 'none'; }
   } catch(e) {}
 
-  // Support badge — open conversations
+  // Support badge — open conversations only
   try {
-    const sup = await supaGet('support_conversations?select=id');
+    const allSupport = await supaGet('support_conversations?select=id,status');
+    const openCount = allSupport.filter(s => !s.status || s.status === 'open').length;
     const supb = document.getElementById('supportbadge');
-    if (supb) { supb.textContent = sup.length; supb.style.display = sup.length > 0 ? 'inline' : 'none'; }
+    if (supb) { supb.textContent = openCount; supb.style.display = openCount > 0 ? 'inline' : 'none'; }
   } catch(e) {}
 }
 async function loadListings() {
@@ -1085,11 +1086,11 @@ async function removeSoldListing(listingId, btn) {
   btn.textContent = 'Removing…';
   btn.disabled = true;
 
-  // Step 1: Deactivate
+  // Step 1: Deactivate AND clear is_sold so it doesn't reappear
   const r1 = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`, {
     method: 'PATCH',
     headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ is_active: false })
+    body: JSON.stringify({ is_active: false, is_sold: false })
   });
 
   if (!r1.ok) {
