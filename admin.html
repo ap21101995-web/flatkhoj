@@ -114,9 +114,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
     <div class="nav-item" onclick="go('unlocks',this)"><span>🔓</span> Contact Unlocks</div>
     <div class="nav-section">Moderation</div>
-    <div class="nav-item" onclick="go('sold',this)"><span>🔴</span> Sold Reports</div>
+    <div class="nav-item" onclick="go('sold',this)"><span>🔴</span> Sold Reports <span class="nav-badge" id="soldbadge" style="display:none">0</span></div>
     <div class="nav-item" onclick="go('reports',this)"><span>🚩</span> Reports <span class="nav-badge" id="rbadge" style="display:none">0</span></div>
-    <div class="nav-item" onclick="go('support',this)"><span>💬</span> Support</div>
+    <div class="nav-item" onclick="go('support',this)"><span>💬</span> Support <span class="nav-badge" id="supportbadge" style="display:none">0</span></div>
   </div>
 
   <div class="main">
@@ -517,10 +517,26 @@ async function loadDashboard() {
         </tr>`;
       });
     }
+    // Update nav badges for pending items
+    try {
+      const [soldReports, pendingReports, pendingSupport] = await Promise.all([
+        supaGet('listings?is_sold=eq.true&is_active=eq.true&select=id'),
+        supaGet('reports?status=eq.pending&select=id'),
+        supaGet('support_conversations?select=id')
+      ]);
+
+      const sb = document.getElementById('soldbadge');
+      if (sb) { sb.textContent = soldReports.length; sb.style.display = soldReports.length > 0 ? 'inline' : 'none'; }
+
+      const rb = document.getElementById('rbadge');
+      if (rb) { rb.textContent = pendingReports.length; rb.style.display = pendingReports.length > 0 ? 'inline' : 'none'; }
+
+      const supb = document.getElementById('supportbadge');
+      if (supb) { supb.textContent = pendingSupport.length; supb.style.display = pendingSupport.length > 0 ? 'inline' : 'none'; }
+    } catch(e) {}
+
   } catch(e) { console.error('Dashboard:', e); }
 }
-
-// ── LISTINGS ──────────────────────────────────────────────
 async function loadListings() {
   try {
     const [listings, unlocks] = await Promise.all([
