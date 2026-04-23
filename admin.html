@@ -540,12 +540,11 @@ async function refreshBadges() {
     if (rb) { rb.textContent = rep.length; rb.style.display = rep.length > 0 ? 'inline' : 'none'; }
   } catch(e) {}
 
-  // Support badge — open conversations only
+  // Support badge — only open conversations
   try {
-    const allSupport = await supaGet('support_conversations?select=id,status');
-    const openCount = allSupport.filter(s => !s.status || s.status === 'open').length;
+    const openSupport = await supaGet('support_conversations?status=eq.open&select=id');
     const supb = document.getElementById('supportbadge');
-    if (supb) { supb.textContent = openCount; supb.style.display = openCount > 0 ? 'inline' : 'none'; }
+    if (supb) { supb.textContent = openSupport.length; supb.style.display = openSupport.length > 0 ? 'inline' : 'none'; }
   } catch(e) {}
 }
 async function loadListings() {
