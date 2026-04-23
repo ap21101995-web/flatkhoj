@@ -627,41 +627,31 @@ async function viewListingUnlockers(listingId, areaName) {
 // ── USERS ─────────────────────────────────────────────────
 async function loadUsers() {
   try {
-    const [users, allUnlocks, allTx] = await Promise.all([
+    const [users, allUnlocks] = await Promise.all([
       supaGet('users?select=*&order=created_at.desc'),
-      supaGet('contact_unlocks?select=unlocker_user_id,coins_spent'),
-      supaGet('coin_transactions?select=user_id,type,amount')
+      supaGet('contact_unlocks?select=unlocker_user_id,coins_spent')
     ]);
 
-    // Count unlocks per user
-    const unlockCount = {};
-    const unlockCoins = {};
+    // Count paid unlocks per user
+    const unlockCount = {}, unlockSpent = {};
     allUnlocks.forEach(u => {
-      unlockCount[u.unlocker_user_id] = (unlockCount[u.unlocker_user_id]||0) + 1;
-      unlockCoins[u.unlocker_user_id] = (unlockCoins[u.unlocker_user_id]||0) + (u.coins_spent||5);
-    });
-
-    // Sum purchased coins per user
-    const purchasedCoins = {};
-    allTx.forEach(t => {
-      if (t.type === 'purchase' || t.type === 'admin_credit' || t.type === 'signup_bonus') {
-        purchasedCoins[t.user_id] = (purchasedCoins[t.user_id]||0) + (t.amount||0);
+      if ((u.coins_spent||0) > 0) {
+        unlockCount[u.unlocker_user_id] = (unlockCount[u.unlocker_user_id]||0) + 1;
+        unlockSpent[u.unlocker_user_id] = (unlockSpent[u.unlocker_user_id]||0) + u.coins_spent;
       }
     });
 
     const t = document.getElementById('usersTable');
-    t.innerHTML = '<tr><th>Phone</th><th>Balance</th><th>Unlocks</th><th>Coins Spent</th><th>Total Earned</th><th>Joined</th><th>Actions</th></tr>';
-    if (!users.length) { t.innerHTML += '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink3)">No users yet</td></tr>'; return; }
+    t.innerHTML = '<tr><th>Phone</th><th>Balance</th><th>Unlocks (paid)</th><th>Coins Spent</th><th>Joined</th><th>Actions</th></tr>';
+    if (!users.length) { t.innerHTML += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">No users yet</td></tr>'; return; }
     users.forEach(u => {
       const unlocks = unlockCount[u.id] || 0;
-      const spent = unlockCoins[u.id] || 0;
-      const earned = purchasedCoins[u.id] || 0;
+      const spent = unlockSpent[u.id] || 0;
       t.innerHTML += `<tr>
         <td style="font-weight:600">+91 ${u.phone}</td>
         <td><span style="color:var(--gold);font-weight:700">${u.coins||0} 🪙</span></td>
         <td style="font-weight:700;color:var(--teal-light)">${unlocks}</td>
-        <td style="color:var(--red)">${spent > 0 ? '-'+spent+' 🪙' : '—'}</td>
-        <td style="color:var(--green)">${earned > 0 ? '+'+earned+' 🪙' : '—'}</td>
+        <td style="color:var(--red)">${spent > 0 ? spent+' 🪙' : '—'}</td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
         <td><button class="btn btn-teal" onclick="viewUserDetail('${u.id}','+91 ${u.phone}')">Full Activity</button></td>
       </tr>`;
@@ -670,11 +660,15 @@ async function loadUsers() {
 }
 
 async function viewUserDetail(userId, phone) {
-  const [purchases, unlocks, posts] = await Promise.all([
-    supaGet('coin_transactions?user_id=eq.'+userId+'&order=created_at.desc&select=*'),
+  const [userData, purchases, unlocks, posts] = await Promise.all([
+    supaGet('users?id=eq.'+userId+'&select=coins'),
+    supaGet('coin_transactions?user_id=eq.'+userId+'&type=eq.purchase&order=created_at.desc&select=*'),
     supaGet('contact_unlocks?unlocker_user_id=eq.'+userId+'&order=created_at.desc&select=*'),
     supaGet('listings?user_id=eq.'+userId+'&order=created_at.desc&select=id,areas,listing_type,is_active,rent_amount')
   ]);
+
+  // Always use DB balance — single source of truth
+  const currentBalance = userData[0]?.coins ?? 0;
 
   // Fetch listing details in batches of 50
   const lids = [...new Set(unlocks.map(u=>u.listing_id).filter(Boolean))];
@@ -686,26 +680,17 @@ async function viewUserDetail(userId, phone) {
       const area = Array.isArray(l.areas) ? l.areas[0] : l.areas || 'Unknown';
       let contact = l.custom_contact_phone || null;
       if (!contact && l.posted_by_owner !== true && l.user_id) {
-        try {
-          const u2 = await supaGet('users?id=eq.'+l.user_id+'&select=phone');
-          if (u2.length) contact = u2[0].phone;
-        } catch(e) {}
+        try { const u2 = await supaGet('users?id=eq.'+l.user_id+'&select=phone'); if(u2.length) contact = u2[0].phone; } catch(e) {}
       }
       lMap[l.id] = { area, contact };
     }
   }
 
-  // Calculate correct expected balance
-  const totalIn = purchases.filter(p => ['purchase','admin_credit','signup_bonus','referral_bonus'].includes(p.type))
-    .reduce((s,p) => s+(p.amount||0), 0);
-  const totalOut = purchases.filter(p => ['unlock_contact','admin_debit'].includes(p.type))
-    .reduce((s,p) => s+Math.abs(p.amount||0), 0);
-  const unlockSpend = unlocks.reduce((s,u) => s+(u.coins_spent||0), 0);
-  const realPurchases = purchases.filter(p => p.type === 'purchase');
-  const rupees = realPurchases.reduce((s,p) => s+({15:20,30:30,50:40,100:70,200:125}[p.amount]||0), 0);
+  const unlockSpend = unlocks.filter(u=>(u.coins_spent||0)>0).reduce((s,u)=>s+(u.coins_spent||0),0);
+  const rupees = purchases.reduce((s,p)=>s+({15:20,30:30,50:40,100:70,200:125}[p.amount]||0),0);
 
-  const purchaseRows = !realPurchases.length ? '<tr><td colspan="3" style="padding:12px 16px;color:var(--ink3)">No purchases</td></tr>' :
-    realPurchases.map(p=>`<tr>
+  const purchaseRows = !purchases.length ? '<tr><td colspan="3" style="padding:12px 16px;color:var(--ink3)">No purchases</td></tr>' :
+    purchases.map(p=>`<tr>
       <td style="padding:8px 16px;border-bottom:1px solid var(--border)">${timeAgo(p.created_at)}</td>
       <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--gold);font-weight:700">+${p.amount} 🪙</td>
       <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--green)">₹${{15:20,30:30,50:40,100:70,200:125}[p.amount]||'?'}</td>
@@ -730,17 +715,17 @@ async function viewUserDetail(userId, phone) {
     }).join('');
 
   showModal(phone,
-    `${realPurchases.length} purchase${realPurchases.length!==1?'s':''} (₹${rupees}) · ${unlocks.length} unlock${unlocks.length!==1?'s':''} (${unlockSpend} 🪙 spent) · ${posts.length} post${posts.length!==1?'s':''}`,
-    `<div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px">Coin Purchases</div>
-    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">
+    `🪙 <strong>${currentBalance} coins</strong> balance &nbsp;·&nbsp; ${purchases.length} purchase(s) (₹${rupees}) &nbsp;·&nbsp; ${unlocks.length} unlocks (${unlockSpend} 🪙 spent)`,
+    `<div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase">Coin Purchases (${purchases.length})</div>
+    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);background:var(--bg3)">
       <th style="padding:8px 16px;text-align:left">When</th><th style="padding:8px 16px;text-align:left">Coins</th><th style="padding:8px 16px;text-align:left">₹ Paid</th>
     </tr>${purchaseRows}</table>
-    <div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;border-top:1px solid var(--border);margin-top:4px">Contacts Unlocked (${unlocks.length})</div>
-    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">
-      <th style="padding:8px 16px;text-align:left">Area</th><th style="padding:8px 16px;text-align:left">Contact Revealed</th><th style="padding:8px 16px;text-align:left">Coins</th><th style="padding:8px 16px;text-align:left">When</th>
+    <div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;border-top:1px solid var(--border);margin-top:4px">Contacts Unlocked (${unlocks.length})</div>
+    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);background:var(--bg3)">
+      <th style="padding:8px 16px;text-align:left">Area</th><th style="padding:8px 16px;text-align:left">Contact</th><th style="padding:8px 16px;text-align:left">Coins</th><th style="padding:8px 16px;text-align:left">When</th>
     </tr>${unlockRows}</table>
-    <div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;border-top:1px solid var(--border);margin-top:4px">Posts Made</div>
-    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;background:var(--bg3)">
+    <div style="padding:14px 16px 8px;font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;border-top:1px solid var(--border);margin-top:4px">Posts (${posts.length})</div>
+    <table style="width:100%"><tr style="font-size:11px;font-weight:700;color:var(--ink3);background:var(--bg3)">
       <th style="padding:8px 16px;text-align:left">Area</th><th style="padding:8px 16px;text-align:left">Type</th><th style="padding:8px 16px;text-align:left">Status</th>
     </tr>${postRows}</table>`);
 }
