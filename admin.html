@@ -642,7 +642,7 @@ async function loadUsers() {
     });
 
     const t = document.getElementById('usersTable');
-    t.innerHTML = '<tr><th>Phone</th><th>Balance</th><th>Unlocks (paid)</th><th>Coins Spent</th><th>Joined</th><th>Actions</th></tr>';
+    t.innerHTML = '<tr><th>Phone</th><th>Balance (live)</th><th>Unlocks (paid)</th><th>Coins Spent</th><th>Joined</th><th>Actions</th></tr>';
     if (!users.length) { t.innerHTML += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">No users yet</td></tr>'; return; }
     users.forEach(u => {
       const unlocks = unlockCount[u.id] || 0;
@@ -835,20 +835,41 @@ async function loadReports() {
     const rb = document.getElementById('rbadge');
     if (pending > 0) { rb.textContent=pending; rb.style.display=''; } else rb.style.display='none';
     const rMap = {fake:'Fake listing',brokerage:'Wrong brokerage',wrong_contact:'Wrong contact',rented:'Already rented',spam:'Spam',other:'Other'};
+
+    // Fetch listing and reporter info
+    const lids = [...new Set(reports.map(r=>r.listing_id).filter(Boolean))];
+    const rids = [...new Set(reports.map(r=>r.reported_by).filter(Boolean))];
+    const [listings, reporters] = await Promise.all([
+      lids.length ? supaGet('listings?id=in.('+lids.join(',')+')'+'&select=id,areas,listing_type,poster_name') : Promise.resolve([]),
+      rids.length ? supaGet('users?id=in.('+rids.join(',')+')'+'&select=id,phone') : Promise.resolve([])
+    ]);
+    const lMap = {}; listings.forEach(l => {
+      const area = Array.isArray(l.areas) ? l.areas[0] : l.areas||'Unknown';
+      const type = {flat_listing:'Flat',flat_wanted:'Wanted',flatmate_wanted:'Flatmate'}[l.listing_type]||l.listing_type;
+      lMap[l.id] = `${type} in ${area}${l.poster_name?' · '+l.poster_name:''}`;
+    });
+    const rMap2 = {}; reporters.forEach(u => rMap2[u.id] = u.phone);
+
     const t = document.getElementById('reportsTable');
-    t.innerHTML = '<tr><th>Listing</th><th>Reason</th><th>Time</th><th>Status</th><th>Actions</th></tr>';
-    if (!reports.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No reports yet</td></tr>'; return; }
+    t.innerHTML = '<tr><th>Listing</th><th>Reported By</th><th>Reason</th><th>Time</th><th>Status</th><th>Actions</th></tr>';
+    if (!reports.length) { t.innerHTML += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">No reports yet</td></tr>'; return; }
     reports.forEach(r => {
       const status = r.status==='pending' ? '<span class="badge b-pending">Pending</span>' : '<span class="badge b-ok">Resolved</span>';
       const actions = r.status==='pending'
         ? `<button class="btn btn-red" style="margin-right:4px" onclick="resolveReport('${r.id}','remove',this)">Remove listing</button>
            <button class="btn btn-ghost" onclick="resolveReport('${r.id}','dismiss',this)">Dismiss</button>`
         : '<span style="font-size:12px;color:var(--ink3)">Done</span>';
+      const listingInfo = r.listing_id
+        ? `<a href="listing_detail.html?id=${r.listing_id}" target="_blank" style="color:var(--teal-light);font-weight:600;font-size:13px">${lMap[r.listing_id]||'View listing →'}</a>`
+        : '—';
+      const reporterPhone = r.reported_by ? (rMap2[r.reported_by] ? '+91 '+rMap2[r.reported_by] : '—') : '—';
       t.innerHTML += `<tr>
-        <td style="font-size:12px;color:var(--ink3);font-family:monospace">${(r.listing_id||'').slice(0,8)}...</td>
-        <td>${rMap[r.reason]||r.reason}</td>
-        <td style="font-size:12px;color:var(--ink3)">${timeAgo(r.created_at)}</td>
-        <td>${status}</td><td>${actions}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border)">${listingInfo}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink2)">${reporterPhone}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border)">${rMap[r.reason]||r.reason||'—'}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${timeAgo(r.created_at)}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border)">${status}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid var(--border)">${actions}</td>
       </tr>`;
     });
   } catch(e) { console.error('Reports:', e); }
