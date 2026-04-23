@@ -759,7 +759,7 @@ body {
     </div>
   </div>
 
-  <button class="apply-filters-btn" onclick="closeSheet('filter')">Apply Filters</button>
+  <button class="apply-filters-btn" onclick="applyFiltersAndClose()">Apply Filters</button>
 </div>
 
 <!-- ── LOGIN SHEET ── -->
@@ -918,6 +918,8 @@ let _fetchedListings = [];
 let currentOffset = 0;
 const PAGE_SIZE = 20;
 let activeFilter = 'all';
+let activeGenderFilter = 'Any';
+let activeAreaFilter = 'All Areas';
 let activeArea = 'all';
 let activeAreaCoords = null;
 
@@ -971,6 +973,8 @@ async function loadListings(reset = true) {
     }
 
     _fetchedListings = listings;
+    // Save current visit time for next session's "new" detection
+    localStorage.setItem('fk_last_visit', new Date().toISOString());
     document.getElementById('feedLoading').style.display = 'none';
 
     if (listings.length === 0) {
@@ -993,6 +997,8 @@ async function loadListings(reset = true) {
 
   } catch(err) {
     console.error('Load error:', err);
+    // Save current visit time for next session's "new" detection
+    localStorage.setItem('fk_last_visit', new Date().toISOString());
     document.getElementById('feedLoading').style.display = 'none';
     document.getElementById('feedEmpty').style.display = 'block';
     document.getElementById('feedEmpty').innerHTML = `
@@ -1081,6 +1087,9 @@ function renderListings(listings) {
         card.style.borderColor = '#e05252';
         card.style.background = 'rgba(224,82,82,0.04)';
       }
+      // Show NEW badge for listings posted after user's last visit
+      const lastVisit = localStorage.getItem('fk_last_visit');
+      const isNew = lastVisit && new Date(l.created_at) > new Date(lastVisit);
       card.onclick = function(e) {
         if (!e.target.closest('.unlock-btn') && !e.target.closest('.save-btn')) {
           window.location.href = 'listing_detail.html?id=' + l.id;
@@ -1089,6 +1098,7 @@ function renderListings(listings) {
 
       card.innerHTML = `
         <div class="type-label">${typeLabel}</div>
+        ${isNew ? '<span style="background:#dcfce7;color:#16a34a;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px;display:inline-block">✨ New</span>' : ''}
         ${l.is_sold ? '<div style="display:inline-block;background:#fde8e8;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px">🔴 Sold/Taken</div>' : ''}
         <div class="broker-tag ${brokerClass} dot">${brokerText}</div>
         <div class="card-header">
@@ -2108,6 +2118,28 @@ async function toggleSave(btn, listingId) {
 function toggleFPill(el, group) {
   document.querySelectorAll(`[onclick*="toggleFPill(this,'${group}')"]`).forEach(p => p.classList.remove('active'));
   el.classList.add('active');
+}
+
+function getPillVal(group) {
+  const active = document.querySelector(`[onclick*="toggleFPill(this,'${group}')"].active`);
+  return active ? active.textContent.trim() : null;
+}
+
+function applyFiltersAndClose() {
+  // Read gender filter
+  activeGenderFilter = getPillVal('fgender') || 'Any';
+  // Read area filter
+  activeAreaFilter = getPillVal('farea') || 'All Areas';
+  // Read type filter
+  const typeVal = getPillVal('ftype');
+  const typeMap2 = { 'Looking for Flatmate': 'flat_wanted', 'Looking for Occupancy': 'flatmate_wanted', 'Full Flat': 'flat_listing', 'All': 'all' };
+  if (typeVal && typeMap2[typeVal]) {
+    activeFilter = typeMap2[typeVal];
+    // Update chip UI
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  }
+  closeSheet('filter');
+  loadListings();
 }
 </script>
 <!-- LEGAL FOOTER -->
