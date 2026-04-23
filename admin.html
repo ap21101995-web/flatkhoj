@@ -384,9 +384,13 @@ async function supaGet(path) {
 async function supaPatch(table, query, data) {
   const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, {
     method:'PATCH',
-    headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+    headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify(data)
   });
+  if (!r.ok) {
+    const err = await r.text();
+    console.error(`supaPatch ${table} failed:`, r.status, err);
+  }
   return r.ok;
 }
 
