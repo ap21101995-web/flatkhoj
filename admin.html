@@ -1159,8 +1159,16 @@ async function lookupUnlocks() {
     if (!users.length) { document.getElementById('lookup-notfound').style.display = 'block'; return; }
     const user = users[0];
 
-    // Get all unlocks by this user
-    const unlocks = await supaGet('contact_unlocks?unlocker_user_id=eq.' + user.id + '&order=created_at.desc&select=*');
+    // Get all unlocks by this user — deduplicate by listing_id
+    const allUnlocks = await supaGet('contact_unlocks?unlocker_user_id=eq.' + user.id + '&order=created_at.desc&select=*');
+    
+    // Deduplicate by listing_id (keep most recent)
+    const seenListings = new Set();
+    const unlocks = allUnlocks.filter(u => {
+      if (seenListings.has(u.listing_id)) return false;
+      seenListings.add(u.listing_id);
+      return true;
+    });
 
     // Show user info
     document.getElementById('lookup-user-info').innerHTML =
@@ -1178,7 +1186,8 @@ async function lookupUnlocks() {
       document.getElementById('lookup-empty').style.display = 'none';
       document.getElementById('lookup-table-wrap').style.display = 'block';
 
-      // Fetch listing + contact info for each unlock
+      // Fetch listing + contact info for each unlock — deduplicate by contact phone
+      const seenContacts = new Set();
       for (const u of unlocks) {
         let listingInfo = '—';
         let contactInfo = '—';
@@ -1201,6 +1210,10 @@ async function lookupUnlocks() {
             }
           }
         } catch(e) {}
+
+        // Skip if same contact phone already shown
+        if (contactInfo !== '—' && seenContacts.has(contactInfo)) continue;
+        if (contactInfo !== '—') seenContacts.add(contactInfo);
 
         const row = table.insertRow();
         row.innerHTML = `
