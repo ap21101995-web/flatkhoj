@@ -966,11 +966,13 @@ async function loadSoldReports() {
     const listings = await supaGet('listings?is_sold=eq.true&order=sold_at.desc&select=*');
     const table = document.getElementById('soldTable');
     while (table.rows.length > 1) table.deleteRow(1);
+
     if (!listings.length) {
       document.getElementById('soldEmpty').style.display = 'block';
       return;
     }
     document.getElementById('soldEmpty').style.display = 'none';
+
     for (const l of listings) {
       const area = Array.isArray(l.areas) ? l.areas[0] : (l.areas || '—');
       const type = {flat_listing:'Flat',flat_wanted:'Flat Wanted',flatmate_wanted:'Flatmate',pg_listing:'PG'}[l.listing_type] || l.listing_type;
@@ -983,6 +985,7 @@ async function loadSoldReports() {
         try { const p = await supaGet('users?id=eq.'+l.user_id+'&select=phone'); if(p.length) posterPhone = '+91 '+p[0].phone; } catch(e) {}
       }
       const row = table.insertRow();
+      row.setAttribute('data-listing-id', l.id);
       row.innerHTML = `
         <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
           <a href="listing_detail.html?id=${l.id}" target="_blank" style="color:var(--teal-light);font-weight:600">${type} in ${area}</a>
@@ -992,17 +995,23 @@ async function loadSoldReports() {
         <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--red)">${reporterPhone}</td>
         <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${l.sold_at ? timeAgo(l.sold_at) : '—'}</td>
         <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
-          <button class="btn sold-remove-btn" data-id="${l.id}" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red);font-size:12px">Remove Listing</button>
-          <button class="btn btn-teal sold-notsold-btn" data-id="${l.id}" style="font-size:12px;margin-left:6px">Not Sold</button>
+          <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red);font-size:12px" data-action="remove" data-id="${l.id}">Remove Listing</button>
+          <button class="btn btn-teal" style="font-size:12px;margin-left:6px" data-action="notsold" data-id="${l.id}">Not Sold</button>
         </td>`;
-
-      // Attach events directly to the buttons
-      const removeBtn = row.querySelector('.sold-remove-btn');
-      const notSoldBtn = row.querySelector('.sold-notsold-btn');
-      removeBtn.addEventListener('click', function() { removeSoldListing(l.id, this); });
-      notSoldBtn.addEventListener('click', function() { unsoldListing(l.id, this); });
     }
-  } catch(e) { console.error(e); }
+
+    // Single event listener on table — handles all button clicks via delegation
+    table.onclick = async function(e) {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if (!id) return;
+      if (action === 'remove') await removeSoldListing(id, btn);
+      if (action === 'notsold') await unsoldListing(id, btn);
+    };
+
+  } catch(e) { console.error('loadSoldReports:', e); }
 }
 
 async function removeSoldListing(listingId, btn) {
