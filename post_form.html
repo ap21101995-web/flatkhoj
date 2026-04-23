@@ -2301,6 +2301,9 @@ window.addEventListener('load', async function() {
       window._editListingId = editId;
       window._editListingData = listing;
 
+      // Auto-check all confirmation boxes in edit mode — user already agreed when first posting
+      document.querySelectorAll('.post-confirm-cb').forEach(cb => cb.checked = true);
+
       // Ensure type grid is visible (not blocked by limits)
       document.getElementById('typeGridWrap').style.display = 'block';
       document.getElementById('limitBlockedScreen').style.display = 'none';
