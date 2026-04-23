@@ -1350,13 +1350,22 @@ async function confirmUnlock() {
       return;
     }
 
-    // Deduct 5 coins
+    // Deduct 5 coins — block unlock if deduction fails
     const newCoins = currentCoins - UNLOCK_COST;
-    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+    const deductRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ coins: newCoins })
     });
+
+    if (!deductRes.ok) {
+      const err = await deductRes.text();
+      console.error('Coin deduction failed:', err);
+      btn.innerHTML = 'Spend <span id="unlockBtnCost">' + UNLOCK_COST + '</span> Coins & Unlock →';
+      btn.disabled = false;
+      alert('Failed to deduct coins. Please try again.');
+      return;
+    }
 
     // Record unlock — fetch listing owner id first
     let listingOwnerId = user.userId; // fallback

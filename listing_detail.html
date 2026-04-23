@@ -1083,7 +1083,12 @@ async function confirmUnlock(){
       }
 
       const newCoins = currentCoins - UNLOCK_COST;
-      await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({coins:newCoins})});
+      const deductRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({coins:newCoins})});
+      if (!deductRes.ok) {
+        btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →'; btn.disabled=false;
+        alert('Failed to deduct coins. Please try again.');
+        return;
+      }
       
       // Sync to localStorage
       user.coins = newCoins;
