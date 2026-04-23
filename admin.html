@@ -838,7 +838,7 @@ async function loadReports() {
 
     // Fetch listing and reporter info
     const lids = [...new Set(reports.map(r=>r.listing_id).filter(Boolean))];
-    const rids = [...new Set(reports.map(r=>r.reported_by).filter(Boolean))];
+    const rids = [...new Set(reports.map(r=>r.reporter_user_id).filter(Boolean))];
     const [listings, reporters] = await Promise.all([
       lids.length ? supaGet('listings?id=in.('+lids.join(',')+')'+'&select=id,areas,listing_type,poster_name') : Promise.resolve([]),
       rids.length ? supaGet('users?id=in.('+rids.join(',')+')'+'&select=id,phone') : Promise.resolve([])
@@ -862,7 +862,7 @@ async function loadReports() {
       const listingInfo = r.listing_id
         ? `<a href="listing_detail.html?id=${r.listing_id}" target="_blank" style="color:var(--teal-light);font-weight:600;font-size:13px">${lMap[r.listing_id]||'View listing →'}</a>`
         : '—';
-      const reporterPhone = r.reported_by ? (rMap2[r.reported_by] ? '+91 '+rMap2[r.reported_by] : '—') : '—';
+      const reporterPhone = r.reporter_user_id ? (rMap2[r.reporter_user_id] ? '+91 '+rMap2[r.reporter_user_id] : '—') : '—';
       t.innerHTML += `<tr>
         <td style="padding:10px 16px;border-bottom:1px solid var(--border)">${listingInfo}</td>
         <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink2)">${reporterPhone}</td>
