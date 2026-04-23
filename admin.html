@@ -517,12 +517,11 @@ async function loadDashboard() {
         </tr>`;
       });
     }
-    // Update nav badges for pending items
+    // Update nav badges — only unresolved counts
     try {
-      const [soldReports, pendingReports, pendingSupport] = await Promise.all([
+      const [soldReports, pendingReports] = await Promise.all([
         supaGet('listings?is_sold=eq.true&is_active=eq.true&select=id'),
-        supaGet('reports?status=eq.pending&select=id'),
-        supaGet('support_conversations?select=id')
+        supaGet('reports?status=eq.pending&select=id')
       ]);
 
       const sb = document.getElementById('soldbadge');
@@ -531,8 +530,9 @@ async function loadDashboard() {
       const rb = document.getElementById('rbadge');
       if (rb) { rb.textContent = pendingReports.length; rb.style.display = pendingReports.length > 0 ? 'inline' : 'none'; }
 
-      const supb = document.getElementById('supportbadge');
-      if (supb) { supb.textContent = pendingSupport.length; supb.style.display = pendingSupport.length > 0 ? 'inline' : 'none'; }
+      // Support badge — count conversations with unread messages (messages from users not yet replied to)
+      const supportb = document.getElementById('supportbadge');
+      if (supportb) supportb.style.display = 'none'; // hide until support data available
     } catch(e) {}
 
   } catch(e) { console.error('Dashboard:', e); }
@@ -1002,12 +1002,9 @@ async function loadSoldReports() {
 async function removeSoldListing(id, btn) {
   btn.textContent = 'Removing…'; btn.disabled = true;
   try {
-    // Get listing to find reporter and unlock cost
-    const listings = await supaGet('listings?id=eq.'+id+'&select=sold_reported_by,is_sold');
-    const listing = listings[0];
-
     // Deactivate listing
-    await supaPatch('listings', 'id=eq.'+id, { is_active: false });
+    const patchOk = await supaPatch('listings', 'id=eq.'+id, { is_active: false });
+    if (!patchOk) { toast('Failed to deactivate listing', 'error'); btn.textContent = 'Remove Listing'; btn.disabled = false; return; }
 
     // Refund coins to ALL users who unlocked this listing
     const unlocks = await supaGet('contact_unlocks?listing_id=eq.'+id+'&select=unlocker_user_id,coins_spent');
@@ -1024,27 +1021,38 @@ async function removeSoldListing(id, btn) {
           method: 'POST',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: user.id,
-            type: 'admin_credit',
-            amount: refundAmount,
+            user_id: user.id, type: 'admin_credit', amount: refundAmount,
             balance_after: newCoins,
             description: 'Refund — listing was sold/taken when contact was unlocked',
             created_at: new Date().toISOString()
           })
         });
         refundCount++;
-      } catch(e) {}
+      } catch(e) { console.error('Refund error:', e); }
     }
-    toast('Listing removed · ' + refundCount + ' user(s) refunded', 'success');
-    loadSoldReports();
-  } catch(e) { btn.textContent = 'Remove Listing'; btn.disabled = false; toast('Error: '+e.message, 'error'); }
+    toast('✅ Listing removed · ' + refundCount + ' user(s) refunded', 'success');
+    await loadSoldReports();
+    loadDashboard();
+  } catch(e) { 
+    console.error('removeSoldListing error:', e);
+    btn.textContent = 'Remove Listing'; btn.disabled = false; 
+    toast('Error: '+e.message, 'error'); 
+  }
 }
 
 async function unsoldListing(id, btn) {
   btn.textContent = 'Updating…'; btn.disabled = true;
-  await supaPatch('listings', 'id=eq.'+id, { is_sold: false, sold_reported_by: null, sold_at: null });
-  toast('Marked as active', 'success');
-  loadSoldReports();
+  try {
+    const ok = await supaPatch('listings', 'id=eq.'+id, { is_sold: false, sold_reported_by: null, sold_at: null });
+    if (!ok) { toast('Failed to update listing', 'error'); btn.textContent = 'Not Sold'; btn.disabled = false; return; }
+    toast('✅ Removed from sold reports — listing is active', 'success');
+    await loadSoldReports();
+    loadDashboard();
+  } catch(e) { 
+    console.error('unsoldListing error:', e);
+    btn.textContent = 'Not Sold'; btn.disabled = false; 
+    toast('Error: '+e.message, 'error'); 
+  }
 }
 
 async function lookupUnlocks() {
