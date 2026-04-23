@@ -399,6 +399,7 @@ function doLogin() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     loadDashboard();
+    refreshBadges();
   } else {
     document.getElementById('lerr').style.display = 'block';
   }
@@ -517,25 +518,34 @@ async function loadDashboard() {
         </tr>`;
       });
     }
-    // Update nav badges — only unresolved counts
-    try {
-      const [soldReports, pendingReports, openSupport] = await Promise.all([
-        supaGet('listings?is_sold=eq.true&is_active=eq.true&select=id'),
-        supaGet('reports?status=eq.pending&select=id'),
-        supaGet('support_conversations?status=eq.open&select=id')
-      ]);
-
-      const sb = document.getElementById('soldbadge');
-      if (sb) { sb.textContent = soldReports.length; sb.style.display = soldReports.length > 0 ? 'inline' : 'none'; }
-
-      const rb = document.getElementById('rbadge');
-      if (rb) { rb.textContent = pendingReports.length; rb.style.display = pendingReports.length > 0 ? 'inline' : 'none'; }
-
-      const supb = document.getElementById('supportbadge');
-      if (supb) { supb.textContent = openSupport.length; supb.style.display = openSupport.length > 0 ? 'inline' : 'none'; }
-    } catch(e) {}
+    // Update nav badges
+    refreshBadges();
 
   } catch(e) { console.error('Dashboard:', e); }
+}
+
+// Called on login and after any action — updates all 3 badges independently
+async function refreshBadges() {
+  // Sold reports badge
+  try {
+    const sold = await supaGet('listings?is_sold=eq.true&is_active=eq.true&select=id');
+    const sb = document.getElementById('soldbadge');
+    if (sb) { sb.textContent = sold.length; sb.style.display = sold.length > 0 ? 'inline' : 'none'; }
+  } catch(e) {}
+
+  // Reports badge
+  try {
+    const rep = await supaGet('reports?status=eq.pending&select=id');
+    const rb = document.getElementById('rbadge');
+    if (rb) { rb.textContent = rep.length; rb.style.display = rep.length > 0 ? 'inline' : 'none'; }
+  } catch(e) {}
+
+  // Support badge — open conversations
+  try {
+    const sup = await supaGet('support_conversations?select=id');
+    const supb = document.getElementById('supportbadge');
+    if (supb) { supb.textContent = sup.length; supb.style.display = sup.length > 0 ? 'inline' : 'none'; }
+  } catch(e) {}
 }
 async function loadListings() {
   try {
@@ -1053,7 +1063,7 @@ async function removeSoldListing(listingId, btn) {
 
   toast('✅ Listing removed · ' + refundCount + ' user(s) refunded', 'success');
   btn.closest('tr').remove();
-  loadDashboard();
+  refreshBadges();
 }
 
 async function unsoldListing(listingId, btn) {
@@ -1077,7 +1087,7 @@ async function unsoldListing(listingId, btn) {
 
   toast('✅ Removed from sold reports', 'success');
   btn.closest('tr').remove();
-  loadDashboard();
+  refreshBadges();
 }
 
 async function lookupUnlocks() {
