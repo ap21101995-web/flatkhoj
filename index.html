@@ -531,9 +531,9 @@ body {
     <a href="#" class="logo">Flat<span>Khoj</span></a>
     <div class="search-wrap" style="position:relative">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="search" id="homeSearchInput" placeholder="Search up to 3 areas…" autocomplete="off"
+      <input type="search" id="homeSearchInput" placeholder="Search area…" autocomplete="off"
         oninput="homeAreaSearch(this)"
-        onfocus="homeAreaSearch(this)"
+        onfocus="homeAreaFocus(this)"
         onkeydown="if(event.key==='Escape')closeHomeSearch()">
       <div id="homeSearchDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid #e8e8e4;border-radius:12px;overflow:hidden;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.1);max-height:280px;overflow-y:auto"></div>
     </div>
@@ -544,6 +544,9 @@ body {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       Post
     </button>
+  </div>
+  <!-- Selected area tags row -->
+  <div id="homeAreaTagsRow" style="display:none;flex-wrap:wrap;gap:6px;padding:4px 16px 8px;background:var(--bg)">
   </div>
 </header>
 
@@ -2469,21 +2472,33 @@ function renderHomeDropdown(areas, q) {
 }
 
 function selectHomeArea(area) {
-  // Toggle area in activeAreas (up to 3)
   if (activeAreas.has(area)) {
+    // Already selected — remove it
     activeAreas.delete(area);
   } else {
-    if (activeAreas.size >= 3) {
-      // Remove oldest
-      activeAreas.delete(activeAreas.values().next().value);
-    }
+    if (activeAreas.size >= 3) return; // max 3
     activeAreas.add(area);
   }
 
-  // Update search input to show selected areas
-  const selected = [...activeAreas];
-  document.getElementById('homeSearchInput').value = selected.join(', ');
+  // Clear input and close dropdown
+  const input = document.getElementById('homeSearchInput');
+  input.value = '';
   document.getElementById('homeSearchDropdown').style.display = 'none';
+
+  // Update placeholder based on remaining slots
+  const remaining = 3 - activeAreas.size;
+  if (remaining === 0) {
+    input.placeholder = '3 Areas Selected ✓';
+    input.disabled = true;
+    input.style.opacity = '0.6';
+  } else {
+    input.placeholder = activeAreas.size === 0 ? 'Search area…' : `Add ${remaining} more area${remaining > 1 ? 's' : ''}…`;
+    input.disabled = false;
+    input.style.opacity = '';
+  }
+
+  // Render tags below search
+  renderHomeAreaTags();
 
   // Update area chips
   document.querySelectorAll('.area-chip').forEach(c => {
@@ -2495,12 +2510,56 @@ function selectHomeArea(area) {
     }
   });
 
+  input.focus();
   loadListings();
+}
+
+function renderHomeAreaTags() {
+  const row = document.getElementById('homeAreaTagsRow');
+  if (!row) return;
+  if (activeAreas.size === 0) {
+    row.style.display = 'none';
+    row.innerHTML = '';
+    return;
+  }
+  row.style.display = 'flex';
+  row.innerHTML = [...activeAreas].map(area =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--teal-bg);border:1px solid var(--teal);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--teal);font-weight:600">
+      📍 ${area}
+      <button onclick="removeHomeArea('${area.replace(/'/g,"\\'")}') " style="background:none;border:none;cursor:pointer;color:var(--teal);font-size:14px;line-height:1;padding:0;margin-left:2px">×</button>
+    </span>`
+  ).join('');
+}
+
+function removeHomeArea(area) {
+  activeAreas.delete(area);
+  const input = document.getElementById('homeSearchInput');
+  const remaining = 3 - activeAreas.size;
+  input.placeholder = activeAreas.size === 0 ? 'Search area…' : `Add ${remaining} more area${remaining > 1 ? 's' : ''}…`;
+  input.disabled = false;
+  input.style.opacity = '';
+  renderHomeAreaTags();
+  // Update chips
+  document.querySelectorAll('.area-chip').forEach(c => {
+    const chipArea = c.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+    if (chipArea === 'all') c.classList.toggle('active', activeAreas.size === 0);
+    else c.classList.toggle('active', activeAreas.has(chipArea));
+  });
+  loadListings();
+}
+
+function homeAreaFocus(input) {
+  if (!input.disabled) homeAreaSearch(input);
 }
 
 function clearAreaSearch() {
   activeAreas.clear();
-  document.getElementById('homeSearchInput').value = '';
+  const input = document.getElementById('homeSearchInput');
+  input.value = '';
+  input.placeholder = 'Search area…';
+  input.disabled = false;
+  input.style.opacity = '';
+  renderHomeAreaTags();
   document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
   document.querySelector('.area-chip')?.classList.add('active');
   loadListings();
@@ -2826,30 +2885,28 @@ function setArea(el, area) {
     activeAreas.clear();
     document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
+    renderHomeAreaTags();
     loadListings();
     return;
   }
-  // Toggle
   if (activeAreas.has(area)) {
     activeAreas.delete(area);
     el.classList.remove('active');
   } else {
-    if (activeAreas.size >= 3) {
-      // Remove oldest (first added) — find its chip and deactivate
-      const first = activeAreas.values().next().value;
-      activeAreas.delete(first);
-      document.querySelectorAll('.area-chip').forEach(c => {
-        if (c.textContent.trim() === first) c.classList.remove('active');
-      });
-    }
+    if (activeAreas.size >= 3) return; // hard limit — ignore tap if already 3
     activeAreas.add(area);
     el.classList.add('active');
   }
   // Update All Areas chip
   const allAreaChip = document.querySelector('.area-chip');
   if (allAreaChip) allAreaChip.classList.toggle('active', activeAreas.size === 0);
+  // Update search input placeholder
+  const input = document.getElementById('homeSearchInput');
+  const remaining = 3 - activeAreas.size;
+  if (remaining === 0) { input.placeholder = '3 Areas Selected ✓'; input.disabled = true; input.style.opacity = '0.6'; }
+  else { input.placeholder = activeAreas.size === 0 ? 'Search area…' : `Add ${remaining} more area${remaining>1?'s':''}…`; input.disabled = false; input.style.opacity = ''; }
+  renderHomeAreaTags();
   loadListings();
-  return; // prevent original function running
 }
 function _setArea_unused(el, area) {
   document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
