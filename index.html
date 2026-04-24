@@ -2430,7 +2430,10 @@ const NEARBY_AREAS = {"Colaba": ["Cuffe Parade", "Nariman Point", "Churchgate", 
 
 
 function homeAreaSearch(input) {
-  const q = input.value.trim();
+  // Search based on the last area being typed (after last comma)
+  const fullVal = input.value;
+  const parts = fullVal.split(',');
+  const q = parts[parts.length - 1].trim();
   const dd = document.getElementById('homeSearchDropdown');
 
   if (q.length === 0) {
@@ -2438,28 +2441,13 @@ function homeAreaSearch(input) {
     return;
   }
 
-  // Always search local list first — instant, no API needed
   const localMatches = POPULAR_AREAS
     .filter(a => a.toLowerCase().includes(q.toLowerCase()))
     .slice(0, 8);
 
   if (localMatches.length > 0) {
     renderHomeDropdown(localMatches, q);
-  }
-
-  // Also try Google Places for micro areas not in local list
-  if (homeGmapsReady && homePlacesService && q.length >= 2) {
-    homePlacesService.getPlacePredictions({
-      input: q + ' Mumbai',
-      componentRestrictions: { country: 'IN' },
-      types: ['geocode'],
-    }, function(predictions, status) {
-      if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) return;
-      const googleAreas = predictions.map(p => p.structured_formatting.main_text);
-      const merged = [...new Set([...localMatches, ...googleAreas])].slice(0, 8);
-      renderHomeDropdown(merged, q);
-    });
-  } else if (localMatches.length === 0) {
+  } else {
     dd.style.display = 'block';
     dd.innerHTML = '<div style="padding:12px 16px;font-size:14px;color:#888">No areas found for "' + q + '"</div>';
   }
@@ -2468,10 +2456,13 @@ function homeAreaSearch(input) {
 function renderHomeDropdown(areas, q) {
   const dd = document.getElementById('homeSearchDropdown');
   dd.style.display = 'block';
-  dd.innerHTML = areas.map(area => {
+  const selectedCount = activeAreas.size;
+  dd.innerHTML = (selectedCount > 0 ? `<div style="padding:8px 16px;font-size:12px;color:var(--teal);font-weight:600;background:#f0faf8">${selectedCount}/3 area${selectedCount>1?'s':''} selected · Tap to add/remove</div>` : '') +
+    areas.map(area => {
     const highlighted = q ? area.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<strong>$1</strong>') : area;
-    return `<div onclick="selectHomeArea('${area.replace(/'/g,"\\'")}')" style="padding:12px 16px;font-size:14px;color:#444;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f0efec" onmouseover="this.style.background='#e8f5f3'" onmouseout="this.style.background=''"  >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0f7b6c" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    const isSelected = activeAreas.has(area);
+    return `<div onclick="selectHomeArea('${area.replace(/'/g,"\\'")}')" style="padding:12px 16px;font-size:14px;color:#444;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f0efec;${isSelected?'background:#f0faf8;':''}" onmouseover="this.style.background='#e8f5f3'" onmouseout="this.style.background='${isSelected?'#f0faf8':''}'"  >
+      ${isSelected ? '<span style="color:var(--teal);font-weight:700;font-size:16px">✓</span>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0f7b6c" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'}
       ${highlighted}
     </div>`;
   }).join('');
