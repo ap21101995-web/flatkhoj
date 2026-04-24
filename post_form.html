@@ -2966,12 +2966,14 @@ function sp(el,group){
 function mp(el){el.classList.toggle('sel');}
 
 function sbfw(choice) {
-  ['fw-byes','fw-bprefno','fw-bno'].forEach(id => {
-    document.getElementById(id).classList.remove('sel-no','sel-yes','sel-pref');
+  ['fw-byes','fw-bprefno'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('sel-no','sel-yes','sel-pref');
   });
-  const map = { yes:'fw-byes', prefno:'fw-bprefno', no:'fw-bno' };
-  const styleMap = { yes:'sel-yes', prefno:'sel-pref', no:'sel-no' };
-  document.getElementById(map[choice]).classList.add(styleMap[choice]);
+  const map = { yes:'fw-byes', prefno:'fw-bprefno', no:'fw-bprefno' };
+  const styleMap = { yes:'sel-yes', prefno:'sel-pref', no:'sel-pref' };
+  const el = document.getElementById(map[choice]);
+  if (el) el.classList.add(styleMap[choice]);
   document.getElementById('fw-broker-choice').value = choice;
 }
 
