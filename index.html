@@ -521,6 +521,19 @@ body {
   .card-title { font-size: 15px; }
   .bottom-nav { max-width: 680px; }
 }
+
+.area-wrap { position:relative; }
+.area-input-home { width:100%; padding:10px 14px 10px 36px; border:1.5px solid var(--border); border-radius:10px; font-family:var(--font); font-size:14px; color:var(--ink); background:var(--bg); outline:none; }
+.area-input-home:focus { border-color:var(--teal); }
+.area-input-home::placeholder { color:var(--ink3); }
+.area-dropdown-home { position:absolute; top:calc(100% + 4px); left:0; right:0; background:white; border:1.5px solid var(--border); border-radius:12px; overflow:hidden; z-index:500; box-shadow:0 8px 24px rgba(0,0,0,0.12); display:none; max-height:220px; overflow-y:auto; }
+.area-dropdown-home.open { display:block; }
+.area-option-home { padding:11px 14px; font-size:13px; color:var(--ink2); cursor:pointer; display:flex; align-items:center; gap:8px; font-family:var(--font); border-bottom:1px solid #f5f5f3; }
+.area-option-home:active { background:var(--teal-bg); color:var(--teal); }
+.area-option-home .match { color:var(--teal); font-weight:700; }
+.home-area-tags { display:none; flex-wrap:wrap; gap:5px; padding:5px 16px 8px; }
+.home-area-tag { display:inline-flex; align-items:center; gap:5px; background:var(--teal-bg); border:1px solid var(--teal); border-radius:6px; padding:4px 10px; font-size:12px; color:var(--teal); font-weight:600; }
+.home-area-tag button { background:none; border:none; cursor:pointer; color:var(--teal); font-size:14px; line-height:1; padding:0; }
 </style>
 </head>
 <body>
@@ -529,13 +542,13 @@ body {
 <header class="topbar">
   <div class="topbar-inner">
     <a href="#" class="logo">Flat<span>Khoj</span></a>
-    <div class="search-wrap" style="position:relative">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="search" id="homeSearchInput" placeholder="Search area…" autocomplete="off"
+    <div class="area-wrap" id="homeAreaWrap" style="flex:1;min-width:0">
+      <svg class="area-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="area-input-home" id="homeSearchInput" type="text" placeholder="Search area…" autocomplete="off"
         oninput="homeAreaSearch(this)"
         onfocus="homeAreaFocus(this)"
-        onkeydown="if(event.key==='Escape')closeHomeSearch()">
-      <div id="homeSearchDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid #e8e8e4;border-radius:12px;overflow:hidden;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.1);max-height:280px;overflow-y:auto"></div>
+        onkeydown="if(event.key==='Escape')document.getElementById('homeAreaDd').classList.remove('open')">
+      <div class="area-dropdown-home" id="homeAreaDd"></div>
     </div>
     <div id="navCoinBadge" style="display:none;align-items:center;gap:3px;background:#fffbee;border:1.5px solid #e6a817;border-radius:20px;padding:4px 9px;font-size:12px;font-weight:700;color:#b07d00;cursor:pointer;flex-shrink:0;white-space:nowrap" onclick="window.location.href='coins.html'">
       🪙<span id="navCoinCount">0</span>
@@ -545,9 +558,7 @@ body {
       Post
     </button>
   </div>
-  <!-- Selected area tags row -->
-  <div id="homeAreaTagsRow" style="display:none;flex-wrap:wrap;gap:6px;padding:4px 16px 8px;background:var(--bg)">
-  </div>
+  <div class="home-area-tags" id="homeAreaTagsRow"></div>
 </header>
 
 <!-- FILTER CHIPS — listing type -->
@@ -2432,42 +2443,51 @@ const POPULAR_AREAS = [
 const NEARBY_AREAS = {"Colaba": ["Cuffe Parade", "Nariman Point", "Churchgate", "Fort", "CSMT"], "Cuffe Parade": ["Colaba", "Nariman Point", "Churchgate"], "Nariman Point": ["Churchgate", "Fort", "Colaba", "Cuffe Parade"], "Churchgate": ["Marine Lines", "Fort", "Nariman Point", "Colaba"], "Marine Lines": ["Churchgate", "Grant Road", "Girgaon", "Chowpatty"], "Fort": ["Churchgate", "Nariman Point", "CST", "Ballard Estate"], "Ballard Estate": ["Fort", "CSMT", "Masjid Bunder"], "Masjid Bunder": ["Ballard Estate", "Mandvi", "Carnac Bunder"], "Mandvi": ["Masjid Bunder", "Kalbadevi", "Bhindi Bazaar"], "Kalbadevi": ["Mandvi", "Girgaon", "Bhendi Bazaar", "Zaveri Bazaar"], "Girgaon": ["Kalbadevi", "Grant Road", "Chowpatty", "Marine Lines"], "Grant Road": ["Girgaon", "Chowpatty", "Byculla", "Tardeo", "Marine Lines"], "Chowpatty": ["Girgaon", "Grant Road", "Breach Candy", "Tardeo"], "Byculla": ["Grant Road", "Parel", "Cotton Green", "Mazgaon", "Chinchpokli"], "Parel": ["Byculla", "Dadar", "Worli", "Lower Parel", "Prabhadevi"], "Lower Parel": ["Parel", "Worli", "Dadar West", "Prabhadevi", "Elphinstone Road"], "Prabhadevi": ["Dadar West", "Worli", "Lower Parel", "Parel"], "Worli": ["Lower Parel", "Prabhadevi", "Dadar West", "Mahim", "Mahalaxmi"], "Dadar": ["Dadar West", "Dadar East", "Parel", "Matunga", "Prabhadevi"], "Dadar West": ["Dadar", "Worli", "Prabhadevi", "Matunga West"], "Dadar East": ["Dadar", "Matunga East", "Sion", "Parel"], "Matunga": ["Dadar", "Sion", "Matunga West", "Matunga East"], "Matunga West": ["Dadar West", "Matunga", "Mahim"], "Matunga East": ["Dadar East", "Matunga", "Sion"], "Mahim": ["Dadar West", "Worli", "Bandra West", "Dharavi"], "Sion": ["Matunga East", "Dadar East", "Kurla", "Dharavi", "Chembur"], "Dharavi": ["Sion", "Mahim", "Kurla", "Deonar"], "Bandra West": ["Bandra East", "Khar West", "Santacruz West", "Mahim"], "Bandra East": ["Bandra West", "Kurla", "Dharavi", "BKC", "Vakola"], "BKC": ["Bandra East", "Kurla", "Santacruz East", "Kalina"], "Khar West": ["Bandra West", "Santacruz West", "Vile Parle West"], "Santacruz West": ["Bandra West", "Khar West", "Vile Parle West", "Santacruz East"], "Santacruz East": ["Santacruz West", "Kalina", "Vakola", "BKC", "Vile Parle East"], "Vakola": ["Santacruz East", "BKC", "Vile Parle East"], "Kalina": ["Santacruz East", "BKC", "Vile Parle East"], "Vile Parle West": ["Santacruz West", "Khar West", "Vile Parle East", "Andheri West"], "Vile Parle East": ["Vile Parle West", "Santacruz East", "Andheri East", "Kalina"], "Andheri West": ["Andheri East", "Vile Parle West", "Jogeshwari West", "DN Nagar", "Versova", "Lokhandwala"], "Andheri East": ["Andheri West", "Vile Parle East", "Jogeshwari East", "Sakinaka", "Marol", "MIDC"], "Jogeshwari West": ["Andheri West", "Jogeshwari East", "Goregaon West"], "Jogeshwari East": ["Andheri East", "Jogeshwari West", "Goregaon East"], "Versova": ["Andheri West", "DN Nagar", "Lokhandwala", "Oshiwara"], "DN Nagar": ["Andheri West", "Versova", "Lokhandwala", "Azad Nagar"], "Lokhandwala": ["Andheri West", "Versova", "DN Nagar", "Oshiwara"], "Oshiwara": ["Lokhandwala", "Versova", "Andheri West", "Goregaon West"], "Sakinaka": ["Andheri East", "Marol", "Kurla", "Powai"], "Marol": ["Andheri East", "Sakinaka", "Powai", "Chakala"], "Powai": ["Sakinaka", "Marol", "Vikhroli West", "Kanjurmarg"], "Goregaon West": ["Goregaon East", "Malad West", "Jogeshwari West", "Oshiwara", "Film City"], "Goregaon East": ["Goregaon West", "Malad East", "Jogeshwari East", "Film City"], "Malad West": ["Malad East", "Goregaon West", "Kandivali West", "Mindspace", "Marve"], "Malad East": ["Malad West", "Goregaon East", "Kandivali East"], "Kandivali West": ["Kandivali East", "Malad West", "Borivali West", "Dahisar West"], "Kandivali East": ["Kandivali West", "Malad East", "Borivali East"], "Borivali West": ["Borivali East", "Kandivali West", "Dahisar West"], "Borivali East": ["Borivali West", "Kandivali East", "Dahisar East"], "Dahisar West": ["Dahisar East", "Borivali West", "Mira Road"], "Dahisar East": ["Dahisar West", "Borivali East", "Mira Road"], "Kurla": ["Sion", "Ghatkopar West", "BKC", "Bandra East", "Sakinaka"], "Ghatkopar West": ["Ghatkopar East", "Kurla", "Vikhroli West"], "Ghatkopar East": ["Ghatkopar West", "Vikhroli East", "Chembur"], "Vikhroli West": ["Vikhroli East", "Powai", "Ghatkopar West"], "Vikhroli East": ["Vikhroli West", "Ghatkopar East", "Kanjurmarg"], "Chembur": ["Sion", "Ghatkopar East", "Deonar", "Govandi", "Trombay"], "Mulund West": ["Mulund East", "Thane West", "Bhandup West"], "Mulund East": ["Mulund West", "Thane East", "Bhandup East"], "Bhandup West": ["Bhandup East", "Mulund West", "Kanjurmarg"], "Bhandup East": ["Bhandup West", "Mulund East", "Vikhroli East"], "Thane West": ["Thane East", "Mulund West", "Ghodbunder Road", "Majiwada"], "Thane East": ["Thane West", "Mulund East", "Wagle Estate"], "Navi Mumbai": ["Vashi", "Nerul", "Belapur", "Kharghar", "Seawoods", "Panvel"], "Vashi": ["Nerul", "Sanpada", "Juinagar", "Belapur"], "Nerul": ["Vashi", "Seawoods", "Belapur", "Sanpada"], "Belapur": ["Nerul", "Kharghar", "Seawoods"], "Kharghar": ["Belapur", "Panvel", "Kamothe"], "Seawoods": ["Nerul", "Belapur", "Juinagar"], "Juhu": ["Vile Parle West", "Andheri West", "Versova"], "Mira Road": ["Dahisar West", "Dahisar East", "Bhayandar"]};
 
 
+function homeAreaFocus(input) {
+  homeAreaSearch(input);
+}
+
 function homeAreaSearch(input) {
-  // Search based on the last area being typed (after last comma)
-  const fullVal = input.value;
-  const parts = fullVal.split(',');
-  const q = parts[parts.length - 1].trim();
-  const dd = document.getElementById('homeSearchDropdown');
+  const q = input.value.trim();
+  const dd = document.getElementById('homeAreaDd');
+  if (!dd) return;
+
+  // If max 3 selected, close dropdown
+  if (activeAreas.size >= 3) { dd.classList.remove('open'); return; }
+
+  const already = [...activeAreas];
 
   if (q.length === 0) {
-    renderHomeDropdown(POPULAR_AREAS.slice(0, 14), '');
+    const popular = ['Andheri West','Andheri East','Bandra West','Powai',
+      'Thane West','Lower Parel','Malad West','Goregaon West',
+      'Kandivali West','Borivali West','Worli','Dadar West',
+      'Chembur','Mulund West','Vikhroli West','Ghatkopar West']
+      .filter(a => !already.includes(a));
+    renderHomeDropdown(popular, '');
+    dd.classList.add('open');
     return;
   }
 
   const localMatches = POPULAR_AREAS
-    .filter(a => a.toLowerCase().includes(q.toLowerCase()))
+    .filter(a => a.toLowerCase().includes(q.toLowerCase()) && !already.includes(a))
     .slice(0, 8);
 
   if (localMatches.length > 0) {
     renderHomeDropdown(localMatches, q);
+    dd.classList.add('open');
   } else {
-    dd.style.display = 'block';
-    dd.innerHTML = '<div style="padding:12px 16px;font-size:14px;color:#888">No areas found for "' + q + '"</div>';
+    dd.innerHTML = `<div class="area-option-home" style="color:var(--ink3);cursor:default">📍 No areas found for "${q}"</div>`;
+    dd.classList.add('open');
   }
 }
 
 function renderHomeDropdown(areas, q) {
-  const dd = document.getElementById('homeSearchDropdown');
-  dd.style.display = 'block';
-  const selectedCount = activeAreas.size;
-  dd.innerHTML = (selectedCount > 0 ? `<div style="padding:8px 16px;font-size:12px;color:var(--teal);font-weight:600;background:#f0faf8">${selectedCount}/3 area${selectedCount>1?'s':''} selected · Tap to add/remove</div>` : '') +
-    areas.map(area => {
-    const highlighted = q ? area.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<strong>$1</strong>') : area;
-    const isSelected = activeAreas.has(area);
-    return `<div onclick="selectHomeArea('${area.replace(/'/g,"\\'")}')" style="padding:12px 16px;font-size:14px;color:#444;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f0efec;${isSelected?'background:#f0faf8;':''}" onmouseover="this.style.background='#e8f5f3'" onmouseout="this.style.background='${isSelected?'#f0faf8':''}'"  >
-      ${isSelected ? '<span style="color:var(--teal);font-weight:700;font-size:16px">✓</span>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0f7b6c" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'}
-      ${highlighted}
-    </div>`;
+  const dd = document.getElementById('homeAreaDd');
+  if (!dd) return;
+  dd.innerHTML = areas.map(area => {
+    const esc = area.replace(/'/g, "\\'");
+    const highlighted = q ? area.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<span class="match">$1</span>') : area;
+    return `<div class="area-option-home" onclick="selectHomeArea('${esc}')"><span>📍</span>${highlighted}</div>`;
   }).join('');
 }
 
@@ -2483,7 +2503,7 @@ function selectHomeArea(area) {
   // Clear input and close dropdown
   const input = document.getElementById('homeSearchInput');
   input.value = '';
-  document.getElementById('homeSearchDropdown').style.display = 'none';
+  document.getElementById('homeAreaDd')?.classList.remove('open');
 
   // Update placeholder based on remaining slots
   const remaining = 3 - activeAreas.size;
@@ -2566,7 +2586,7 @@ function clearAreaSearch() {
 }
 
 function closeHomeSearch() {
-  document.getElementById('homeSearchDropdown').style.display = 'none';
+  document.getElementById('homeAreaDd')?.classList.remove('open');
 }
 
 // Close dropdown when clicking outside
