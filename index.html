@@ -531,7 +531,7 @@ body {
     <a href="#" class="logo">Flat<span>Khoj</span></a>
     <div class="search-wrap" style="position:relative">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="search" id="homeSearchInput" placeholder="Search area, locality…" autocomplete="off"
+      <input type="search" id="homeSearchInput" placeholder="Search up to 3 areas…" autocomplete="off"
         oninput="homeAreaSearch(this)"
         onfocus="homeAreaSearch(this)"
         onkeydown="if(event.key==='Escape')closeHomeSearch()">
@@ -919,8 +919,8 @@ let currentOffset = 0;
 const PAGE_SIZE = 20;
 let activeFilter = 'all';
 let activeGenderFilter = 'Any';
-let activeAreaFilter = 'All Areas';
-let activeArea = 'all';
+let activeAreaFilter = [];
+let activeAreas = new Set(); // up to 3 areas
 let activeAreaCoords = null;
 
 async function loadListings(reset = true) {
@@ -958,16 +958,22 @@ async function loadListings(reset = true) {
     let listings = await res.json();
     if (!Array.isArray(listings)) throw new Error('Bad response');
 
-    // Area filter
-    if (activeArea && activeArea !== 'all') {
-      const areaLower = activeArea.toLowerCase();
+    // Area filter — up to 3 areas, includes nearby
+    if (activeAreas.size > 0) {
+      // Build full search set including nearby areas for each selected area
+      const searchSet = new Set();
+      activeAreas.forEach(area => {
+        searchSet.add(area.toLowerCase());
+        const nearby = NEARBY_AREAS[area] || [];
+        nearby.forEach(n => searchSet.add(n.toLowerCase()));
+      });
       const exact = listings.filter(l => {
-        const areas = Array.isArray(l.areas) ? l.areas : [l.areas];
-        return areas.some(a => a && a.toLowerCase().includes(areaLower));
+        const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
+        return lareas.some(la => [...searchSet].some(sa => la.includes(sa) || sa.includes(la)));
       });
       const others = listings.filter(l => {
-        const areas = Array.isArray(l.areas) ? l.areas : [l.areas];
-        return !areas.some(a => a && a.toLowerCase().includes(areaLower));
+        const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
+        return !lareas.some(la => [...searchSet].some(sa => la.includes(sa) || sa.includes(la)));
       });
       listings = [...exact, ...others];
     }
@@ -2472,11 +2478,40 @@ function renderHomeDropdown(areas, q) {
 }
 
 function selectHomeArea(area) {
-  document.getElementById('homeSearchInput').value = area;
+  // Toggle area in activeAreas (up to 3)
+  if (activeAreas.has(area)) {
+    activeAreas.delete(area);
+  } else {
+    if (activeAreas.size >= 3) {
+      // Remove oldest
+      activeAreas.delete(activeAreas.values().next().value);
+    }
+    activeAreas.add(area);
+  }
+
+  // Update search input to show selected areas
+  const selected = [...activeAreas];
+  document.getElementById('homeSearchInput').value = selected.join(', ');
   document.getElementById('homeSearchDropdown').style.display = 'none';
-  activeArea = area;
-  activeAreaCoords = getAreaCoords(area);
+
+  // Update area chips
+  document.querySelectorAll('.area-chip').forEach(c => {
+    const chipArea = c.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+    if (chipArea === 'all') {
+      c.classList.toggle('active', activeAreas.size === 0);
+    } else {
+      c.classList.toggle('active', activeAreas.has(chipArea));
+    }
+  });
+
+  loadListings();
+}
+
+function clearAreaSearch() {
+  activeAreas.clear();
+  document.getElementById('homeSearchInput').value = '';
   document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('.area-chip')?.classList.add('active');
   loadListings();
 }
 
@@ -2796,6 +2831,36 @@ function getListingCoords(listing) {
 }
 
 function setArea(el, area) {
+  if (area === 'all') {
+    activeAreas.clear();
+    document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    loadListings();
+    return;
+  }
+  // Toggle
+  if (activeAreas.has(area)) {
+    activeAreas.delete(area);
+    el.classList.remove('active');
+  } else {
+    if (activeAreas.size >= 3) {
+      // Remove oldest (first added) — find its chip and deactivate
+      const first = activeAreas.values().next().value;
+      activeAreas.delete(first);
+      document.querySelectorAll('.area-chip').forEach(c => {
+        if (c.textContent.trim() === first) c.classList.remove('active');
+      });
+    }
+    activeAreas.add(area);
+    el.classList.add('active');
+  }
+  // Update All Areas chip
+  const allAreaChip = document.querySelector('.area-chip');
+  if (allAreaChip) allAreaChip.classList.toggle('active', activeAreas.size === 0);
+  loadListings();
+  return; // prevent original function running
+}
+function _setArea_unused(el, area) {
   document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   if (area === 'all') {
@@ -2893,6 +2958,30 @@ async function toggleSave(btn, listingId) {
 
 // Filter pills (single select per group)
 function toggleFPill(el, group) {
+  if (group === 'farea') {
+    // Multi-select up to 3 for area
+    const val = el.textContent.trim();
+    if (val === 'All Areas') {
+      document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"]`).forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      return;
+    }
+    if (el.classList.contains('active')) {
+      el.classList.remove('active');
+      // Re-activate All Areas if nothing selected
+      const anyActive = document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"].active`).length;
+      const anyAreaActive = document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"].active`).length;
+      if (!anyAreaActive) document.querySelector(`[onclick*="toggleFPill(this,'farea')"]`)?.classList.add('active');
+    } else {
+      const active = document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"].active`);
+      const nonAll = [...active].filter(p => p.textContent.trim() !== 'All Areas');
+      if (nonAll.length >= 3) nonAll[0].classList.remove('active'); // remove oldest
+      document.querySelector(`[onclick*="toggleFPill(this,'farea')"]`)?.classList.remove('active'); // remove All Areas
+      el.classList.add('active');
+    }
+    return;
+  }
+  // Single select for other groups
   document.querySelectorAll(`[onclick*="toggleFPill(this,'${group}')"]`).forEach(p => p.classList.remove('active'));
   el.classList.add('active');
 }
@@ -2906,7 +2995,12 @@ function applyFiltersAndClose() {
   // Read gender filter
   activeGenderFilter = getPillVal('fgender') || 'Any';
   // Read area filter
-  activeAreaFilter = getPillVal('farea') || 'All Areas';
+  // Read up to 3 selected area pills
+  const selectedAreaPills = [...document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"].active`)]
+    .map(p => p.textContent.trim())
+    .filter(v => v !== 'All Areas');
+  activeAreas = new Set(selectedAreaPills);
+  activeAreaFilter = selectedAreaPills;
   // Read type filter
   const typeVal = getPillVal('ftype');
   const typeMap2 = { 'Looking for Flatmate': 'flat_wanted', 'Looking for Occupancy': 'flatmate_wanted', 'Full Flat': 'flat_listing', 'All': 'all' };
