@@ -466,9 +466,13 @@ function filterListingsByPhone(val) {
 }
 
 function filterTable(tableId, q) {
-  const lower = q.toLowerCase();
+  const lower = q.toLowerCase().trim();
+  const isNum = /^\d+$/.test(lower);
   document.querySelectorAll('#'+tableId+' tr:not(:first-child)').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(lower) ? '' : 'none';
+    const text = row.textContent.toLowerCase();
+    // For numbers, also search without the +91 prefix
+    const match = text.includes(lower) || (isNum && text.replace(/\D/g,'').includes(lower));
+    row.style.display = match ? '' : 'none';
   });
 }
 
