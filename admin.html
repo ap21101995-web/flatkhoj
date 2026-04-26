@@ -161,7 +161,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div class="table-card">
         <div class="table-header">
           <div class="ttitle">All Users</div>
-          <input class="filter-input" placeholder="Search phone…" oninput="filterTable('usersTable',this.value)">
+          <input class="filter-input" placeholder="Search phone…" oninput="searchUsers(this.value)">
         </div>
         <table id="usersTable"></table>
       </div>
@@ -451,6 +451,19 @@ function showModal(title, sub, bodyHtml) {
   </div>`;
   m.onclick = e => { if(e.target===m) m.remove(); };
   document.body.appendChild(m);
+}
+
+function searchUsers(q) {
+  const digits = q.replace(/\D/g, '');
+  const lower = q.toLowerCase().trim();
+  const rows = document.querySelectorAll('#usersTable tr');
+  rows.forEach((row, i) => {
+    if (i === 0) return; // skip header
+    if (!lower) { row.style.display = ''; return; }
+    const text = row.textContent.replace(/\s+/g,' ');
+    const textDigits = text.replace(/\D/g,'');
+    row.style.display = (text.toLowerCase().includes(lower) || (digits && textDigits.includes(digits))) ? '' : 'none';
+  });
 }
 
 function filterListingsByPhone(val) {
