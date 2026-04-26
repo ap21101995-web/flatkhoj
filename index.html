@@ -2706,7 +2706,7 @@ async function fetchUserData() {
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
         }),
         fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&select=listing_id`, {
-          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range': '0-9999' }
         })
       ]);
       const [savedData, unlockedData] = await Promise.all([savedRes.json(), unlockedRes.json()]);
@@ -2746,7 +2746,7 @@ window.addEventListener('focus', async function() {
   if (!user) return;
   try {
     const res = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&select=listing_id`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range': '0-9999' }
     });
     const data = await res.json();
     if (Array.isArray(data)) {
