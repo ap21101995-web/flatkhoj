@@ -107,7 +107,7 @@ window.onload = async function() {
       div.innerHTML = `
         <div class="type-label">${typeLabels[l.listing_type] || l.listing_type}</div>
         <div class="card-title">${l.description?.slice(0,80) || 'Listing in ' + areas}</div>
-        ${l.poster_name ? `<div style="font-size:13px;color:var(--ink2);font-weight:600;margin:4px 0">👤 ${l.poster_name}</div>` : ''}
+        <div style="font-size:13px;color:var(--ink2);font-weight:600;margin:4px 0">👤 ${l.poster_name || 'FlatKhoj Member'}</div>
         <div class="card-meta">
           <span>📍 ${areas}</span>
           ${l.rent_amount ? `<span>₹${l.rent_amount.toLocaleString('en-IN')}/mo</span>` : ''}

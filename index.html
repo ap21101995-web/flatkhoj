@@ -954,11 +954,11 @@ async function loadListings(reset = true) {
       const exact = [], nearby = [];
       listings.forEach(l => {
         const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
+        // Exact match: listing area contains selected area OR selected area contains listing area
         const isExact = lareas.some(la => selectedLower.some(s => la.includes(s) || s.includes(la)));
         if (isExact) { exact.push(l); return; }
         const isNearby = lareas.some(la => [...nearbyLower].some(n => la.includes(n) || n.includes(la)));
         if (isNearby) nearby.push(l);
-        // others are omitted when filter is active
       });
 
       // Within each group, sort latest first
@@ -2583,22 +2583,22 @@ document.addEventListener('click', function(e) {
 // ── SMART AREA CHIPS ───────────────────────────────────────
 // Default order shown for first 30 signups
 const DEFAULT_AREAS = [
-  { name: 'Bandra', key: 'Bandra West' },
-  { name: 'Andheri', key: 'Andheri West' },
+  { name: 'Bandra', key: 'Bandra' },
+  { name: 'Andheri', key: 'Andheri' },
   { name: 'Powai', key: 'Powai' },
-  { name: 'Thane', key: 'Thane West' },
+  { name: 'Thane', key: 'Thane' },
   { name: 'Lower Parel', key: 'Lower Parel' },
-  { name: 'Malad', key: 'Malad West' },
-  { name: 'Goregaon', key: 'Goregaon West' },
+  { name: 'Malad', key: 'Malad' },
+  { name: 'Goregaon', key: 'Goregaon' },
   { name: 'Versova', key: 'Versova' },
-  { name: 'Dadar', key: 'Dadar West' },
-  { name: 'Kurla', key: 'Kurla West' },
+  { name: 'Dadar', key: 'Dadar' },
+  { name: 'Kurla', key: 'Kurla' },
   { name: 'Chembur', key: 'Chembur' },
-  { name: 'Mulund', key: 'Mulund West' },
-  { name: 'Vikhroli', key: 'Vikhroli West' },
-  { name: 'Ghatkopar', key: 'Ghatkopar West' },
-  { name: 'Kandivali', key: 'Kandivali West' },
-  { name: 'Borivali', key: 'Borivali West' },
+  { name: 'Mulund', key: 'Mulund' },
+  { name: 'Vikhroli', key: 'Vikhroli' },
+  { name: 'Ghatkopar', key: 'Ghatkopar' },
+  { name: 'Kandivali', key: 'Kandivali' },
+  { name: 'Borivali', key: 'Borivali' },
   { name: 'Navi Mumbai', key: 'Navi Mumbai' },
   { name: 'Worli', key: 'Worli' },
   { name: 'Juhu', key: 'Juhu' },
