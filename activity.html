@@ -275,7 +275,7 @@ async function loadMyPosts(user) {
 async function loadUnlockedContacts(user) {
   const wrap = document.getElementById('unlockedWrap');
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&order=created_at.desc&select=*,listings(listing_type,areas,description,rent_amount,is_active)`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/contact_unlocks?unlocker_user_id=eq.${user.userId}&order=created_at.desc&select=*,listings(listing_type,areas,description,rent_amount,is_active,poster_name)`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range': '0-9999' }
     });
     const unlocks = await res.json();
@@ -304,6 +304,7 @@ async function loadUnlockedContacts(user) {
       div.innerHTML = `
         <div class="activity-type">${typeLabel}</div>
         <div class="activity-title">${description}</div>
+        <div style="font-size:13px;color:var(--ink2);font-weight:600;margin:3px 0 4px">👤 ${l?.poster_name || 'FlatKhoj Member'}</div>
         <div class="activity-meta">
           <span>📍 ${areas}</span>
           ${l?.rent_amount ? `<span>₹${l.rent_amount.toLocaleString('en-IN')}/mo</span>` : ''}
