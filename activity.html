@@ -296,6 +296,8 @@ async function loadUnlockedContacts(user) {
       const typeLabel = l ? (typeLabels[l.listing_type] || l.listing_type) : 'Listing';
       const description = l?.description?.slice(0,80) || 'Listing in ' + areas;
       const isDeleted = !l || l.is_active === false;
+      // Skip deleted/expired listings entirely
+      if (isDeleted) return;
       const div = document.createElement('div');
       div.className = 'activity-card';
       div.onclick = () => window.location.href = `listing_detail.html?id=${u.listing_id}`;

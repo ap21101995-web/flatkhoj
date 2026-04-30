@@ -99,22 +99,27 @@ window.onload = async function() {
     saved.forEach(s => {
       const l = s.listings;
       if (!l) return;
+      // Don't show deleted/expired listings in saved
+      if (!l.is_active) return;
       const areas = Array.isArray(l.areas) ? l.areas.join(', ') : l.areas || 'Mumbai';
       const div = document.createElement('div');
       div.className = 'listing-card';
       div.innerHTML = `
         <div class="type-label">${typeLabels[l.listing_type] || l.listing_type}</div>
         <div class="card-title">${l.description?.slice(0,80) || 'Listing in ' + areas}</div>
+        ${l.poster_name ? `<div style="font-size:13px;color:var(--ink2);font-weight:600;margin:4px 0">👤 ${l.poster_name}</div>` : ''}
         <div class="card-meta">
           <span>📍 ${areas}</span>
           ${l.rent_amount ? `<span>₹${l.rent_amount.toLocaleString('en-IN')}/mo</span>` : ''}
-          <span style="color:${l.is_active ? 'var(--teal)' : 'var(--red)'}">${l.is_active ? '● Live' : '● Expired'}</span>
         </div>
-        <button class="unsave-btn" onclick="unsave(event, '${s.listing_id}', this)">🔖 Saved</button>
+        <button class="unsave-btn" onclick="unsave(event, '${s.listing_id}', this)">🔖 Remove</button>
       `;
       div.onclick = () => window.location.href = `listing_detail.html?id=${l.id}`;
       wrap.appendChild(div);
     });
+    if (!wrap.children.length) {
+      wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🔖</div><div class="empty-title">No saved listings</div><div class="empty-sub">Your saved listings appear here</div><a href="index.html" class="empty-btn">Browse listings →</a></div>`;
+    }
   } catch(e) {
     wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink3)">Could not load saved listings</div>';
   }

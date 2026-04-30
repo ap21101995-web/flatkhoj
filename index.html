@@ -938,24 +938,42 @@ async function loadListings(reset = true) {
     let listings = await res.json();
     if (!Array.isArray(listings)) throw new Error('Bad response');
 
-    // Area filter — up to 3 areas, includes nearby
+    // Area filter — exact matches first, nearby second, rest hidden if area filter active
     if (activeAreas.size > 0) {
-      // Build full search set including nearby areas for each selected area
-      const searchSet = new Set();
-      activeAreas.forEach(area => {
-        searchSet.add(area.toLowerCase());
+      const selectedArr = [...activeAreas];
+      const selectedLower = selectedArr.map(a => a.toLowerCase());
+
+      // Build nearby set
+      const nearbyLower = new Set();
+      selectedArr.forEach(area => {
         const nearby = NEARBY_AREAS[area] || [];
-        nearby.forEach(n => searchSet.add(n.toLowerCase()));
+        nearby.forEach(n => nearbyLower.add(n.toLowerCase()));
       });
-      const exact = listings.filter(l => {
+
+      // Categorise each listing
+      const exact = [], nearby = [];
+      listings.forEach(l => {
         const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
-        return lareas.some(la => [...searchSet].some(sa => la.includes(sa) || sa.includes(la)));
+        const isExact = lareas.some(la => selectedLower.some(s => la.includes(s) || s.includes(la)));
+        if (isExact) { exact.push(l); return; }
+        const isNearby = lareas.some(la => [...nearbyLower].some(n => la.includes(n) || n.includes(la)));
+        if (isNearby) nearby.push(l);
+        // others are omitted when filter is active
       });
-      const others = listings.filter(l => {
-        const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
-        return !lareas.some(la => [...searchSet].some(sa => la.includes(sa) || sa.includes(la)));
+
+      // Within each group, sort latest first
+      const byDate = (a, b) => new Date(b.created_at) - new Date(a.created_at);
+      listings = [...exact.sort(byDate), ...nearby.sort(byDate)];
+    }
+
+    // Gender filter — Female sees Female + Any, Male sees Male + Any
+    if (activeGenderFilter && activeGenderFilter !== 'Any') {
+      const gf = activeGenderFilter.toLowerCase();
+      listings = listings.filter(l => {
+        const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
+        if (!gp || gp === 'any' || gp === 'any gender' || gp === '') return true;
+        return gp.includes(gf);
       });
-      listings = [...exact, ...others];
     }
 
     _fetchedListings = listings;
