@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /support_admin.html
+
+Sitemap: https://flatkhoj.com/sitemap.xml
