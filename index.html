@@ -755,9 +755,9 @@ body {
   <div class="filter-sheet-section">
     <span class="filter-sheet-label">Monthly budget / rent</span>
     <div class="budget-row">
-      <input class="budget-input" type="number" placeholder="Min ₹6,000">
+      <input class="budget-input" id="budgetMin" type="number" placeholder="Min ₹6,000">
       <span style="color:#888;font-size:14px">—</span>
-      <input class="budget-input" type="number" placeholder="Max ₹4,00,000">
+      <input class="budget-input" id="budgetMax" type="number" placeholder="Max ₹4,00,000">
     </div>
   </div>
 
@@ -949,6 +949,11 @@ let currentOffset = 0;
 const PAGE_SIZE = 20;
 let activeFilter = 'all';
 let activeGenderFilter = 'Any';
+let activeBrokerFilter = 'All Listings';
+let activeFoodFilter = 'Any';
+let activeOccFilter = 'Any';
+let activeBudgetMin = null;
+let activeBudgetMax = null;
 let activeAreaFilter = [];
 let activeAreas = new Set(); // up to 3 areas
 let activeAreaCoords = null;
@@ -1016,13 +1021,56 @@ async function loadListings(reset = true) {
       listings = [...exact.sort(byDate), ...nearby.sort(byDate)];
     }
 
-    // Gender filter — Female sees Female + Any, Male sees Male + Any
+    // Gender filter
     if (activeGenderFilter && activeGenderFilter !== 'Any') {
       const gf = activeGenderFilter.toLowerCase();
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
         if (!gp || gp === 'any' || gp === 'any gender' || gp === '') return true;
         return gp.includes(gf);
+      });
+    }
+
+    // Brokerage filter
+    if (activeBrokerFilter === '✓ No Brokerage') {
+      listings = listings.filter(l => l.has_brokerage === false);
+    } else if (activeBrokerFilter === 'With Broker') {
+      listings = listings.filter(l => l.has_brokerage === true);
+    }
+
+    // Food filter
+    if (activeFoodFilter && activeFoodFilter !== 'Any') {
+      const ff = activeFoodFilter.toLowerCase();
+      const isVeg = ff.includes('veg only');
+      listings = listings.filter(l => {
+        const food = (l.food_preference || '').toLowerCase();
+        if (!food || food === 'any' || food === '') return true;
+        if (isVeg) return food.includes('veg');
+        return food.includes('non');
+      });
+    }
+
+    // Occupancy type filter
+    if (activeOccFilter && activeOccFilter !== 'Any') {
+      const oc = activeOccFilter.toLowerCase();
+      listings = listings.filter(l => {
+        const rt = (l.room_type || l.occupancy_type || '').toLowerCase();
+        if (!rt) return true;
+        if (oc === 'single') return rt.includes('single');
+        if (oc === 'double') return rt.includes('double');
+        if (oc === 'entire flat') return rt.includes('entire') || rt.includes('full');
+        return true;
+      });
+    }
+
+    // Budget filter
+    if (activeBudgetMin || activeBudgetMax) {
+      listings = listings.filter(l => {
+        const rent = l.rent_amount || 0;
+        if (!rent) return true;
+        if (activeBudgetMin && rent < activeBudgetMin) return false;
+        if (activeBudgetMax && rent > activeBudgetMax) return false;
+        return true;
       });
     }
 
@@ -3094,21 +3142,27 @@ function getPillVal(group) {
 }
 
 function applyFiltersAndClose() {
-  // Read gender filter
+  // Gender
   activeGenderFilter = getPillVal('fgender') || 'Any';
-  // Read area filter
-  // Read up to 3 selected area pills
+  // Brokerage
+  activeBrokerFilter = getPillVal('fbroker') || 'All Listings';
+  // Food
+  activeFoodFilter = getPillVal('ffood') || 'Any';
+  // Occupancy
+  activeOccFilter = getPillVal('focc') || 'Any';
+  // Budget
+  activeBudgetMin = parseInt(document.getElementById('budgetMin')?.value) || null;
+  activeBudgetMax = parseInt(document.getElementById('budgetMax')?.value) || null;
+  // Area from pills
   const selectedAreaPills = [...document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"].active`)]
-    .map(p => p.textContent.trim())
-    .filter(v => v !== 'All Areas');
+    .map(p => p.textContent.trim()).filter(v => v !== 'All Areas');
   activeAreas = new Set(selectedAreaPills);
   activeAreaFilter = selectedAreaPills;
-  // Read type filter
+  // Type
   const typeVal = getPillVal('ftype');
   const typeMap2 = { 'Looking for Flatmate': 'flat_wanted', 'Looking for Occupancy': 'flatmate_wanted', 'Full Flat': 'flat_listing', 'All': 'all' };
   if (typeVal && typeMap2[typeVal]) {
     activeFilter = typeMap2[typeVal];
-    // Update chip UI
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   }
   closeSheet('filter');
