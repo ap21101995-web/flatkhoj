@@ -753,15 +753,6 @@ body {
   </div>
 
   <div class="filter-sheet-section">
-    <span class="filter-sheet-label">Monthly budget / rent</span>
-    <div class="budget-row">
-      <input class="budget-input" id="budgetMin" type="number" placeholder="Min ₹6,000">
-      <span style="color:#888;font-size:14px">—</span>
-      <input class="budget-input" id="budgetMax" type="number" placeholder="Max ₹4,00,000">
-    </div>
-  </div>
-
-  <div class="filter-sheet-section">
     <span class="filter-sheet-label">Food preference</span>
     <div class="filter-pill-group">
       <div class="filter-pill active" onclick="toggleFPill(this,'ffood')">Any</div>
@@ -993,85 +984,81 @@ async function loadListings(reset = true) {
     let listings = await res.json();
     if (!Array.isArray(listings)) throw new Error('Bad response');
 
-    // Area filter — exact matches first, nearby second, rest hidden if area filter active
-    if (activeAreas.size > 0) {
-      const selectedArr = [...activeAreas];
-      const selectedLower = selectedArr.map(a => a.toLowerCase());
-
-      // Build nearby set
-      const nearbyLower = new Set();
-      selectedArr.forEach(area => {
-        const nearby = NEARBY_AREAS[area] || [];
-        nearby.forEach(n => nearbyLower.add(n.toLowerCase()));
-      });
-
-      // Categorise each listing
-      const exact = [], nearby = [];
-      listings.forEach(l => {
-        const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
-        // Exact match: listing area contains selected area OR selected area contains listing area
-        const isExact = lareas.some(la => selectedLower.some(s => la.includes(s) || s.includes(la)));
-        if (isExact) { exact.push(l); return; }
-        const isNearby = lareas.some(la => [...nearbyLower].some(n => la.includes(n) || n.includes(la)));
-        if (isNearby) nearby.push(l);
-      });
-
-      // Within each group, sort latest first
-      const byDate = (a, b) => new Date(b.created_at) - new Date(a.created_at);
-      listings = [...exact.sort(byDate), ...nearby.sort(byDate)];
-    }
-
-    // Gender filter
+    // ── STEP 1: Hard filter — gender is non-negotiable ──
     if (activeGenderFilter && activeGenderFilter !== 'Any') {
       const gf = activeGenderFilter.toLowerCase();
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        if (!gp || gp === 'any' || gp === 'any gender' || gp === '') return true;
-        return gp.includes(gf);
+        // Show if: no preference set, 'any', or matches selected gender
+        return !gp || gp === 'any' || gp === 'any gender' || gp.includes(gf);
       });
     }
 
-    // Brokerage filter
-    if (activeBrokerFilter === '✓ No Brokerage') {
-      listings = listings.filter(l => l.has_brokerage === false);
-    } else if (activeBrokerFilter === 'With Broker') {
-      listings = listings.filter(l => l.has_brokerage === true);
-    }
-
-    // Food filter
+    // ── STEP 2: Food hard filter (if selected) ──
     if (activeFoodFilter && activeFoodFilter !== 'Any') {
       const ff = activeFoodFilter.toLowerCase();
       const isVeg = ff.includes('veg only');
       listings = listings.filter(l => {
-        const food = (l.food_preference || '').toLowerCase();
+        const food = (l.food_preference || '').toLowerCase().trim();
         if (!food || food === 'any' || food === '') return true;
         if (isVeg) return food.includes('veg');
         return food.includes('non');
       });
     }
 
-    // Occupancy type filter
-    if (activeOccFilter && activeOccFilter !== 'Any') {
-      const oc = activeOccFilter.toLowerCase();
-      listings = listings.filter(l => {
-        const rt = (l.room_type || l.occupancy_type || '').toLowerCase();
-        if (!rt) return true;
-        if (oc === 'single') return rt.includes('single');
-        if (oc === 'double') return rt.includes('double');
-        if (oc === 'entire flat') return rt.includes('entire') || rt.includes('full');
-        return true;
-      });
+    // ── STEP 3: Sort by area + brokerage priority ──
+    // Build area match helpers
+    const selectedArr = [...activeAreas];
+    const selectedLower = selectedArr.map(a => a.toLowerCase());
+    const nearbyLower = new Set();
+    selectedArr.forEach(area => {
+      (NEARBY_AREAS[area] || []).forEach(n => nearbyLower.add(n.toLowerCase()));
+    });
+
+    const hasAreaFilter = activeAreas.size > 0;
+    const hasBrokerFilter = activeBrokerFilter && activeBrokerFilter !== 'All Listings';
+
+    function matchesArea(l) {
+      if (!hasAreaFilter) return true;
+      const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
+      return lareas.some(la => selectedLower.some(s => la.includes(s) || s.includes(la)));
     }
 
-    // Budget filter
-    if (activeBudgetMin || activeBudgetMax) {
-      listings = listings.filter(l => {
-        const rent = l.rent_amount || 0;
-        if (!rent) return true;
-        if (activeBudgetMin && rent < activeBudgetMin) return false;
-        if (activeBudgetMax && rent > activeBudgetMax) return false;
-        return true;
+    function matchesNearby(l) {
+      if (!hasAreaFilter) return false;
+      const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase());
+      return lareas.some(la => [...nearbyLower].some(n => la.includes(n) || n.includes(la)));
+    }
+
+    function matchesBroker(l) {
+      if (!hasBrokerFilter) return true;
+      if (activeBrokerFilter === '✓ No Brokerage') return l.has_brokerage === false;
+      if (activeBrokerFilter === 'With Broker') return l.has_brokerage === true;
+      return true;
+    }
+
+    const byDate = (a, b) => new Date(b.created_at) - new Date(a.created_at);
+
+    if (!hasAreaFilter && !hasBrokerFilter) {
+      // No sorting filters — just show by date
+      listings = listings.sort(byDate);
+    } else {
+      // Score each listing: higher = show first
+      // Area match = 2 pts, Nearby = 1 pt, Broker match = 1 pt
+      const scored = listings.map(l => {
+        const areaExact = matchesArea(l);
+        const areaNearby = !areaExact && matchesNearby(l);
+        const brokerOk = matchesBroker(l);
+        let score = 0;
+        if (areaExact) score += 2;
+        else if (areaNearby) score += 1;
+        if (brokerOk) score += 1;
+        return { l, score };
       });
+
+      // Sort by score desc, then by date within same score
+      scored.sort((a, b) => b.score - a.score || byDate(a.l, b.l));
+      listings = scored.map(s => s.l);
     }
 
     _fetchedListings = listings;
@@ -3153,18 +3140,9 @@ function applyFiltersAndClose() {
   // Budget
   activeBudgetMin = parseInt(document.getElementById('budgetMin')?.value) || null;
   activeBudgetMax = parseInt(document.getElementById('budgetMax')?.value) || null;
-  // Area from pills
-  const selectedAreaPills = [...document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"].active`)]
-    .map(p => p.textContent.trim()).filter(v => v !== 'All Areas');
-  activeAreas = new Set(selectedAreaPills);
-  activeAreaFilter = selectedAreaPills;
-  // Type
-  const typeVal = getPillVal('ftype');
-  const typeMap2 = { 'Looking for Flatmate': 'flat_wanted', 'Looking for Occupancy': 'flatmate_wanted', 'Full Flat': 'flat_listing', 'All': 'all' };
-  if (typeVal && typeMap2[typeVal]) {
-    activeFilter = typeMap2[typeVal];
-    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  }
+  // NOTE: Do NOT read type or area from More Filters pills
+  // Type is controlled by the top chips only
+  // Area is controlled by the search bar and area chips only
   closeSheet('filter');
   loadListings();
 }
