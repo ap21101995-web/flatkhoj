@@ -1439,21 +1439,34 @@ async function confirmUnlock() {
       return;
     }
 
-    // Deduct 5 coins — block unlock if deduction fails
+    // Deduct coins — verify it actually worked
     const newCoins = currentCoins - UNLOCK_COST;
     const deductRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({ coins: newCoins })
     });
 
     if (!deductRes.ok) {
-      const err = await deductRes.text();
-      console.error('Coin deduction failed:', err);
       btn.innerHTML = 'Spend <span id="unlockBtnCost">' + UNLOCK_COST + '</span> Coins & Unlock →';
       btn.disabled = false;
       alert('Failed to deduct coins. Please try again.');
       return;
+    }
+
+    // Verify the DB actually updated to the right value
+    const verifyRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const verifyData = await verifyRes.json();
+    const actualCoins = verifyData[0]?.coins;
+    if (actualCoins !== newCoins) {
+      // DB has different value — force correct it
+      await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ coins: newCoins })
+      });
     }
 
     // Record unlock — fetch listing owner id first
