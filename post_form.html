@@ -1750,10 +1750,9 @@ function collectFormData() {
     data.furnishing = document.getElementById('fl-furn-select')?.value || null;
     data.food_preference = document.querySelector('#f-fl .sel[onclick*="fl-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fl .sel[onclick*="fl-gen"]')?.textContent?.trim() || null;
-    data.room_type = 'Entire flat'; // flat_listing always means entire flat
-    data.tenant_type = document.querySelector('#f-fl .sel[onclick*="fl-tt"]')?.textContent?.trim() || null;
+    data.room_type = 'Entire flat';
+    data.tenant_type = null;
     data.amenities = null;
-    if (data.amenities.length === 0) data.amenities = null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
     data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fl-available')?.value || null;
