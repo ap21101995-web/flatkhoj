@@ -259,15 +259,15 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="type-text"><div class="type-title">Flat Wanted</div><div class="type-desc">I am looking for a flat or room to move into</div></div>
       <div class="type-check" id="ck-fw"></div>
     </div>
-    <div class="type-card" id="tc-fl" onclick="selectType('fl')">
-      <div class="type-icon" style="background:#eafaf1">🏠</div>
-      <div class="type-text"><div class="type-title">Full Flat Listing</div><div class="type-desc">I have a whole flat available for rent</div></div>
-      <div class="type-check" id="ck-fl"></div>
-    </div>
     <div class="type-card" id="tc-fm" onclick="selectType('fm')">
       <div class="type-icon" style="background:#f3eeff">👥</div>
       <div class="type-text"><div class="type-title">Flatmate Wanted (or PG)</div><div class="type-desc">I need someone to share my flat, or I am vacating and need a replacement. Also for PG accommodations.</div></div>
       <div class="type-check" id="ck-fm"></div>
+    </div>
+    <div class="type-card" id="tc-fl" onclick="selectType('fl')">
+      <div class="type-icon" style="background:#eafaf1">🏠</div>
+      <div class="type-text"><div class="type-title">Full Flat Listing</div><div class="type-desc">I have a whole flat available for rent</div></div>
+      <div class="type-check" id="ck-fl"></div>
     </div>
     </div>
   </div>
@@ -394,11 +394,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 
   <!-- FLATMATE WANTED -->
   <div id="f-fm" style="display:none">
-    <div style="padding:4px 0 16px"><div class="step-heading">Flatmate Wanted</div><div class="step-sub">Help potential flatmates understand what they are getting into</div></div>
-    <div class="form-card">
-      <div class="card-title">📋 Your Situation</div>
-      <div class="field"><div class="field-label">What best describes you? <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-sit')">I am staying — looking for a flatmate</div><div class="pill" onclick="sp(this,'fm-sit')">I am vacating — need a replacement</div><div class="pill" onclick="sp(this,'fm-sit')">Helping find a flatmate</div></div></div>
-    </div>
+    <div style="padding:4px 0 16px"><div class="step-heading">Flatmate Wanted</div><div class="step-sub">Tell potential flatmates about your place</div></div>
     <div class="form-card">
       <div class="card-title">📍 Flat Details</div>
       <div class="field"><div class="field-label">Contact Name <span class="req">*</span></div><input class="input" type="text" id="fm-poster-name" placeholder="First name is fine" oninput="validateName(this)"></div>
@@ -424,9 +420,6 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="card-title">🏠 House Rules & Vibe</div>
       <div class="field"><div class="field-label">Food In This House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fm-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fm-food')">🍽️ No Veg/Non-Veg Preference</div></div></div>
       <div class="field"><div class="field-label">Preferred Flatmate's Gender <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-gen')">Male</div><div class="pill" onclick="sp(this,'fm-gen')">Female</div><div class="pill" onclick="sp(this,'fm-gen')">Any Gender</div></div></div>
-      <div class="field"><div class="field-label">Preferred Flatmate Type</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pref')">Working Professional</div><div class="pill" onclick="sp(this,'fm-pref')">Student</div><div class="pill" onclick="sp(this,'fm-pref')">Any</div></div></div>
-      <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fm-pets')">No</div></div></div>
-      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap" id="fm-amenities"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Gated Society</div></div></div>
       <div class="field"><div class="field-label">Anything else to add?</div><textarea class="textarea" placeholder="Optional — Add anything that you want to about your requirement." oninput="cc(this,'fm-cc',300)"></textarea><div class="char-count" id="fm-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
@@ -1789,12 +1782,8 @@ function collectFormData() {
     data.rent_amount = parseInt(document.querySelector('#f-fm input[type="number"]')?.value) || null;
     data.food_preference = document.querySelector('#f-fm .sel[onclick*="fm-food"]')?.textContent?.trim() || null;
     data.gender_preference = document.querySelector('#f-fm .sel[onclick*="fm-gen"]')?.textContent?.trim() || null;
-    data.situation = document.querySelector('#f-fm .sel[onclick*="fm-sit"]')?.textContent?.trim() || null;
     data.room_type = document.querySelector('#f-fm .sel[onclick*="fm-rm"]')?.textContent?.trim() || null;
     data.furnishing = document.querySelector('#f-fm .sel[onclick*="fm-furn"]')?.textContent?.trim() || null;
-    data.tenant_type = document.querySelector('#f-fm .sel[onclick*="fm-pref"]')?.textContent?.trim() || null;
-    const fmPets = document.querySelector('#f-fm .sel[onclick*="fm-pets"]')?.textContent?.trim(); data.pets_allowed = fmPets ? fmPets.includes('Yes') : null;
-    data.amenities = [...(document.querySelectorAll('#fm-amenities .pill.sel') || [])].map(p => p.textContent.trim()).filter(Boolean);
     if (data.amenities.length === 0) data.amenities = null;
     data.description = document.querySelector('#f-fm textarea')?.value || null;
     data.has_brokerage = document.getElementById('fm-byes')?.classList.contains('sel-yes') || false;
@@ -2923,16 +2912,13 @@ function prefillEditForm(listing, t) {
         if (el('fm-other-type')) el('fm-other-type').style.display = 'block';
       }
     }
-    fillPill('#f-fm', 'fm-sit', listing.situation);
     fillPill('#f-fm', 'fm-rm', listing.room_type);
     fillPill('#f-fm', 'fm-furn', listing.furnishing);
     fillPillFuzzy('#f-fm', 'fm-food', listing.food_preference);
     fillPill('#f-fm', 'fm-gen', listing.gender_preference);
-    fillPill('#f-fm', 'fm-pref', listing.tenant_type);
-    if (listing.pets_allowed === true) { const p = document.querySelector('#f-fm [onclick*="fm-pets"]'); if(p) sp(p,'fm-pets'); } else if (listing.pets_allowed === false) { const pills = document.querySelectorAll('#f-fm [onclick*="fm-pets"]'); if(pills[1]) sp(pills[1],'fm-pets'); }
     // Amenities
     if (listing.amenities && Array.isArray(listing.amenities)) {
-      document.querySelectorAll('#fm-amenities .pill').forEach(p => {
+      document.querySelectorAll('#fm-amenities-REMOVED .pill').forEach(p => {
         if (listing.amenities.includes(p.textContent.trim())) p.classList.add('sel');
       });
     }
@@ -3066,8 +3052,7 @@ function getRequiredChecks(t) {
   if (t === 'fm') return [
     { test: () => (areaVals['fm-area']||[]).length > 0,
       el: () => document.querySelector('#f-fm .area-wrap') },
-    { test: () => pillSel('#f-fm [onclick*="fm-sit"]'),
-      el: () => document.querySelector('#f-fm [onclick*="fm-sit"]')?.closest('.field') },
+
     { test: () => !!document.getElementById('fm-poster-name')?.value?.trim(),
       el: () => document.getElementById('fm-poster-name') },
     { test: () => !!document.getElementById('fm-flat-type')?.value,
