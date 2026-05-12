@@ -1784,7 +1784,7 @@ function collectFormData() {
     data.gender_preference = document.querySelector('#f-fm .sel[onclick*="fm-gen"]')?.textContent?.trim() || null;
     data.room_type = document.querySelector('#f-fm .sel[onclick*="fm-rm"]')?.textContent?.trim() || null;
     data.furnishing = document.querySelector('#f-fm .sel[onclick*="fm-furn"]')?.textContent?.trim() || null;
-    if (data.amenities.length === 0) data.amenities = null;
+    data.amenities = null;
     data.description = document.querySelector('#f-fm textarea')?.value || null;
     data.has_brokerage = document.getElementById('fm-byes')?.classList.contains('sel-yes') || false;
     data.available_from = document.getElementById('fm-available')?.value || null;
