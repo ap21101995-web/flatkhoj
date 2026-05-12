@@ -374,12 +374,9 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       </div>
     </div>
     <div class="form-card">
-      <div class="card-title">🏠 Preferences & Amenities</div>
+      <div class="card-title">🏠 Preferences</div>
       <div class="field"><div class="field-label">Food Preference In House <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-food')">🥦 Veg</div><div class="pill" onclick="sp(this,'fl-food')">🍗 Non-Veg</div><div class="pill" onclick="sp(this,'fl-food')">🍽️ No Veg/Non-Veg Preference</div></div></div>
-      <div class="field"><div class="field-label">Preferred Tenant's Gender <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-gen')">Male only</div><div class="pill" onclick="sp(this,'fl-gen')">Female only</div><div class="pill" onclick="sp(this,'fl-gen')">Any</div></div></div>
-      <div class="field"><div class="field-label">Preferred Tenant's Profile</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-tt')">Working Professional</div><div class="pill" onclick="sp(this,'fl-tt')">Student</div><div class="pill" onclick="sp(this,'fl-tt')">Family</div><div class="pill" onclick="sp(this,'fl-tt')">Any</div></div></div>
-      <div class="field"><div class="field-label">Amenities</div><div class="pill-wrap" id="fl-amenities"><div class="pill" onclick="mp(this)">AC</div><div class="pill" onclick="mp(this)">WiFi</div><div class="pill" onclick="mp(this)">Parking</div><div class="pill" onclick="mp(this)">Gym</div><div class="pill" onclick="mp(this)">Lift</div><div class="pill" onclick="mp(this)">Gated Society</div><div class="pill" onclick="mp(this)">Security Guard</div><div class="pill" onclick="mp(this)">Swimming Pool</div><div class="pill" onclick="mp(this)">Garden</div><div class="pill" onclick="mp(this)">Washing Machine</div><div class="pill" onclick="mp(this)">Geyser</div><div class="pill" onclick="mp(this)">Modular Kitchen</div></div></div>
-      <div class="field"><div class="field-label">Pets Allowed?</div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-pets')">🐾 Yes</div><div class="pill" onclick="sp(this,'fl-pets')">No</div></div></div>
+      <div class="field"><div class="field-label">Preferred Tenant's Gender <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-gen')">Family</div><div class="pill" onclick="sp(this,'fl-gen')">Male only</div><div class="pill" onclick="sp(this,'fl-gen')">Female only</div><div class="pill" onclick="sp(this,'fl-gen')">Any</div></div></div>
       <div class="field"><div class="field-label">Anything else to add?</div><textarea class="textarea" placeholder="Optional — Add anything that you want to about your requirement." oninput="cc(this,'fl-cc',300)"></textarea><div class="char-count" id="fl-cc">0 / 300</div></div>
     </div>
     <div class="form-card">
@@ -1755,8 +1752,7 @@ function collectFormData() {
     data.gender_preference = document.querySelector('#f-fl .sel[onclick*="fl-gen"]')?.textContent?.trim() || null;
     data.room_type = 'Entire flat'; // flat_listing always means entire flat
     data.tenant_type = document.querySelector('#f-fl .sel[onclick*="fl-tt"]')?.textContent?.trim() || null;
-    const flPets = document.querySelector('#f-fl .sel[onclick*="fl-pets"]')?.textContent?.trim(); data.pets_allowed = flPets ? flPets.includes('Yes') : null;
-    data.amenities = [...(document.querySelectorAll('#fl-amenities .pill.sel') || [])].map(p => p.textContent.trim()).filter(Boolean);
+    data.amenities = null;
     if (data.amenities.length === 0) data.amenities = null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
     data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') || false;
@@ -2866,10 +2862,9 @@ function prefillEditForm(listing, t) {
     fillPillFuzzy('#f-fl', 'fl-food', listing.food_preference);
     fillPill('#f-fl', 'fl-gen', listing.gender_preference);
     fillPill('#f-fl', 'fl-tt', listing.tenant_type);         // Working Professional/Student etc
-    if (listing.pets_allowed === true) { const p = document.querySelector('#f-fl [onclick*="fl-pets"]'); if(p) sp(p,'fl-pets'); } else if (listing.pets_allowed === false) { const pills = document.querySelectorAll('#f-fl [onclick*="fl-pets"]'); if(pills[1]) sp(pills[1],'fl-pets'); }
     // Amenities
     if (listing.amenities && Array.isArray(listing.amenities)) {
-      document.querySelectorAll('#fl-amenities .pill').forEach(p => {
+      document.querySelectorAll('#fl-amenities-REMOVED .pill').forEach(p => {
         if (listing.amenities.includes(p.textContent.trim())) p.classList.add('sel');
       });
     }
