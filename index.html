@@ -3001,53 +3001,40 @@ function renderSubFilters(type) {
   if (!type || type === 'all') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
   bar.style.display = 'block';
 
-  const pill = (id, val, label, active) => `<button
-    onclick="handleSubFilter('${id}','${val}')"
-    style="margin:2px 4px 2px 0;padding:6px 12px;border-radius:20px;font-size:13px;font-family:var(--font);cursor:pointer;border:1.5px solid ${active?'var(--teal)':'var(--border)'};background:${active?'var(--teal-bg)':'var(--bg)'};color:${active?'var(--teal)':'var(--ink2)'};font-weight:${active?700:400};white-space:nowrap;transition:all 0.15s"
-    data-sf-id="${id}" data-sf-val="${val}">${label}</button>`;
+  const isGenderActive = activeGenderFilter !== 'Any';
+  const isBrokerActive = activeBrokerFilter !== 'All Listings';
+  const isFamilyActive = subFamilyFilter !== 'Any';
+
+  const dd = (id, opts, currentVal, active) => {
+    const style = active
+      ? 'margin-right:8px;padding:6px 10px;border:1.5px solid var(--teal);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--teal-bg);color:var(--teal);font-weight:700;outline:none;cursor:pointer'
+      : 'margin-right:8px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--ink2);outline:none;cursor:pointer';
+    return `<select data-id="${id}" onchange="handleSubFilter('${id}',this.value)" style="${style}">
+      ${opts.map(o => `<option value="${o}" ${o === currentVal ? 'selected' : ''}>${o}</option>`).join('')}
+    </select>`;
+  };
 
   let html = '';
+  const genderVal = activeGenderFilter === 'Any' ? 'Any' : activeGenderFilter;
+  const brokerVal = activeBrokerFilter === 'All Listings' ? 'Any' : activeBrokerFilter === '✓ No Brokerage' ? 'No Brokerage' : 'With Broker';
 
   if (type === 'flatwanted') {
-    // Gender pills
-    ['Any', 'Male', 'Female'].forEach(v => {
-      const active = (v === 'Any' && activeGenderFilter === 'Any') || activeGenderFilter === v;
-      html += pill('sfGender', v, v, active);
-    });
-    html += '<span style="display:inline-block;width:1px;height:20px;background:var(--border);margin:0 6px;vertical-align:middle"></span>';
-    // Brokerage pills
-    ['Any', 'No Brokerage', 'With Broker'].forEach(v => {
-      const active = (v === 'Any' && activeBrokerFilter === 'All Listings') ||
-                     (v === 'No Brokerage' && activeBrokerFilter === '✓ No Brokerage') ||
-                     (v === 'With Broker' && activeBrokerFilter === 'With Broker');
-      html += pill('sfBroker', v, v, active);
-    });
-
+    html += dd('sfGender', ['Any','Male','Female'], genderVal, isGenderActive);
+    html += dd('sfBroker', ['Any','No Brokerage','With Broker'], brokerVal, isBrokerActive);
   } else if (type === 'flatmate' || type === 'flatlisting') {
-    // Family/Bachelor pills
-    ['Any', 'Family', 'Bachelor'].forEach(v => {
-      const active = subFamilyFilter === v || (v === 'Any' && subFamilyFilter === 'Any');
-      html += pill('sfFamily', v, v, active);
-    });
-    html += '<span style="display:inline-block;width:1px;height:20px;background:var(--border);margin:0 6px;vertical-align:middle"></span>';
-    // Gender pills — hide if Family selected
+    html += dd('sfFamily', ['Any','Family','Bachelor'], subFamilyFilter, isFamilyActive);
     if (subFamilyFilter !== 'Family') {
-      ['Any', 'Male', 'Female'].forEach(v => {
-        const active = (v === 'Any' && activeGenderFilter === 'Any') || activeGenderFilter === v;
-        html += pill('sfGender', v, v, active);
-      });
-      html += '<span style="display:inline-block;width:1px;height:20px;background:var(--border);margin:0 6px;vertical-align:middle"></span>';
+      html += dd('sfGender', ['Any','Male','Female'], genderVal, isGenderActive);
     }
-    // Brokerage pills
-    ['Any', 'No Brokerage', 'With Broker'].forEach(v => {
-      const active = (v === 'Any' && activeBrokerFilter === 'All Listings') ||
-                     (v === 'No Brokerage' && activeBrokerFilter === '✓ No Brokerage') ||
-                     (v === 'With Broker' && activeBrokerFilter === 'With Broker');
-      html += pill('sfBroker', v, v, active);
-    });
+    html += dd('sfBroker', ['Any','No Brokerage','With Broker'], brokerVal, isBrokerActive);
   }
 
   bar.innerHTML = html;
+
+  // Re-attach onchange since innerHTML replaced elements
+  bar.querySelectorAll('select').forEach(sel => {
+    sel.onchange = function() { handleSubFilter(this.dataset.id, this.value); };
+  });
 }
 
 function handleSubFilter(id, val) {
