@@ -319,15 +319,6 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
           </div>
         </div>
       </div>
-      <div class="field"><div class="field-label">Stay Duration</div>
-        <select class="select" id="fw-duration">
-          <option value="">Select duration…</option>
-          <option>Short term (1–3 months)</option>
-          <option>Medium term (3–6 months)</option>
-          <option>Long term (6+ months)</option>
-          <option>Flexible / Not sure</option>
-        </select>
-      </div>
     </div>
     <div class="form-card">
       <div class="card-title">🙋 Flat Seeker's Profile</div>
@@ -362,7 +353,6 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="area-dropdown" id="dd-fl-area"></div>
       </div>
       <div class="area-selected-tag" id="tag-fl-area"><span id="tagval-fl-area"></span><button onclick="clearArea('fl-area')">×</button></div></div>
-      <div class="field"><div class="field-label">Landmark / Building Name</div><input class="input" type="text" placeholder="Optional — e.g. Near Infinity Mall, Andheri West"><div class="field-hint">Exact address is only shared after contact is unlocked</div></div>
       <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fl-ft')">1 RK</div><div class="pill" onclick="sp(this,'fl-ft')">1 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">2 BHK</div><div class="pill" onclick="sp(this,'fl-ft')">3 BHK</div><div class="pill" onclick="spWithOther(this,'fl-ft','fl-other-type')">Other</div></div><input class="input" id="fl-other-type" type="text" placeholder="e.g. 4 BHK, Bungalow, Studio" style="display:none;margin-top:8px" /></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Monthly rent <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="18000" min="3000" max="400000"></div></div>
@@ -442,7 +432,6 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="area-dropdown" id="dd-pg-area"></div>
       </div>
       <div class="area-selected-tag" id="tag-pg-area"><span id="tagval-pg-area"></span><button onclick="clearArea('pg-area')">×</button></div></div>
-      <div class="field"><div class="field-label">Nearby Landmark</div><input class="input" type="text" placeholder="Optional — e.g. Near D-Mart, 2 mins from metro"></div>
       <div class="field"><div class="field-label">PG Is For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-for')">Boys Only</div><div class="pill" onclick="sp(this,'pg-for')">Girls Only</div><div class="pill" onclick="sp(this,'pg-for')">Both Boys & Girls</div></div></div>
       <div class="field"><div class="field-label">Room Types Available <span class="req">*</span></div><div class="pill-wrap" id="pg-room-types"><div class="pill" onclick="mp(this)">Single Room</div><div class="pill" onclick="mp(this)">Double Sharing</div><div class="pill" onclick="mp(this)">Triple Sharing</div></div></div>
       <div class="field-row">
