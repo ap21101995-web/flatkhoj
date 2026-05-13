@@ -594,7 +594,7 @@ body {
     <a href="#" class="logo">Flat<span>Khoj</span></a>
     <div class="area-wrap" id="homeAreaWrap" style="flex:1;min-width:0">
       <svg class="area-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input class="area-input-home" id="homeSearchInput" type="text" placeholder="Search area…" autocomplete="off"
+      <input class="area-input-home" id="homeSearchInput" type="text" placeholder="Area" autocomplete="off"
         oninput="homeAreaSearch(this)"
         onfocus="homeAreaFocus(this)"
         onkeydown="if(event.key==='Escape')document.getElementById('homeAreaDd').classList.remove('open')">
@@ -614,18 +614,18 @@ body {
 <!-- FILTER CHIPS — listing type -->
 <div class="filter-bar">
   <div class="filter-inner">
-    <button class="filter-chip active" onclick="setFilter(this,'all')">All</button>
-    <button class="filter-chip" onclick="setFilter(this,'flatwanted')">🙋 Looking for Flatmate</button>
-    <button class="filter-chip" onclick="setFilter(this,'flatmate')">🏠 Looking for Occupancy</button>
-    <button class="filter-chip" onclick="setFilter(this,'flatlisting')">🏢 Full Flat</button>
-    <button class="filter-chip teal-active" onclick="openFilterSheet()">⚙ More Filters</button>
-    <button class="filter-chip" onclick="setFilter(this,'nobroker')" style="border-color:#0f7b6c;color:#0f7b6c">✓ No Broker</button>
+    <button class="filter-chip active" data-type="all" onclick="setFilter(this,'all')">All</button>
+    <button class="filter-chip" data-type="flatwanted" onclick="setFilter(this,'flatwanted')">🙋 Looking for Flatmate</button>
+    <button class="filter-chip" data-type="flatmate" onclick="setFilter(this,'flatmate')">🏠 Looking for Occupancy</button>
+    <button class="filter-chip" data-type="flatlisting" onclick="setFilter(this,'flatlisting')">🏢 Full Flat</button>
   </div>
+</div>
+<!-- CONTEXTUAL SUB-FILTERS -->
+<div id="subFilterBar" style="display:none;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap">
 </div>
 
 <!-- MUMBAI AREA QUICK SELECT -->
 <div class="area-bar">
-  <div class="area-label">📍 Mumbai areas</div>
   <div class="area-chips" id="areaChips">
     <button class="area-chip active" onclick="setArea(this,'all')">All areas</button>
     <!-- Dynamic chips loaded by JS below -->
@@ -989,8 +989,17 @@ async function loadListings(reset = true) {
       const gf = activeGenderFilter.toLowerCase();
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        // Show if: no preference set, 'any', or matches selected gender
         return !gp || gp === 'any' || gp === 'any gender' || gp.includes(gf);
+      });
+    }
+
+    // Family/Bachelor hard filter
+    if (subFamilyFilter && subFamilyFilter !== 'Any') {
+      listings = listings.filter(l => {
+        const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
+        if (subFamilyFilter === 'Family') return gp.includes('family');
+        if (subFamilyFilter === 'Bachelor') return !gp.includes('family');
+        return true;
       });
     }
 
@@ -2966,13 +2975,63 @@ function _setArea_unused(el, area) {
 
 // Filter chips
 function setFilter(el, type) {
-  document.querySelectorAll('.filter-chip').forEach(c => {
-    if (!c.classList.contains('teal-active')) c.classList.remove('active');
-  });
-  if (!el.classList.contains('teal-active')) el.classList.add('active');
-  const map = { all:'all', flatwanted:'flat_wanted', flatlisting:'flat_listing', flatmate:'flatmate_wanted', pg:'pg_listing', nobroker:'nobroker' };
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const map = { all:'all', flatwanted:'flat_wanted', flatlisting:'flat_listing', flatmate:'flatmate_wanted', pg:'pg_listing' };
   activeFilter = map[type] || 'all';
+  // Reset sub-filters on type change
+  activeGenderFilter = 'Any';
+  activeBrokerFilter = 'All Listings';
+  subFamilyFilter = 'Any';
+  renderSubFilters(type);
   loadListings();
+}
+
+let subFamilyFilter = 'Any';
+
+function renderSubFilters(type) {
+  const bar = document.getElementById('subFilterBar');
+  if (!bar) return;
+  if (!type || type === 'all') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  bar.style.display = 'block';
+  bar.innerHTML = '';
+
+  const dd = (id, label, opts) => `<select data-id="${id}" onchange="handleSubFilter('${id}',this.value)"
+    style="margin-right:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--ink);outline:none;cursor:pointer">
+    <option value="" disabled selected style="color:var(--ink3)">${label} ▾</option>
+    ${opts.map(o=>`<option value="${o}">${o}</option>`).join('')}
+  </select>`;
+
+  if (type === 'flatwanted') {
+    // Looking for Flatmate: Gender + Brokerage
+    bar.innerHTML =
+      dd('sfGender','Gender',['Any Gender','Male','Female']) +
+      dd('sfBroker','Brokerage',['Any','No Brokerage','With Broker']);
+
+  } else if (type === 'flatmate' || type === 'flatlisting') {
+    // Looking for Occupancy / Full Flat: Family/Bachelor → Gender (if Bachelor) → Brokerage
+    bar.innerHTML = dd('sfFamily','Family/Bachelor',['Any','Family','Bachelor']);
+    if (subFamilyFilter !== 'Family') {
+      bar.innerHTML += dd('sfGender','Gender',['Any Gender','Male','Female']);
+    }
+    bar.innerHTML += dd('sfBroker','Brokerage',['Any','No Brokerage','With Broker']);
+  }
+}
+
+function handleSubFilter(id, val) {
+  const activeType = document.querySelector('.filter-chip.active')?.dataset?.type || 'all';
+  if (id === 'sfFamily') {
+    subFamilyFilter = val;
+    if (val === 'Family') activeGenderFilter = 'Any';
+    renderSubFilters(activeType);
+    loadListings();
+  } else if (id === 'sfGender') {
+    activeGenderFilter = val === 'Any Gender' ? 'Any' : val;
+    loadListings();
+  } else if (id === 'sfBroker') {
+    activeBrokerFilter = val === 'Any' ? 'All Listings' : val === 'No Brokerage' ? '✓ No Brokerage' : 'With Broker';
+    loadListings();
+  }
 }
 
 // Sheet logic
