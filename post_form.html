@@ -1933,10 +1933,27 @@ async function submitListing() {
           return;
         }
         const newCoins = currentCoins - 50;
-        await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
+        const deductOk = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
           method: 'PATCH',
-          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify({ coins: newCoins })
+        });
+        if (!deductOk.ok) {
+          btn.textContent = window._editListingId ? '💾 Save Changes' : '🚀 Post Listing — It\'s Free!';
+          btn.disabled = false;
+          alert('Failed to deduct coins. Please try again.');
+          return;
+        }
+        // Log the deduction in coin_transactions for balance tracking
+        await fetch(`${SUPA_URL}/rest/v1/coin_transactions`, {
+          method: 'POST',
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.userId, type: 'free_contact', amount: -50,
+            balance_after: newCoins,
+            description: 'Free contact activation — anyone can view contact without coins',
+            created_at: new Date().toISOString()
+          })
         });
         user.coins = newCoins;
         localStorage.setItem('fmh_user', JSON.stringify(user));
