@@ -980,14 +980,18 @@ async function loadListings(reset = true) {
 
     // ── STEP 1: Hard filter — gender is non-negotiable ──
     if (activeGenderFilter && activeGenderFilter !== 'Any') {
-      const gf = activeGenderFilter.toLowerCase();
+      const gf = activeGenderFilter.toLowerCase(); // 'male' or 'female'
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        // Empty/Any = show to everyone
-        if (!gp || gp === 'any' || gp === 'any gender' || gp === '') return true;
-        // Family listings don't apply to male/female gender filter
-        if (gp.includes('family')) return false;
-        return gp.includes(gf);
+        // Empty/null = show to everyone
+        if (!gp) return true;
+        // Any/Any Gender = show to everyone
+        if (gp === 'any' || gp === 'any gender') return true;
+        // Family = not a gender filter, show to everyone in gender filter
+        if (gp.includes('family')) return true;
+        // Check if listing matches selected gender
+        // Handles: "Male", "Male only", "Male Flatmate", "Female", "Female only", "Female Flatmate"
+        return gp.startsWith(gf);
       });
     }
 
@@ -1061,8 +1065,7 @@ async function loadListings(reset = true) {
     function matchesBroker(l) {
       if (!hasBrokerFilter) return true;
       if (activeBrokerFilter === '✓ No Brokerage') return l.has_brokerage === false;
-      if (activeBrokerFilter === 'With Broker') return l.has_brokerage === true;
-      return true;
+      return true; // All Options shows everything
     }
 
     const byDate = (a, b) => new Date(b.created_at) - new Date(a.created_at);
