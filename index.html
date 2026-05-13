@@ -633,13 +633,7 @@ body {
 </div>
 
 <!-- STATS -->
-<div class="stats-bar">
-  <div class="stats-text">Showing <strong>312 listings</strong> · Mumbai</div>
-  <button class="sort-btn" onclick="openSortSheet()">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
-    Newest first
-  </button>
-</div>
+
 
 <!-- LOGIN NUDGE (shown to logged out users) -->
 <div class="login-nudge" id="loginNudge">
@@ -3005,12 +2999,15 @@ function renderSubFilters(type) {
   const isBrokerActive = activeBrokerFilter !== 'All Listings';
   const isFamilyActive = subFamilyFilter !== 'Any';
 
+  const labels = { sfGender:'Gender', sfBroker:'Brokerage', sfFamily:'Family/Bachelor' };
   const dd = (id, opts, currentVal, active) => {
     const style = active
       ? 'margin-right:8px;padding:6px 10px;border:1.5px solid var(--teal);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--teal-bg);color:var(--teal);font-weight:700;outline:none;cursor:pointer'
       : 'margin-right:8px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--ink2);outline:none;cursor:pointer';
+    const label = labels[id] || id;
     return `<select data-id="${id}" onchange="handleSubFilter('${id}',this.value)" style="${style}">
-      ${opts.map(o => `<option value="${o}" ${o === currentVal ? 'selected' : ''}>${o}</option>`).join('')}
+      <option value="" disabled ${!active ? 'selected' : ''} style="color:var(--ink3)">${label}</option>
+      ${opts.map(o => `<option value="${o}" ${o === currentVal && active ? 'selected' : ''}>${o}</option>`).join('')}
     </select>`;
   };
 
