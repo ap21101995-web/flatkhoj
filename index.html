@@ -962,7 +962,12 @@ async function loadListings(reset = true) {
   try {
     const now = new Date().toISOString();
     let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&expires_at=gte.${now}`;
-    if (activeFilter !== 'all' && activeFilter !== 'nobroker') url += `&listing_type=eq.${activeFilter}`;
+    // "Looking for Occupancy" shows both flatmate_wanted AND flat_listing
+    if (activeFilter === 'flatmate_wanted') {
+      url += `&listing_type=in.(flatmate_wanted,flat_listing)`;
+    } else if (activeFilter !== 'all' && activeFilter !== 'nobroker') {
+      url += `&listing_type=eq.${activeFilter}`;
+    }
     if (activeFilter === 'nobroker') url += `&has_brokerage=eq.false`;
 
     const res = await fetch(url, {
@@ -980,17 +985,14 @@ async function loadListings(reset = true) {
 
     // ── STEP 1: Hard filter — gender is non-negotiable ──
     if (activeGenderFilter && activeGenderFilter !== 'Any') {
-      const gf = activeGenderFilter.toLowerCase(); // 'male' or 'female'
+      const gf = activeGenderFilter.toLowerCase();
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        // Empty/null = show to everyone
-        if (!gp) return true;
-        // Any/Any Gender = show to everyone
-        if (gp === 'any' || gp === 'any gender') return true;
-        // Family = not a gender filter, show to everyone in gender filter
+        // Empty/null/Any/Any Gender = show to everyone
+        if (!gp || gp === 'any' || gp === 'any gender') return true;
+        // Family = show to everyone in gender filter
         if (gp.includes('family')) return true;
         // Check if listing matches selected gender
-        // Handles: "Male", "Male only", "Male Flatmate", "Female", "Female only", "Female Flatmate"
         return gp.startsWith(gf);
       });
     }
@@ -999,9 +1001,13 @@ async function loadListings(reset = true) {
     if (subFamilyFilter && subFamilyFilter !== 'Any') {
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        // Empty/Any/null = suitable for everyone including family
-        if (!gp || gp === 'any' || gp === 'any gender' || gp === '') return true;
-        if (subFamilyFilter === 'Family') return gp.includes('family');
+        const isFlat = l.listing_type === 'flat_listing';
+        // Full flat listings with no gender or Any = show for both Family and Bachelor
+        if (!gp || gp === 'any' || gp === 'any gender') return true;
+        if (subFamilyFilter === 'Family') {
+          // Show if: tagged Family, or full flat listing (always family-friendly)
+          return gp.includes('family') || isFlat;
+        }
         if (subFamilyFilter === 'Bachelor') return !gp.includes('family');
         return true;
       });
