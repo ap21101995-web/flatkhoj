@@ -1093,7 +1093,7 @@ async function loadListings(reset = true) {
 
     if (listings.length === 0) {
       document.getElementById('feedEmpty').style.display = 'block';
-      document.querySelector('.stats-text').innerHTML = 'No listings found';
+      const st1 = document.querySelector('.stats-text'); if(st1) st1.innerHTML = 'No listings found';
       return;
     }
 
@@ -1103,7 +1103,7 @@ async function loadListings(reset = true) {
     currentOffset = PAGE_SIZE;
     renderListings(page);
 
-    document.querySelector('.stats-text').innerHTML = `Recent listings (${listings.length})`;
+    const st2 = document.querySelector('.stats-text'); if(st2) st2.innerHTML = `Recent listings (${listings.length})`;
 
     if (listings.length > PAGE_SIZE) {
       document.getElementById('loadMoreWrap').style.display = 'block';
@@ -1130,8 +1130,8 @@ function loadMoreListings() {
   allListings = [...allListings, ...page];
   currentOffset += PAGE_SIZE;
   renderListings(page);
-  document.querySelector('.stats-text').innerHTML =
-    `Showing <strong>${allListings.length}</strong> of <strong>${_fetchedListings.length}</strong> listing${_fetchedListings.length !== 1 ? 's' : ''}`;
+  const st3 = document.querySelector('.stats-text');
+  if (st3) st3.innerHTML = `Showing <strong>${allListings.length}</strong> of <strong>${_fetchedListings.length}</strong> listing${_fetchedListings.length !== 1 ? 's' : ''}`;
   if (currentOffset >= _fetchedListings.length) {
     document.getElementById('loadMoreWrap').style.display = 'none';
   }
