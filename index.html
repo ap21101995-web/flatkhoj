@@ -989,7 +989,11 @@ async function loadListings(reset = true) {
       const gf = activeGenderFilter.toLowerCase();
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        return !gp || gp === 'any' || gp === 'any gender' || gp.includes(gf);
+        // Empty/Any = show to everyone
+        if (!gp || gp === 'any' || gp === 'any gender' || gp === '') return true;
+        // Family listings don't apply to male/female gender filter
+        if (gp.includes('family')) return false;
+        return gp.includes(gf);
       });
     }
 
@@ -997,6 +1001,8 @@ async function loadListings(reset = true) {
     if (subFamilyFilter && subFamilyFilter !== 'Any') {
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
+        // Empty/Any/null = suitable for everyone including family
+        if (!gp || gp === 'any' || gp === 'any gender' || gp === '') return true;
         if (subFamilyFilter === 'Family') return gp.includes('family');
         if (subFamilyFilter === 'Bachelor') return !gp.includes('family');
         return true;
@@ -2994,28 +3000,54 @@ function renderSubFilters(type) {
   if (!bar) return;
   if (!type || type === 'all') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
   bar.style.display = 'block';
-  bar.innerHTML = '';
 
-  const dd = (id, label, opts) => `<select data-id="${id}" onchange="handleSubFilter('${id}',this.value)"
-    style="margin-right:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--ink);outline:none;cursor:pointer">
-    <option value="" disabled selected style="color:var(--ink3)">${label} ▾</option>
-    ${opts.map(o=>`<option value="${o}">${o}</option>`).join('')}
-  </select>`;
+  const pill = (id, val, label, active) => `<button
+    onclick="handleSubFilter('${id}','${val}')"
+    style="margin:2px 4px 2px 0;padding:6px 12px;border-radius:20px;font-size:13px;font-family:var(--font);cursor:pointer;border:1.5px solid ${active?'var(--teal)':'var(--border)'};background:${active?'var(--teal-bg)':'var(--bg)'};color:${active?'var(--teal)':'var(--ink2)'};font-weight:${active?700:400};white-space:nowrap;transition:all 0.15s"
+    data-sf-id="${id}" data-sf-val="${val}">${label}</button>`;
+
+  let html = '';
 
   if (type === 'flatwanted') {
-    // Looking for Flatmate: Gender + Brokerage
-    bar.innerHTML =
-      dd('sfGender','Gender',['Any Gender','Male','Female']) +
-      dd('sfBroker','Brokerage',['Any','No Brokerage','With Broker']);
+    // Gender pills
+    ['Any', 'Male', 'Female'].forEach(v => {
+      const active = (v === 'Any' && activeGenderFilter === 'Any') || activeGenderFilter === v;
+      html += pill('sfGender', v, v, active);
+    });
+    html += '<span style="display:inline-block;width:1px;height:20px;background:var(--border);margin:0 6px;vertical-align:middle"></span>';
+    // Brokerage pills
+    ['Any', 'No Brokerage', 'With Broker'].forEach(v => {
+      const active = (v === 'Any' && activeBrokerFilter === 'All Listings') ||
+                     (v === 'No Brokerage' && activeBrokerFilter === '✓ No Brokerage') ||
+                     (v === 'With Broker' && activeBrokerFilter === 'With Broker');
+      html += pill('sfBroker', v, v, active);
+    });
 
   } else if (type === 'flatmate' || type === 'flatlisting') {
-    // Looking for Occupancy / Full Flat: Family/Bachelor → Gender (if Bachelor) → Brokerage
-    bar.innerHTML = dd('sfFamily','Family/Bachelor',['Any','Family','Bachelor']);
+    // Family/Bachelor pills
+    ['Any', 'Family', 'Bachelor'].forEach(v => {
+      const active = subFamilyFilter === v || (v === 'Any' && subFamilyFilter === 'Any');
+      html += pill('sfFamily', v, v, active);
+    });
+    html += '<span style="display:inline-block;width:1px;height:20px;background:var(--border);margin:0 6px;vertical-align:middle"></span>';
+    // Gender pills — hide if Family selected
     if (subFamilyFilter !== 'Family') {
-      bar.innerHTML += dd('sfGender','Gender',['Any Gender','Male','Female']);
+      ['Any', 'Male', 'Female'].forEach(v => {
+        const active = (v === 'Any' && activeGenderFilter === 'Any') || activeGenderFilter === v;
+        html += pill('sfGender', v, v, active);
+      });
+      html += '<span style="display:inline-block;width:1px;height:20px;background:var(--border);margin:0 6px;vertical-align:middle"></span>';
     }
-    bar.innerHTML += dd('sfBroker','Brokerage',['Any','No Brokerage','With Broker']);
+    // Brokerage pills
+    ['Any', 'No Brokerage', 'With Broker'].forEach(v => {
+      const active = (v === 'Any' && activeBrokerFilter === 'All Listings') ||
+                     (v === 'No Brokerage' && activeBrokerFilter === '✓ No Brokerage') ||
+                     (v === 'With Broker' && activeBrokerFilter === 'With Broker');
+      html += pill('sfBroker', v, v, active);
+    });
   }
+
+  bar.innerHTML = html;
 }
 
 function handleSubFilter(id, val) {
@@ -3023,15 +3055,13 @@ function handleSubFilter(id, val) {
   if (id === 'sfFamily') {
     subFamilyFilter = val;
     if (val === 'Family') activeGenderFilter = 'Any';
-    renderSubFilters(activeType);
-    loadListings();
   } else if (id === 'sfGender') {
-    activeGenderFilter = val === 'Any Gender' ? 'Any' : val;
-    loadListings();
+    activeGenderFilter = val === 'Any' ? 'Any' : val;
   } else if (id === 'sfBroker') {
     activeBrokerFilter = val === 'Any' ? 'All Listings' : val === 'No Brokerage' ? '✓ No Brokerage' : 'With Broker';
-    loadListings();
   }
+  renderSubFilters(activeType);
+  loadListings();
 }
 
 // Sheet logic
