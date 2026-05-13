@@ -1949,7 +1949,7 @@ async function submitListing() {
           method: 'POST',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: user.userId, type: 'free_contact', amount: -50,
+            user_id: user.userId, type: 'free_contact_paid', amount: -50,
             balance_after: newCoins,
             description: 'Free contact activation — anyone can view contact without coins',
             created_at: new Date().toISOString()
