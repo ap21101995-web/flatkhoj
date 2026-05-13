@@ -2996,7 +2996,7 @@ function renderSubFilters(type) {
   bar.style.display = 'block';
 
   const isGenderActive = activeGenderFilter !== 'Any';
-  const isBrokerActive = activeBrokerFilter !== 'All Listings';
+  const isBrokerActive = activeBrokerFilter === '✓ No Brokerage';
   const isFamilyActive = subFamilyFilter !== 'Any';
 
   const labels = { sfGender:'Gender', sfBroker:'Brokerage', sfFamily:'Family/Bachelor' };
@@ -3013,17 +3013,19 @@ function renderSubFilters(type) {
 
   let html = '';
   const genderVal = activeGenderFilter === 'Any' ? 'Any' : activeGenderFilter;
-  const brokerVal = activeBrokerFilter === 'All Listings' ? 'Any' : activeBrokerFilter === '✓ No Brokerage' ? 'No Brokerage' : 'With Broker';
+  const brokerVal = activeBrokerFilter === 'All Listings' ? 'All Options' : 'No Brokerage';
 
   if (type === 'flatwanted') {
+    // Looking for Flatmate: Gender only, no brokerage
     html += dd('sfGender', ['Any','Male','Female'], genderVal, isGenderActive);
-    html += dd('sfBroker', ['Any','No Brokerage','With Broker'], brokerVal, isBrokerActive);
+
   } else if (type === 'flatmate' || type === 'flatlisting') {
     html += dd('sfFamily', ['Any','Family','Bachelor'], subFamilyFilter, isFamilyActive);
     if (subFamilyFilter !== 'Family') {
       html += dd('sfGender', ['Any','Male','Female'], genderVal, isGenderActive);
     }
-    html += dd('sfBroker', ['Any','No Brokerage','With Broker'], brokerVal, isBrokerActive);
+    // Brokerage: only 2 options
+    html += dd('sfBroker', ['All Options','No Brokerage'], brokerVal, isBrokerActive);
   }
 
   bar.innerHTML = html;
@@ -3042,7 +3044,7 @@ function handleSubFilter(id, val) {
   } else if (id === 'sfGender') {
     activeGenderFilter = val === 'Any' ? 'Any' : val;
   } else if (id === 'sfBroker') {
-    activeBrokerFilter = val === 'Any' ? 'All Listings' : val === 'No Brokerage' ? '✓ No Brokerage' : 'With Broker';
+    activeBrokerFilter = val === 'All Options' ? 'All Listings' : '✓ No Brokerage';
   }
   renderSubFilters(activeType);
   loadListings();
