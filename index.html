@@ -1037,60 +1037,55 @@ async function loadListings(reset = true) {
     const hasAreaFilter = activeAreas.size > 0;
     const hasBrokerFilter = activeBrokerFilter && activeBrokerFilter !== 'All Listings';
 
-    // Build geo proximity sets — use coordinate-based proximity map
-    // For each selected area, get its geo neighbors within 5km (ordered by distance)
-    const geoNearby1 = new Set(); // within ~2km
-    const geoNearby2 = new Set(); // within ~5km
-    selectedArr.forEach(area => {
-      // Also add parent/children for exact family match
-      const parent = PARENT_AREA[area];
-      if (parent) geoNearby1.add(parent.toLowerCase());
-      (CHILDREN_AREA[area] || []).forEach(c => geoNearby1.add(c.toLowerCase()));
-      if (parent) (CHILDREN_AREA[parent] || []).forEach(s => geoNearby1.add(s.toLowerCase()));
-      // Add geo proximity (first 5 = very close, rest = further)
-      const geoList = GEO_PROXIMITY[area] || NEARBY_AREAS[area] || [];
-      geoList.slice(0, 5).forEach(n => geoNearby1.add(n.toLowerCase()));
-      geoList.slice(5).forEach(n => geoNearby2.add(n.toLowerCase()));
-    });
+    // ── COORDINATE-BASED AREA SCORING ──
+    // Get coordinates for each selected area
+    const selectedCoords = selectedArr
+      .map(a => ({ name: a, coord: AREA_COORDS[a] || null }))
+      .filter(x => x.coord);
 
-    function areaScore(l) {
-      // Returns: 3=exact or parent/child of selected, 2=very close geo, 1=further nearby, 0=no match
-      const lareas = (Array.isArray(l.areas) ? l.areas : [l.areas || '']).map(a => a.toLowerCase().trim());
+    function getAreaCoord(areaName) {
+      if (!areaName) return null;
+      // Direct lookup
+      if (AREA_COORDS[areaName]) return AREA_COORDS[areaName];
+      // Case-insensitive lookup
+      const lower = areaName.toLowerCase();
+      const key = Object.keys(AREA_COORDS).find(k => k.toLowerCase() === lower);
+      return key ? AREA_COORDS[key] : null;
+    }
 
-      // For each selected area, build exact match set (selected + all its children + its parent + siblings)
-      for (const sel of selectedLower) {
-        for (const la of lareas) {
-          // Direct match
-          if (la.includes(sel) || sel.includes(la)) return 3;
-          // Check if listing area's parent matches selected area
-          // e.g. listing has "DN Nagar", selected is "Andheri West"
-          // PARENT_AREA["DN Nagar"] = "Andheri West"
-          const listingAreaTitle = Object.keys(PARENT_AREA).find(k => k.toLowerCase() === la);
-          if (listingAreaTitle) {
-            const parent = PARENT_AREA[listingAreaTitle];
-            if (parent && (parent.toLowerCase().includes(sel) || sel.includes(parent.toLowerCase()))) return 3;
-          }
-          // Check if selected area's children include listing area
-          // e.g. selected is "Andheri West", listing has "DN Nagar"
-          const selAreaTitle = Object.keys(CHILDREN_AREA).find(k => k.toLowerCase() === sel);
-          if (selAreaTitle) {
-            const children = CHILDREN_AREA[selAreaTitle] || [];
-            if (children.some(c => c.toLowerCase() === la || la.includes(c.toLowerCase()) || c.toLowerCase().includes(la))) return 3;
-          }
-          // Check if selected is "Andheri" (parent) and listing is "Andheri West/East" or any sub-area
-          for (const [parent, children] of Object.entries(CHILDREN_AREA)) {
-            if (parent.toLowerCase().includes(sel) || sel.includes(parent.toLowerCase())) {
-              if (children.some(c => c.toLowerCase() === la || la.includes(c.toLowerCase()) || c.toLowerCase().includes(la))) return 3;
-            }
-          }
+    function haversineKm(c1, c2) {
+      const R = 6371;
+      const dlat = (c2[0] - c1[0]) * Math.PI / 180;
+      const dlon = (c2[1] - c1[1]) * Math.PI / 180;
+      const a = Math.sin(dlat/2)**2 + Math.cos(c1[0]*Math.PI/180) * Math.cos(c2[0]*Math.PI/180) * Math.sin(dlon/2)**2;
+      return R * 2 * Math.asin(Math.sqrt(a));
+    }
+
+    function listingMinDistance(l) {
+      // Get all area coordinates for this listing
+      const lareas = Array.isArray(l.areas) ? l.areas : [l.areas || ''];
+      const listingCoords = lareas.map(a => getAreaCoord(a)).filter(Boolean);
+      if (!listingCoords.length || !selectedCoords.length) return 999;
+
+      // For each selected area, find minimum distance to any of the listing's areas
+      // Then take the minimum across all selected areas
+      let minDist = 999;
+      for (const sel of selectedCoords) {
+        for (const lc of listingCoords) {
+          const d = haversineKm(sel.coord, lc);
+          if (d < minDist) minDist = d;
         }
       }
+      return minDist;
+    }
 
-      const isClose = lareas.some(la => [...geoNearby1].some(s => la.includes(s) || s.includes(la)));
-      if (isClose) return 2;
-      const isFurther = lareas.some(la => [...geoNearby2].some(s => la.includes(s) || s.includes(la)));
-      if (isFurther) return 1;
-      return 0;
+    function areaScore(l) {
+      if (!hasAreaFilter || !selectedCoords.length) return 3;
+      const d = listingMinDistance(l);
+      if (d <= 1.5) return 3;  // exact / same area
+      if (d <= 4) return 2;    // very close
+      if (d <= 8) return 1;    // nearby
+      return 0;                // far
     }
 
     function matchesArea(l) { return !hasAreaFilter || areaScore(l) > 0; }
@@ -1111,15 +1106,20 @@ async function loadListings(reset = true) {
       // Score each listing: higher = show first
       // Area match = 2 pts, Nearby = 1 pt, Broker match = 1 pt
       const scored = listings.map(l => {
-        const as = hasAreaFilter ? areaScore(l) : 3; // 3=exact,2=family,1=nearby,0=other
+        const as = hasAreaFilter ? areaScore(l) : 3;
+        const dist = hasAreaFilter ? listingMinDistance(l) : 0;
         const brokerOk = matchesBroker(l);
-        // Area score: 0-3 (weight 2x), broker: 0-1
-        const score = (as * 2) + (brokerOk ? 1 : 0);
-        return { l, score };
+        // Primary: area score (higher=closer), secondary: broker, tertiary: date
+        const score = (as * 1000) + (brokerOk ? 100 : 0) + Math.max(0, 100 - Math.round(dist * 10));
+        return { l, score, dist };
       });
 
-      // Sort by score desc, then by date within same score
-      scored.sort((a, b) => b.score - a.score || byDate(a.l, b.l));
+      // Sort by score desc, then by distance asc, then by date desc within same distance
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (Math.abs(a.dist - b.dist) > 0.5) return a.dist - b.dist;
+        return byDate(a.l, b.l);
+      });
       listings = scored.map(s => s.l);
     }
 
