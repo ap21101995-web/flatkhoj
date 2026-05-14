@@ -204,7 +204,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div>
           <div style="font-size:16px;font-weight:800;color:var(--ink)">Basic Plan</div>
-          <div style="font-size:13px;color:var(--ink3);margin-top:4px">3 posts/day · 10 posts/month · 30 days</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:4px">3 posts/day · 10 posts/month · 60 days</div>
         </div>
         <div style="font-size:20px;font-weight:800;color:var(--teal)">99 🪙</div>
       </div>
@@ -217,7 +217,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div>
           <div style="font-size:16px;font-weight:800;color:var(--ink)">Pro Plan</div>
-          <div style="font-size:13px;color:var(--ink3);margin-top:4px">8 posts/day · 25 posts/month · 30 days</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:4px">8 posts/day · 25 posts/month · 60 days</div>
         </div>
         <div style="font-size:20px;font-weight:800;color:#7c3aed">199 🪙</div>
       </div>
@@ -513,7 +513,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
   </div>
 
   <div style="background:var(--teal-bg);border:1.5px solid var(--teal);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.7">
-    🎉 <strong>Posting is completely free.</strong> Your listing will stay live for <strong>30 days</strong> and can be renewed for free anytime.
+    🎉 <strong>Posting is completely free.</strong> Your listing will stay live for <strong>60 days</strong> and can be renewed for free anytime.
   </div>
   <div style="background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.7;margin-top:12px" id="deleteReminderMsg"></div>
 </div>
@@ -1894,7 +1894,7 @@ async function submitListing() {
     formData.user_id = user.userId;
     formData.city = 'Mumbai';
     formData.is_active = true;
-    formData.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    formData.expires_at = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
     formData.created_at = new Date().toISOString();
     formData.updated_at = new Date().toISOString();
 
