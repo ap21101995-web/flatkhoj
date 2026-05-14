@@ -963,7 +963,7 @@ async function loadListings(reset = true) {
 
   try {
     const now = new Date().toISOString();
-    let url = `${SUPA_URL}/rest/v1/listings?select=id,listing_type,areas,rent_amount,gender_preference,preferred_gender,has_brokerage,poster_name,description,flat_type,room_type,furnishing,food_preference,available_from,photos,is_free_contact,custom_contact_phone,user_id,posted_by_owner,is_sold,created_at,expires_at&is_active=eq.true&order=created_at.desc&expires_at=gte.${now}`;
+    let url = `${SUPA_URL}/rest/v1/listings?select=id,listing_type,areas,rent_amount,gender_preference,preferred_gender,has_brokerage,brokerage_preference,poster_name,description,flat_type,room_type,furnishing,food_preference,available_from,photos,is_free_contact,custom_contact_phone,user_id,posted_by_owner,is_sold,created_at,expires_at&is_active=eq.true&order=created_at.desc&expires_at=gte.${now}`;
     // "Looking for Occupancy" shows both flatmate_wanted AND flat_listing
     if (activeFilter === 'flatmate_wanted') {
       url += `&listing_type=in.(flatmate_wanted,flat_listing)`;
@@ -976,7 +976,7 @@ async function loadListings(reset = true) {
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${SUPA_KEY}`,
-        'Prefer': 'count=exact'
+        'Range': '0-9999'
       }
     });
 
