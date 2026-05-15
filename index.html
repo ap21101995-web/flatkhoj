@@ -2811,20 +2811,33 @@ async function loadAreaChips() {
       });
     }
 
-    // Render chips
+    // Render chips — only first 8, then "More Areas"
     const container = document.getElementById('areaChips');
-    // Keep "All areas" chip first
     const allChip = container.querySelector('[onclick*="all"]');
     container.innerHTML = '';
     container.appendChild(allChip);
 
-    sortedAreas.forEach(area => {
+    sortedAreas.slice(0, 8).forEach(area => {
       const btn = document.createElement('button');
       btn.className = 'area-chip';
       btn.textContent = area.name;
       btn.onclick = function() { setArea(this, area.key); };
       container.appendChild(btn);
     });
+
+    // More Areas button — focuses search bar
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'area-chip';
+    moreBtn.textContent = '+ More Areas';
+    moreBtn.style.cssText = 'border-style:dashed;color:var(--teal);border-color:var(--teal)';
+    moreBtn.onclick = function() {
+      const input = document.getElementById('homeSearchInput');
+      if (input) {
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => { input.focus(); homeAreaFocus(input); }, 300);
+      }
+    };
+    container.appendChild(moreBtn);
 
   } catch(e) {
     // Fallback — render default order
@@ -2832,13 +2845,22 @@ async function loadAreaChips() {
     const allChip = container.querySelector('[onclick*="all"]');
     container.innerHTML = '';
     container.appendChild(allChip);
-    DEFAULT_AREAS.forEach(area => {
+    DEFAULT_AREAS.slice(0, 8).forEach(area => {
       const btn = document.createElement('button');
       btn.className = 'area-chip';
       btn.textContent = area.name;
       btn.onclick = function() { setArea(this, area.key); };
       container.appendChild(btn);
     });
+    const moreBtn2 = document.createElement('button');
+    moreBtn2.className = 'area-chip';
+    moreBtn2.textContent = '+ More Areas';
+    moreBtn2.style.cssText = 'border-style:dashed;color:var(--teal);border-color:var(--teal)';
+    moreBtn2.onclick = function() {
+      const input = document.getElementById('homeSearchInput');
+      if (input) { input.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => { input.focus(); homeAreaFocus(input); }, 300); }
+    };
+    container.appendChild(moreBtn2);
   }
 }
 
