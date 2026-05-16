@@ -466,15 +466,62 @@ function searchUsers(q) {
   });
 }
 
-function filterListingsByPhone(val) {
+async function filterListingsByPhone(val) {
   const q = val.trim().replace(/\D/g, '');
-  const rows = document.querySelectorAll('#listingsTable tr');
-  rows.forEach((row, i) => {
-    if (i === 0) return; // skip header
-    if (!q) { row.style.display = ''; return; }
-    const posterPhone = row.cells[1]?.textContent?.replace(/\D/g,'') || '';
-    const contactPhone = row.cells[2]?.textContent?.replace(/\D/g,'') || '';
-    row.style.display = (posterPhone.includes(q) || contactPhone.includes(q)) ? '' : 'none';
+  if (!q || q.length < 5) {
+    const rows = document.querySelectorAll('#listingsTable tr');
+    rows.forEach((row, i) => {
+      if (i === 0) return;
+      row.style.display = !q ? '' : (row.textContent.replace(/\D/g,'').includes(q) ? '' : 'none');
+    });
+    return;
+  }
+  // Search DB for user with this phone
+  const users = await supaGet(`users?phone=eq.${q}&select=id,phone`);
+  if (!users.length) {
+    const rows = document.querySelectorAll('#listingsTable tr');
+    rows.forEach((row, i) => {
+      if (i === 0) return;
+      row.style.display = row.textContent.replace(/\D/g,'').includes(q) ? '' : 'none';
+    });
+    return;
+  }
+  const userId = users[0].id;
+  // Fetch ALL listings for this user from DB — no limit
+  const [byUser, byContact] = await Promise.all([
+    supaGet(`listings?user_id=eq.${userId}&select=*&order=created_at.desc`),
+    supaGet(`listings?custom_contact_phone=eq.${q}&select=*&order=created_at.desc`)
+  ]);
+  const seen = new Set();
+  const allListings = [...byUser, ...byContact].filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
+
+  const t = document.getElementById('listingsTable');
+  const header = t.rows[0]; t.innerHTML = ''; t.appendChild(header);
+
+  const typeMap = {flat_listing:'Flat',flat_wanted:'Wanted',flatmate_wanted:'Flatmate',pg_listing:'PG'};
+  if (!allListings.length) {
+    t.innerHTML += `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink3)">No listings found for +91 ${q}</td></tr>`;
+    return;
+  }
+  allListings.forEach(l => {
+    const areas = Array.isArray(l.areas) ? l.areas.join(', ') : l.areas||'Mumbai';
+    const price = l.rent_amount ? 'Rs.'+l.rent_amount.toLocaleString('en-IN') : '-';
+    const posterPhone = '+91 '+users[0].phone;
+    const contactShown = l.custom_contact_phone ? '+91 '+l.custom_contact_phone : posterPhone;
+    const isExpired = l.expires_at && new Date(l.expires_at) < new Date();
+    t.innerHTML += `<tr>
+      <td><div style="font-weight:600">${areas}</div><div style="font-size:11px;color:var(--ink3)">${typeMap[l.listing_type]||l.listing_type}${l.poster_name?' · '+l.poster_name:''}</div></td>
+      <td style="font-size:12px;color:var(--ink2)">${posterPhone}</td>
+      <td style="font-size:12px;font-weight:700;color:var(--gold)">${contactShown}</td>
+      <td>${price}</td>
+      <td>—</td>
+      <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.created_at)}</td>
+      <td><span class="badge ${isExpired?'b-red">Expired':l.is_active?'b-ok">Live':'b-red">Off'}</span></td>
+      <td>
+        <button class="btn btn-ghost" style="margin-right:4px" onclick="window.open('listing_detail.html?id=${l.id}','_blank')">View</button>
+        <button class="btn btn-red" onclick="removeListing('${l.id}',this)">Remove</button>
+      </td>
+    </tr>`;
   });
 }
 
@@ -564,10 +611,11 @@ async function refreshBadges() {
     if (supb) { supb.textContent = openSupport.length; supb.style.display = openSupport.length > 0 ? 'inline' : 'none'; }
   } catch(e) {}
 }
-async function loadListings() {
+async function loadListings(phoneFilter = '') {
   try {
+    let listingUrl = 'listings?select=*&order=created_at.desc';
     const [listings, unlocks] = await Promise.all([
-      supaGet('listings?select=*&order=created_at.desc&limit=200'),
+      supaGet(listingUrl),
       supaGet('contact_unlocks?select=listing_id')
     ]);
     const unlockMap = {};
