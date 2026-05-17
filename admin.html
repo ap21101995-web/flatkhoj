@@ -468,25 +468,45 @@ function searchUsers(q) {
 
 async function filterListingsByPhone(val) {
   const q = val.trim().replace(/\D/g, '');
-  if (!q || q.length < 6) {
+  if (!q || q.length < 4) {
     if (!q) loadListings();
     return;
   }
   document.getElementById('listingsTable').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink3)">Searching…</td></tr>';
   try {
     const since = new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString();
-    // Find user by phone
-    const users = await supaGet('users?phone=eq.' + q + '&select=id,phone');
+
+    // Find all users whose phone contains these digits in sequence
+    const allUsers = await supaGet('users?select=id,phone');
+    const matchedUsers = allUsers.filter(u => u.phone && u.phone.replace(/\D/g,'').includes(q));
+    const matchedUserIds = matchedUsers.map(u => u.id);
+    const matchedPhones = matchedUsers.map(u => u.phone.replace(/\D/g,''));
+
     let listings = [];
-    if (users.length) {
-      // Get all their listings in last 50 days
-      listings = await supaGet('listings?user_id=eq.' + users[0].id + '&order=created_at.desc&created_at=gte.' + since + '&select=*');
+
+    // Fetch listings by matched user IDs (in batches)
+    for (let i = 0; i < matchedUserIds.length; i += 50) {
+      const batch = matchedUserIds.slice(i, i + 50);
+      const res = await supaGet('listings?user_id=in.(' + batch.join(',') + ')&order=created_at.desc&created_at=gte.' + since + '&select=*');
+      listings.push(...res);
     }
-    // Also check custom_contact_phone
-    const custom = await supaGet('listings?custom_contact_phone=eq.' + q + '&order=created_at.desc&created_at=gte.' + since + '&select=*');
-    const seen = new Set(listings.map(l => l.id));
-    custom.forEach(l => { if (!seen.has(l.id)) listings.push(l); });
-    await renderListingsTable(listings);
+
+    // Also fetch by custom_contact_phone containing digits
+    const customRes = await supaGet('listings?order=created_at.desc&created_at=gte.' + since + '&select=*');
+    customRes.forEach(l => {
+      if (l.custom_contact_phone && l.custom_contact_phone.replace(/\D/g,'').includes(q)) {
+        if (!listings.find(x => x.id === l.id)) listings.push(l);
+      }
+    });
+
+    // Sort newest first
+    listings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Build poster phone map
+    const uMap = {};
+    allUsers.forEach(u => uMap[u.id] = u.phone);
+
+    await renderListingsTable(listings, uMap);
   } catch(e) { console.error(e); }
 }
 
@@ -583,19 +603,21 @@ async function loadListings() {
   } catch(e) { console.error('Listings:', e); }
 }
 
-async function renderListingsTable(listings) {
+async function renderListingsTable(listings, uMap) {
   const unlockMap = {};
   if (listings.length) {
     const lids = listings.map(l => l.id);
-    const unlocks = await supaGet('contact_unlocks?listing_id=in.(' + lids.join(',') + ')&select=listing_id');
+    const unlocks = await supaGet('contact_unlocks?listing_id=in.(' + lids.slice(0,50).join(',') + ')&select=listing_id');
     unlocks.forEach(u => { unlockMap[u.listing_id] = (unlockMap[u.listing_id]||0)+1; });
   }
 
-  const userIds = [...new Set(listings.map(l => l.user_id).filter(Boolean))];
-  const posterMap = {};
-  if (userIds.length) {
-    const posterUsers = await supaGet('users?id=in.(' + userIds.join(',') + ')&select=id,phone');
-    posterUsers.forEach(u => posterMap[u.id] = u.phone);
+  if (!uMap) {
+    const userIds = [...new Set(listings.map(l => l.user_id).filter(Boolean))];
+    uMap = {};
+    if (userIds.length) {
+      const posterUsers = await supaGet('users?id=in.(' + userIds.join(',') + ')&select=id,phone');
+      posterUsers.forEach(u => uMap[u.id] = u.phone);
+    }
   }
 
   const typeMap = {flat_listing:'Flat',flat_wanted:'Wanted',flatmate_wanted:'Flatmate',pg_listing:'PG'};
@@ -610,7 +632,7 @@ async function renderListingsTable(listings) {
     const price = l.rent_amount ? 'Rs.'+l.rent_amount.toLocaleString('en-IN') : '-';
     const uc = unlockMap[l.id]||0;
     const unlockBtn = uc > 0 ? `<button class="btn btn-teal" onclick="viewListingUnlockers('${l.id}','${areas.replace(/'/g,"\\'")}')">View ${uc}</button>` : '<span style="color:var(--ink3)">None</span>';
-    const posterPhone = posterMap[l.user_id] ? '+91 '+posterMap[l.user_id] : '—';
+    const posterPhone = uMap[l.user_id] ? '+91 '+uMap[l.user_id] : '—';
     const contactShown = l.custom_contact_phone ? '+91 '+l.custom_contact_phone : (l.posted_by_owner === true ? '<span style="color:var(--red)">⚠️ Missing</span>' : posterPhone);
     const isExpired = l.expires_at && new Date(l.expires_at) < new Date();
     t.innerHTML += `<tr>
