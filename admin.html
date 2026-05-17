@@ -613,9 +613,9 @@ async function refreshBadges() {
 }
 async function loadListings(phoneFilter = '') {
   try {
-    let listingUrl = 'listings?select=*&order=created_at.desc';
+    const since = new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString();
     const [listings, unlocks] = await Promise.all([
-      supaGet(listingUrl),
+      supaGet('listings?select=*&order=created_at.desc&created_at=gte.' + since),
       supaGet('contact_unlocks?select=listing_id')
     ]);
     const unlockMap = {};
