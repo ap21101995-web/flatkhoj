@@ -369,6 +369,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
 const ADMIN_PW = 'Owner_Aditya_2026';
+const HELPER_PHONE = '9225248222';
+const HELPER_PW = 'MushMush';
+let currentRole = null; // 'owner' or 'helper'
 
 async function supaGet(path) {
   const r = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
@@ -395,13 +398,36 @@ async function supaPatch(table, query, data) {
 }
 
 function doLogin() {
-  if (document.getElementById('pwInput').value === ADMIN_PW) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
+  const pw = document.getElementById('pwInput').value;
+  let role = null;
+  if (pw === ADMIN_PW) role = 'owner';
+  else if (pw === HELPER_PW) role = 'helper';
+  if (!role) {
+    document.getElementById('lerr').style.display = 'block';
+    return;
+  }
+  currentRole = role;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  applyRoleAccess(role);
+  if (role === 'helper') {
+    go('listings', document.querySelector('.nav-item[onclick*="listings"]'));
+  } else {
     loadDashboard();
     refreshBadges();
-  } else {
-    document.getElementById('lerr').style.display = 'block';
+  }
+}
+
+function applyRoleAccess(role) {
+  if (role === 'helper') {
+    // Hide all nav items except Listings
+    document.querySelectorAll('.nav-item').forEach(n => {
+      const onclick = n.getAttribute('onclick') || '';
+      if (!onclick.includes("'listings'")) n.style.display = 'none';
+    });
+    // Hide the section labels too
+    document.querySelectorAll('.nav-section').forEach(s => { s.style.display = 'none'; });
+    document.querySelectorAll('.nav-divider').forEach(s => { s.style.display = 'none'; });
   }
 }
 function logout() {
@@ -411,6 +437,7 @@ function logout() {
 }
 
 function go(page, el) {
+  if (currentRole === 'helper' && page !== 'listings') return;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
