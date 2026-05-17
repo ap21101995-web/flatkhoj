@@ -984,144 +984,88 @@ async function loadListings(reset = true) {
     let listings = await res.json();
     if (!Array.isArray(listings)) throw new Error('Bad response');
 
-    // ── STEP 1: Hard filter — gender is non-negotiable ──
+    // ── STEP 1: GENDER — hard filter, non-negotiable ──
     if (activeGenderFilter && activeGenderFilter !== 'Any') {
       const gf = activeGenderFilter.toLowerCase();
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        // Empty/null/Any/Any Gender = show to everyone
         if (!gp || gp === 'any' || gp === 'any gender') return true;
-        // Family = show to everyone in gender filter
-        if (gp.includes('family')) return true;
-        // Check if listing matches selected gender
+        if (gp.includes('family')) return true; // family listings not gender filtered
         return gp.startsWith(gf);
       });
     }
 
-    // Family/Bachelor hard filter
+    // ── STEP 2: FAMILY/BACHELOR — hard filter ──
     if (subFamilyFilter && subFamilyFilter !== 'Any') {
       listings = listings.filter(l => {
         const gp = (l.gender_preference || l.preferred_gender || '').toLowerCase().trim();
-        const isFlat = l.listing_type === 'flat_listing';
-        // Full flat listings with no gender or Any = show for both Family and Bachelor
         if (!gp || gp === 'any' || gp === 'any gender') return true;
-        if (subFamilyFilter === 'Family') {
-          // Show if: tagged Family, or full flat listing (always family-friendly)
-          return gp.includes('family') || isFlat;
-        }
+        if (subFamilyFilter === 'Family') return gp.includes('family') || l.listing_type === 'flat_listing';
         if (subFamilyFilter === 'Bachelor') return !gp.includes('family');
         return true;
       });
     }
 
-    // ── STEP 2: Food hard filter (if selected) ──
-    if (activeFoodFilter && activeFoodFilter !== 'Any') {
-      const ff = activeFoodFilter.toLowerCase();
-      const isVeg = ff.includes('veg only');
-      listings = listings.filter(l => {
-        const food = (l.food_preference || '').toLowerCase().trim();
-        if (!food || food === 'any' || food === '') return true;
-        if (isVeg) return food.includes('veg');
-        return food.includes('non');
-      });
+    // ── STEP 3: BROKERAGE — hard filter ──
+    if (activeBrokerFilter === '✓ No Brokerage') {
+      listings = listings.filter(l => l.has_brokerage === false);
     }
 
-    // ── STEP 3: Sort by area + brokerage priority ──
-    // Build area match helpers
+    // ── STEP 4: AREA — soft sort by distance (all listings shown, ordered by proximity) ──
     const selectedArr = [...activeAreas];
-    const selectedLower = selectedArr.map(a => a.toLowerCase());
-    const nearbyLower = new Set();
-    selectedArr.forEach(area => {
-      ([] || []).forEach(n => nearbyLower.add(n.toLowerCase()));
-    });
-
     const hasAreaFilter = activeAreas.size > 0;
-    const hasBrokerFilter = activeBrokerFilter && activeBrokerFilter !== 'All Listings';
 
-    // ── COORDINATE-BASED AREA SCORING ──
-    // Get coordinates for each selected area
-    const selectedCoords = selectedArr
-      .map(a => ({ name: a, coord: AREA_COORDS[a] || null }))
-      .filter(x => x.coord);
-
-    function getAreaCoord(areaName) {
-      if (!areaName) return null;
-      // Direct lookup
-      if (AREA_COORDS[areaName]) return AREA_COORDS[areaName];
-      // Case-insensitive lookup
-      const lower = areaName.toLowerCase();
-      const key = Object.keys(AREA_COORDS).find(k => k.toLowerCase() === lower);
-      return key ? AREA_COORDS[key] : null;
-    }
-
-    function haversineKm(c1, c2) {
-      const R = 6371;
-      const dlat = (c2[0] - c1[0]) * Math.PI / 180;
-      const dlon = (c2[1] - c1[1]) * Math.PI / 180;
-      const a = Math.pow(Math.sin(dlat/2), 2) + Math.cos(c1[0]*Math.PI/180) * Math.cos(c2[0]*Math.PI/180) * Math.pow(Math.sin(dlon/2), 2);
-      return R * 2 * Math.asin(Math.sqrt(a));
-    }
-
-    function listingMinDistance(l) {
-      // Get all area coordinates for this listing
-      const lareas = Array.isArray(l.areas) ? l.areas : [l.areas || ''];
-      const listingCoords = lareas.map(a => getAreaCoord(a)).filter(Boolean);
-      if (!listingCoords.length || !selectedCoords.length) return 999;
-
-      // For each selected area, find minimum distance to any of the listing's areas
-      // Then take the minimum across all selected areas
-      let minDist = 999;
-      for (const sel of selectedCoords) {
-        for (const lc of listingCoords) {
-          const d = haversineKm(sel.coord, lc);
-          if (d < minDist) minDist = d;
-        }
-      }
-      return minDist;
-    }
-
-    function areaScore(l) {
-      if (!hasAreaFilter || !selectedCoords.length) return 3;
-      const d = listingMinDistance(l);
-      if (d <= 1.5) return 3;  // exact / same area
-      if (d <= 4) return 2;    // very close
-      if (d <= 8) return 1;    // nearby
-      return 0;                // far
-    }
-
-    function matchesArea(l) { return !hasAreaFilter || areaScore(l) > 0; }
-    function matchesNearby(l) { return hasAreaFilter && areaScore(l) >= 1; }
-
-    function matchesBroker(l) {
-      if (!hasBrokerFilter) return true;
-      if (activeBrokerFilter === '✓ No Brokerage') return l.has_brokerage === false;
-      return true; // All Options shows everything
-    }
-
-    const byDate = (a, b) => new Date(b.created_at) - new Date(a.created_at);
-
-    if (!hasAreaFilter && !hasBrokerFilter) {
-      // No sorting filters — just show by date
-      listings = listings.sort(byDate);
+    if (!hasAreaFilter) {
+      // No area filter — newest first
+      listings = listings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     } else {
-      // Score each listing: higher = show first
-      // Area match = 2 pts, Nearby = 1 pt, Broker match = 1 pt
-      const scored = listings.map(l => {
-        const as = hasAreaFilter ? areaScore(l) : 3;
-        const dist = hasAreaFilter ? listingMinDistance(l) : 0;
-        const brokerOk = matchesBroker(l);
-        // Primary: area score (higher=closer), secondary: broker, tertiary: date
-        const score = (as * 1000) + (brokerOk ? 100 : 0) + Math.max(0, 100 - Math.round(dist * 10));
-        return { l, score, dist };
-      });
+      // Build selected area coordinates
+      const selectedCoords = selectedArr.map(a => {
+        let coord = AREA_COORDS[a];
+        if (!coord) {
+          const k = Object.keys(AREA_COORDS).find(k => k.toLowerCase() === a.toLowerCase());
+          coord = k ? AREA_COORDS[k] : null;
+        }
+        return coord;
+      }).filter(Boolean);
 
-      // Sort by score desc, then by distance asc, then by date desc within same distance
-      scored.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        if (Math.abs(a.dist - b.dist) > 0.5) return a.dist - b.dist;
-        return byDate(a.l, b.l);
+      function haversineKm(c1, c2) {
+        const R = 6371;
+        const dlat = (c2[0]-c1[0]) * Math.PI/180;
+        const dlon = (c2[1]-c1[1]) * Math.PI/180;
+        const a = Math.pow(Math.sin(dlat/2),2) + Math.cos(c1[0]*Math.PI/180)*Math.cos(c2[0]*Math.PI/180)*Math.pow(Math.sin(dlon/2),2);
+        return R*2*Math.asin(Math.sqrt(a));
+      }
+
+      function getListingDist(l) {
+        if (!selectedCoords.length) return 999;
+        const lareas = Array.isArray(l.areas) ? l.areas : [l.areas||''];
+        let minDist = 999;
+        for (const la of lareas) {
+          let lcoord = AREA_COORDS[la];
+          if (!lcoord) {
+            const k = Object.keys(AREA_COORDS).find(k => k.toLowerCase() === la.toLowerCase());
+            lcoord = k ? AREA_COORDS[k] : null;
+          }
+          if (!lcoord) continue;
+          for (const sc of selectedCoords) {
+            const d = haversineKm(sc, lcoord);
+            if (d < minDist) minDist = d;
+          }
+        }
+        return minDist;
+      }
+
+      // Sort by distance (closest first), then newest within same distance band
+      const withDist = listings.map(l => ({ l, d: getListingDist(l) }));
+      withDist.sort((a, b) => {
+        // Band listings: 0-2km, 2-5km, 5-10km, 10+km — newest first within each band
+        const bandA = a.d <= 2 ? 0 : a.d <= 5 ? 1 : a.d <= 10 ? 2 : 3;
+        const bandB = b.d <= 2 ? 0 : b.d <= 5 ? 1 : b.d <= 10 ? 2 : 3;
+        if (bandA !== bandB) return bandA - bandB;
+        return new Date(b.l.created_at) - new Date(a.l.created_at);
       });
-      listings = scored.map(s => s.l);
+      listings = withDist.map(x => x.l);
     }
 
     _fetchedListings = listings;
