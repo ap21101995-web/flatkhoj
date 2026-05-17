@@ -611,13 +611,14 @@ async function refreshBadges() {
     if (supb) { supb.textContent = openSupport.length; supb.style.display = openSupport.length > 0 ? 'inline' : 'none'; }
   } catch(e) {}
 }
-async function loadListings(phoneFilter = '') {
+async function loadListings() {
   try {
     const since = new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString();
-    const [listings, unlocks] = await Promise.all([
-      supaGet('listings?select=*&order=created_at.desc&created_at=gte.' + since),
-      supaGet('contact_unlocks?select=listing_id')
-    ]);
+    const listings = await supaGet('listings?select=*&order=created_at.desc&created_at=gte.' + since);
+
+    // Only fetch unlocks for the listings we loaded
+    const lids = listings.map(l => l.id);
+    const unlocks = lids.length ? await supaGet('contact_unlocks?listing_id=in.(' + lids.slice(0,100).join(',') + ')&select=listing_id') : [];
     const unlockMap = {};
     unlocks.forEach(u => { unlockMap[u.listing_id] = (unlockMap[u.listing_id]||0)+1; });
 
