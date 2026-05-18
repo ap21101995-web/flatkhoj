@@ -371,6 +371,8 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const ADMIN_PW = 'Owner_Aditya_2026';
 const HELPER_PHONE = '9225248222';
 const HELPER_PW = 'MushMush';
+const HELPER2_PHONE = '8001517396';
+const HELPER2_PW = 'arbaz';
 let currentRole = null; // 'owner' or 'helper'
 
 async function supaGet(path) {
@@ -401,7 +403,7 @@ function doLogin() {
   const pw = document.getElementById('pwInput').value;
   let role = null;
   if (pw === ADMIN_PW) role = 'owner';
-  else if (pw === HELPER_PW) role = 'helper';
+  else if (pw === HELPER_PW || pw === HELPER2_PW) role = 'helper';
   if (!role) {
     document.getElementById('lerr').style.display = 'block';
     return;
