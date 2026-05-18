@@ -457,7 +457,7 @@ function onPhoneInput(input) {
   btn.disabled = !isValid;
   document.getElementById('phoneError').classList.remove('show');
 
-  if (val === '9538584612' || val === '9225248222') {
+  if (val === '9538584612') {
     btn.querySelector('.btn-text').textContent = 'Continue →';
   } else {
     btn.querySelector('.btn-text').textContent = 'Send OTP →';
@@ -478,7 +478,7 @@ async function sendOtp() {
   phoneNumber = phone;
 
   // ── OWNER BYPASS ─────────────────────────────────────────
-  if (phone === '9538584612' || phone === '9225248222') {
+  if (phone === '9538584612') {
     goToScreen('screen-owner');
     setTimeout(() => document.getElementById('ownerPasswordInput').focus(), 300);
     return;
@@ -567,30 +567,20 @@ function clearOtp() {
 async function verifyOwnerPassword() {
   const pwd = document.getElementById('ownerPasswordInput').value;
   const OWNER_PASSWORD = 'Owner_Aditya_2026';
-  const HELPER_PASSWORD = 'MushMush';
 
-  const isOwnerPw = pwd === OWNER_PASSWORD;
-  const isHelperPw = pwd === HELPER_PASSWORD;
-  const phoneToUse = phoneNumber;
-
-  // Owner password must be used with owner number; helper password with helper number
-  let valid = false;
-  let userName = '';
-  if (phoneToUse === '9538584612' && isOwnerPw) { valid = true; userName = 'Aditya'; }
-  else if (phoneToUse === '9225248222' && isHelperPw) { valid = true; userName = 'Helper'; }
-
-  if (!valid) {
+  if (pwd !== OWNER_PASSWORD) {
     document.getElementById('ownerErrorText').textContent = 'Incorrect password. Please try again.';
     document.getElementById('ownerError').classList.add('show');
     return;
   }
 
-  // Password correct — create/get account in Supabase
+  // Password correct — create/get owner account in Supabase
   try {
     const SUPA_URL = SUPABASE_URL;
     const SUPA_KEY = SUPABASE_ANON_KEY;
 
-    const res = await fetch(`${SUPA_URL}/rest/v1/users?phone=eq.${phoneToUse}&select=id,coins`, {
+    // Check if user exists
+    const res = await fetch(`${SUPA_URL}/rest/v1/users?phone=eq.9538584612&select=id,coins`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     });
     const existing = await res.json();
@@ -601,29 +591,32 @@ async function verifyOwnerPassword() {
       userId = existing[0].id;
       coins = existing[0].coins || 0;
     } else {
+      // Create owner account
       const createRes = await fetch(`${SUPA_URL}/rest/v1/users`, {
         method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-        body: JSON.stringify({ phone: phoneToUse, coins: 999, created_at: new Date().toISOString() })
+        body: JSON.stringify({ phone: '9538584612', coins: 999, created_at: new Date().toISOString() })
       });
       const newUser = await createRes.json();
       userId = newUser[0]?.id;
       coins = 999;
     }
 
+    // Save owner login — mark as owner
     const user = {
-      phone: phoneToUse,
-      name: userName,
+      phone: '9538584612',
+      name: 'Aditya',
       coins: coins,
       userId: userId,
       sessionToken: 'owner-session-' + Date.now(),
       joinedAt: Date.now(),
-      isOwner: true
+      isOwner: true  // special flag
     };
     saveLoginState(user);
 
-    document.getElementById('welcomeTitle').textContent = 'Welcome back, ' + userName + '!';
-    document.getElementById('welcomeSub').textContent = 'Signed in. You can post listings with custom contact numbers.';
+    // Show welcome screen
+    document.getElementById('welcomeTitle').textContent = 'Welcome back, Aditya!';
+    document.getElementById('welcomeSub').textContent = 'Signed in as owner. You can post listings with custom contact numbers.';
     document.getElementById('coinsAwarded').style.display = 'none';
 
     const cb = document.getElementById('continueBtn');
