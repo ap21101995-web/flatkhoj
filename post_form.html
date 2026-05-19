@@ -1874,7 +1874,7 @@ async function submitListing() {
 
       // Add custom contact if owner
       const editUserPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
-      if (editUserPhone==='9538584612' || editUserPhone==='8001517396' || editUserPhone==='9225248222' || user.isOwner===true || user.isOwner==='true') {
+      if (editUserPhone==='9538584612' || editUserPhone==='8001517396' || editUserPhone==='7208304566' || editUserPhone==='9225248222' || user.isOwner===true || user.isOwner==='true') {
         const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
         if (customPhone && customPhone.length === 10) merged.custom_contact_phone = customPhone;
       }
@@ -1954,7 +1954,7 @@ async function submitListing() {
 
     // If owner posting on behalf — save custom contact number and mark as owner-posted
     const userPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
-    const isAppOwner = userPhone==='9538584612' || userPhone==='8001517396' || userPhone==='9225248222' || user.isOwner===true || user.isOwner==='true';
+    const isAppOwner = userPhone==='9538584612' || userPhone==='8001517396' || userPhone==='7208304566' || userPhone==='9225248222' || user.isOwner===true || user.isOwner==='true';
     if (isAppOwner) {
       const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
       if (!customPhone || customPhone.length !== 10 || !/^[6-9]\d{9}$/.test(customPhone)) {
@@ -2110,7 +2110,7 @@ async function checkPostingLimitsStrict() {
   const user = getUser();
   if (!user) return false;
   const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
-  if (ph==='9538584612' || ph==='8001517396' || ph==='9225248222' || ph==='1111111100' || user.isOwner===true || user.isOwner==='true') return true;
+  if (ph==='9538584612' || ph==='8001517396' || ph==='7208304566' || ph==='9225248222' || ph==='1111111100' || user.isOwner===true || user.isOwner==='true') return true;
   try {
     const now = new Date();
     const window24h = new Date(now.getTime() - 24*60*60*1000).toISOString();
@@ -2156,7 +2156,7 @@ async function checkPostingLimits() {
   if (!user) return;
   // Owner has no posting limits
   const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
-  if (ph==='9538584612' || ph==='8001517396' || ph==='9225248222' || ph==='1111111100' || user.isOwner===true || user.isOwner==='true') return;
+  if (ph==='9538584612' || ph==='8001517396' || ph==='7208304566' || ph==='9225248222' || ph==='1111111100' || user.isOwner===true || user.isOwner==='true') return;
   try {
     const now = new Date();
     const window24h = new Date(now.getTime() - 24*60*60*1000).toISOString();
@@ -2768,7 +2768,7 @@ function updateUI(){
     const user = getUser();
     if (user) {
       const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
-      if (ph==='9538584612' || ph==='8001517396' || ph==='9225248222' || user.isOwner===true || user.isOwner==='true') {
+      if (ph==='9538584612' || ph==='8001517396' || ph==='7208304566' || ph==='9225248222' || user.isOwner===true || user.isOwner==='true') {
         document.getElementById('ownerContactField').style.display = 'block';
       }
     }
