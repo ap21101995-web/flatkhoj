@@ -503,30 +503,36 @@ async function filterListingsByPhone(val) {
   }
   document.getElementById('listingsTable').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink3)">Searching…</td></tr>';
   try {
-    const since = new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString();
+    const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
     // Find all users whose phone contains these digits in sequence
     const allUsers = await supaGet('users?select=id,phone');
     const matchedUsers = allUsers.filter(u => u.phone && u.phone.replace(/\D/g,'').includes(q));
     const matchedUserIds = matchedUsers.map(u => u.id);
-    const matchedPhones = matchedUsers.map(u => u.phone.replace(/\D/g,''));
 
     let listings = [];
 
-    // Fetch listings by matched user IDs (in batches)
+    // Fetch listings by matched user IDs within 60 days
     for (let i = 0; i < matchedUserIds.length; i += 50) {
       const batch = matchedUserIds.slice(i, i + 50);
-      const res = await supaGet('listings?user_id=in.(' + batch.join(',') + ')&order=created_at.desc&created_at=gte.' + since + '&select=*');
+      const res = await supaGet('listings?user_id=in.(' + batch.join(',') + ')&order=created_at.desc&created_at=gte.' + since + '&select=*&limit=500');
       listings.push(...res);
     }
 
-    // Also fetch by custom_contact_phone containing digits
-    const customRes = await supaGet('listings?order=created_at.desc&created_at=gte.' + since + '&select=*');
-    customRes.forEach(l => {
-      if (l.custom_contact_phone && l.custom_contact_phone.replace(/\D/g,'').includes(q)) {
-        if (!listings.find(x => x.id === l.id)) listings.push(l);
-      }
-    });
+    // Also fetch by custom_contact_phone within 60 days
+    // Use pagination to get beyond 1000 row limit
+    let offset = 0;
+    while (true) {
+      const batch = await supaGet('listings?order=created_at.desc&created_at=gte.' + since + '&select=id,custom_contact_phone,areas,listing_type,rent_amount,poster_name,user_id,created_at,expires_at,is_active&limit=500&offset=' + offset);
+      if (!batch.length) break;
+      batch.forEach(l => {
+        if (l.custom_contact_phone && l.custom_contact_phone.replace(/\D/g,'').includes(q)) {
+          if (!listings.find(x => x.id === l.id)) listings.push(l);
+        }
+      });
+      if (batch.length < 500) break;
+      offset += 500;
+    }
 
     // Sort newest first
     listings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -627,7 +633,8 @@ async function refreshBadges() {
 }
 async function loadListings() {
   try {
-    const listings = await supaGet('listings?select=*&order=created_at.desc&limit=10');
+    const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+    const listings = await supaGet('listings?select=*&order=created_at.desc&created_at=gte.' + since + '&limit=10');
     await renderListingsTable(listings);
   } catch(e) { console.error('Listings:', e); }
 }
