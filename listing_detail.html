@@ -1474,7 +1474,7 @@ async function activateFreeContact() {
 
 async function deleteListing() {
   const user = getUser();
-  const isAppOwner = user && (user.isOwner === true || user.isOwner === 'true' || ['9538584612','8001517396' || ph==='7208304566','9225248222'].includes(String(user.phone||'').replace(/\D/g,'').slice(-10)));
+  const isAppOwner = user && (user.isOwner === true || user.isOwner === 'true' || ['9538584612','8001517396','7208304566','9225248222'].includes(String(user.phone||'').replace(/\D/g,'').slice(-10)));
   if (!user || (!isAppOwner && user.userId !== listing.user_id && user.userId !== listing.claimed_by_user_id)) return;
 
   const deleteBtn = document.querySelector('[onclick="deleteListing()"]');
