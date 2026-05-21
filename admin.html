@@ -386,6 +386,23 @@ async function supaGet(path) {
   if (!r.ok) { console.error('supaGet failed:', path, r.status); return []; }
   return r.json();
 }
+
+// Get exact count without fetching all rows
+async function supaCount(path) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    method: 'HEAD',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Prefer': 'count=exact'
+    }
+  });
+  if (!r.ok) return 0;
+  const range = r.headers.get('Content-Range'); // e.g. "0-999/1523"
+  if (!range) return 0;
+  const total = range.split('/')[1];
+  return total === '*' ? 0 : parseInt(total) || 0;
+}
 async function supaPatch(table, query, data) {
   const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, {
     method:'PATCH',
@@ -559,21 +576,23 @@ function filterTable(tableId, q) {
 // ── DASHBOARD ─────────────────────────────────────────────
 async function loadDashboard() {
   try {
-    const [listings, users, purchases, unlocks] = await Promise.all([
-      supaGet('listings?select=id&is_active=eq.true'),
-      supaGet('users?select=id'),
-      supaGet('coin_transactions?select=amount&type=eq.purchase'),
-      supaGet('contact_unlocks?select=id')
+    const since60 = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+    const [activeListings, totalUsers, totalUnlocks, recentListings, purchases] = await Promise.all([
+      supaCount('listings?is_active=eq.true&expires_at=gte.' + new Date().toISOString()),
+      supaCount('users'),
+      supaCount('contact_unlocks'),
+      supaCount('listings?created_at=gte.' + since60),
+      supaGet('coin_transactions?select=amount&type=eq.purchase')
     ]);
 
-    document.getElementById('s-listings').textContent = listings.length;
-    document.getElementById('s-listings-sub').textContent = 'Active listings';
-    document.getElementById('s-users').textContent = users.length;
+    document.getElementById('s-listings').textContent = activeListings;
+    document.getElementById('s-listings-sub').textContent = 'Active listings (' + recentListings + ' in last 60d)';
+    document.getElementById('s-users').textContent = totalUsers;
     document.getElementById('s-users-sub').textContent = 'Registered users';
     const totalCoins = purchases.reduce((s,p)=>s+(p.amount||0),0);
     document.getElementById('s-revenue').textContent = totalCoins;
     document.getElementById('s-revenue-sub').textContent = purchases.length + ' transactions';
-    document.getElementById('s-unlocks').textContent = unlocks.length;
+    document.getElementById('s-unlocks').textContent = totalUnlocks;
     document.getElementById('s-unlocks-sub').textContent = 'Contacts revealed';
 
     const recentUnlocks = await supaGet('contact_unlocks?order=created_at.desc&limit=15&select=*');
