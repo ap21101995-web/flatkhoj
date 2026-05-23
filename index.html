@@ -3215,5 +3215,15 @@ function applyFiltersAndClose() {
   </div>
 </div>
 
+<script>
+// Silent background refresh every 30 seconds — only reloads listings, not the page
+setInterval(() => {
+  // Only refresh if user is not scrolled down (avoid disrupting browsing)
+  if (window.scrollY < 300) {
+    loadListings();
+  }
+}, 30000);
+</script>
+
 </body>
 </html>

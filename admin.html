@@ -455,8 +455,10 @@ function logout() {
   document.getElementById('pwInput').value = '';
 }
 
+let _currentPage = 'dashboard';
 function go(page, el) {
   if (currentRole === 'helper' && page !== 'listings') return;
+  _currentPage = page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -466,6 +468,13 @@ function go(page, el) {
   const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, unlookup:()=>{}, useractivity:loadUserActivity, sold:loadSoldReports, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
   if (loaders[page]) loaders[page]();
 }
+
+// Silent auto-refresh every 30 seconds — reloads current section data only
+setInterval(() => {
+  if (document.getElementById('app')?.style.display === 'none') return; // not logged in
+  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, sold:loadSoldReports, reports:loadReports, support:loadSupport };
+  if (loaders[_currentPage]) loaders[_currentPage]();
+}, 30000);
 
 function timeAgo(d) {
   const diff = Date.now() - new Date(d).getTime();
