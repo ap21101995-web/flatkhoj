@@ -942,7 +942,7 @@ let activeOccFilter = 'Any';
 let activeBudgetMin = null;
 let activeBudgetMax = null;
 let activeAreaFilter = [];
-let activeAreas = new Set(); // up to 3 areas
+let activeAreas = new Set(); // up to 6 areas
 let activeAreaCoords = null;
 
 async function loadListings(reset = true) {
@@ -2573,7 +2573,7 @@ function homeAreaSearch(input) {
   if (!dd) return;
 
   // If max 3 selected, close dropdown
-  if (activeAreas.size >= 3) { dd.classList.remove('open'); return; }
+  if (activeAreas.size >= 6) { dd.classList.remove('open'); return; }
 
   const already = [...activeAreas];
 
@@ -2616,7 +2616,7 @@ function selectHomeArea(area) {
     // Already selected — remove it
     activeAreas.delete(area);
   } else {
-    if (activeAreas.size >= 3) return; // max 3
+    if (activeAreas.size >= 6) return; // max 6
     activeAreas.add(area);
   }
 
@@ -2626,7 +2626,7 @@ function selectHomeArea(area) {
   document.getElementById('homeAreaDd')?.classList.remove('open');
 
   // Update placeholder based on remaining slots
-  const remaining = 3 - activeAreas.size;
+  const remaining = 6 - activeAreas.size;
   if (remaining === 0) {
     input.placeholder = '3 Areas Selected ✓';
     input.disabled = true;
@@ -2674,7 +2674,7 @@ function renderHomeAreaTags() {
 function removeHomeArea(area) {
   activeAreas.delete(area);
   const input = document.getElementById('homeSearchInput');
-  const remaining = 3 - activeAreas.size;
+  const remaining = 6 - activeAreas.size;
   input.placeholder = activeAreas.size === 0 ? 'Search area…' : `Add ${remaining} more area${remaining > 1 ? 's' : ''}…`;
   input.disabled = false;
   input.style.opacity = '';
@@ -2981,7 +2981,7 @@ function setArea(el, area) {
   if (allAreaChip) allAreaChip.classList.toggle('active', activeAreas.size === 0);
   // Update search input placeholder
   const input = document.getElementById('homeSearchInput');
-  const remaining = 3 - activeAreas.size;
+  const remaining = 6 - activeAreas.size;
   if (remaining === 0) { input.placeholder = '3 Areas Selected ✓'; input.disabled = true; input.style.opacity = '0.6'; }
   else { input.placeholder = activeAreas.size === 0 ? 'Search area…' : `Add ${remaining} more area${remaining>1?'s':''}…`; input.disabled = false; input.style.opacity = ''; }
   renderHomeAreaTags();
