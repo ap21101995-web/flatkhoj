@@ -2628,7 +2628,7 @@ function selectHomeArea(area) {
   // Update placeholder based on remaining slots
   const remaining = 6 - activeAreas.size;
   if (remaining === 0) {
-    input.placeholder = '3 Areas Selected ✓';
+    input.placeholder = '6 Areas Selected ✓';
     input.disabled = true;
     input.style.opacity = '0.6';
   } else {
@@ -2982,7 +2982,7 @@ function setArea(el, area) {
   // Update search input placeholder
   const input = document.getElementById('homeSearchInput');
   const remaining = 6 - activeAreas.size;
-  if (remaining === 0) { input.placeholder = '3 Areas Selected ✓'; input.disabled = true; input.style.opacity = '0.6'; }
+  if (remaining === 0) { input.placeholder = '6 Areas Selected ✓'; input.disabled = true; input.style.opacity = '0.6'; }
   else { input.placeholder = activeAreas.size === 0 ? 'Search area…' : `Add ${remaining} more area${remaining>1?'s':''}…`; input.disabled = false; input.style.opacity = ''; }
   renderHomeAreaTags();
   loadListings();
@@ -3152,7 +3152,7 @@ async function toggleSave(btn, listingId) {
 // Filter pills (single select per group)
 function toggleFPill(el, group) {
   if (group === 'farea') {
-    // Multi-select up to 3 for area
+    // Multi-select up to 6 for area
     const val = el.textContent.trim();
     if (val === 'All Areas') {
       document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"]`).forEach(p => p.classList.remove('active'));
@@ -3168,7 +3168,7 @@ function toggleFPill(el, group) {
     } else {
       const active = document.querySelectorAll(`[onclick*="toggleFPill(this,'farea')"].active`);
       const nonAll = [...active].filter(p => p.textContent.trim() !== 'All Areas');
-      if (nonAll.length >= 3) nonAll[0].classList.remove('active'); // remove oldest
+      if (nonAll.length >= 6) nonAll[0].classList.remove('active'); // remove oldest if over 6
       document.querySelector(`[onclick*="toggleFPill(this,'farea')"]`)?.classList.remove('active'); // remove All Areas
       el.classList.add('active');
     }
