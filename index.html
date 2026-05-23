@@ -2972,7 +2972,7 @@ function setArea(el, area) {
     activeAreas.delete(area);
     el.classList.remove('active');
   } else {
-    if (activeAreas.size >= 3) return; // hard limit — ignore tap if already 3
+    if (activeAreas.size >= 6) return; // hard limit — ignore tap if already 6
     activeAreas.add(area);
     el.classList.add('active');
   }
