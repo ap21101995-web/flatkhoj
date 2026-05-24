@@ -3216,12 +3216,32 @@ function applyFiltersAndClose() {
 </div>
 
 <script>
-// Silent background refresh every 30 seconds — only reloads listings, not the page
-setInterval(() => {
-  // Only refresh if user is not scrolled down (avoid disrupting browsing)
-  if (window.scrollY < 300) {
-    loadListings();
-  }
+// Smart auto-refresh every 30 seconds
+// Checks if new listings exist, shows a banner instead of disrupting scroll
+let _lastRefreshTime = new Date().toISOString();
+
+setInterval(async () => {
+  try {
+    const since = _lastRefreshTime;
+    const now = new Date().toISOString();
+    const res = await fetch(`${SUPA_URL}/rest/v1/listings?select=id&is_active=eq.true&created_at=gt.${since}&limit=1`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const newItems = await res.json();
+    _lastRefreshTime = now;
+    if (newItems && newItems.length > 0) {
+      // New listings found — show refresh banner
+      let banner = document.getElementById('refreshBanner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'refreshBanner';
+        banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--teal);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+        banner.onclick = () => { banner.remove(); window.scrollTo({top:0,behavior:'smooth'}); loadListings(); };
+        document.body.appendChild(banner);
+      }
+      banner.textContent = '↑ New listings available — tap to refresh';
+    }
+  } catch(e) {}
 }, 30000);
 </script>
 
