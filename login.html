@@ -390,7 +390,7 @@ body {
     <div class="success-circle">✓</div>
     <div class="success-title" id="welcomeTitle">Welcome to FlatKhoj!</div>
     <div class="success-sub" id="welcomeSub">
-      You're signed in. As a welcome gift, you've received <strong>5 free coins</strong> to get started.
+      You're signed in. Buy coins to start unlocking contacts.
     </div>
     <div class="coins-awarded" id="coinsAwarded">Your account is ready — buy coins to unlock contacts</div>
     <button class="continue-btn" id="continueBtn" onclick="onContinue()">Continue →</button>
@@ -747,7 +747,7 @@ async function verifyOtp() {
 
       if (data.isNewUser) {
         document.getElementById('welcomeTitle').textContent = 'Welcome to FlatKhoj! 🎉';
-        document.getElementById('welcomeSub').innerHTML = "You're signed in. As a welcome gift, you've received <strong>8 free coins</strong> to get started!";
+        document.getElementById('welcomeSub').innerHTML = "You're signed in. Buy coins to start unlocking contacts.";
         document.getElementById('coinsAwarded').style.display = 'inline-block';
       } else {
         document.getElementById('welcomeTitle').textContent = 'Welcome back!';

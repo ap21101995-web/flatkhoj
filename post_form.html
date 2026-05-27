@@ -480,14 +480,14 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="broker-icon">🔒</div>
         <div>
           <div class="broker-title">Standard — unlock via coins</div>
-          <div class="broker-desc">Interested people spend <strong>5 coins</strong> to see your contact. Free for you.</div>
+          <div class="broker-desc">Interested people spend <strong>50 coins</strong> to see your contact. Free for you.</div>
         </div>
       </div>
       <div class="broker-opt" id="fc-free" onclick="selectFreeContact('free')" style="cursor:pointer">
         <div class="broker-icon">🌟</div>
         <div>
           <div class="broker-title">Make it free — get more responses</div>
-          <div class="broker-desc">Anyone can see your contact without spending coins. <strong>Costs you 50 coins upfront</strong> — but gets significantly more inquiries.</div>
+          <div class="broker-desc">Anyone can see your contact without spending coins. <strong>Costs you 250 coins upfront</strong> — but gets significantly more inquiries.</div>
         </div>
       </div>
     </div>
@@ -1908,7 +1908,7 @@ async function submitListing() {
         // Already paid — just keep it free, no deduction
         formData.is_free_contact = true;
       } else {
-        // New free contact — deduct 50 coins
+        // New free contact — deduct 250 coins
         const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
         });
@@ -2330,7 +2330,7 @@ window.addEventListener('load', async function() {
 
       // Set up free contact card based on existing listing state
       if (listing.is_free_contact) {
-        // Already paid 50 coins — lock to free, hide standard option
+        // Already paid 250 coins — lock to free, hide standard option
         document.getElementById('fc-choice').value = 'free';
         document.getElementById('fc-paid').style.display = 'none';
         const freeCard = document.getElementById('fc-free');
@@ -2339,7 +2339,7 @@ window.addEventListener('load', async function() {
         freeCard.onclick = null;
         freeCard.style.cursor = 'default';
         freeCard.querySelector('.broker-title').textContent = '✅ Free contact — already activated';
-        freeCard.querySelector('.broker-desc').textContent = 'You paid 50 coins when posting. Anyone can see your contact for free. This cannot be reversed.';
+        freeCard.querySelector('.broker-desc').textContent = 'You paid 250 coins when posting. Anyone can see your contact for free. This cannot be reversed.';
       } else {
         // Not yet free — allow choosing, default to standard
         document.getElementById('fc-choice').value = 'paid';
