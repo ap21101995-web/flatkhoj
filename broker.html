@@ -240,39 +240,51 @@
   <h2>Choose your plan</h2>
   <p>All plans include unlimited area selection. Cancel anytime.</p>
   <div class="plans">
-    <div class="plan-card" onclick="selectPlan(this,'starter',2999,10)" id="plan-starter">
+    <div class="plan-card" onclick="selectPlan(this,'starter',1299,10)" id="plan-starter">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div class="plan-name">Starter</div>
           <div class="plan-contacts"><strong>10 contacts</strong> per month</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="plan-price">₹2,999<span>/mo</span></div>
+          <div class="plan-price">₹1,299<span>/mo</span></div>
           <div class="plan-check" id="check-starter"></div>
         </div>
       </div>
     </div>
-    <div class="plan-card popular" onclick="selectPlan(this,'growth',3999,20)" id="plan-growth">
+    <div class="plan-card" onclick="selectPlan(this,'growth',2199,20)" id="plan-growth">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div class="plan-name">Growth</div>
           <div class="plan-contacts"><strong>20 contacts</strong> per month</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="plan-price">₹3,999<span>/mo</span></div>
+          <div class="plan-price">₹2,199<span>/mo</span></div>
           <div class="plan-check" id="check-growth"></div>
         </div>
       </div>
     </div>
-    <div class="plan-card" onclick="selectPlan(this,'pro',4999,30)" id="plan-pro">
+    <div class="plan-card popular" onclick="selectPlan(this,'pro',2999,30)" id="plan-pro">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div class="plan-name">Pro</div>
           <div class="plan-contacts"><strong>30 contacts</strong> per month</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="plan-price">₹4,999<span>/mo</span></div>
+          <div class="plan-price">₹2,999<span>/mo</span></div>
           <div class="plan-check" id="check-pro"></div>
+        </div>
+      </div>
+    </div>
+    <div class="plan-card" onclick="selectPlan(this,'elite',3999,50)" id="plan-elite">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="plan-name">Elite</div>
+          <div class="plan-contacts"><strong>50 contacts</strong> per month</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="plan-price">₹3,999<span>/mo</span></div>
+          <div class="plan-check" id="check-elite"></div>
         </div>
       </div>
     </div>
@@ -329,9 +341,10 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const ZONES = {"South Mumbai": ["Colaba", "Cuffe Parade", "Nariman Point", "Churchgate", "Fort", "Marine Lines", "Charni Road", "Grant Road", "Malabar Hill", "Breach Candy", "Tardeo", "Mahalaxmi", "Byculla", "Worli", "Lower Parel", "Prabhadevi", "Dadar", "Parel", "Mahim", "Matunga", "Sion", "Dharavi"], "Western Suburbs (South)": ["Bandra", "Bandra West", "Bandra East", "BKC", "Khar", "Khar West", "Khar East", "Santacruz", "Santacruz West", "Santacruz East", "Vile Parle", "Vile Parle West", "Vile Parle East", "Juhu", "Vakola", "Kalina"], "Andheri & Jogeshwari": ["Andheri", "Andheri West", "Andheri East", "DN Nagar", "Azad Nagar", "Lokhandwala", "Versova", "Oshiwara", "Four Bungalows", "Seven Bungalows", "Yari Road", "Marol", "Sakinaka", "Chakala", "MIDC Andheri", "JB Nagar", "Veera Desai Road", "Jogeshwari West", "Jogeshwari East"], "Goregaon & Malad": ["Goregaon", "Goregaon West", "Goregaon East", "Malad", "Malad West", "Malad East", "Mindspace", "Film City", "Bangur Nagar", "Marve", "Malvani"], "Kandivali & Borivali": ["Kandivali", "Kandivali West", "Kandivali East", "Borivali", "Borivali West", "Borivali East", "Dahisar", "Dahisar West", "Dahisar East", "IC Colony", "Thakur Village", "Mira Road"], "Powai & East": ["Powai", "Hiranandani Gardens", "Chandivali", "Vikhroli", "Vikhroli West", "Vikhroli East", "Kanjurmarg", "Ghatkopar", "Ghatkopar West", "Ghatkopar East", "Kurla", "Kurla West", "Kurla East", "Chembur", "Mulund", "Mulund West", "Mulund East", "Bhandup", "Nahur", "Wadala", "Sion", "Govandi"], "Thane": ["Thane", "Thane West", "Thane East", "Wagle Estate", "Ghodbunder Road", "Majiwada", "Hiranandani Thane", "Manpada", "Kolshet", "Kapurbawdi"], "Navi Mumbai": ["Vashi", "Nerul", "Kharghar", "CBD Belapur", "Belapur", "Airoli", "Ghansoli", "Koparkhairane", "Seawoods", "Panvel", "Sanpada", "Juinagar"]};
 
 const PLANS = {
-  starter: { name: 'Starter', price: 2999, contacts: 10 },
-  growth:  { name: 'Growth',  price: 3999, contacts: 20 },
-  pro:     { name: 'Pro',     price: 4999, contacts: 30 },
+  starter: { name: 'Starter', price: 1299, contacts: 10 },
+  growth:  { name: 'Growth',  price: 2199, contacts: 20 },
+  pro:     { name: 'Pro',     price: 2999, contacts: 30 },
+  elite:   { name: 'Elite',   price: 3999, contacts: 50 },
 };
 
 let selectedPlan = null;

@@ -487,7 +487,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div class="broker-icon">🌟</div>
         <div>
           <div class="broker-title">Make it free — get more responses</div>
-          <div class="broker-desc">Anyone can see your contact without spending coins. <strong>Costs you 250 coins upfront</strong> — but gets significantly more inquiries.</div>
+          <div class="broker-desc">Anyone can see your contact without spending coins. <strong>Costs you 500 coins upfront</strong> — but gets significantly more inquiries.</div>
         </div>
       </div>
     </div>
@@ -1908,19 +1908,19 @@ async function submitListing() {
         // Already paid — just keep it free, no deduction
         formData.is_free_contact = true;
       } else {
-        // New free contact — deduct 250 coins
+        // New free contact — deduct 500 coins
         const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
         });
         const coinData = await coinRes.json();
         const currentCoins = coinData[0]?.coins || 0;
-        if (currentCoins < 250) {
+        if (currentCoins < 500) {
           btn.textContent = window._editListingId ? '💾 Save Changes' : '🚀 Post Listing — It\'s Free!';
           btn.disabled = false;
           window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
           return;
         }
-        const newCoins = currentCoins - 250;
+        const newCoins = currentCoins - 500;
         const deductOk = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
           method: 'PATCH',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -1937,7 +1937,7 @@ async function submitListing() {
           method: 'POST',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: user.userId, type: 'free_contact_paid', amount: -250,
+            user_id: user.userId, type: 'free_contact_paid', amount: -500,
             balance_after: newCoins,
             description: 'Free contact activation — anyone can view contact without coins',
             created_at: new Date().toISOString()
@@ -2330,7 +2330,7 @@ window.addEventListener('load', async function() {
 
       // Set up free contact card based on existing listing state
       if (listing.is_free_contact) {
-        // Already paid 250 coins — lock to free, hide standard option
+        // Already paid 500 coins — lock to free, hide standard option
         document.getElementById('fc-choice').value = 'free';
         document.getElementById('fc-paid').style.display = 'none';
         const freeCard = document.getElementById('fc-free');
@@ -2339,7 +2339,7 @@ window.addEventListener('load', async function() {
         freeCard.onclick = null;
         freeCard.style.cursor = 'default';
         freeCard.querySelector('.broker-title').textContent = '✅ Free contact — already activated';
-        freeCard.querySelector('.broker-desc').textContent = 'You paid 250 coins when posting. Anyone can see your contact for free. This cannot be reversed.';
+        freeCard.querySelector('.broker-desc').textContent = 'You paid 500 coins when posting. Anyone can see your contact for free. This cannot be reversed.';
       } else {
         // Not yet free — allow choosing, default to standard
         document.getElementById('fc-choice').value = 'paid';
