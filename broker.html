@@ -7,204 +7,88 @@
 <meta name="description" content="Subscribe to FlatKhoj broker feed. Get real Mumbai flat leads on WhatsApp the moment they are posted.">
 <link rel="preconnect" href="https://hbvdboxyppsmcuqgbpwp.supabase.co">
 <style>
-  :root {
-    --teal: #0f7b6c;
-    --teal-bg: #e8f5f3;
-    --teal-dark: #0a5c50;
-    --gold: #e6a817;
-    --ink: #1a1a1a;
-    --ink2: #444;
-    --ink3: #888;
-    --bg: #ffffff;
-    --bg2: #f8fafa;
-    --border: #e0e8e6;
-    --red: #e53e3e;
-    --font: -apple-system, 'Segoe UI', sans-serif;
-    --radius: 14px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--font); background: var(--bg); color: var(--ink); }
-
-  /* Hero */
-  .hero {
-    background: linear-gradient(135deg, #0a5c50 0%, #0f7b6c 60%, #1a9e8a 100%);
-    color: white;
-    padding: 48px 20px 40px;
-    text-align: center;
-  }
-  .hero-logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 20px; opacity: 0.9; }
-  .hero-logo span { color: #7fe8d6; }
-  .hero h1 { font-size: 28px; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
-  .hero h1 em { color: #7fe8d6; font-style: normal; }
-  .hero p { font-size: 15px; opacity: 0.85; max-width: 360px; margin: 0 auto 24px; line-height: 1.5; }
-  .hero-stats { display: flex; justify-content: center; gap: 32px; }
-  .stat { text-align: center; }
-  .stat-num { font-size: 26px; font-weight: 800; color: #7fe8d6; }
-  .stat-label { font-size: 11px; opacity: 0.75; margin-top: 2px; }
-
-  /* How it works */
-  .how { padding: 32px 20px; background: var(--bg2); }
-  .how h2 { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 20px; }
-  .steps { display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
-  .step { display: flex; align-items: flex-start; gap: 14px; background: white; border-radius: 12px; padding: 14px 16px; border: 1px solid var(--border); }
-  .step-num { background: var(--teal); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-  .step-text { font-size: 14px; color: var(--ink2); line-height: 1.4; }
-  .step-text strong { color: var(--ink); }
-
-  /* Plans */
-  .plans-section { padding: 32px 20px; }
-  .plans-section h2 { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 6px; }
-  .plans-section p { text-align: center; font-size: 13px; color: var(--ink3); margin-bottom: 20px; }
-  .plans { display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
-  .plan-card {
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px;
-    cursor: pointer;
-    transition: all 0.15s;
-    position: relative;
-  }
-  .plan-card.selected {
-    border-color: var(--teal);
-    background: var(--teal-bg);
-  }
-  .plan-card.popular::before {
-    content: 'Most Popular';
-    position: absolute;
-    top: -11px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--gold);
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 12px;
-    border-radius: 20px;
-  }
-  .plan-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .plan-name { font-size: 16px; font-weight: 700; }
-  .plan-price { font-size: 20px; font-weight: 800; color: var(--teal); }
-  .plan-price span { font-size: 13px; font-weight: 400; color: var(--ink3); }
-  .plan-contacts { font-size: 13px; color: var(--ink2); }
-  .plan-contacts strong { color: var(--ink); }
-  .plan-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 50%; flex-shrink: 0; transition: all 0.15s; }
-  .plan-card.selected .plan-check { background: var(--teal); border-color: var(--teal); background-image: url("data:image/svg+xml,%3Csvg width='12' height='10' viewBox='0 0 12 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5L4.5 8.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; }
-
-  /* Form */
-  .form-section { padding: 8px 20px 32px; }
-  .form-section h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; max-width: 480px; margin-left: auto; margin-right: auto; }
-  .form-wrap { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; }
-  .field input, .field select {
-    width: 100%; padding: 12px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    font-size: 15px;
-    font-family: var(--font);
-    color: var(--ink);
-    background: white;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .field input:focus, .field select:focus { border-color: var(--teal); }
-
-  /* Area selection */
-  .area-section { max-width: 480px; margin: 0 auto; }
-  .area-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-  .area-section p { font-size: 13px; color: var(--ink3); margin-bottom: 14px; }
-  .zone { margin-bottom: 16px; }
-  .zone-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px;
-    background: var(--bg2);
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    margin-bottom: 6px;
-  }
-  .zone-header .zone-count { font-size: 12px; color: var(--teal); font-weight: 700; }
-  .zone-areas { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 4px; display: none; }
-  .zone-areas.open { display: flex; }
-  .area-pill {
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    cursor: pointer;
-    border: 1.5px solid var(--border);
-    background: white;
-    color: var(--ink2);
-    transition: all 0.12s;
-  }
-  .area-pill.selected {
-    border-color: var(--teal);
-    background: var(--teal-bg);
-    color: var(--teal);
-    font-weight: 600;
-  }
-  .select-all-btn {
-    font-size: 12px;
-    color: var(--teal);
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-weight: 600;
-    padding: 0;
-  }
-  .selected-areas-summary {
-    background: var(--teal-bg);
-    border: 1.5px solid var(--teal);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: var(--teal);
-    font-weight: 600;
-    margin-bottom: 16px;
-    display: none;
-  }
-
-  /* Submit */
-  .submit-btn {
-    width: 100%;
-    background: var(--teal);
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    padding: 16px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: var(--font);
-    margin-top: 8px;
-    transition: background 0.15s;
-  }
-  .submit-btn:active { background: var(--teal-dark); }
-  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .note { font-size: 12px; color: var(--ink3); text-align: center; margin-top: 10px; line-height: 1.5; }
-
-  /* Success */
-  .success-screen {
-    display: none;
-    padding: 60px 20px;
-    text-align: center;
-    max-width: 480px;
-    margin: 0 auto;
-  }
-  .success-icon { font-size: 56px; margin-bottom: 16px; }
-  .success-screen h2 { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
-  .success-screen p { font-size: 15px; color: var(--ink2); line-height: 1.6; }
-
-  .divider { height: 1px; background: var(--border); max-width: 480px; margin: 0 auto 24px; }
+  :root{--teal:#0f7b6c;--teal-bg:#e8f5f3;--teal-dark:#0a5c50;--gold:#e6a817;--gold-bg:#fef9ec;--ink:#1a1a1a;--ink2:#444;--ink3:#888;--bg:#fff;--bg2:#f8fafa;--border:#e0e8e6;--red:#e53e3e;--font:-apple-system,'Segoe UI',sans-serif;--radius:14px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--font);background:var(--bg);color:var(--ink);}
+  .hero{background:linear-gradient(135deg,#0a5c50 0%,#0f7b6c 60%,#1a9e8a 100%);color:white;padding:48px 20px 40px;text-align:center;}
+  .hero-logo{font-size:22px;font-weight:800;margin-bottom:20px;opacity:.9;}
+  .hero-logo span{color:#7fe8d6;}
+  .hero h1{font-size:28px;font-weight:800;line-height:1.2;margin-bottom:12px;}
+  .hero h1 em{color:#7fe8d6;font-style:normal;}
+  .hero p{font-size:15px;opacity:.85;max-width:360px;margin:0 auto 24px;line-height:1.5;}
+  .hero-stats{display:flex;justify-content:center;gap:32px;}
+  .stat{text-align:center;}
+  .stat-num{font-size:26px;font-weight:800;color:#7fe8d6;}
+  .stat-label{font-size:11px;opacity:.75;margin-top:2px;}
+  .section{padding:28px 20px;}
+  .section h2{font-size:18px;font-weight:700;text-align:center;margin-bottom:6px;}
+  .section>p{text-align:center;font-size:13px;color:var(--ink3);margin-bottom:20px;}
+  .bg2{background:var(--bg2);}
+  .steps{display:flex;flex-direction:column;gap:10px;max-width:480px;margin:16px auto 0;}
+  .step{display:flex;align-items:flex-start;gap:14px;background:white;border-radius:12px;padding:14px 16px;border:1px solid var(--border);}
+  .step-num{background:var(--teal);color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+  .step-text{font-size:14px;color:var(--ink2);line-height:1.4;}
+  .billing-toggle{display:flex;justify-content:center;gap:0;max-width:240px;margin:0 auto 12px;background:var(--bg2);border:1.5px solid var(--border);border-radius:30px;padding:4px;}
+  .billing-btn{flex:1;padding:8px 16px;border:none;border-radius:26px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);background:transparent;color:var(--ink3);transition:all .15s;}
+  .billing-btn.active{background:var(--teal);color:white;}
+  .saving-badge{text-align:center;background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:#a07000;display:none;margin:0 auto 16px;}
+  .plans{display:flex;flex-direction:column;gap:12px;max-width:480px;margin:0 auto;}
+  .plan-card{border:2px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .15s;position:relative;}
+  .plan-card.selected{border-color:var(--teal);background:var(--teal-bg);}
+  .plan-card.popular::before{content:'Most Popular';position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--gold);color:white;font-size:11px;font-weight:700;padding:3px 12px;border-radius:20px;}
+  .plan-top{display:flex;justify-content:space-between;align-items:center;}
+  .plan-name{font-size:16px;font-weight:700;}
+  .plan-contacts{font-size:13px;color:var(--ink2);margin-top:3px;}
+  .plan-price{text-align:right;}
+  .plan-price-main{font-size:22px;font-weight:800;color:var(--teal);}
+  .plan-price-sub{font-size:12px;color:var(--ink3);}
+  .plan-price-orig{font-size:11px;color:var(--ink3);text-decoration:line-through;min-height:16px;}
+  .plan-check{width:20px;height:20px;border:2px solid var(--border);border-radius:50%;flex-shrink:0;margin-left:12px;transition:all .15s;}
+  .plan-card.selected .plan-check{background:var(--teal);border-color:var(--teal);background-image:url("data:image/svg+xml,%3Csvg width='12' height='10' viewBox='0 0 12 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5L4.5 8.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;}
+  .form-wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px;}
+  .field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:var(--font);color:var(--ink);outline:none;transition:border-color .15s;}
+  .field input:focus{border-color:var(--teal);}
+  .field-hint{font-size:12px;color:var(--ink3);margin-top:4px;}
+  .area-section{max-width:480px;margin:0 auto;}
+  .area-section h3{font-size:15px;font-weight:700;margin-bottom:4px;}
+  .area-section>p{font-size:13px;color:var(--ink3);margin-bottom:14px;}
+  .zone{margin-bottom:12px;}
+  .zone-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg2);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid var(--border);margin-bottom:6px;}
+  .zone-count{font-size:12px;color:var(--teal);font-weight:700;}
+  .zone-areas{display:none;flex-wrap:wrap;gap:6px;padding:0 4px;}
+  .zone-areas.open{display:flex;}
+  .area-pill{padding:5px 12px;border-radius:20px;font-size:13px;cursor:pointer;border:1.5px solid var(--border);background:white;color:var(--ink2);transition:all .12s;}
+  .area-pill.selected{border-color:var(--teal);background:var(--teal-bg);color:var(--teal);font-weight:600;}
+  .select-all-btn{font-size:12px;color:var(--teal);background:none;border:none;cursor:pointer;font-weight:600;padding:0;}
+  .selected-summary{background:var(--teal-bg);border:1.5px solid var(--teal);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--teal);font-weight:600;margin-bottom:16px;display:none;}
+  .submit-btn{width:100%;background:var(--teal);color:white;border:none;border-radius:var(--radius);padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font);margin-top:8px;transition:background .15s;}
+  .submit-btn:active{background:var(--teal-dark);}
+  .submit-btn:disabled{opacity:.6;cursor:not-allowed;}
+  .note{font-size:12px;color:var(--ink3);text-align:center;margin-top:10px;line-height:1.5;}
+  .divider{height:1px;background:var(--border);max-width:480px;margin:0 auto 24px;}
+  .success-screen{display:none;padding:60px 20px;text-align:center;max-width:480px;margin:0 auto;}
+  .success-icon{font-size:56px;margin-bottom:16px;}
+  .success-screen h2{font-size:22px;font-weight:800;margin-bottom:10px;}
+  .success-screen p{font-size:15px;color:var(--ink2);line-height:1.6;}
+  .processing-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+  .processing-overlay.show{display:flex;}
+  .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;}
+  .proc-text{color:white;font-size:15px;font-weight:600;}
+  @keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
 
-<!-- HERO -->
+<div class="processing-overlay" id="processingOverlay">
+  <div class="spinner"></div>
+  <div class="proc-text">Processing payment…</div>
+</div>
+
 <div class="hero">
   <div class="hero-logo">Flat<span>Khoj</span> for Brokers</div>
   <h1>Get Mumbai flat leads<br><em>straight on WhatsApp</em></h1>
-  <p>The moment someone posts a listing in your area, you get the contact. No chasing. No portals. Just fresh leads.</p>
+  <p>The moment someone posts in your area, you get the contact. No chasing. No portals. Just fresh leads.</p>
   <div class="hero-stats">
     <div class="stat"><div class="stat-num">1,000+</div><div class="stat-label">Active listings</div></div>
     <div class="stat"><div class="stat-num">50+</div><div class="stat-label">Areas covered</div></div>
@@ -212,91 +96,98 @@
   </div>
 </div>
 
-<!-- HOW IT WORKS -->
-<div class="how">
+<div class="section bg2">
   <h2>How it works</h2>
   <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-text"><strong>Select your areas</strong> — choose any number of Mumbai localities you work in</div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-text"><strong>Pick a plan</strong> — 10, 20 or 30 contacts per month</div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-text"><strong>Receive leads on WhatsApp</strong> — the moment a flat seeker posts in your area</div>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <div class="step-text"><strong>Auto-renews monthly</strong> — no manual renewal needed</div>
-    </div>
+    <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Select your areas</strong> — choose any Mumbai localities you work in</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Pick a plan</strong> — 10 to 50 contacts per month</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Get leads on WhatsApp</strong> — the moment a flat seeker posts in your area</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Auto-renews monthly or annually</strong> — save 25% with annual billing</div></div>
   </div>
 </div>
 
-<!-- PLANS -->
-<div class="plans-section">
+<div class="section">
   <h2>Choose your plan</h2>
   <p>All plans include unlimited area selection. Cancel anytime.</p>
+  <div style="text-align:center;margin-bottom:16px">
+    <div class="billing-toggle">
+      <button class="billing-btn active" id="btnMonthly" onclick="setBilling('monthly')">Monthly</button>
+      <button class="billing-btn" id="btnAnnual" onclick="setBilling('annual')">Annual</button>
+    </div>
+    <div class="saving-badge" id="savingBadge">🎉 Save 25% — 3 months free!</div>
+  </div>
   <div class="plans">
-    <div class="plan-card" onclick="selectPlan(this,'starter',1299,10)" id="plan-starter">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="plan-card " id="plan-starter" onclick="selectPlan(this,'starter')">
+      <div class="plan-top">
         <div>
           <div class="plan-name">Starter</div>
           <div class="plan-contacts"><strong>10 contacts</strong> per month</div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="plan-price">₹1,299<span>/mo</span></div>
-          <div class="plan-check" id="check-starter"></div>
+        <div style="display:flex;align-items:center">
+          <div class="plan-price">
+            <div class="plan-price-main">&#8377;1,299</div>
+            <div class="plan-price-sub">/month</div>
+            <div class="plan-price-orig"></div>
+          </div>
+          <div class="plan-check"></div>
         </div>
       </div>
     </div>
-    <div class="plan-card" onclick="selectPlan(this,'growth',2199,20)" id="plan-growth">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="plan-card " id="plan-growth" onclick="selectPlan(this,'growth')">
+      <div class="plan-top">
         <div>
           <div class="plan-name">Growth</div>
           <div class="plan-contacts"><strong>20 contacts</strong> per month</div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="plan-price">₹2,199<span>/mo</span></div>
-          <div class="plan-check" id="check-growth"></div>
+        <div style="display:flex;align-items:center">
+          <div class="plan-price">
+            <div class="plan-price-main">&#8377;2,199</div>
+            <div class="plan-price-sub">/month</div>
+            <div class="plan-price-orig"></div>
+          </div>
+          <div class="plan-check"></div>
         </div>
       </div>
     </div>
-    <div class="plan-card popular" onclick="selectPlan(this,'pro',2999,30)" id="plan-pro">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="plan-card popular" id="plan-pro" onclick="selectPlan(this,'pro')">
+      <div class="plan-top">
         <div>
           <div class="plan-name">Pro</div>
           <div class="plan-contacts"><strong>30 contacts</strong> per month</div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="plan-price">₹2,999<span>/mo</span></div>
-          <div class="plan-check" id="check-pro"></div>
+        <div style="display:flex;align-items:center">
+          <div class="plan-price">
+            <div class="plan-price-main">&#8377;2,999</div>
+            <div class="plan-price-sub">/month</div>
+            <div class="plan-price-orig"></div>
+          </div>
+          <div class="plan-check"></div>
         </div>
       </div>
     </div>
-    <div class="plan-card" onclick="selectPlan(this,'elite',3999,50)" id="plan-elite">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="plan-card " id="plan-elite" onclick="selectPlan(this,'elite')">
+      <div class="plan-top">
         <div>
           <div class="plan-name">Elite</div>
           <div class="plan-contacts"><strong>50 contacts</strong> per month</div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="plan-price">₹3,999<span>/mo</span></div>
-          <div class="plan-check" id="check-elite"></div>
+        <div style="display:flex;align-items:center">
+          <div class="plan-price">
+            <div class="plan-price-main">&#8377;3,999</div>
+            <div class="plan-price-sub">/month</div>
+            <div class="plan-price-orig"></div>
+          </div>
+          <div class="plan-check"></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- REGISTRATION FORM -->
-<div class="form-section" id="formSection">
+<div class="section" id="formSection">
   <div class="divider"></div>
   <div class="form-wrap">
     <h2 style="margin:0 0 16px">Your details</h2>
-
     <div class="field">
       <label>Full Name *</label>
       <input type="text" id="brokerName" placeholder="Your name">
@@ -306,189 +197,213 @@
       <input type="tel" id="brokerPhone" maxlength="10" placeholder="10-digit mobile number">
     </div>
     <div class="field">
-      <label>WhatsApp Number * <span style="font-weight:400;color:var(--ink3)">(leads will be sent here)</span></label>
-      <input type="tel" id="brokerWhatsapp" maxlength="10" placeholder="10-digit WhatsApp number">
-      <div style="font-size:12px;color:var(--ink3);margin-top:4px">Leave same as phone if it's the same number</div>
+      <label>WhatsApp Number * <span style="font-weight:400;color:var(--ink3)">(leads delivered here)</span></label>
+      <input type="tel" id="brokerWhatsapp" maxlength="10" placeholder="Leave blank if same as above">
+      <div class="field-hint">If same as phone number above, leave this blank</div>
     </div>
-
     <div class="area-section">
       <h3>Select your areas *</h3>
       <p>Choose all areas you want leads from. Tap a zone to expand.</p>
-      <div id="selectedSummary" class="selected-areas-summary"></div>
+      <div id="selectedSummary" class="selected-summary"></div>
       <div id="zonesContainer"></div>
     </div>
-
-    <button class="submit-btn" id="submitBtn" onclick="submitRegistration()">
-      Register & Proceed to Payment →
-    </button>
-    <p class="note">By registering you agree to monthly auto-debit. Cancel anytime by contacting us on WhatsApp.</p>
+    <button class="submit-btn" id="submitBtn" onclick="submitRegistration()">Register & Pay →</button>
+    <p class="note">Secured by Cashfree · UPI, Cards, Netbanking · Cancel anytime via WhatsApp</p>
   </div>
 </div>
 
-<!-- SUCCESS -->
 <div class="success-screen" id="successScreen">
   <div class="success-icon">🎉</div>
-  <h2>You're registered!</h2>
-  <p>We'll activate your account within 24 hours and send you a confirmation on WhatsApp.<br><br>
-  Once active, leads from your selected areas will start flowing in automatically.</p>
-  <p style="margin-top:20px;font-size:13px;color:var(--ink3)">Questions? WhatsApp us at <strong>+91 95385 84612</strong></p>
+  <h2>Payment successful!</h2>
+  <p>Your broker account is now active.<br><br>
+  Leads from your selected areas will start arriving on WhatsApp as soon as new listings are posted.<br><br>
+  Questions? WhatsApp us at <strong>+91 95385 84612</strong></p>
 </div>
 
 <script>
 const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
-
 const ZONES = {"South Mumbai": ["Colaba", "Cuffe Parade", "Nariman Point", "Churchgate", "Fort", "Marine Lines", "Charni Road", "Grant Road", "Malabar Hill", "Breach Candy", "Tardeo", "Mahalaxmi", "Byculla", "Worli", "Lower Parel", "Prabhadevi", "Dadar", "Parel", "Mahim", "Matunga", "Sion", "Dharavi"], "Western Suburbs (South)": ["Bandra", "Bandra West", "Bandra East", "BKC", "Khar", "Khar West", "Khar East", "Santacruz", "Santacruz West", "Santacruz East", "Vile Parle", "Vile Parle West", "Vile Parle East", "Juhu", "Vakola", "Kalina"], "Andheri & Jogeshwari": ["Andheri", "Andheri West", "Andheri East", "DN Nagar", "Azad Nagar", "Lokhandwala", "Versova", "Oshiwara", "Four Bungalows", "Seven Bungalows", "Yari Road", "Marol", "Sakinaka", "Chakala", "MIDC Andheri", "JB Nagar", "Veera Desai Road", "Jogeshwari West", "Jogeshwari East"], "Goregaon & Malad": ["Goregaon", "Goregaon West", "Goregaon East", "Malad", "Malad West", "Malad East", "Mindspace", "Film City", "Bangur Nagar", "Marve", "Malvani"], "Kandivali & Borivali": ["Kandivali", "Kandivali West", "Kandivali East", "Borivali", "Borivali West", "Borivali East", "Dahisar", "Dahisar West", "Dahisar East", "IC Colony", "Thakur Village", "Mira Road"], "Powai & East": ["Powai", "Hiranandani Gardens", "Chandivali", "Vikhroli", "Vikhroli West", "Vikhroli East", "Kanjurmarg", "Ghatkopar", "Ghatkopar West", "Ghatkopar East", "Kurla", "Kurla West", "Kurla East", "Chembur", "Mulund", "Mulund West", "Mulund East", "Bhandup", "Nahur", "Wadala", "Sion", "Govandi"], "Thane": ["Thane", "Thane West", "Thane East", "Wagle Estate", "Ghodbunder Road", "Majiwada", "Hiranandani Thane", "Manpada", "Kolshet", "Kapurbawdi"], "Navi Mumbai": ["Vashi", "Nerul", "Kharghar", "CBD Belapur", "Belapur", "Airoli", "Ghansoli", "Koparkhairane", "Seawoods", "Panvel", "Sanpada", "Juinagar"]};
-
-const PLANS = {
-  starter: { name: 'Starter', price: 1299, contacts: 10 },
-  growth:  { name: 'Growth',  price: 2199, contacts: 20 },
-  pro:     { name: 'Pro',     price: 2999, contacts: 30 },
-  elite:   { name: 'Elite',   price: 3999, contacts: 50 },
-};
+const PLANS = {"starter": {"name": "Starter", "contacts": 10, "monthly": 1299, "annual": 11691}, "growth": {"name": "Growth", "contacts": 20, "monthly": 2199, "annual": 19791}, "pro": {"name": "Pro", "contacts": 30, "monthly": 2999, "annual": 26991}, "elite": {"name": "Elite", "contacts": 50, "monthly": 3999, "annual": 35991}};
 
 let selectedPlan = null;
+let billing = 'monthly';
 let selectedAreas = new Set();
 
-// Render zones
-function renderZones() {
-  const container = document.getElementById('zonesContainer');
-  Object.entries(ZONES).forEach(([zone, areas]) => {
-    const zoneEl = document.createElement('div');
-    zoneEl.className = 'zone';
-    zoneEl.innerHTML = `
-      <div class="zone-header" onclick="toggleZone(this)">
-        <span>${zone}</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="zone-count" id="count-${zone.replace(/[^a-z]/gi,'_')}"></span>
-          <button class="select-all-btn" onclick="event.stopPropagation();selectAllZone('${zone}')">Select all</button>
-          <span style="color:var(--ink3);font-size:12px">▼</span>
-        </div>
-      </div>
-      <div class="zone-areas" id="zone-${zone.replace(/[^a-z]/gi,'_')}">
-        ${areas.map(a => `<div class="area-pill" onclick="toggleArea(this,'${a}')" data-area="${a}">${a}</div>`).join('')}
-      </div>`;
-    container.appendChild(zoneEl);
+function setBilling(type) {
+  billing = type;
+  document.getElementById('btnMonthly').classList.toggle('active', type==='monthly');
+  document.getElementById('btnAnnual').classList.toggle('active', type==='annual');
+  const badge = document.getElementById('savingBadge');
+  badge.style.display = type==='annual' ? 'inline-block' : 'none';
+  // Update all plan prices
+  Object.entries(PLANS).forEach(([id, plan]) => {
+    const card = document.getElementById('plan-'+id);
+    if (!card) return;
+    const main = card.querySelector('.plan-price-main');
+    const sub = card.querySelector('.plan-price-sub');
+    const orig = card.querySelector('.plan-price-orig');
+    if (type === 'annual') {
+      main.textContent = '₹' + plan.annual.toLocaleString('en-IN');
+      sub.textContent = '/year';
+      orig.textContent = '₹' + (plan.monthly*12).toLocaleString('en-IN') + ' normally';
+    } else {
+      main.textContent = '₹' + plan.monthly.toLocaleString('en-IN');
+      sub.textContent = '/month';
+      orig.textContent = '';
+    }
   });
 }
 
-function toggleZone(header) {
-  const zoneId = header.nextElementSibling.id;
-  const areasDiv = document.getElementById(zoneId);
-  areasDiv.classList.toggle('open');
-  const arrow = header.querySelector('span:last-child');
-  arrow.textContent = areasDiv.classList.contains('open') ? '▲' : '▼';
-}
-
-function selectAllZone(zone) {
-  const areas = ZONES[zone];
-  const allSelected = areas.every(a => selectedAreas.has(a));
-  areas.forEach(a => {
-    if (allSelected) selectedAreas.delete(a);
-    else selectedAreas.add(a);
-  });
-  updateAreaPills();
-  updateSummary();
-}
-
-function toggleArea(pill, area) {
-  if (selectedAreas.has(area)) selectedAreas.delete(area);
-  else selectedAreas.add(area);
-  updateAreaPills();
-  updateSummary();
-}
-
-function updateAreaPills() {
-  document.querySelectorAll('.area-pill').forEach(p => {
-    const area = p.dataset.area;
-    p.classList.toggle('selected', selectedAreas.has(area));
-  });
-  // Update zone counts
-  Object.entries(ZONES).forEach(([zone, areas]) => {
-    const count = areas.filter(a => selectedAreas.has(a)).length;
-    const el = document.getElementById('count-' + zone.replace(/[^a-z]/gi,'_'));
-    if (el) el.textContent = count > 0 ? count + ' selected' : '';
-  });
-}
-
-function updateSummary() {
-  const summary = document.getElementById('selectedSummary');
-  if (selectedAreas.size === 0) {
-    summary.style.display = 'none';
-  } else {
-    summary.style.display = 'block';
-    summary.textContent = `✓ ${selectedAreas.size} area${selectedAreas.size > 1 ? 's' : ''} selected`;
-  }
-}
-
-function selectPlan(el, planId, price, contacts) {
+function selectPlan(el, planId) {
   document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   selectedPlan = planId;
 }
 
+function renderZones() {
+  const container = document.getElementById('zonesContainer');
+  Object.entries(ZONES).forEach(([zone, areas]) => {
+    const safe = zone.replace(/[^a-z]/gi,'_');
+    const el = document.createElement('div');
+    el.className = 'zone';
+    el.innerHTML = `
+      <div class="zone-header" onclick="toggleZone(this)">
+        <span>${zone}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="zone-count" id="cnt-${safe}"></span>
+          <button class="select-all-btn" onclick="event.stopPropagation();selectAllZone('${zone}')">Select all</button>
+          <span style="color:var(--ink3);font-size:12px">▼</span>
+        </div>
+      </div>
+      <div class="zone-areas" id="zone-${safe}">
+        ${areas.map(a=>`<div class="area-pill" onclick="toggleArea(this,'${a}')" data-area="${a}">${a}</div>`).join('')}
+      </div>`;
+    container.appendChild(el);
+  });
+}
+
+function toggleZone(h) {
+  const d = h.nextElementSibling;
+  d.classList.toggle('open');
+  h.querySelector('span:last-child').textContent = d.classList.contains('open') ? '▲' : '▼';
+}
+
+function selectAllZone(zone) {
+  const areas = ZONES[zone];
+  const all = areas.every(a=>selectedAreas.has(a));
+  areas.forEach(a=>all?selectedAreas.delete(a):selectedAreas.add(a));
+  updatePills(); updateSummary();
+}
+
+function toggleArea(pill, area) {
+  selectedAreas.has(area)?selectedAreas.delete(area):selectedAreas.add(area);
+  updatePills(); updateSummary();
+}
+
+function updatePills() {
+  document.querySelectorAll('.area-pill').forEach(p=>p.classList.toggle('selected',selectedAreas.has(p.dataset.area)));
+  Object.entries(ZONES).forEach(([zone,areas])=>{
+    const n=areas.filter(a=>selectedAreas.has(a)).length;
+    const el=document.getElementById('cnt-'+zone.replace(/[^a-z]/gi,'_'));
+    if(el) el.textContent=n>0?n+' selected':'';
+  });
+}
+
+function updateSummary() {
+  const s=document.getElementById('selectedSummary');
+  if(!selectedAreas.size){s.style.display='none';return;}
+  s.style.display='block';
+  s.textContent=`✓ ${selectedAreas.size} area${selectedAreas.size>1?'s':''} selected`;
+}
+
 async function submitRegistration() {
-  const name = document.getElementById('brokerName').value.trim();
-  const phone = document.getElementById('brokerPhone').value.trim().replace(/\D/g,'');
-  const whatsapp = document.getElementById('brokerWhatsapp').value.trim().replace(/\D/g,'') || phone;
+  const name=document.getElementById('brokerName').value.trim();
+  const phone=document.getElementById('brokerPhone').value.trim().replace(/\D/g,'');
+  const waRaw=document.getElementById('brokerWhatsapp').value.trim().replace(/\D/g,'');
+  const wa=waRaw||phone;
 
-  if (!name) { alert('Please enter your name'); return; }
-  if (phone.length !== 10) { alert('Please enter a valid 10-digit phone number'); return; }
-  if (!selectedPlan) { alert('Please select a plan'); return; }
-  if (selectedAreas.size === 0) { alert('Please select at least one area'); return; }
+  if(!name){alert('Please enter your name');return;}
+  if(phone.length!==10){alert('Please enter a valid 10-digit phone number');return;}
+  if(!selectedPlan){alert('Please select a plan');return;}
+  if(!selectedAreas.size){alert('Please select at least one area');return;}
 
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = 'Registering...';
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true; btn.textContent='Processing…';
+
+  const plan=PLANS[selectedPlan];
+  const amount=billing==='annual'?plan.annual:plan.monthly;
 
   try {
-    const plan = PLANS[selectedPlan];
-    const res = await fetch(`${SUPA_URL}/rest/v1/brokers`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${SUPA_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
-        name,
-        phone,
-        whatsapp_number: whatsapp,
-        areas: [...selectedAreas],
-        plan: selectedPlan,
-        contacts_per_month: plan.contacts,
-        subscription_status: 'pending',
-        is_active: false,
-        billing_cycle_start: new Date().toISOString().split('T')[0]
-      })
+    // Save broker record
+    const bRes=await fetch(`${SUPA_URL}/rest/v1/brokers`,{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({name,phone,whatsapp_number:wa,areas:[...selectedAreas],plan:selectedPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,billing_cycle_start:new Date().toISOString().split('T')[0]})
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      if (err.code === '23505') {
-        alert('This phone number is already registered. Please contact us on WhatsApp.');
-        btn.disabled = false; btn.textContent = 'Register & Proceed to Payment →';
-        return;
-      }
+    if(!bRes.ok){
+      const err=await bRes.json();
+      if(err.code==='23505'){alert('This number is already registered. Contact us on WhatsApp.');btn.disabled=false;btn.textContent='Register & Pay →';return;}
       throw new Error('Registration failed');
     }
 
-    // Show success
-    document.getElementById('formSection').style.display = 'none';
-    document.querySelector('.plans-section').style.display = 'none';
-    document.querySelector('.how').style.display = 'none';
-    document.querySelector('.hero').style.display = 'none';
-    document.getElementById('successScreen').style.display = 'block';
+    const bData=await bRes.json();
+    const brokerId=bData[0]?.id;
+    document.getElementById('processingOverlay').classList.add('show');
+
+    // Create payment order
+    const oRes=await fetch(`${SUPA_URL}/functions/v1/create-order`,{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+      body:JSON.stringify({userId:brokerId,phone,amount,pack:`broker_${selectedPlan}_${billing}`,coins:0,isBroker:true,brokerPlan:selectedPlan,billingCycle:billing})
+    });
+
+    const order=await oRes.json();
+    document.getElementById('processingOverlay').classList.remove('show');
+
+    if(!order.payment_session_id){
+      alert('Payment setup failed. Please try again or WhatsApp us.');
+      btn.disabled=false;btn.textContent='Register & Pay →';return;
+    }
+
+    // Open Cashfree
+    const script=document.createElement('script');
+    script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.onload=function(){
+      const cf=Cashfree({mode:'production'});
+      cf.checkout({
+        paymentSessionId:order.payment_session_id,
+        returnUrl:`https://flatkhoj.com/broker.html?payment=success&broker_id=${brokerId}&plan=${selectedPlan}&billing=${billing}`
+      });
+    };
+    document.head.appendChild(script);
 
   } catch(e) {
+    document.getElementById('processingOverlay').classList.remove('show');
     alert('Something went wrong. Please try again or WhatsApp us at +91 95385 84612');
-    btn.disabled = false;
-    btn.textContent = 'Register & Proceed to Payment →';
+    btn.disabled=false;btn.textContent='Register & Pay →';
   }
 }
 
-renderZones();
+window.onload=async function(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('payment')==='success'){
+    const brokerId=params.get('broker_id');
+    if(brokerId){
+      await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}`,{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+        body:JSON.stringify({is_active:true,subscription_status:'active'})
+      });
+    }
+    document.querySelector('.hero').style.display='none';
+    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+    document.getElementById('successScreen').style.display='block';
+    return;
+  }
+  renderZones();
+};
 </script>
 </body>
 </html>
