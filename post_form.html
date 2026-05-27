@@ -210,7 +210,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         </div>
         <div style="font-size:20px;font-weight:800;color:var(--teal)">99 🪙</div>
       </div>
-      <button onclick="upgradeInline('basic', 99)" id="basicUpgradeBtn" style="width:100%;padding:14px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
+      <button onclick="upgradeInline('basic', 499)" id="basicUpgradeBtn" style="width:100%;padding:14px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
         Upgrade for 99 coins →
       </button>
     </div>
@@ -223,7 +223,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         </div>
         <div style="font-size:20px;font-weight:800;color:#7c3aed">199 🪙</div>
       </div>
-      <button onclick="upgradeInline('pro', 199)" id="proUpgradeBtn" style="width:100%;padding:14px;background:#7c3aed;color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
+      <button onclick="upgradeInline('pro', 999)" id="proUpgradeBtn" style="width:100%;padding:14px;background:#7c3aed;color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">
         Upgrade for 199 coins →
       </button>
     </div>
@@ -2052,57 +2052,9 @@ function showLimitBlocked(msg, coins, currentPlan) {
 }
 
 async function upgradeInline(plan, coinCost) {
-  const user = getUser();
-  if (!user) { window.location.href = 'login.html?trigger=post'; return; }
-
-  const btn = document.getElementById(plan + 'UpgradeBtn');
-  btn.textContent = 'Checking balance…'; btn.disabled = true;
-
-  try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-    });
-    const data = await res.json();
-    const currentCoins = data[0]?.coins || 0;
-
-    if (currentCoins < coinCost) {
-      btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
-      window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
-      return;
-    }
-
-    btn.textContent = 'Upgrading…';
-    const newCoins = currentCoins - coinCost;
-    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ coins: newCoins, posting_plan: plan, posting_plan_expires: expires })
-    });
-
-    user.coins = newCoins;
-    localStorage.setItem('fmh_user', JSON.stringify(user));
-
-    // Success — reload page so limit check runs fresh
-    // Hide blocked screen — post directly without reloading
-    document.getElementById('limitBlockedScreen').style.display = 'none';
-    const btn2 = document.getElementById(plan + 'UpgradeBtn');
-    btn2.textContent = '✅ Upgraded! Posting now…';
-    btn2.style.background = '#1a7a3c';
-    // Set default contact choice if not already set
-    if (!document.getElementById('fc-choice').value) {
-      document.getElementById('fc-choice').value = 'paid';
-    }
-    // Submit the listing directly
-    setTimeout(async () => {
-      await submitListing();
-    }, 500);
-
-  } catch(e) {
-    btn.textContent = `Upgrade for ${coinCost} coins →`; btn.disabled = false;
-    alert('Something went wrong. Please try again.');
-  }
+  // Redirect to coins page to purchase the posting plan via Cashfree
+  localStorage.setItem('fk_coins_return', window.location.href);
+  window.location.href = 'coins.html?context=upgrade&upgrade_plan=' + plan;
 }
 
 // Strict version — returns true if allowed, false if blocked. Used before auto-submit.
