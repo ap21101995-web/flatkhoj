@@ -1914,13 +1914,13 @@ async function submitListing() {
         });
         const coinData = await coinRes.json();
         const currentCoins = coinData[0]?.coins || 0;
-        if (currentCoins < 50) {
+        if (currentCoins < 250) {
           btn.textContent = window._editListingId ? '💾 Save Changes' : '🚀 Post Listing — It\'s Free!';
           btn.disabled = false;
           window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
           return;
         }
-        const newCoins = currentCoins - 50;
+        const newCoins = currentCoins - 250;
         const deductOk = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
           method: 'PATCH',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -1937,7 +1937,7 @@ async function submitListing() {
           method: 'POST',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: user.userId, type: 'free_contact_paid', amount: -50,
+            user_id: user.userId, type: 'free_contact_paid', amount: -250,
             balance_after: newCoins,
             description: 'Free contact activation — anyone can view contact without coins',
             created_at: new Date().toISOString()
