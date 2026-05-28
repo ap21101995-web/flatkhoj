@@ -1039,16 +1039,40 @@ async function loadSupport() {
     t.innerHTML = '<tr><th>User Phone</th><th>Subject</th><th>Status</th><th>Updated</th><th>Actions</th></tr>';
     if (!convs.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No conversations</td></tr>'; return; }
     convs.forEach(c => {
-      t.innerHTML += `<tr>
+      const isResolved = c.status === 'resolved';
+      t.innerHTML += `<tr id="conv-row-${c.id}">
         <td style="font-weight:600">+91 ${c.user_phone||'Unknown'}</td>
-        <td>${c.subject}</td>
-        <td><span class="badge ${c.status==='open'?'b-pending">Open':'b-ok">Resolved'}</span></td>
+        <td>${c.subject||'—'}</td>
+        <td><span class="badge ${isResolved?'b-ok">Resolved':'b-pending">Open'}</span></td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(c.updated_at)}</td>
-        <td><a href="support_admin.html" class="btn btn-ghost">Open chat →</a></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <a href="support_admin.html?conv=${c.id}" class="btn btn-ghost">Open chat →</a>
+          <button class="btn ${isResolved?'btn-ghost':'btn-teal'}" onclick="toggleSupportStatus('${c.id}','${c.status}',this)">
+            ${isResolved ? 'Reopen' : 'Mark resolved'}
+          </button>
+        </td>
       </tr>`;
     });
   } catch(e) { console.error('Support:', e); }
 }
+async function toggleSupportStatus(id, currentStatus, btn) {
+  const newStatus = currentStatus === 'resolved' ? 'open' : 'resolved';
+  btn.disabled = true; btn.textContent = '…';
+  const ok = await supaPatch('support_conversations', 'id=eq.'+id, {
+    status: newStatus,
+    updated_at: new Date().toISOString()
+  });
+  if (ok) {
+    toast(newStatus === 'resolved' ? 'Marked as resolved' : 'Reopened', 'ok');
+    loadSupport(); // refresh table
+    refreshBadges();
+  } else {
+    toast('Failed to update', 'error');
+    btn.disabled = false;
+    btn.textContent = currentStatus === 'resolved' ? 'Reopen' : 'Mark resolved';
+  }
+}
+
 // ── USER MANAGEMENT ────────────────────────────────────────
 let mgmtUser = null;
 
