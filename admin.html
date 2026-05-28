@@ -625,7 +625,7 @@ async function loadDashboard() {
         t.innerHTML += `<tr>
           <td style="font-weight:600">${phone}</td>
           <td>${area}</td>
-          <td><span class="badge b-unlock">${u.coins_spent||5} coins</span></td>
+          <td><span class="badge b-unlock">${u.coins_spent||50} coins</span></td>
           <td style="font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
         </tr>`;
       });
@@ -735,7 +735,7 @@ async function viewListingUnlockers(listingId, areaName) {
     return `<tr>
       <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-weight:600">${phone}</td>
       <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
-      <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--gold)">${u.coins_spent||5} coins</td>
+      <td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--gold)">${u.coins_spent||50} coins</td>
     </tr>`;
   }).join('');
   showModal('Who Unlocked This', areaName+' - '+unlocks.length+' unlock'+(unlocks.length>1?'s':''),
@@ -942,7 +942,7 @@ async function loadUnlocks() {
         <td style="font-weight:600">${phone}</td>
         <td>${lInfo.area||'—'}</td>
         <td style="color:var(--gold);font-weight:700;font-size:13px">${lInfo.phone?'+91 '+lInfo.phone:'—'}</td>
-        <td><span class="badge b-unlock">${u.coins_spent||5} coins</span></td>
+        <td><span class="badge b-unlock">${u.coins_spent||50} coins</span></td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(u.created_at)}</td>
       </tr>`;
     });
@@ -1229,7 +1229,7 @@ async function removeSoldListing(listingId, btn) {
     for (const u of unlocks) {
       const users = await supaGet('users?id=eq.'+u.unlocker_user_id+'&select=id,coins');
       if (!users.length) continue;
-      const newCoins = (users[0].coins||0) + (u.coins_spent||5);
+      const newCoins = (users[0].coins||0) + (u.coins_spent||50);
       await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${u.unlocker_user_id}`, {
         method: 'PATCH',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -1383,7 +1383,7 @@ async function loadUserActivity() {
       const unlocks = unlocksByUser[u.id] || [];
       const purchased = tx.filter(t => t.type === 'purchase').reduce((s,t) => s+(t.amount||0), 0);
       const rupees = tx.filter(t => t.type === 'purchase').reduce((s,t) => s+(coinMap[t.amount]||0), 0);
-      const spent = unlocks.reduce((s,t) => s+(t.coins_spent||5), 0);
+      const spent = unlocks.reduce((s,t) => s+(t.coins_spent||50), 0);
       const isOwner = u.phone === '9538584612';
       const isTest = u.phone === '1111111100';
       const badge = isOwner ? '<span style="background:var(--teal-bg);color:var(--teal-light);border-radius:6px;padding:1px 6px;font-size:10px">OWNER</span>' :
