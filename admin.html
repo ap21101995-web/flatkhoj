@@ -591,16 +591,17 @@ async function loadDashboard() {
       supaCount('users'),
       supaCount('contact_unlocks'),
       supaCount('listings?created_at=gte.' + since60),
-      supaGet('coin_transactions?select=amount&type=eq.purchase')
+      supaGet('coin_transactions?select=amount,description&type=eq.purchase')
     ]);
 
     document.getElementById('s-listings').textContent = activeListings;
     document.getElementById('s-listings-sub').textContent = 'Active listings (' + recentListings + ' in last 60d)';
     document.getElementById('s-users').textContent = totalUsers;
     document.getElementById('s-users-sub').textContent = 'Registered users';
-    const totalCoins = purchases.reduce((s,p)=>s+(p.amount||0),0);
+    const realPurchases = purchases.filter(p => !p.description || !p.description.includes('Legacy credit'));
+    const totalCoins = realPurchases.reduce((s,p)=>s+(p.amount||0),0);
     document.getElementById('s-revenue').textContent = totalCoins;
-    document.getElementById('s-revenue-sub').textContent = purchases.length + ' transactions';
+    document.getElementById('s-revenue-sub').textContent = realPurchases.length + ' transactions';
     document.getElementById('s-unlocks').textContent = totalUnlocks;
     document.getElementById('s-unlocks-sub').textContent = 'Contacts revealed';
 
@@ -809,13 +810,13 @@ async function viewUserDetail(userId, phone) {
   }
 
   const unlockSpend = unlocks.filter(u=>(u.coins_spent||0)>0).reduce((s,u)=>s+(u.coins_spent||0),0);
-  const rupees = purchases.reduce((s,p)=>s+({15:20,30:30,50:40,100:70,200:125}[p.amount]||0),0);
+  const rupees = purchases.filter(p=>!p.description||!p.description.includes('Legacy')).reduce((s,p)=>s+({50:175,150:450,500:1400,1000:2500,2000:4500,15:20,30:30,100:70,200:125}[p.amount]||0),0);
 
   const purchaseRows = !purchases.length ? '<tr><td colspan="3" style="padding:12px 16px;color:var(--ink3)">No purchases</td></tr>' :
     purchases.map(p=>`<tr>
       <td style="padding:8px 16px;border-bottom:1px solid var(--border)">${timeAgo(p.created_at)}</td>
       <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--gold);font-weight:700">+${p.amount} 🪙</td>
-      <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--green)">₹${{15:20,30:30,50:40,100:70,200:125}[p.amount]||'?'}</td>
+      <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--green)">₹${{50:175,150:450,500:1400,1000:2500,2000:4500,15:20,30:30,100:70,200:125}[p.amount]||'?'}</td>
     </tr>`).join('');
 
   const unlockRows = !unlocks.length ? '<tr><td colspan="4" style="padding:12px 16px;color:var(--ink3)">No unlocks</td></tr>' :
@@ -862,7 +863,7 @@ async function loadCoinPurchases() {
     const users = uids.length > 0 ? await supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : [];
     const uMap = {}; users.forEach(u=>uMap[u.id]=u.phone);
     const totalCoins = purchases.reduce((s,p)=>s+(p.amount||0),0);
-    const totalRupees = purchases.reduce((s,p)=>s+(coinToRupees[p.amount]||0),0);
+    const totalRupees = purchases.filter(p=>!p.description||!p.description.includes('Legacy')).reduce((s,p)=>s+(coinToRupees[p.amount]||0),0);
     document.getElementById('totalCoinsInfo').textContent = 
       purchases.length+' transactions · '+totalCoins+' coins sold · ₹'+totalRupees+' total revenue';
     const t = document.getElementById('coinpurchasesTable');
