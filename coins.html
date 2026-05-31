@@ -289,7 +289,17 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <!-- POSTING PLANS SECTION -->
 <div style="margin:24px 16px 0;background:var(--bg2);border-radius:14px;padding:16px;border:1.5px solid var(--border)">
   <div style="font-size:15px;font-weight:700;margin-bottom:4px">📋 Posting Plans</div>
-  <div style="font-size:13px;color:var(--ink3);margin-bottom:14px">Need to post more listings? Upgrade your monthly posting limit.</div>
+  <div style="font-size:13px;color:var(--ink3);margin-bottom:12px">Need to post more listings? Upgrade your monthly posting limit.</div>
+
+  <!-- Billing toggle -->
+  <div style="display:flex;justify-content:center;margin-bottom:12px">
+    <div style="display:flex;background:var(--bg);border:1.5px solid var(--border);border-radius:30px;padding:3px;">
+      <button id="postBtnMonthly" onclick="setPostBilling('monthly')" style="padding:6px 16px;border:none;border-radius:26px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);background:var(--teal);color:white;">Monthly</button>
+      <button id="postBtnAnnual" onclick="setPostBilling('annual')" style="padding:6px 16px;border:none;border-radius:26px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);background:transparent;color:var(--ink3);">Annual</button>
+    </div>
+  </div>
+  <div id="postSavingBadge" style="display:none;text-align:center;background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:#a07000;margin-bottom:12px">🎉 Save 25% — 3 months free!</div>
+
   <div style="display:flex;flex-direction:column;gap:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;background:white;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px">
       <div>
@@ -304,8 +314,8 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div style="font-size:12px;color:var(--ink3);margin-top:2px">3 posts/day · 10 posts/month</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-size:18px;font-weight:800;color:var(--teal)">₹499<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
-        <button onclick="buyPostingPlan('basic',499)" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Buy</button>
+        <div id="basicPostPrice" style="font-size:18px;font-weight:800;color:var(--teal)">₹499<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
+        <button onclick="buyPostingPlan('basic', postBilling)" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Buy</button>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;background:white;border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;position:relative">
@@ -315,8 +325,8 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
         <div style="font-size:12px;color:var(--ink3);margin-top:2px">8 posts/day · 25 posts/month</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-size:18px;font-weight:800;color:var(--teal)">₹999<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
-        <button onclick="buyPostingPlan('pro',999)" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Buy</button>
+        <div id="proPostPrice" style="font-size:18px;font-weight:800;color:var(--teal)">₹999<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span></div>
+        <button onclick="buyPostingPlan('pro', postBilling)" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Buy</button>
       </div>
     </div>
   </div>
@@ -687,11 +697,32 @@ async function addCoinsToAccount(coins, amount, orderId) {
   }
 }
 
+// ── POSTING PLAN BILLING TOGGLE ───────────────────────────
+let postBilling = 'monthly';
+function setPostBilling(type) {
+  postBilling = type;
+  document.getElementById('postBtnMonthly').style.background = type==='monthly' ? 'var(--teal)' : 'transparent';
+  document.getElementById('postBtnMonthly').style.color = type==='monthly' ? 'white' : 'var(--ink3)';
+  document.getElementById('postBtnAnnual').style.background = type==='annual' ? 'var(--teal)' : 'transparent';
+  document.getElementById('postBtnAnnual').style.color = type==='annual' ? 'white' : 'var(--ink3)';
+  document.getElementById('postSavingBadge').style.display = type==='annual' ? 'block' : 'none';
+  document.getElementById('basicPostPrice').innerHTML = type==='annual'
+    ? '₹4,491<span style="font-size:12px;font-weight:400;color:var(--ink3)">/year</span>'
+    : '₹499<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span>';
+  document.getElementById('proPostPrice').innerHTML = type==='annual'
+    ? '₹8,991<span style="font-size:12px;font-weight:400;color:var(--ink3)">/year</span>'
+    : '₹999<span style="font-size:12px;font-weight:400;color:var(--ink3)">/mo</span>';
+}
+
 // ── POSTING PLAN PURCHASE ──────────────────────────────────
-async function buyPostingPlan(plan, amount) {
+async function buyPostingPlan(plan, billing) {
   const user = getUser();
   if (!user) { window.location.href = 'login.html?trigger=coins'; return; }
-
+  const prices = {
+    basic: { monthly: 499, annual: 4491 },
+    pro:   { monthly: 999, annual: 8991 }
+  };
+  const amount = prices[plan][billing];
   showProcessing();
   try {
     const res = await fetch(`${SUPA_URL}/functions/v1/create-order`, {
@@ -700,9 +731,10 @@ async function buyPostingPlan(plan, amount) {
       body: JSON.stringify({
         userId: user.userId, phone: user.phone,
         amount, coins: 0,
-        pack: `posting_${plan}`,
+        pack: `posting_${plan}_${billing}`,
         isPostingPlan: true,
-        postingPlan: plan
+        postingPlan: plan,
+        billingCycle: billing
       })
     });
     const order = await res.json();
@@ -714,7 +746,7 @@ async function buyPostingPlan(plan, amount) {
       const cashfree = Cashfree({ mode: CASHFREE_ENV });
       cashfree.checkout({
         paymentSessionId: order.payment_session_id,
-        returnUrl: `https://flatkhoj.com/coins.html?plan_success=${plan}&order_id=${order.order_id}`
+        returnUrl: `https://flatkhoj.com/coins.html?plan_success=${plan}&billing=${billing}&order_id=${order.order_id}`
       });
     };
     document.head.appendChild(script);
