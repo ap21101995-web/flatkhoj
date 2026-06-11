@@ -858,28 +858,80 @@ const coinToRupees = {15:20, 30:30, 50:40, 100:70, 200:125};
 
 async function loadCoinPurchases() {
   try {
-    const purchases = await supaGet('coin_transactions?type=eq.purchase&order=created_at.desc&select=*');
-    const uids = [...new Set(purchases.map(p=>p.user_id).filter(Boolean))];
-    const users = uids.length > 0 ? await supaGet('users?id=in.('+uids.join(',')+')&select=id,phone') : [];
-    const uMap = {}; users.forEach(u=>uMap[u.id]=u.phone);
-    const totalCoins = purchases.reduce((s,p)=>s+(p.amount||0),0);
-    const totalRupees = purchases.filter(p=>!p.description||!p.description.includes('Legacy')).reduce((s,p)=>s+(coinToRupees[p.amount]||0),0);
+    // Fetch all purchase types — real purchases, pending, and legacy
+    const [purchases, pending] = await Promise.all([
+      supaGet('coin_transactions?type=eq.purchase&order=created_at.desc&select=*&limit=500'),
+      supaGet('coin_transactions?type=eq.purchase_pending&order=created_at.desc&select=*&limit=100'),
+    ]);
+
+    // Separate real purchases from legacy credits
+    const realPurchases = purchases.filter(p => 
+      !p.description || !p.description.includes('Legacy credit')
+    );
+    const legacyCredits = purchases.filter(p => 
+      p.description && p.description.includes('Legacy credit')
+    );
+
+    // Coin-to-rupee map (new pricing + old pricing for history)
+    const coinToRupeesMap = {
+      50:175, 150:450, 500:1400, 1000:2500, 2000:4500,  // new pricing
+      15:20, 30:30, 40:40, 100:70, 200:125,              // old pricing
+    };
+
+    // Get all user phones
+    const allUids = [...new Set([
+      ...realPurchases.map(p=>p.user_id),
+      ...pending.map(p=>p.user_id)
+    ].filter(Boolean))];
+    const users = allUids.length > 0 
+      ? await supaGet('users?id=in.('+allUids.join(',')+')'+'&select=id,phone') 
+      : [];
+    const uMap = {};
+    users.forEach(u => uMap[u.id] = u.phone);
+
+    // Totals (exclude legacy)
+    const totalCoins = realPurchases.reduce((s,p)=>s+(p.amount||0),0);
+    const totalRupees = realPurchases.reduce((s,p)=>s+(coinToRupeesMap[p.amount]||0),0);
+
     document.getElementById('totalCoinsInfo').textContent = 
-      purchases.length+' transactions · '+totalCoins+' coins sold · ₹'+totalRupees+' total revenue';
+      `${realPurchases.length} purchases · ${totalCoins} coins sold · ₹${totalRupees.toLocaleString('en-IN')} revenue · ${pending.length} pending`;
+
     const t = document.getElementById('coinpurchasesTable');
-    t.innerHTML = '<tr><th>User Phone</th><th>Coins Bought</th><th>Amount Paid</th><th>Order ID</th><th>When</th></tr>';
-    if (!purchases.length) { t.innerHTML += '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink3)">No purchases yet</td></tr>'; return; }
-    purchases.forEach(p => {
+    t.innerHTML = '<tr><th>User Phone</th><th>Coins</th><th>Amount Paid</th><th>Order ID</th><th>Status</th><th>When</th></tr>';
+
+    if (!realPurchases.length && !pending.length) {
+      t.innerHTML += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">No purchases yet</td></tr>';
+      return;
+    }
+
+    // Show pending first (most likely to need attention)
+    pending.forEach(p => {
       const phone = uMap[p.user_id] ? '+91 '+uMap[p.user_id] : 'Unknown';
-      const rupees = coinToRupees[p.amount] ? '₹'+coinToRupees[p.amount] : '—';
-      t.innerHTML += `<tr>
+      const rupees = coinToRupeesMap[p.amount] ? '₹'+coinToRupeesMap[p.amount] : '—';
+      t.innerHTML += `<tr style="background:#fffbf0">
         <td style="font-weight:600">${phone}</td>
         <td><span class="badge b-purchase">${p.amount} coins</span></td>
-        <td style="font-weight:700;color:var(--green)">${rupees}</td>
-        <td style="font-size:12px;color:var(--ink3);font-family:monospace">${p.order_id||'—'}</td>
+        <td style="font-weight:700;color:var(--gold)">${rupees}</td>
+        <td style="font-size:11px;color:var(--ink3);font-family:monospace">${p.order_id||'—'}</td>
+        <td><span class="badge b-pending">Pending</span></td>
         <td style="font-size:12px;color:var(--ink3)">${timeAgo(p.created_at)}</td>
       </tr>`;
     });
+
+    // Show confirmed purchases
+    realPurchases.forEach(p => {
+      const phone = uMap[p.user_id] ? '+91 '+uMap[p.user_id] : 'Unknown';
+      const rupees = coinToRupeesMap[p.amount] ? '₹'+coinToRupeesMap[p.amount] : (p.description?.includes('posting plan') ? 'Plan' : '—');
+      t.innerHTML += `<tr>
+        <td style="font-weight:600">${phone}</td>
+        <td><span class="badge b-purchase">${p.amount > 0 ? p.amount+' coins' : p.description?.includes('posting plan') ? 'Plan' : '—'}</span></td>
+        <td style="font-weight:700;color:var(--green)">${rupees}</td>
+        <td style="font-size:11px;color:var(--ink3);font-family:monospace">${p.order_id||'—'}</td>
+        <td><span class="badge b-ok">Paid</span></td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(p.created_at)}</td>
+      </tr>`;
+    });
+
   } catch(e) { console.error('Coin purchases:', e); }
 }
 
