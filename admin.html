@@ -861,59 +861,57 @@ const coinToRupees = {50:175, 150:450, 500:1400, 1000:2500, 2000:4500, 15:20, 30
 
 async function loadCoinPurchases() {
   try {
-    // Fetch all purchase types — real purchases, pending, and legacy
-    const [purchases, pending] = await Promise.all([
+    const [purchases, allPending] = await Promise.all([
       supaGet('coin_transactions?type=eq.purchase&order=created_at.desc&select=*&limit=500'),
-      supaGet('coin_transactions?type=eq.purchase_pending&order=created_at.desc&select=*&limit=100'),
+      supaGet('coin_transactions?type=eq.purchase_pending&order=created_at.desc&select=*&limit=500'),
     ]);
 
-    // Separate real purchases from legacy credits
-    const realPurchases = purchases.filter(p => 
+    // Exclude legacy credits from real purchases
+    const realPurchases = purchases.filter(p =>
       !p.description || !p.description.includes('Legacy credit')
     );
-    const legacyCredits = purchases.filter(p => 
-      p.description && p.description.includes('Legacy credit')
-    );
 
-    // Coin-to-rupee map (new pricing + old pricing for history)
-    const coinToRupeesMap = {
-      50:175, 150:450, 500:1400, 1000:2500, 2000:4500,  // new pricing
-      15:20, 30:30, 40:40, 100:70, 200:125,              // old pricing
-    };
+    // Only show pending that do NOT have a matching purchase (truly orphaned)
+    const paidOrderIds = new Set(realPurchases.map(p => p.order_id).filter(Boolean));
+    const trulyPending = allPending.filter(p => p.order_id && !paidOrderIds.has(p.order_id));
 
-    // Get all user phones
+    // Price map — new and old pricing
+    const CM = {50:175,150:450,500:1400,1000:2500,2000:4500,15:20,30:30,40:40,100:70,200:125};
+
+    // Get user phones for all relevant transactions
     const allUids = [...new Set([
       ...realPurchases.map(p=>p.user_id),
-      ...pending.map(p=>p.user_id)
+      ...trulyPending.map(p=>p.user_id)
     ].filter(Boolean))];
-    const users = allUids.length > 0 
-      ? await supaGet('users?id=in.('+allUids.join(',')+')'+'&select=id,phone') 
+    const users = allUids.length > 0
+      ? await supaGet('users?id=in.('+allUids.join(',')+')'+'&select=id,phone')
       : [];
     const uMap = {};
     users.forEach(u => uMap[u.id] = u.phone);
 
-    // Totals (exclude legacy)
+    // Correct totals from DB ground truth
     const totalCoins = realPurchases.reduce((s,p)=>s+(p.amount||0),0);
-    const totalRupees = realPurchases.reduce((s,p)=>s+(coinToRupeesMap[p.amount]||0),0);
+    const totalRupees = realPurchases.reduce((s,p)=>s+(CM[p.amount]||0),0);
 
-    document.getElementById('totalCoinsInfo').textContent = 
-      `${realPurchases.length} purchases · ${totalCoins} coins sold · ₹${totalRupees.toLocaleString('en-IN')} revenue · ${pending.length} pending`;
+    document.getElementById('totalCoinsInfo').textContent =
+      `${realPurchases.length} purchases · ${totalCoins.toLocaleString('en-IN')} coins sold · ₹${totalRupees.toLocaleString('en-IN')} revenue${trulyPending.length > 0 ? ' · ' + trulyPending.length + ' pending' : ''}`;
 
     const t = document.getElementById('coinpurchasesTable');
     t.innerHTML = '<tr><th>User Phone</th><th>Coins</th><th>Amount Paid</th><th>Order ID</th><th>Status</th><th>When</th></tr>';
 
-    if (!realPurchases.length && !pending.length) {
+    if (!realPurchases.length && !trulyPending.length) {
       t.innerHTML += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">No purchases yet</td></tr>';
       return;
     }
 
-    // Show pending first
-    pending.forEach(p => {
+    // Truly pending first
+    trulyPending.forEach(p => {
       const phone = uMap[p.user_id] ? '+91 '+uMap[p.user_id] : 'Unknown';
-      const rupees = coinToRupeesMap[p.amount] ? '₹'+coinToRupeesMap[p.amount].toLocaleString('en-IN') : '—';
+      const coins = p.amount > 0 ? p.amount+' coins' : 'Plan';
+      const rupees = CM[p.amount] ? '₹'+CM[p.amount].toLocaleString('en-IN') : '—';
       t.innerHTML += `<tr>
         <td style="font-weight:600">${phone}</td>
-        <td><span class="badge b-purchase">${p.amount} coins</span></td>
+        <td><span class="badge b-purchase">${coins}</span></td>
         <td style="font-weight:700;color:var(--green)">${rupees}</td>
         <td style="font-size:11px;color:var(--ink3);font-family:monospace">${p.order_id||'—'}</td>
         <td><span class="badge b-pending">Pending</span></td>
@@ -921,11 +919,11 @@ async function loadCoinPurchases() {
       </tr>`;
     });
 
-    // Show confirmed purchases
+    // Confirmed purchases
     realPurchases.forEach(p => {
       const phone = uMap[p.user_id] ? '+91 '+uMap[p.user_id] : 'Unknown';
-      const rupees = coinToRupeesMap[p.amount] ? '₹'+coinToRupeesMap[p.amount].toLocaleString('en-IN') : (p.description?.includes('posting plan') ? 'Plan' : '—');
       const coins = p.amount > 0 ? p.amount+' coins' : (p.description?.includes('posting plan') ? 'Plan' : '—');
+      const rupees = CM[p.amount] ? '₹'+CM[p.amount].toLocaleString('en-IN') : (p.description?.includes('posting plan') ? 'Plan' : '—');
       t.innerHTML += `<tr>
         <td style="font-weight:600">${phone}</td>
         <td><span class="badge b-purchase">${coins}</span></td>
