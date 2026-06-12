@@ -591,7 +591,7 @@ async function loadDashboard() {
       supaCount('users'),
       supaCount('contact_unlocks'),
       supaCount('listings?created_at=gte.' + since60),
-      supaGet('coin_transactions?select=amount,description&type=eq.purchase')
+      supaGet('coin_transactions?select=amount,description&type=eq.purchase'),
     ]);
 
     document.getElementById('s-listings').textContent = activeListings;
@@ -600,8 +600,9 @@ async function loadDashboard() {
     document.getElementById('s-users-sub').textContent = 'Registered users';
     const realPurchases = purchases.filter(p => !p.description || !p.description.includes('Legacy credit'));
     const totalCoins = realPurchases.reduce((s,p)=>s+(p.amount||0),0);
-    document.getElementById('s-revenue').textContent = totalCoins;
-    document.getElementById('s-revenue-sub').textContent = realPurchases.length + ' transactions';
+    const totalRupees = realPurchases.reduce((s,p)=>s+(coinToRupees[p.amount]||0),0);
+    document.getElementById('s-revenue').textContent = '₹' + totalRupees.toLocaleString('en-IN');
+    document.getElementById('s-revenue-sub').textContent = realPurchases.length + ' purchases · ' + totalCoins + ' coins sold';
     document.getElementById('s-unlocks').textContent = totalUnlocks;
     document.getElementById('s-unlocks-sub').textContent = 'Contacts revealed';
 
@@ -854,7 +855,7 @@ async function viewUserDetail(userId, phone) {
 }
 
 // ── COIN PURCHASES ────────────────────────────────────────
-const coinToRupees = {15:20, 30:30, 50:40, 100:70, 200:125};
+const coinToRupees = {50:175, 150:450, 500:1400, 1000:2500, 2000:4500, 15:20, 30:30, 100:70, 200:125};
 
 async function loadCoinPurchases() {
   try {
