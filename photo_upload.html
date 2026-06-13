@@ -565,7 +565,7 @@ function handleFiles(input) {
       const origText = btn.textContent;
       const _uCheck = getUser();
       const _phCheck = String(_uCheck?.phone||'').replace(/\D/g,'').slice(-10);
-      const isOwnerCheck = _phCheck === '9538584612' || _phCheck === '8001517396' || _phCheck === '7208304566' || _phCheck === '9225248222' || _uCheck?.isOwner === true || _uCheck?.isOwner === 'true';
+      const isOwnerCheck = _phCheck === '9538584612' || _phCheck === '8001517396' || _phCheck === '9225248222' || _uCheck?.isOwner === true || _uCheck?.isOwner === 'true';
       if (!isOwnerCheck) {
         btn.textContent = '🔍 Checking photo…';
         btn.disabled = true;
@@ -584,7 +584,7 @@ function handleFiles(input) {
       // Owner bypass — skip all moderation checks
       const _u = getUser();
       const _ph = String(_u?.phone||'').replace(/\D/g,'').slice(-10);
-      const isOwnerUpload = _ph === '9538584612' || _ph === '8001517396' || _ph === '7208304566' || _ph === '9225248222' || _u?.isOwner === true || _u?.isOwner === 'true';
+      const isOwnerUpload = _ph === '9538584612' || _ph === '8001517396' || _ph === '9225248222' || _u?.isOwner === true || _u?.isOwner === 'true';
 
       if (isOwnerUpload) {
         // Owner: skip checking, add directly
