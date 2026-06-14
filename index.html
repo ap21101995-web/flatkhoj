@@ -3635,5 +3635,114 @@ setInterval(async () => {
 }, 30000);
 </script>
 
-</body>
+<!-- Floating Broker Widget -->
+<div id="brokerWidget" style="position:fixed;bottom:100px;right:20px;z-index:888;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;" onclick="handleBrokerClick(event)">
+  <div style="position:relative;width:64px;height:64px;">
+    <!-- Face circle -->
+    <svg width="64" height="64" viewBox="0 0 64 64" style="display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.25))">
+      <!-- Head -->
+      <circle cx="32" cy="28" r="22" fill="#0f7b6c"/>
+      <!-- Eyes -->
+      <circle cx="24" cy="24" r="3" fill="white"/>
+      <circle cx="40" cy="24" r="3" fill="white"/>
+      <circle cx="25" cy="25" r="1.5" fill="#0a5c50"/>
+      <circle cx="41" cy="25" r="1.5" fill="#0a5c50"/>
+      <!-- Smile -->
+      <path d="M22 33 Q32 41 42 33" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- Tie/collar hint -->
+      <path d="M27 48 L32 42 L37 48 L32 62 Z" fill="#0f7b6c"/>
+      <circle cx="32" cy="50" r="16" fill="#0a5c50" opacity="0.4"/>
+    </svg>
+    <!-- Broker label -->
+    <div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:#0f7b6c;color:white;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;white-space:nowrap;letter-spacing:0.5px;font-family:-apple-system,'Segoe UI',sans-serif;box-shadow:0 2px 6px rgba(0,0,0,0.2)">BROKER</div>
+    <!-- Pulse ring -->
+    <div id="brokerPulse" style="position:absolute;top:-4px;left:-4px;width:72px;height:72px;border-radius:50%;border:2px solid #0f7b6c;opacity:0.6;animation:brokerPulse 2s ease-out infinite;pointer-events:none;"></div>
+  </div>
+</div>
+
+<style>
+@keyframes brokerPulse {
+  0% { transform:scale(0.95); opacity:0.6; }
+  70% { transform:scale(1.2); opacity:0; }
+  100% { transform:scale(1.2); opacity:0; }
+}
+</style>
+
+<script>
+(function() {
+  const el = document.getElementById('brokerWidget');
+  let isDragging = false;
+  let didDrag = false;
+  let startX, startY, initLeft, initTop;
+
+  // Position from right/bottom → convert to left/top for dragging
+  function toAbsolute() {
+    const rect = el.getBoundingClientRect();
+    el.style.left = rect.left + 'px';
+    el.style.top = rect.top + 'px';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+  }
+
+  // Mouse drag
+  el.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    isDragging = true;
+    didDrag = false;
+    el.style.cursor = 'grabbing';
+    toAbsolute();
+    startX = e.clientX - el.getBoundingClientRect().left;
+    startY = e.clientY - el.getBoundingClientRect().top;
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    didDrag = true;
+    const x = e.clientX - startX;
+    const y = e.clientY - startY;
+    el.style.left = Math.max(0, Math.min(window.innerWidth - 80, x)) + 'px';
+    el.style.top = Math.max(0, Math.min(window.innerHeight - 100, y)) + 'px';
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (isDragging) { isDragging = false; el.style.cursor = 'grab'; }
+  });
+
+  // Touch drag
+  el.addEventListener('touchstart', function(e) {
+    isDragging = true;
+    didDrag = false;
+    toAbsolute();
+    const t = e.touches[0];
+    startX = t.clientX - el.getBoundingClientRect().left;
+    startY = t.clientY - el.getBoundingClientRect().top;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', function(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    didDrag = true;
+    const t = e.touches[0];
+    const x = t.clientX - startX;
+    const y = t.clientY - startY;
+    el.style.left = Math.max(0, Math.min(window.innerWidth - 80, x)) + 'px';
+    el.style.top = Math.max(0, Math.min(window.innerHeight - 100, y)) + 'px';
+  }, { passive: false });
+
+  el.addEventListener('touchend', function() { isDragging = false; });
+})();
+
+function handleBrokerClick(e) {
+  if (window._brokerDidDrag) { window._brokerDidDrag = false; return; }
+  window.location.href = 'broker.html';
+}
+
+// Track drag state for click suppression
+const _bw = document.getElementById('brokerWidget');
+_bw.addEventListener('mousedown', function() { window._brokerDidDrag = false; });
+_bw.addEventListener('mousemove', function() { window._brokerDidDrag = true; });
+_bw.addEventListener('touchstart', function() { window._brokerDidDrag = false; }, {passive:true});
+_bw.addEventListener('touchmove', function() { window._brokerDidDrag = true; }, {passive:true});
+</script>
+<!-- End Floating Broker Widget -->
 </html>
