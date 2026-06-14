@@ -381,8 +381,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-teal" id="bm-toggle" onclick="toggleBrokerActive()">Activate</button>
               <button class="btn btn-ghost" onclick="resetBrokerCount()">Reset monthly count</button>
+              <button class="btn btn-ghost" onclick="upgradeBrokerPlan()">Change plan</button>
               <button class="btn btn-red" onclick="deleteBroker()">Delete broker</button>
             </div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:8px">PAYMENT HISTORY</div>
+            <table id="bm-payments-table" style="width:100%"></table>
           </div>
           <div>
             <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:8px">RECENT LEADS SENT</div>
@@ -1204,18 +1209,22 @@ const PLAN_LABELS = { starter:'Starter', growth:'Growth', pro:'Pro', elite:'Elit
 
 async function loadBrokers() {
   try {
-    const [brokers, leads] = await Promise.all([
+    const [brokers, leads, payments] = await Promise.all([
       supaGet('brokers?select=*&order=created_at.desc'),
       supaGet('broker_leads?select=broker_id,is_paid_lead,sent_at&order=sent_at.desc'),
+      supaGet('broker_payments?select=amount,payment_date,plan,billing_cycle&order=payment_date.desc'),
     ]);
     allBrokers = brokers;
 
     // Stats
     const active = brokers.filter(b=>b.is_active);
-    const monthlyRev = active.reduce((s,b)=>{
-      const key = `${b.plan}_${b.billing_cycle||'monthly'}`;
-      return s + (PLAN_PRICES[key]||0);
-    }, 0);
+
+    // ACTUAL revenue received (from broker_payments table)
+    const totalRevenue = payments.reduce((s,p)=>s+(p.amount||0),0);
+    const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0);
+    const revenueThisMonth = payments
+      .filter(p=>new Date(p.payment_date)>=thisMonth)
+      .reduce((s,p)=>s+(p.amount||0),0);
 
     // Leads this month
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
@@ -1229,8 +1238,8 @@ async function loadBrokers() {
 
     document.getElementById('bs-active').textContent = active.length;
     document.getElementById('bs-active-sub').textContent = brokers.length + ' total registered';
-    document.getElementById('bs-revenue').textContent = '₹' + monthlyRev.toLocaleString('en-IN');
-    document.getElementById('bs-revenue-sub').textContent = 'If all renew this month';
+    document.getElementById('bs-revenue').textContent = '₹' + revenueThisMonth.toLocaleString('en-IN');
+    document.getElementById('bs-revenue-sub').textContent = '₹'+totalRevenue.toLocaleString('en-IN')+' total received · '+payments.length+' payments';
     document.getElementById('bs-leads').textContent = paidLeads.length;
     document.getElementById('bs-leads-sub').textContent = leadsThisMonth.length + ' total (paid + free)';
     document.getElementById('bs-fill').textContent = fillRate + '%';
@@ -1435,20 +1444,59 @@ function openBrokerModal(brokerId) {
 
 async function loadBrokerLeads(brokerId) {
   try {
-    const leads = await supaGet(`broker_leads?broker_id=eq.${brokerId}&order=sent_at.desc&limit=10&select=*`);
-    const t = document.getElementById('bm-leads-table');
-    if(!leads.length){
-      t.innerHTML = '<tr><td style="padding:8px;color:var(--ink3);font-size:12px">No leads sent yet</td></tr>';
-      return;
+    // Load payment history
+    const payments = await supaGet(`broker_payments?broker_id=eq.${brokerId}&order=payment_date.desc&select=*`);
+    const pt = document.getElementById('bm-payments-table');
+    if(!payments.length){
+      pt.innerHTML = '<tr><td style="padding:8px;color:var(--ink3);font-size:12px">No payments recorded yet</td></tr>';
+    } else {
+      pt.innerHTML = '<tr><th>Amount</th><th>Plan</th><th>Date</th></tr>' +
+        payments.map(p=>`<tr>
+          <td style="font-weight:700;color:var(--green)">₹${(p.amount||0).toLocaleString('en-IN')}</td>
+          <td style="font-size:12px">${p.plan||'—'} ${p.billing_cycle||'monthly'}</td>
+          <td style="font-size:12px;color:var(--ink3)">${new Date(p.payment_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+        </tr>`).join('');
     }
-    t.innerHTML = '<tr><th>Listing ID</th><th>Type</th><th>Sent</th><th>Status</th></tr>' +
-      leads.map(l=>`<tr>
-        <td style="font-size:11px;font-family:monospace;color:var(--ink3)">${(l.listing_id||'').slice(0,8)}…</td>
-        <td>${l.is_paid_lead?'<span class="badge b-ok">Paid</span>':'<span class="badge b-pending">Free</span>'}</td>
-        <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.sent_at)}</td>
-        <td style="font-size:12px">${l.whatsapp_status||'sent'}</td>
-      </tr>`).join('');
-  } catch(e) {}
+
+    // Load recent leads
+    const leads = await supaGet(`broker_leads?broker_id=eq.${brokerId}&order=sent_at.desc&limit=10&select=*`);
+    const lt = document.getElementById('bm-leads-table');
+    if(!leads.length){
+      lt.innerHTML = '<tr><td style="padding:8px;color:var(--ink3);font-size:12px">No leads sent yet</td></tr>';
+    } else {
+      lt.innerHTML = '<tr><th>Listing ID</th><th>Type</th><th>Sent</th><th>Status</th></tr>' +
+        leads.map(l=>`<tr>
+          <td style="font-size:11px;font-family:monospace;color:var(--ink3)">${(l.listing_id||'').slice(0,8)}…</td>
+          <td>${l.is_paid_lead?'<span class="badge b-ok">Paid</span>':'<span class="badge b-pending">Free</span>'}</td>
+          <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.sent_at)}</td>
+          <td style="font-size:12px">${l.whatsapp_status||'sent'}</td>
+        </tr>`).join('');
+    }
+  } catch(e) { console.error('loadBrokerLeads:', e); }
+}
+
+async function upgradeBrokerPlan() {
+  const b = allBrokers.find(x=>x.id===selectedBrokerId);
+  if(!b) return;
+  const plans = ['starter_monthly','growth_monthly','pro_monthly','elite_monthly','starter_annual','growth_annual','pro_annual','elite_annual'];
+  const prices = {starter_monthly:1299,growth_monthly:2199,pro_monthly:2999,elite_monthly:3999,starter_annual:11691,growth_annual:19791,pro_annual:26991,elite_annual:35991};
+  const contacts = {starter:10,growth:20,pro:30,elite:50};
+  const choice = prompt(`Current plan: ${b.plan} ${b.billing_cycle}\n\nEnter new plan key:\n${plans.map(p=>`${p} = ₹${prices[p]}`).join('\n')}`);
+  if(!choice || !plans.includes(choice)) { alert('Invalid plan key'); return; }
+  const [newPlan, newCycle] = choice.split('_').reduce((a,v,i,arr)=>i<arr.length-1?[...a,v]:[a.slice(0,-1).join('_')||a[0],v],[]);
+  const planName = choice.replace(/_monthly|_annual/,'');
+  const cycle = choice.includes('annual')?'annual':'monthly';
+  const ok = await supaPatch('brokers','id=eq.'+selectedBrokerId,{
+    plan: planName,
+    billing_cycle: cycle,
+    contacts_per_month: contacts[planName]||10,
+    subscription_status: 'pending',
+    is_active: false,
+  });
+  if(ok){
+    toast('Plan updated — broker must complete payment to activate new plan','ok');
+    closeBrokerModal(); loadBrokers();
+  } else toast('Update failed','err');
 }
 
 async function toggleBrokerActive() {
