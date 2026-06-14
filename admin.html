@@ -1292,77 +1292,84 @@ async function loadBrokers() {
 function renderForecast(activeBrokers) {
   const container = document.getElementById('forecastContainer');
   if(!activeBrokers.length){
-    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">No active brokers yet.</div>';
+    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">No active brokers yet. Forecast will appear once brokers subscribe.</div>';
     return;
   }
 
-  // Group by area — calculate demand periods
   const now = new Date();
-  const areaMap = {};
+
+  // Build timeline: for each broker, find their next billing date
+  // and add their remaining quota per area to that date bucket
+  const timeline = {}; // { 'dateKey': { area: { remaining, brokers: [] } } }
 
   activeBrokers.forEach(b => {
     if(!b.billing_cycle_start) return;
+    const remaining = (b.contacts_per_month||0) - (b.contacts_sent_this_month||0);
+    if(remaining <= 0) return; // quota fully met — nothing needed
+
+    // Calculate next billing date from cycle start
     const cycleStart = new Date(b.billing_cycle_start);
-    // Find next billing date
-    const nextBilling = new Date(cycleStart);
-    while(nextBilling <= now) {
-      nextBilling.setMonth(nextBilling.getMonth() + (b.billing_cycle==='annual'?12:1));
-    }
-    const remaining = b.contacts_per_month - (b.contacts_sent_this_month||0);
-    if(remaining <= 0) return;
+    const next = new Date(cycleStart);
+    const monthsToAdd = b.billing_cycle==='annual' ? 12 : 1;
+    while(next <= now) next.setMonth(next.getMonth() + monthsToAdd);
+
+    const dateKey = next.toISOString().split('T')[0]; // YYYY-MM-DD for sorting
+    const dateLabel = next.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
+
+    if(!timeline[dateKey]) timeline[dateKey] = { label: dateLabel, areas: {} };
 
     (b.areas||[]).forEach(area => {
-      if(!areaMap[area]) areaMap[area] = [];
-      areaMap[area].push({
-        brokerName: b.name,
-        phone: b.phone,
-        remaining,
-        quota: b.contacts_per_month,
-        nextBilling,
-        plan: b.plan,
-      });
+      if(!timeline[dateKey].areas[area]) {
+        timeline[dateKey].areas[area] = { remaining: 0, brokerCount: 0, brokerNames: [] };
+      }
+      timeline[dateKey].areas[area].remaining += remaining;
+      timeline[dateKey].areas[area].brokerCount += 1;
+      timeline[dateKey].areas[area].brokerNames.push(b.name||b.phone);
     });
   });
 
-  if(!Object.keys(areaMap).length){
-    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">All broker quotas filled for this month.</div>';
+  const sortedDates = Object.keys(timeline).sort();
+
+  if(!sortedDates.length){
+    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">All broker quotas are fully met for this month. 🎉</div>';
     return;
   }
 
-  // Sort areas by total demand
-  const sorted = Object.entries(areaMap).sort((a,b)=>
-    b[1].reduce((s,x)=>s+x.remaining,0) - a[1].reduce((s,x)=>s+x.remaining,0)
-  );
-
-  // Group by next billing date for timeline view
-  const byDate = {};
-  sorted.forEach(([area, brokers]) => {
-    brokers.forEach(b => {
-      const dateKey = b.nextBilling.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
-      if(!byDate[dateKey]) byDate[dateKey] = {};
-      if(!byDate[dateKey][area]) byDate[dateKey][area] = 0;
-      byDate[dateKey][area] += b.remaining;
-    });
-  });
-
-  // Sort dates chronologically
-  const sortedDates = Object.keys(byDate).sort((a,b)=>new Date(a)-new Date(b));
-
+  // Calculate days until each deadline
   let html = '';
-  sortedDates.forEach(date => {
-    const areas = Object.entries(byDate[date]).sort((a,b)=>b[1]-a[1]);
-    const total = areas.reduce((s,x)=>s+x[1],0);
-    html += `<div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:var(--teal-light);margin-bottom:8px;padding:6px 10px;background:var(--teal-bg);border-radius:8px;display:inline-block">
-        📅 By ${date} — ${total} paid leads needed
+  sortedDates.forEach((dateKey, idx) => {
+    const bucket = timeline[dateKey];
+    const deadline = new Date(dateKey);
+    const daysLeft = Math.ceil((deadline - now) / (1000*60*60*24));
+    const urgency = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--gold)' : 'var(--teal-light)';
+    const urgencyBg = daysLeft <= 3 ? 'var(--red-bg)' : daysLeft <= 7 ? 'var(--gold-bg)' : 'var(--teal-bg)';
+
+    const areas = Object.entries(bucket.areas).sort((a,b)=>b[1].remaining-a[1].remaining);
+    const totalRemaining = areas.reduce((s,[,v])=>s+v.remaining,0);
+
+    html += `<div style="margin-bottom:20px;border:1px solid var(--border2);border-radius:12px;overflow:hidden">
+      <div style="background:${urgencyBg};padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:${urgency}">📅 Deadline: ${bucket.label}</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:2px">${daysLeft} day${daysLeft!==1?'s':''} from now · ${totalRemaining} paid leads still needed</div>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:${urgency}">${totalRemaining}</div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-        ${areas.map(([area,count])=>`
-          <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px">
-            <span style="font-weight:600">${area}</span>
-            <span style="color:var(--ink3);margin-left:4px">${count} leads</span>
-          </div>`).join('')}
-      </div>
+      <table style="width:100%">
+        <tr>
+          <th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:left">Area</th>
+          <th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:center">Leads Still Needed</th>
+          <th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:left">Brokers Waiting</th>
+        </tr>
+        ${areas.map(([area, data])=>`
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 16px;font-size:13px;font-weight:600">${area}</td>
+            <td style="padding:8px 16px;text-align:center">
+              <span style="background:${urgencyBg};color:${urgency};font-weight:700;font-size:13px;padding:2px 10px;border-radius:20px">${data.remaining}</span>
+            </td>
+            <td style="padding:8px 16px;font-size:12px;color:var(--ink3)">${data.brokerNames.join(', ')}</td>
+          </tr>`).join('')}
+      </table>
     </div>`;
   });
 
