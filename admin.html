@@ -66,6 +66,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .b-resolved { background:var(--green-bg); color:var(--green); }
 .b-purchase { background:var(--gold-bg); color:var(--gold); }
 .b-unlock { background:var(--teal-bg); color:var(--teal-light); }
+.b-blue { background:var(--blue-bg); color:var(--blue); }
 .btn { padding:6px 14px; border-radius:6px; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; }
 .btn-ghost { background:var(--bg3); color:var(--ink2); border:1px solid var(--border2); }
 .btn-ghost:hover { color:var(--ink); }
@@ -113,6 +114,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="nav-section">Analytics</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
     <div class="nav-item" onclick="go('unlocks',this)"><span>🔓</span> Contact Unlocks</div>
+    <div class="nav-item" onclick="go('brokers',this)"><span>🏢</span> Brokers <span class="nav-badge" id="brokerbadge" style="display:none">0</span></div>
     <div class="nav-section">Moderation</div>
     <div class="nav-item" onclick="go('sold',this)"><span>🔴</span> Sold Reports <span class="nav-badge" id="soldbadge" style="display:none">0</span></div>
     <div class="nav-item" onclick="go('reports',this)"><span>🚩</span> Reports <span class="nav-badge" id="rbadge" style="display:none">0</span></div>
@@ -329,6 +331,67 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <!-- BROKERS -->
+    <div class="page" id="pg-brokers">
+      <!-- Summary stats -->
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card"><div class="stat-label">Active Brokers</div><div class="stat-value" id="bs-active">—</div><div class="stat-sub" id="bs-active-sub">Loading…</div></div>
+        <div class="stat-card"><div class="stat-label">Monthly Revenue</div><div class="stat-value" id="bs-revenue">—</div><div class="stat-sub" id="bs-revenue-sub">From subscriptions</div></div>
+        <div class="stat-card"><div class="stat-label">Leads Sent</div><div class="stat-value" id="bs-leads">—</div><div class="stat-sub" id="bs-leads-sub">This month</div></div>
+        <div class="stat-card"><div class="stat-label">Quota Fill Rate</div><div class="stat-value" id="bs-fill">—</div><div class="stat-sub" id="bs-fill-sub">Avg across brokers</div></div>
+      </div>
+
+      <!-- Area demand forecast -->
+      <div class="table-card" style="margin-bottom:16px">
+        <div class="table-header">
+          <div class="ttitle">📍 Area Demand Forecast</div>
+          <div style="font-size:12px;color:var(--ink3)">Flat Wanted + Okay with Brokerage listings needed per area</div>
+        </div>
+        <div id="forecastContainer" style="padding:16px"></div>
+      </div>
+
+      <!-- Broker list -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="ttitle">All Brokers</div>
+          <button class="btn btn-teal" onclick="loadBrokers()">↻ Refresh</button>
+        </div>
+        <table id="brokersTable"></table>
+      </div>
+    </div>
+
+    <!-- BROKER DETAIL MODAL -->
+    <div class="modal-backdrop" id="brokerModal" style="display:none" onclick="if(event.target===this)closeBrokerModal()">
+      <div class="modal-box" style="max-width:600px">
+        <div class="modal-head">
+          <div>
+            <div class="modal-title" id="bm-name">Broker</div>
+            <div class="modal-sub" id="bm-sub">Details</div>
+          </div>
+          <button class="modal-close" onclick="closeBrokerModal()">×</button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="bm-details"></div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:8px">SUBSCRIBED AREAS</div>
+            <div id="bm-areas" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:8px">ACTIONS</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-teal" id="bm-toggle" onclick="toggleBrokerActive()">Activate</button>
+              <button class="btn btn-ghost" onclick="resetBrokerCount()">Reset monthly count</button>
+              <button class="btn btn-red" onclick="deleteBroker()">Delete broker</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:8px">RECENT LEADS SENT</div>
+            <table id="bm-leads-table" style="width:100%"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- REPORTS -->
     <div class="page" id="pg-sold">
       <div class="topbar"><div class="topbar-title">🔴 Sold Reports</div></div>
@@ -465,7 +528,7 @@ function go(page, el) {
   document.getElementById('pg-' + page).classList.add('active');
   const titles = { dashboard:'Dashboard', listings:'All Listings', users:'All Users', coinpurchases:'Coin Purchases', unlocks:'Contact Unlocks', reports:'Reports', support:'Support' };
   document.getElementById('topbarTitle').textContent = titles[page] || page;
-  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, unlookup:()=>{}, useractivity:loadUserActivity, sold:loadSoldReports, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport };
+  const loaders = { dashboard:loadDashboard, listings:loadListings, users:loadUsers, usermgmt:()=>{}, unlookup:()=>{}, useractivity:loadUserActivity, sold:loadSoldReports, coinpurchases:loadCoinPurchases, unlocks:loadUnlocks, reports:loadReports, support:loadSupport, brokers:loadBrokers };
   if (loaders[page]) loaders[page]();
 }
 
@@ -1126,6 +1189,295 @@ async function toggleSupportStatus(id, currentStatus, btn) {
     btn.disabled = false;
     btn.textContent = currentStatus === 'resolved' ? 'Reopen' : 'Mark resolved';
   }
+}
+
+// ── BROKERS ─────────────────────────────────────────────────
+let allBrokers = [];
+let selectedBrokerId = null;
+
+const PLAN_PRICES = {
+  starter_monthly:1299, growth_monthly:2199, pro_monthly:2999, elite_monthly:3999,
+  starter_annual:11691, growth_annual:19791, pro_annual:26991, elite_annual:35991,
+};
+const PLAN_CONTACTS = { starter:10, growth:20, pro:30, elite:50 };
+const PLAN_LABELS = { starter:'Starter', growth:'Growth', pro:'Pro', elite:'Elite' };
+
+async function loadBrokers() {
+  try {
+    const [brokers, leads] = await Promise.all([
+      supaGet('brokers?select=*&order=created_at.desc'),
+      supaGet('broker_leads?select=broker_id,is_paid_lead,sent_at&order=sent_at.desc'),
+    ]);
+    allBrokers = brokers;
+
+    // Stats
+    const active = brokers.filter(b=>b.is_active);
+    const monthlyRev = active.reduce((s,b)=>{
+      const key = `${b.plan}_${b.billing_cycle||'monthly'}`;
+      return s + (PLAN_PRICES[key]||0);
+    }, 0);
+
+    // Leads this month
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+    const leadsThisMonth = leads.filter(l=>new Date(l.sent_at)>=monthStart);
+    const paidLeads = leadsThisMonth.filter(l=>l.is_paid_lead);
+
+    // Fill rate
+    const totalQuota = active.reduce((s,b)=>s+(b.contacts_per_month||0),0);
+    const totalSent = active.reduce((s,b)=>s+(b.contacts_sent_this_month||0),0);
+    const fillRate = totalQuota > 0 ? Math.round(totalSent/totalQuota*100) : 0;
+
+    document.getElementById('bs-active').textContent = active.length;
+    document.getElementById('bs-active-sub').textContent = brokers.length + ' total registered';
+    document.getElementById('bs-revenue').textContent = '₹' + monthlyRev.toLocaleString('en-IN');
+    document.getElementById('bs-revenue-sub').textContent = 'If all renew this month';
+    document.getElementById('bs-leads').textContent = paidLeads.length;
+    document.getElementById('bs-leads-sub').textContent = leadsThisMonth.length + ' total (paid + free)';
+    document.getElementById('bs-fill').textContent = fillRate + '%';
+    document.getElementById('bs-fill-sub').textContent = totalSent + ' of ' + totalQuota + ' quota used';
+
+    // Broker badge
+    const bb = document.getElementById('brokerbadge');
+    if(bb){ bb.textContent = active.length; bb.style.display = active.length > 0 ? 'inline' : 'none'; }
+
+    // Render forecast
+    renderForecast(active);
+
+    // Render broker table
+    const t = document.getElementById('brokersTable');
+    t.innerHTML = '<tr><th>Name</th><th>Phone</th><th>Plan</th><th>Areas</th><th>Quota</th><th>Billing</th><th>Status</th><th>Action</th></tr>';
+    if(!brokers.length){
+      t.innerHTML += '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink3)">No brokers yet</td></tr>';
+      return;
+    }
+    brokers.forEach(b=>{
+      const planKey = (b.plan||'') + '_' + (b.billing_cycle||'monthly');
+      const price = PLAN_PRICES[planKey] || 0;
+      const cycleLabel = b.billing_cycle==='annual' ? '/yr' : '/mo';
+      const sent = b.contacts_sent_this_month || 0;
+      const quota = b.contacts_per_month || 0;
+      const pct = quota > 0 ? Math.round(sent/quota*100) : 0;
+      const statusBadge = b.is_active
+        ? `<span class="badge b-ok">Active</span>`
+        : `<span class="badge b-red">${b.subscription_status||'Inactive'}</span>`;
+      const nextBilling = b.billing_cycle_start ? (() => {
+        const d = new Date(b.billing_cycle_start);
+        const next = new Date(d);
+        next.setMonth(next.getMonth() + (b.billing_cycle==='annual'?12:1));
+        return next.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+      })() : '—';
+
+      t.innerHTML += `<tr>
+        <td style="font-weight:600">${b.name||'—'}</td>
+        <td>+91 ${b.phone}</td>
+        <td>
+          <span class="badge b-blue">${PLAN_LABELS[b.plan]||b.plan} ${b.billing_cycle==='annual'?'Annual':'Monthly'}</span>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">₹${price.toLocaleString('en-IN')}${cycleLabel}</div>
+        </td>
+        <td style="font-size:12px;color:var(--ink2)">${(b.areas||[]).length} areas</td>
+        <td>
+          <div style="font-size:13px;font-weight:600">${sent}/${quota}</div>
+          <div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;width:80px">
+            <div style="height:4px;background:var(--teal-light);border-radius:2px;width:${pct}%"></div>
+          </div>
+        </td>
+        <td style="font-size:12px;color:var(--ink3)">Renews ${nextBilling}</td>
+        <td>${statusBadge}</td>
+        <td><button class="btn btn-ghost" onclick="openBrokerModal('${b.id}')">View →</button></td>
+      </tr>`;
+    });
+  } catch(e) { console.error('loadBrokers:', e); }
+}
+
+function renderForecast(activeBrokers) {
+  const container = document.getElementById('forecastContainer');
+  if(!activeBrokers.length){
+    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">No active brokers yet.</div>';
+    return;
+  }
+
+  // Group by area — calculate demand periods
+  const now = new Date();
+  const areaMap = {};
+
+  activeBrokers.forEach(b => {
+    if(!b.billing_cycle_start) return;
+    const cycleStart = new Date(b.billing_cycle_start);
+    // Find next billing date
+    const nextBilling = new Date(cycleStart);
+    while(nextBilling <= now) {
+      nextBilling.setMonth(nextBilling.getMonth() + (b.billing_cycle==='annual'?12:1));
+    }
+    const remaining = b.contacts_per_month - (b.contacts_sent_this_month||0);
+    if(remaining <= 0) return;
+
+    (b.areas||[]).forEach(area => {
+      if(!areaMap[area]) areaMap[area] = [];
+      areaMap[area].push({
+        brokerName: b.name,
+        phone: b.phone,
+        remaining,
+        quota: b.contacts_per_month,
+        nextBilling,
+        plan: b.plan,
+      });
+    });
+  });
+
+  if(!Object.keys(areaMap).length){
+    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">All broker quotas filled for this month.</div>';
+    return;
+  }
+
+  // Sort areas by total demand
+  const sorted = Object.entries(areaMap).sort((a,b)=>
+    b[1].reduce((s,x)=>s+x.remaining,0) - a[1].reduce((s,x)=>s+x.remaining,0)
+  );
+
+  // Group by next billing date for timeline view
+  const byDate = {};
+  sorted.forEach(([area, brokers]) => {
+    brokers.forEach(b => {
+      const dateKey = b.nextBilling.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+      if(!byDate[dateKey]) byDate[dateKey] = {};
+      if(!byDate[dateKey][area]) byDate[dateKey][area] = 0;
+      byDate[dateKey][area] += b.remaining;
+    });
+  });
+
+  // Sort dates chronologically
+  const sortedDates = Object.keys(byDate).sort((a,b)=>new Date(a)-new Date(b));
+
+  let html = '';
+  sortedDates.forEach(date => {
+    const areas = Object.entries(byDate[date]).sort((a,b)=>b[1]-a[1]);
+    const total = areas.reduce((s,x)=>s+x[1],0);
+    html += `<div style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--teal-light);margin-bottom:8px;padding:6px 10px;background:var(--teal-bg);border-radius:8px;display:inline-block">
+        📅 By ${date} — ${total} paid leads needed
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        ${areas.map(([area,count])=>`
+          <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px">
+            <span style="font-weight:600">${area}</span>
+            <span style="color:var(--ink3);margin-left:4px">${count} leads</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function openBrokerModal(brokerId) {
+  const b = allBrokers.find(x=>x.id===brokerId);
+  if(!b) return;
+  selectedBrokerId = brokerId;
+
+  document.getElementById('bm-name').textContent = b.name || 'Broker';
+  document.getElementById('bm-sub').textContent = '+91 ' + b.phone + ' · ' + (b.whatsapp_number ? 'WhatsApp: +91 '+b.whatsapp_number : '');
+
+  const planKey = (b.plan||'') + '_' + (b.billing_cycle||'monthly');
+  const price = PLAN_PRICES[planKey] || 0;
+  const cycleLabel = b.billing_cycle==='annual' ? '/year' : '/month';
+  const nextBilling = b.billing_cycle_start ? (() => {
+    const d = new Date(b.billing_cycle_start);
+    const next = new Date(d);
+    next.setMonth(next.getMonth() + (b.billing_cycle==='annual'?12:1));
+    return next.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  })() : '—';
+
+  document.getElementById('bm-details').innerHTML = `
+    <div style="background:var(--bg3);border-radius:8px;padding:12px">
+      <div style="font-size:11px;color:var(--ink3);font-weight:700;margin-bottom:4px">PLAN</div>
+      <div style="font-weight:700">${PLAN_LABELS[b.plan]||b.plan} ${b.billing_cycle==='annual'?'Annual':'Monthly'}</div>
+      <div style="font-size:12px;color:var(--ink3)">₹${price.toLocaleString('en-IN')}${cycleLabel}</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:12px">
+      <div style="font-size:11px;color:var(--ink3);font-weight:700;margin-bottom:4px">QUOTA</div>
+      <div style="font-weight:700">${b.contacts_sent_this_month||0} / ${b.contacts_per_month||0} used</div>
+      <div style="font-size:12px;color:var(--ink3)">${(b.contacts_per_month||0)-(b.contacts_sent_this_month||0)} remaining</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:12px">
+      <div style="font-size:11px;color:var(--ink3);font-weight:700;margin-bottom:4px">STATUS</div>
+      <div style="font-weight:700">${b.subscription_status||'—'}</div>
+      <div style="font-size:12px;color:var(--ink3)">${b.is_active?'✅ Active':'❌ Inactive'}</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:12px">
+      <div style="font-size:11px;color:var(--ink3);font-weight:700;margin-bottom:4px">NEXT BILLING</div>
+      <div style="font-weight:700">${nextBilling}</div>
+      <div style="font-size:12px;color:var(--ink3)">Started ${b.billing_cycle_start||'—'}</div>
+    </div>`;
+
+  // Areas
+  const areasDiv = document.getElementById('bm-areas');
+  areasDiv.innerHTML = (b.areas||[]).map(a=>
+    `<span style="background:var(--teal-bg);color:var(--teal-light);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">${a}</span>`
+  ).join('');
+
+  // Toggle button
+  const toggleBtn = document.getElementById('bm-toggle');
+  toggleBtn.textContent = b.is_active ? 'Deactivate' : 'Activate';
+  toggleBtn.className = b.is_active ? 'btn btn-red' : 'btn btn-teal';
+
+  // Load recent leads
+  loadBrokerLeads(brokerId);
+
+  document.getElementById('brokerModal').style.display = 'flex';
+}
+
+async function loadBrokerLeads(brokerId) {
+  try {
+    const leads = await supaGet(`broker_leads?broker_id=eq.${brokerId}&order=sent_at.desc&limit=10&select=*`);
+    const t = document.getElementById('bm-leads-table');
+    if(!leads.length){
+      t.innerHTML = '<tr><td style="padding:8px;color:var(--ink3);font-size:12px">No leads sent yet</td></tr>';
+      return;
+    }
+    t.innerHTML = '<tr><th>Listing ID</th><th>Type</th><th>Sent</th><th>Status</th></tr>' +
+      leads.map(l=>`<tr>
+        <td style="font-size:11px;font-family:monospace;color:var(--ink3)">${(l.listing_id||'').slice(0,8)}…</td>
+        <td>${l.is_paid_lead?'<span class="badge b-ok">Paid</span>':'<span class="badge b-pending">Free</span>'}</td>
+        <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.sent_at)}</td>
+        <td style="font-size:12px">${l.whatsapp_status||'sent'}</td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+async function toggleBrokerActive() {
+  const b = allBrokers.find(x=>x.id===selectedBrokerId);
+  if(!b) return;
+  const newActive = !b.is_active;
+  const ok = await supaPatch('brokers', 'id=eq.'+selectedBrokerId, {
+    is_active: newActive,
+    subscription_status: newActive ? 'active' : 'cancelled'
+  });
+  if(ok){ toast(newActive?'Broker activated':'Broker deactivated','ok'); closeBrokerModal(); loadBrokers(); }
+  else toast('Update failed','err');
+}
+
+async function resetBrokerCount() {
+  const ok = await supaPatch('brokers', 'id=eq.'+selectedBrokerId, {
+    contacts_sent_this_month: 0,
+    billing_cycle_start: new Date().toISOString().split('T')[0]
+  });
+  if(ok){ toast('Monthly count reset','ok'); closeBrokerModal(); loadBrokers(); }
+  else toast('Reset failed','err');
+}
+
+async function deleteBroker() {
+  if(!confirm('Delete this broker permanently?')) return;
+  const r = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${selectedBrokerId}`, {
+    method:'DELETE',
+    headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
+  });
+  if(r.ok){ toast('Broker deleted','ok'); closeBrokerModal(); loadBrokers(); }
+  else toast('Delete failed','err');
+}
+
+function closeBrokerModal() {
+  document.getElementById('brokerModal').style.display = 'none';
+  selectedBrokerId = null;
 }
 
 // ── USER MANAGEMENT ────────────────────────────────────────
