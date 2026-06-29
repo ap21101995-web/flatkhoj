@@ -194,11 +194,11 @@
     </div>
     <div class="field">
       <label>Phone Number *</label>
-      <input type="tel" id="brokerPhone" maxlength="10" placeholder="10-digit mobile number">
+      <input type="tel" id="brokerPhone" maxlength="13" placeholder="10-digit mobile number">
     </div>
     <div class="field">
       <label>WhatsApp Number <span style="font-weight:400;color:var(--ink3)">(leads delivered here — leave blank if same as above)</span></label>
-      <input type="tel" id="brokerWhatsapp" maxlength="10" placeholder="Only if different from phone number above">
+      <input type="tel" id="brokerWhatsapp" maxlength="13" placeholder="Only if different from phone number above">
     </div>
     <div class="area-section">
       <h3>Select your areas *</h3>
@@ -319,12 +319,18 @@ function updateSummary() {
 
 async function submitRegistration() {
   const name=document.getElementById('brokerName').value.trim();
-  const phone=document.getElementById('brokerPhone').value.trim().replace(/\D/g,'');
-  const waRaw=document.getElementById('brokerWhatsapp').value.trim().replace(/\D/g,'');
+  let phone=document.getElementById('brokerPhone').value.trim().replace(/\D/g,'');
+  // Strip leading country code (91) if present and number is 12 digits
+  if(phone.length===12 && phone.startsWith('91')) phone=phone.slice(2);
+  if(phone.length===11 && phone.startsWith('0')) phone=phone.slice(1);
+  let waRaw=document.getElementById('brokerWhatsapp').value.trim().replace(/\D/g,'');
+  if(waRaw.length===12 && waRaw.startsWith('91')) waRaw=waRaw.slice(2);
+  if(waRaw.length===11 && waRaw.startsWith('0')) waRaw=waRaw.slice(1);
   const wa=waRaw||phone;
 
   if(!name){alert('Please enter your name');return;}
   if(phone.length!==10){alert('Please enter a valid 10-digit phone number');return;}
+  if(wa.length!==10){alert('Please enter a valid 10-digit WhatsApp number');return;}
   if(!selectedPlan){alert('Please select a plan');return;}
   if(!selectedAreas.size){alert('Please select at least one area');return;}
 
@@ -335,21 +341,43 @@ async function submitRegistration() {
   const amount=billing==='annual'?plan.annual:plan.monthly;
 
   try {
-    // Save broker record
-    const bRes=await fetch(`${SUPA_URL}/rest/v1/brokers`,{
-      method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'},
-      body:JSON.stringify({name,phone,whatsapp_number:wa,areas:[...selectedAreas],plan:selectedPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,billing_cycle_start:new Date().toISOString().split('T')[0]})
-    });
+    let brokerId;
 
-    if(!bRes.ok){
-      const err=await bRes.json();
-      if(err.code==='23505'){alert('This number is already registered. Contact us on WhatsApp.');btn.disabled=false;btn.textContent='Register & Pay →';return;}
-      throw new Error('Registration failed');
+    // Check if this phone is already registered (e.g. previous failed/abandoned payment attempt)
+    const existingRes = await fetch(`${SUPA_URL}/rest/v1/brokers?phone=eq.${phone}&select=id,is_active,subscription_status`,{
+      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
+    });
+    const existingRows = await existingRes.json();
+    const existing = existingRows?.[0];
+
+    if(existing && existing.is_active && existing.subscription_status==='active'){
+      alert('This phone number is already an active broker. WhatsApp us at +91 95385 84612 if you want to change your plan.');
+      btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
-    const bData=await bRes.json();
-    const brokerId=bData[0]?.id;
+    if(existing){
+      // Update the existing (pending/inactive) record instead of blocking
+      brokerId = existing.id;
+      await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}`,{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+        body:JSON.stringify({name,whatsapp_number:wa,areas:[...selectedAreas],plan:selectedPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false})
+      });
+    } else {
+      // Save new broker record
+      const bRes=await fetch(`${SUPA_URL}/rest/v1/brokers`,{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify({name,phone,whatsapp_number:wa,areas:[...selectedAreas],plan:selectedPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,billing_cycle_start:new Date().toISOString().split('T')[0]})
+      });
+
+      if(!bRes.ok){
+        throw new Error('Registration failed');
+      }
+      const bData=await bRes.json();
+      brokerId=bData[0]?.id;
+    }
+
     document.getElementById('processingOverlay').classList.add('show');
 
     // Create payment order
@@ -362,18 +390,19 @@ async function submitRegistration() {
     const order=await oRes.json();
     document.getElementById('processingOverlay').classList.remove('show');
 
-    if(!order.payment_session_id){
+    const sessionId = order.subscription_session_id || order.payment_session_id;
+    if(!sessionId){
       alert('Payment setup failed. Please try again or WhatsApp us.');
       btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
-    // Open Cashfree
+    // Open Cashfree — same checkout() method works for both order and subscription sessions
     const script=document.createElement('script');
     script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
     script.onload=function(){
       const cf=Cashfree({mode:'production'});
       cf.checkout({
-        paymentSessionId:order.payment_session_id,
+        paymentSessionId:sessionId,
         returnUrl:`https://flatkhoj.com/broker.html?payment=success&broker_id=${brokerId}&plan=${selectedPlan}&billing=${billing}`
       });
     };
@@ -390,35 +419,45 @@ window.onload=async function(){
   const params=new URLSearchParams(window.location.search);
   if(params.get('payment')==='success'){
     const brokerId=params.get('broker_id');
-    const plan=params.get('plan');
-    const billing=params.get('billing');
 
     if(brokerId){
-      // Verify broker status — webhook may have already activated
-      const checkRes = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=is_active,subscription_status`,{
-        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
-      });
-      const brokerData = await checkRes.json();
-      const broker = brokerData[0];
-
-      // If webhook hasn't fired yet, activate via returnUrl as backup
-      if(!broker?.is_active || broker?.subscription_status !== 'active'){
-        await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}`,{
-          method:'PATCH',
-          headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
-          body:JSON.stringify({
-            is_active:true,
-            subscription_status:'active',
-            contacts_sent_this_month:0,
-            billing_cycle_start:new Date().toISOString().split('T')[0]
-          })
+      // Poll for webhook activation — webhook is the source of truth for actual payment success.
+      // We do NOT force-activate here, since landing on this URL only means Cashfree redirected
+      // back, not that payment actually succeeded.
+      let attempts = 0;
+      let activated = false;
+      while(attempts < 10 && !activated){
+        const checkRes = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=is_active,subscription_status`,{
+          headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
         });
+        const brokerData = await checkRes.json();
+        const broker = brokerData[0];
+        if(broker?.is_active && broker?.subscription_status === 'active'){
+          activated = true;
+          break;
+        }
+        if(broker?.subscription_status === 'payment_failed'){
+          break;
+        }
+        await new Promise(r=>setTimeout(r, 1500));
+        attempts++;
+      }
+
+      document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+      document.querySelector('.hero').style.display='none';
+
+      if(activated){
+        document.getElementById('successScreen').style.display='block';
+      } else {
+        document.getElementById('successScreen').innerHTML = `
+          <div class="success-icon">⏳</div>
+          <h2>Confirming your payment…</h2>
+          <p>If you completed the payment, your account will activate within a couple of minutes.<br><br>
+          If you closed the payment page or it failed, no charge was made — just refresh this page and try again.<br><br>
+          Still stuck after 5 minutes? WhatsApp us at <strong>+91 95385 84612</strong></p>`;
+        document.getElementById('successScreen').style.display='block';
       }
     }
-
-    document.querySelector('.hero').style.display='none';
-    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-    document.getElementById('successScreen').style.display='block';
     return;
   }
   renderZones();
