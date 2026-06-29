@@ -1327,103 +1327,94 @@ function renderForecast(activeBrokers) {
 
   const now = new Date();
 
-  // Group brokers (with remaining quota > 0) by area
-  const areaBrokers = {}; // { area: [{ brokerName, remaining, deadline, dateLabel }] }
-
+  // Each row = ONE broker's upcoming deadline, showing ALL their subscribed
+  // areas together — because a broker's quota is a single number (e.g. "30
+  // contacts/month"), not split per area. The backend person can satisfy it
+  // by posting in ANY of the listed areas.
+  //
+  // Cross-broker discount: if an earlier (sooner-deadline) broker shares an
+  // area with this broker, some of THIS broker's remaining need is already
+  // likely to be satisfied by listings aimed at that earlier broker (since
+  // one listing notifies every matching active broker at once). We discount
+  // by the highest "already promised" amount among this broker's areas.
+  const brokerRows = [];
   activeBrokers.forEach(b => {
     if(!b.billing_cycle_start) return;
     const remaining = (b.contacts_per_month||0) - (b.contacts_sent_this_month||0);
     if(remaining <= 0) return;
+    if(!(b.areas||[]).length) return;
 
     const cycleStart = new Date(b.billing_cycle_start);
     const next = new Date(cycleStart);
     const monthsToAdd = b.billing_cycle==='annual' ? 12 : 1;
     while(next <= now) next.setMonth(next.getMonth() + monthsToAdd);
 
-    const dateLabel = next.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    brokerRows.push({
+      brokerName: b.name || b.phone,
+      areas: b.areas,
+      remaining,
+      deadline: next,
+      dateLabel: next.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}),
+    });
+  });
 
-    (b.areas||[]).forEach(area => {
-      if(!areaBrokers[area]) areaBrokers[area] = [];
-      areaBrokers[area].push({
-        brokerName: b.name || b.phone,
-        remaining,
-        deadline: next,
-        dateLabel,
+  if(!brokerRows.length){
+    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">All broker quotas are fully met for this month. 🎉</div>';
+    return;
+  }
+
+  // Sort by deadline ascending — soonest first
+  brokerRows.sort((a,b)=>a.deadline-b.deadline);
+
+  // Walk through in order, discounting each row by what's already
+  // "in flight" for any of its areas from earlier rows
+  const areaCumulative = {}; // area -> cumulative listings already promised
+  const finalRows = [];
+
+  brokerRows.forEach(row => {
+    const maxOverlapCoverage = Math.max(0, ...row.areas.map(a => areaCumulative[a] || 0));
+    const incrementalNeeded = Math.max(0, row.remaining - maxOverlapCoverage);
+
+    if (incrementalNeeded > 0) {
+      finalRows.push({ ...row, listingsNeeded: incrementalNeeded });
+      row.areas.forEach(a => {
+        areaCumulative[a] = Math.max(areaCumulative[a] || 0, maxOverlapCoverage + incrementalNeeded);
       });
-    });
+    }
   });
 
-  if(!Object.keys(areaBrokers).length){
+  if(!finalRows.length){
     container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">All broker quotas are fully met for this month. 🎉</div>';
     return;
   }
-
-  // For each area, simulate deadlines in order:
-  // Sort brokers by deadline ascending. At each deadline, the listings needed
-  // for THAT row = max(0, this broker's remaining requirement - listings
-  // already accounted for by all earlier rows in this area's timeline).
-  // Because one listing satisfies every broker subscribed to that area at once,
-  // listings posted to satisfy an earlier (sooner) deadline automatically count
-  // toward later (further) deadlines in the SAME area too — so later rows only
-  // need the incremental difference, never double-counted.
-  const allRows = []; // flat list across all areas, to be sorted globally by deadline
-
-  Object.entries(areaBrokers).forEach(([area, brokerList]) => {
-    const sorted = [...brokerList].sort((a,b)=>a.deadline-b.deadline);
-    let cumulativeCovered = 0; // listings already "promised" by earlier rows for this area
-
-    sorted.forEach(entry => {
-      const incrementalNeeded = Math.max(0, entry.remaining - cumulativeCovered);
-      if (incrementalNeeded > 0) {
-        allRows.push({
-          area,
-          listingsNeeded: incrementalNeeded,
-          deadline: entry.deadline,
-          dateLabel: entry.dateLabel,
-          brokerName: entry.brokerName,
-          brokerRemaining: entry.remaining,
-        });
-        cumulativeCovered += incrementalNeeded;
-      }
-      // If incrementalNeeded is 0, this broker's requirement is already fully
-      // covered by listings promised for an earlier deadline in this area —
-      // nothing new to show for them.
-      cumulativeCovered = Math.max(cumulativeCovered, entry.remaining);
-    });
-  });
-
-  if(!allRows.length){
-    container.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">All broker quotas are fully met for this month. 🎉</div>';
-    return;
-  }
-
-  // Sort all rows globally by deadline — soonest first across all areas
-  allRows.sort((a,b)=> a.deadline - b.deadline);
 
   let html = '<table style="width:100%"><tr>'+
-    '<th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:left">Area</th>'+
     '<th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:center">Listings Needed</th>'+
     '<th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:left">By Date</th>'+
+    '<th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:left">Areas (any of these)</th>'+
     '<th style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:left">For Broker</th>'+
     '</tr>';
 
-  allRows.forEach((row, idx) => {
+  finalRows.forEach((row, idx) => {
     const daysLeft = Math.ceil((row.deadline - now) / (1000*60*60*24));
     const isTopPriority = idx === 0;
-    const rowColor = isTopPriority ? 'var(--red)' : 'var(--ink2)';
+    const textColor = isTopPriority ? 'var(--red)' : 'var(--ink2)';
     const rowBg = isTopPriority ? 'var(--red-bg)' : 'transparent';
     const badgeColor = isTopPriority ? 'var(--red)' : 'var(--teal-light)';
     const badgeBg = isTopPriority ? 'var(--red-bg)' : 'var(--teal-bg)';
+    const areaTags = row.areas.map(a=>
+      `<span style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:2px 8px;font-size:11px;margin-right:4px;display:inline-block;margin-bottom:3px">${a}</span>`
+    ).join('');
 
     html += `<tr style="border-top:1px solid var(--border);background:${rowBg}">
-      <td style="padding:10px 16px;font-size:13px;font-weight:700;color:${rowColor}">${row.area}</td>
       <td style="padding:10px 16px;text-align:center">
         <span style="background:${badgeBg};color:${badgeColor};font-weight:800;font-size:14px;padding:3px 12px;border-radius:20px">${row.listingsNeeded}</span>
       </td>
-      <td style="padding:10px 16px;font-size:12px;font-weight:${isTopPriority?'700':'400'};color:${rowColor}">
+      <td style="padding:10px 16px;font-size:12px;font-weight:${isTopPriority?'700':'400'};color:${textColor}">
         ${row.dateLabel}<br><span style="font-size:11px;font-weight:400;color:var(--ink3)">${daysLeft} day${daysLeft!==1?'s':''} left</span>
       </td>
-      <td style="padding:10px 16px;font-size:12px;color:var(--ink3)">${row.brokerName} (needs ${row.brokerRemaining} total)</td>
+      <td style="padding:10px 16px;max-width:280px">${areaTags}</td>
+      <td style="padding:10px 16px;font-size:12px;color:var(--ink3)">${row.brokerName}</td>
     </tr>`;
   });
   html += '</table>';
