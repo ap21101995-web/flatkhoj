@@ -67,9 +67,16 @@ function renderTests() {
 }
 
 async function testSupabase() {
-  const r = await fetch(`${SUPA_URL}/rest/v1/`, { headers: { 'apikey': SUPA_KEY } });
-  if (r.ok || r.status === 200) return { pass: true, detail: 'Supabase is reachable.' };
-  return { pass: false, detail: `Could not reach Supabase. HTTP status: ${r.status}` };
+  // The bare REST root can return various non-200 codes by design even when
+  // Supabase is perfectly healthy. A real connectivity failure is a network
+  // error (fetch throws) or a 5xx — anything else means the server answered.
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/`, { headers: { 'apikey': SUPA_KEY } });
+    if (r.status >= 500) return { pass: false, detail: `Supabase responded but with a server error. HTTP status: ${r.status}` };
+    return { pass: true, detail: `Supabase responded. HTTP status: ${r.status} (this is expected/normal for the bare API root).` };
+  } catch(e) {
+    return { pass: false, detail: `Could not reach Supabase at all — network/DNS failure: ${e.message}` };
+  }
 }
 
 async function testBrokersTable() {
@@ -126,23 +133,33 @@ async function testCreateOrderBroker() {
 }
 
 async function testWebhookReachable() {
-  const r = await fetch(`${SUPA_URL}/functions/v1/payment-webhook`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'DIAGNOSTIC_TEST' })
-  });
-  if (r.status === 404) return { pass: false, detail: `payment-webhook function is NOT deployed (404 Not Found).` };
-  return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
+  try {
+    const r = await fetch(`${SUPA_URL}/functions/v1/payment-webhook`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'DIAGNOSTIC_TEST' })
+    });
+    if (r.status === 404) return { pass: false, detail: `payment-webhook function is NOT deployed (404 Not Found). Go to Supabase → Edge Functions → create a function named exactly "payment-webhook" and deploy the code.` };
+    if (r.status === 401) return { pass: false, detail: `Got 401 Unauthorized. This usually means "Verify JWT" is turned ON for this function in Supabase settings. Since Cashfree's webhook calls won't include a Supabase login token, this needs to be turned OFF for payment-webhook to work. Go to Supabase → Edge Functions → payment-webhook → check the JWT verification toggle.` };
+    return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
+  } catch(e) {
+    return { pass: false, detail: `Network error reaching the function: ${e.message}` };
+  }
 }
 
 async function testNotifyBrokersReachable() {
-  const r = await fetch(`${SUPA_URL}/functions/v1/notify-brokers`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ record: { id: 'diagnostic-test', is_active: false } })
-  });
-  if (r.status === 404) return { pass: false, detail: `notify-brokers function is NOT deployed (404 Not Found).` };
-  return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
+  try {
+    const r = await fetch(`${SUPA_URL}/functions/v1/notify-brokers`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ record: { id: 'diagnostic-test', is_active: false } })
+    });
+    if (r.status === 404) return { pass: false, detail: `notify-brokers function is NOT deployed (404 Not Found). Go to Supabase → Edge Functions → create a function named exactly "notify-brokers" and deploy the code.` };
+    if (r.status === 401) return { pass: false, detail: `Got 401 Unauthorized. "Verify JWT" is likely turned ON for this function. Since the database webhook calls this internally without a login token, JWT verification needs to be OFF. Go to Supabase → Edge Functions → notify-brokers → check the JWT toggle.` };
+    return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
+  } catch(e) {
+    return { pass: false, detail: `Network error reaching the function: ${e.message}` };
+  }
 }
 
 async function runAllTests() {
