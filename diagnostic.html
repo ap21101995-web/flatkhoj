@@ -143,7 +143,19 @@ async function testWebhookReachable() {
     if (r.status === 401) return { pass: false, detail: `Got 401 Unauthorized. This usually means "Verify JWT" is turned ON for this function in Supabase settings. Since Cashfree's webhook calls won't include a Supabase login token, this needs to be turned OFF for payment-webhook to work. Go to Supabase → Edge Functions → payment-webhook → check the JWT verification toggle.` };
     return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
   } catch(e) {
-    return { pass: false, detail: `Network error reaching the function: ${e.message}` };
+    // "Failed to fetch" is ambiguous — could mean the function genuinely
+    // doesn't exist, OR it exists but is blocking the CORS preflight (no
+    // OPTIONS handler / no Access-Control-Allow-Origin header), which makes
+    // the browser refuse to even attempt the real request. Try a plain GET
+    // with no custom headers (skips CORS preflight entirely) to tell these
+    // two cases apart.
+    try {
+      const r2 = await fetch(`${SUPA_URL}/functions/v1/payment-webhook`, { method: 'GET' });
+      if (r2.status === 404) return { pass: false, detail: `Confirmed via fallback check: payment-webhook is NOT deployed (404 Not Found). Go to Supabase → Edge Functions → create a function named exactly "payment-webhook" and deploy the code.` };
+      return { pass: false, detail: `The function EXISTS (fallback GET got status ${r2.status}) but is blocking normal requests — likely a CORS configuration problem. The deployed code may not match what was intended, or there's a startup error. Check Supabase → Edge Functions → payment-webhook → Logs for crash details.` };
+    } catch(e2) {
+      return { pass: false, detail: `Could not reach payment-webhook at all, even with a plain GET. This strongly suggests it is NOT deployed. Original error: ${e.message}` };
+    }
   }
 }
 
@@ -158,7 +170,13 @@ async function testNotifyBrokersReachable() {
     if (r.status === 401) return { pass: false, detail: `Got 401 Unauthorized. "Verify JWT" is likely turned ON for this function. Since the database webhook calls this internally without a login token, JWT verification needs to be OFF. Go to Supabase → Edge Functions → notify-brokers → check the JWT toggle.` };
     return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
   } catch(e) {
-    return { pass: false, detail: `Network error reaching the function: ${e.message}` };
+    try {
+      const r2 = await fetch(`${SUPA_URL}/functions/v1/notify-brokers`, { method: 'GET' });
+      if (r2.status === 404) return { pass: false, detail: `Confirmed via fallback check: notify-brokers is NOT deployed (404 Not Found). Go to Supabase → Edge Functions → create a function named exactly "notify-brokers" and deploy the code.` };
+      return { pass: false, detail: `The function EXISTS (fallback GET got status ${r2.status}) but is blocking normal requests — likely a CORS configuration problem or a startup crash. Check Supabase → Edge Functions → notify-brokers → Logs for crash details.` };
+    } catch(e2) {
+      return { pass: false, detail: `Could not reach notify-brokers at all, even with a plain GET. This strongly suggests it is NOT deployed. Original error: ${e.message}` };
+    }
   }
 }
 
