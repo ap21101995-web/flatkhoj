@@ -440,12 +440,25 @@ async function submitRegistration() {
       body:JSON.stringify({userId:brokerId,phone,amount,pack:`broker_${selectedPlan}_${billing}`,coins:0,isBroker:true,brokerPlan:selectedPlan,billingCycle:billing})
     });
 
-    const order=await oRes.json();
+    let order;
+    try {
+      order = await oRes.json();
+    } catch(parseErr) {
+      const rawText = await oRes.text().catch(()=>'(could not read response)');
+      console.error('create-order returned non-JSON. Status:', oRes.status, 'Body:', rawText);
+      document.getElementById('processingOverlay').classList.remove('show');
+      alert('Payment setup error (server returned invalid response, status ' + oRes.status + '). Details logged to console — please check Supabase Edge Function logs for create-order.');
+      btn.disabled=false;btn.textContent='Register & Pay →';return;
+    }
+
+    console.log('create-order response:', order);
     document.getElementById('processingOverlay').classList.remove('show');
 
     const sessionId = order.subscription_session_id || order.payment_session_id;
     if(!sessionId){
-      alert('Payment setup failed. Please try again or WhatsApp us.');
+      const errorDetail = order.error || order.message || JSON.stringify(order);
+      console.error('No session ID in response:', order);
+      alert('Payment setup failed: ' + errorDetail + '\n\nPlease check Supabase Edge Function logs for create-order for full details.');
       btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
@@ -463,7 +476,8 @@ async function submitRegistration() {
 
   } catch(e) {
     document.getElementById('processingOverlay').classList.remove('show');
-    alert('Something went wrong. Please try again or WhatsApp us at +91 95385 84612');
+    console.error('submitRegistration error:', e);
+    alert('Something went wrong: ' + (e.message || e) + '\n\nPlease check browser console (F12) for full details, or WhatsApp us at +91 95385 84612 with a screenshot.');
     btn.disabled=false;btn.textContent='Register & Pay →';
   }
 }
