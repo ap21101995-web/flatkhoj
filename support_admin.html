@@ -57,6 +57,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <body>
 
 <header class="topbar" id="mainTopbar">
+  <button class="back-btn" onclick="window.location.href='admin.html'" style="background:none;border:none;cursor:pointer;color:white;font-size:22px;padding:4px">←</button>
   <div class="topbar-title">🛠 Support Admin</div>
 </header>
 
@@ -136,11 +137,12 @@ async function loadConversations(status) {
       const msgs = await msgRes.json();
       const lastMsg = msgs[0];
       const isUnread = lastMsg?.sender === 'user';
+      const isBroker = conv.source === 'broker';
       const div = document.createElement('div');
       div.className = 'conv-card' + (isUnread ? ' unread' : '');
       div.onclick = () => openChat(conv);
       div.innerHTML = `
-        <div class="conv-phone">+91 ${conv.user_phone}</div>
+        <div class="conv-phone">+91 ${conv.user_phone} ${isBroker ? '<span style="background:#4a9eff;color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px">🏢 BROKER</span>' : ''}</div>
         <div class="conv-subject">${conv.subject}</div>
         <div class="conv-preview">${lastMsg ? (lastMsg.sender === 'admin' ? 'You: ' : 'User: ') + lastMsg.message : 'No messages'}</div>
         <div class="conv-meta">
@@ -163,7 +165,7 @@ function showList() {
 function openChat(conv) {
   currentConvId = conv.id;
   currentStatus = conv.status;
-  document.getElementById('chatPhone').textContent = '+91 ' + conv.user_phone;
+  document.getElementById('chatPhone').innerHTML = '+91 ' + conv.user_phone + (conv.source === 'broker' ? ' <span style="background:#4a9eff;color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px">🏢 BROKER</span>' : '');
   document.getElementById('chatSubject').textContent = conv.subject;
   document.getElementById('resolveBtn').textContent = conv.status === 'resolved' ? 'Reopen' : 'Mark resolved';
   document.getElementById('mainTopbar').style.display = 'none';

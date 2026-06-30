@@ -108,7 +108,7 @@
 
 <div class="section">
   <h2>Choose your plan</h2>
-  <p>All plans include unlimited area selection. Cancel anytime.</p>
+  <p>All plans include unlimited area selection.</p>
   <div style="text-align:center;margin-bottom:16px">
     <div class="billing-toggle">
       <button class="billing-btn active" id="btnMonthly" onclick="setBilling('monthly')">Monthly</button>
@@ -207,7 +207,7 @@
       <div id="zonesContainer"></div>
     </div>
     <button class="submit-btn" id="submitBtn" onclick="submitRegistration()">Register & Pay →</button>
-    <p class="note">Secured by Cashfree · UPI, Cards, Netbanking · Cancel anytime via WhatsApp</p>
+    <p class="note">Secured by Cashfree · UPI, Cards, Netbanking</p>
   </div>
 </div>
 
@@ -215,9 +215,15 @@
   <div class="success-icon">🎉</div>
   <h2>Payment successful!</h2>
   <p>Your broker account is now active.<br><br>
-  Leads from your selected areas will start arriving on WhatsApp as soon as new listings are posted.<br><br>
-  Want to upgrade to an annual plan and save 25%? <a href="broker.html" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Change plan →</a><br><br>
-  Questions? WhatsApp us at <strong>+91 95385 84612</strong></p>
+  Leads from your selected areas will start arriving on WhatsApp as soon as new listings are posted.</p>
+
+  <div id="upgradeAnnualBox" style="display:none;margin-top:20px;background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:12px;padding:16px;text-align:left">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">💰 Switch to Annual & Save 25%</div>
+    <div style="font-size:13px;color:var(--ink2);margin-bottom:12px">Same WhatsApp feed every month — you're just billed once a year instead of monthly.</div>
+    <button class="submit-btn" style="padding:12px" onclick="switchToAnnual()">Switch to Annual →</button>
+  </div>
+
+  <p style="margin-top:20px">Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>
 </div>
 
 <script>
@@ -229,6 +235,53 @@ const PLANS = {"starter": {"name": "Starter", "contacts": 10, "monthly": 1299, "
 let selectedPlan = null;
 let billing = 'monthly';
 let selectedAreas = new Set();
+
+function openBrokerSupport() {
+  const params = new URLSearchParams(window.location.search);
+  const brokerId = params.get('broker_id') || window._activeBrokerId || '';
+  const brokerPhone = window._activeBrokerPhone || '';
+  window.location.href = `support.html?broker=${encodeURIComponent(brokerPhone)}&broker_id=${encodeURIComponent(brokerId)}`;
+}
+
+async function switchToAnnual() {
+  const brokerId = window._activeBrokerId;
+  const currentPlan = window._activePlan;
+  if (!brokerId || !currentPlan) return;
+
+  const btn = document.querySelector('#upgradeAnnualBox button');
+  btn.disabled = true; btn.textContent = 'Processing…';
+
+  try {
+    const planObj = PLANS[currentPlan];
+    const amount = planObj.annual;
+
+    const oRes = await fetch(`${SUPA_URL}/functions/v1/create-order`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: brokerId, phone: window._activeBrokerPhone, amount,
+        isBroker: true, brokerPlan: currentPlan, billingCycle: 'annual'
+      })
+    });
+    const order = await oRes.json();
+    const sessionId = order.subscription_session_id || order.payment_session_id;
+    if (!sessionId) { alert('Could not start annual upgrade. Please use the Need Support link below.'); btn.disabled=false; btn.textContent='Switch to Annual →'; return; }
+
+    const cfScript = document.createElement('script');
+    cfScript.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    cfScript.onload = function() {
+      const cf = Cashfree({ mode: 'production' });
+      cf.checkout({
+        paymentSessionId: sessionId,
+        returnUrl: `https://flatkhoj.com/broker.html?payment=success&broker_id=${brokerId}&plan=${currentPlan}&billing=annual`
+      });
+    };
+    document.head.appendChild(cfScript);
+  } catch(e) {
+    alert('Something went wrong. Please use the Need Support link below.');
+    btn.disabled = false; btn.textContent = 'Switch to Annual →';
+  }
+}
 
 function setBilling(type) {
   billing = type;
@@ -419,6 +472,8 @@ window.onload=async function(){
   const params=new URLSearchParams(window.location.search);
   if(params.get('payment')==='success'){
     const brokerId=params.get('broker_id');
+    const planFromUrl=params.get('plan');
+    const billingFromUrl=params.get('billing');
 
     if(brokerId){
       // Poll for webhook activation — webhook is the source of truth for actual payment success.
@@ -426,17 +481,18 @@ window.onload=async function(){
       // back, not that payment actually succeeded.
       let attempts = 0;
       let activated = false;
+      let brokerRecord = null;
       while(attempts < 10 && !activated){
-        const checkRes = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=is_active,subscription_status`,{
+        const checkRes = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=is_active,subscription_status,phone,plan,billing_cycle`,{
           headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
         });
         const brokerData = await checkRes.json();
-        const broker = brokerData[0];
-        if(broker?.is_active && broker?.subscription_status === 'active'){
+        brokerRecord = brokerData[0];
+        if(brokerRecord?.is_active && brokerRecord?.subscription_status === 'active'){
           activated = true;
           break;
         }
-        if(broker?.subscription_status === 'payment_failed'){
+        if(brokerRecord?.subscription_status === 'payment_failed'){
           break;
         }
         await new Promise(r=>setTimeout(r, 1500));
@@ -447,14 +503,28 @@ window.onload=async function(){
       document.querySelector('.hero').style.display='none';
 
       if(activated){
+        // Store state for upgrade/support actions
+        window._activeBrokerId = brokerId;
+        window._activeBrokerPhone = brokerRecord.phone;
+        window._activePlan = brokerRecord.plan || planFromUrl;
+
+        // Show annual upgrade box only if currently on monthly billing
+        const billingCycle = brokerRecord.billing_cycle || billingFromUrl;
+        if (billingCycle === 'monthly') {
+          document.getElementById('upgradeAnnualBox').style.display = 'block';
+        }
+
         document.getElementById('successScreen').style.display='block';
       } else {
+        // Phone isn't confirmed yet at this point (webhook pending), so support
+        // link uses broker_id only — support.html can still find the conversation
+        // once they message, since we tag it by whatever identity is available.
         document.getElementById('successScreen').innerHTML = `
           <div class="success-icon">⏳</div>
           <h2>Confirming your payment…</h2>
           <p>If you completed the payment, your account will activate within a couple of minutes.<br><br>
           If you closed the payment page or it failed, no charge was made — just refresh this page and try again.<br><br>
-          Still stuck after 5 minutes? WhatsApp us at <strong>+91 95385 84612</strong></p>`;
+          Still need help? <a href="javascript:void(0)" onclick="window.location.href='support.html?broker_id=${encodeURIComponent(params.get('broker_id')||'')}'" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
         document.getElementById('successScreen').style.display='block';
       }
     }
