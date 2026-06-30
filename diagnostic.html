@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlatKhoj — System Diagnostic</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,'Segoe UI',sans-serif;background:#f7f7f5;color:#141414;padding:20px;max-width:600px;margin:0 auto;}
+  h1{font-size:20px;margin-bottom:6px;}
+  .sub{color:#888;font-size:13px;margin-bottom:24px;}
+  .test{background:white;border:1.5px solid #e8e8e4;border-radius:12px;padding:16px;margin-bottom:12px;}
+  .test-name{font-weight:700;font-size:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .status{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;}
+  .status.pending{background:#f0f0f0;color:#888;}
+  .status.running{background:#fff3cd;color:#856404;}
+  .status.pass{background:#d4edda;color:#155724;}
+  .status.fail{background:#f8d7da;color:#721c24;}
+  .detail{font-size:12px;color:#555;margin-top:8px;line-height:1.5;white-space:pre-wrap;word-break:break-word;font-family:monospace;background:#f7f7f5;padding:8px;border-radius:6px;display:none;}
+  .detail.show{display:block;}
+  button{width:100%;padding:14px;background:#0f7b6c;color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:20px;}
+  button:disabled{background:#ccc;}
+  .summary{background:white;border-radius:12px;padding:16px;margin-top:16px;font-size:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<h1>🔍 FlatKhoj System Diagnostic</h1>
+<div class="sub">Tests every part of the broker payment flow. No technical knowledge needed — just press the button below and read the results.</div>
+
+<button id="runBtn" onclick="runAllTests()">Run All Tests →</button>
+
+<div id="tests"></div>
+<div class="summary" id="summary" style="display:none"></div>
+
+<script>
+const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+const TESTS = [
+  { id: 'supabase', name: '1. Can reach Supabase database', fn: testSupabase },
+  { id: 'brokers_table', name: '2. Brokers table exists and is readable', fn: testBrokersTable },
+  { id: 'create_order_exists', name: '3. create-order function is deployed and reachable', fn: testCreateOrderReachable },
+  { id: 'create_order_broker', name: '4. create-order correctly handles a broker subscription request', fn: testCreateOrderBroker },
+  { id: 'webhook_exists', name: '5. payment-webhook function is deployed and reachable', fn: testWebhookReachable },
+  { id: 'notify_brokers_exists', name: '6. notify-brokers function is deployed and reachable', fn: testNotifyBrokersReachable },
+];
+
+function setStatus(id, status, detail) {
+  const el = document.getElementById('status-'+id);
+  el.className = 'status ' + status;
+  el.textContent = status === 'pending' ? 'Waiting…' : status === 'running' ? 'Testing…' : status === 'pass' ? '✓ Pass' : '✗ Fail';
+  if (detail) {
+    const d = document.getElementById('detail-'+id);
+    d.textContent = detail;
+    d.classList.add('show');
+  }
+}
+
+function renderTests() {
+  const wrap = document.getElementById('tests');
+  wrap.innerHTML = TESTS.map(t => `
+    <div class="test">
+      <div class="test-name">${t.name} <span class="status pending" id="status-${t.id}">Waiting…</span></div>
+      <div class="detail" id="detail-${t.id}"></div>
+    </div>`).join('');
+}
+
+async function testSupabase() {
+  const r = await fetch(`${SUPA_URL}/rest/v1/`, { headers: { 'apikey': SUPA_KEY } });
+  if (r.ok || r.status === 200) return { pass: true, detail: 'Supabase is reachable.' };
+  return { pass: false, detail: `Could not reach Supabase. HTTP status: ${r.status}` };
+}
+
+async function testBrokersTable() {
+  const r = await fetch(`${SUPA_URL}/rest/v1/brokers?select=id&limit=1`, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+  });
+  const body = await r.text();
+  if (r.ok) return { pass: true, detail: 'Brokers table is reachable and readable.' };
+  return { pass: false, detail: `Brokers table query failed. Status: ${r.status}\nResponse: ${body}` };
+}
+
+async function testCreateOrderReachable() {
+  // Send an intentionally incomplete request — we only care that the function
+  // responds at all (any JSON response means it's deployed and running),
+  // not whether this particular call succeeds.
+  const r = await fetch(`${SUPA_URL}/functions/v1/create-order`, {
+    method: 'POST',
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  const body = await r.text();
+  if (r.status === 404) return { pass: false, detail: `create-order function is NOT deployed (404 Not Found). Go to Supabase → Edge Functions and deploy it.` };
+  if (r.status >= 500) return { pass: false, detail: `create-order function exists but crashed (Status ${r.status}). Response: ${body}` };
+  return { pass: true, detail: `Function responded (Status ${r.status}). Response: ${body.slice(0,300)}` };
+}
+
+async function testCreateOrderBroker() {
+  // Use a test broker ID and a deliberately safe small amount to check
+  // the broker subscription code path responds without crashing.
+  const r = await fetch(`${SUPA_URL}/functions/v1/create-order`, {
+    method: 'POST',
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: 'diagnostic-test-id-00000000',
+      phone: '9999999999',
+      amount: 1299,
+      isBroker: true,
+      brokerPlan: 'starter',
+      billingCycle: 'monthly'
+    })
+  });
+  let body;
+  try { body = await r.json(); } catch(e) {
+    const text = await r.text().catch(()=>'(unreadable)');
+    return { pass: false, detail: `Response was not valid JSON. Status: ${r.status}\nRaw response: ${text}` };
+  }
+  if (body.subscription_session_id) {
+    return { pass: true, detail: `SUCCESS — got a valid subscription_session_id. Cashfree subscription creation is working correctly.\nResponse: ${JSON.stringify(body).slice(0,300)}` };
+  }
+  if (body.error) {
+    return { pass: false, detail: `Function ran but returned an error: "${body.error}"\n\nThis is the REAL reason broker registration is failing. Common causes:\n- CASHFREE_APP_ID or CASHFREE_SECRET_KEY not set in Supabase secrets\n- Plan ID "Broker_Starter_Monthly" doesn't exactly match what's on Cashfree dashboard\n- Cashfree account not approved for live Subscriptions yet` };
+  }
+  return { pass: false, detail: `Unexpected response shape (no session ID, no error field): ${JSON.stringify(body).slice(0,400)}` };
+}
+
+async function testWebhookReachable() {
+  const r = await fetch(`${SUPA_URL}/functions/v1/payment-webhook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'DIAGNOSTIC_TEST' })
+  });
+  if (r.status === 404) return { pass: false, detail: `payment-webhook function is NOT deployed (404 Not Found).` };
+  return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
+}
+
+async function testNotifyBrokersReachable() {
+  const r = await fetch(`${SUPA_URL}/functions/v1/notify-brokers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ record: { id: 'diagnostic-test', is_active: false } })
+  });
+  if (r.status === 404) return { pass: false, detail: `notify-brokers function is NOT deployed (404 Not Found).` };
+  return { pass: true, detail: `Function responded with status ${r.status} — it is deployed and reachable.` };
+}
+
+async function runAllTests() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = 'Running tests…';
+  renderTests();
+  document.getElementById('summary').style.display = 'none';
+
+  let passCount = 0;
+  let failCount = 0;
+  const failures = [];
+
+  for (const t of TESTS) {
+    setStatus(t.id, 'running');
+    try {
+      const result = await t.fn();
+      setStatus(t.id, result.pass ? 'pass' : 'fail', result.detail);
+      if (result.pass) passCount++; else { failCount++; failures.push(t.name); }
+    } catch(e) {
+      setStatus(t.id, 'fail', 'Test crashed: ' + (e.message || e));
+      failCount++; failures.push(t.name);
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  btn.disabled = false; btn.textContent = 'Run All Tests Again →';
+
+  const summary = document.getElementById('summary');
+  summary.style.display = 'block';
+  if (failCount === 0) {
+    summary.innerHTML = `<strong>✅ All ${passCount} tests passed.</strong><br>Your payment system should be working correctly. If a broker still sees an error, try the test again right after, since the issue might be specific to that one attempt.`;
+  } else {
+    summary.innerHTML = `<strong>⚠️ ${failCount} of ${TESTS.length} tests failed.</strong><br>Failed: ${failures.join(', ')}<br><br>Scroll up and read the red "Fail" boxes above — each one explains exactly what's wrong and what to fix. Fix the FIRST failure first, then run the tests again, since later failures are sometimes caused by earlier ones.`;
+  }
+}
+
+renderTests();
+</script>
+</body>
+</html>

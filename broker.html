@@ -404,7 +404,7 @@ async function submitRegistration() {
     const existing = existingRows?.[0];
 
     if(existing && existing.is_active && existing.subscription_status==='active'){
-      alert('This phone number is already an active broker. WhatsApp us at +91 95385 84612 if you want to change your plan.');
+      alert('This phone number is already an active broker. Use the Need Support link to change your plan.');
       btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
@@ -477,7 +477,7 @@ async function submitRegistration() {
   } catch(e) {
     document.getElementById('processingOverlay').classList.remove('show');
     console.error('submitRegistration error:', e);
-    alert('Something went wrong: ' + (e.message || e) + '\n\nPlease check browser console (F12) for full details, or WhatsApp us at +91 95385 84612 with a screenshot.');
+    alert('Something went wrong: ' + (e.message || e) + '\n\nPlease try again. If this keeps happening, use the Need Support link on the next screen, or contact us through flatkhoj.com/support.html');
     btn.disabled=false;btn.textContent='Register & Pay →';
   }
 }
