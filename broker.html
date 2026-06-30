@@ -259,7 +259,7 @@ async function switchToAnnual() {
       method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: brokerId, phone: window._activeBrokerPhone, amount,
+        userId: brokerId, phone: window._activeBrokerPhone, name: window._activeBrokerName || 'Broker', amount,
         isBroker: true, brokerPlan: currentPlan, billingCycle: 'annual'
       })
     });
@@ -437,7 +437,7 @@ async function submitRegistration() {
     const oRes=await fetch(`${SUPA_URL}/functions/v1/create-order`,{
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
-      body:JSON.stringify({userId:brokerId,phone,amount,pack:`broker_${selectedPlan}_${billing}`,coins:0,isBroker:true,brokerPlan:selectedPlan,billingCycle:billing})
+      body:JSON.stringify({userId:brokerId,phone,name,amount,pack:`broker_${selectedPlan}_${billing}`,coins:0,isBroker:true,brokerPlan:selectedPlan,billingCycle:billing})
     });
 
     let order;
@@ -497,7 +497,7 @@ window.onload=async function(){
       let activated = false;
       let brokerRecord = null;
       while(attempts < 10 && !activated){
-        const checkRes = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=is_active,subscription_status,phone,plan,billing_cycle`,{
+        const checkRes = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=is_active,subscription_status,phone,plan,billing_cycle,name`,{
           headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
         });
         const brokerData = await checkRes.json();
@@ -520,6 +520,7 @@ window.onload=async function(){
         // Store state for upgrade/support actions
         window._activeBrokerId = brokerId;
         window._activeBrokerPhone = brokerRecord.phone;
+        window._activeBrokerName = brokerRecord.name;
         window._activePlan = brokerRecord.plan || planFromUrl;
 
         // Show annual upgrade box only if currently on monthly billing
