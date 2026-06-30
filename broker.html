@@ -264,16 +264,16 @@ async function switchToAnnual() {
       })
     });
     const order = await oRes.json();
-    const sessionId = order.subscription_session_id || order.payment_session_id;
+    const sessionId = order.subscription_session_id;
     if (!sessionId) { alert('Could not start annual upgrade. Please use the Need Support link below.'); btn.disabled=false; btn.textContent='Switch to Annual →'; return; }
 
     const cfScript = document.createElement('script');
     cfScript.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
     cfScript.onload = function() {
       const cf = Cashfree({ mode: 'production' });
-      cf.checkout({
-        paymentSessionId: sessionId,
-        returnUrl: `https://flatkhoj.com/broker.html?payment=success&broker_id=${brokerId}&plan=${currentPlan}&billing=annual`
+      cf.subscriptionsCheckout({
+        subsSessionId: sessionId,
+        redirectTarget: '_self'
       });
     };
     document.head.appendChild(cfScript);
@@ -454,7 +454,7 @@ async function submitRegistration() {
     console.log('create-order response:', order);
     document.getElementById('processingOverlay').classList.remove('show');
 
-    const sessionId = order.subscription_session_id || order.payment_session_id;
+    const sessionId = order.subscription_session_id;
     if(!sessionId){
       const errorDetail = order.error || order.message || JSON.stringify(order);
       console.error('No session ID in response:', order);
@@ -462,14 +462,14 @@ async function submitRegistration() {
       btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
-    // Open Cashfree — same checkout() method works for both order and subscription sessions
+    // Subscriptions use a dedicated checkout method, distinct from regular orders
     const script=document.createElement('script');
     script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
     script.onload=function(){
       const cf=Cashfree({mode:'production'});
-      cf.checkout({
-        paymentSessionId:sessionId,
-        returnUrl:`https://flatkhoj.com/broker.html?payment=success&broker_id=${brokerId}&plan=${selectedPlan}&billing=${billing}`
+      cf.subscriptionsCheckout({
+        subsSessionId: sessionId,
+        redirectTarget: '_self'
       });
     };
     document.head.appendChild(script);
