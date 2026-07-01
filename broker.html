@@ -452,6 +452,7 @@ async function submitRegistration() {
     }
 
     console.log('create-order response:', order);
+    console.log('create-order response:', order);
     document.getElementById('processingOverlay').classList.remove('show');
 
     const sessionId = order.subscription_session_id;
@@ -462,15 +463,27 @@ async function submitRegistration() {
       btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
+    console.log('Got subscription_session_id:', sessionId.slice(0,30)+'...');
+
     // Subscriptions use a dedicated checkout method, distinct from regular orders
     const script=document.createElement('script');
     script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.onerror=function(){
+      alert('Could not load Cashfree payment SDK. Please check your internet connection and try again.');
+      btn.disabled=false;btn.textContent='Register & Pay →';
+    };
     script.onload=function(){
-      const cf=Cashfree({mode:'production'});
-      cf.subscriptionsCheckout({
-        subsSessionId: sessionId,
-        redirectTarget: '_self'
-      });
+      try {
+        const cf=Cashfree({mode:'production'});
+        cf.subscriptionsCheckout({
+          subsSessionId: sessionId,
+          redirectTarget: '_self'
+        });
+      } catch(sdkErr) {
+        console.error('Cashfree SDK error:', sdkErr);
+        alert('Payment checkout error: ' + (sdkErr.message||sdkErr) + '\n\nPlease try again.');
+        btn.disabled=false;btn.textContent='Register & Pay →';
+      }
     };
     document.head.appendChild(script);
 
