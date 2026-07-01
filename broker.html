@@ -455,33 +455,32 @@ async function submitRegistration() {
     console.log('create-order response:', order);
     document.getElementById('processingOverlay').classList.remove('show');
 
-    const sessionId = order.subscription_session_id;
+    const sessionId = order.payment_session_id;
     if(!sessionId){
       const errorDetail = order.error || order.message || JSON.stringify(order);
       console.error('No session ID in response:', order);
-      alert('Payment setup failed: ' + errorDetail + '\n\nPlease check Supabase Edge Function logs for create-order for full details.');
+      alert('Payment setup failed: ' + errorDetail + '\n\nPlease try again.');
       btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
-    console.log('Got subscription_session_id:', sessionId.slice(0,30)+'...');
+    console.log('Got payment_session_id:', sessionId.slice(0,30)+'...');
 
-    // Subscriptions use a dedicated checkout method, distinct from regular orders
     const script=document.createElement('script');
     script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
     script.onerror=function(){
-      alert('Could not load Cashfree payment SDK. Please check your internet connection and try again.');
+      alert('Could not load payment SDK. Please check your internet and try again.');
       btn.disabled=false;btn.textContent='Register & Pay →';
     };
     script.onload=function(){
       try {
         const cf=Cashfree({mode:'production'});
-        cf.subscriptionsCheckout({
-          subsSessionId: sessionId,
+        cf.checkout({
+          paymentSessionId: sessionId,
           redirectTarget: '_self'
         });
       } catch(sdkErr) {
         console.error('Cashfree SDK error:', sdkErr);
-        alert('Payment checkout error: ' + (sdkErr.message||sdkErr) + '\n\nPlease try again.');
+        alert('Payment error: ' + (sdkErr.message||sdkErr));
         btn.disabled=false;btn.textContent='Register & Pay →';
       }
     };
@@ -497,6 +496,45 @@ async function submitRegistration() {
 
 window.onload=async function(){
   const params=new URLSearchParams(window.location.search);
+
+  // Handle mandate session redirect (from WhatsApp link — broker sets up auto-renewal)
+  const mandateSession=params.get('mandate_session');
+  if(mandateSession){
+    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+    document.querySelector('.hero').style.display='none';
+    document.getElementById('successScreen').innerHTML=`
+      <div class="success-icon">🔄</div>
+      <h2>Set up auto-renewal</h2>
+      <p>One-time UPI authorization to enable automatic monthly payments.<br><br>
+      You will <strong>not</strong> be charged now — this only sets up auto-debit for future months.</p>
+      <button class="submit-btn" id="mandateBtn" style="margin-top:20px">Authorize UPI Auto-debit →</button>`;
+    document.getElementById('successScreen').style.display='block';
+    document.getElementById('mandateBtn').onclick=function(){
+      const script=document.createElement('script');
+      script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.onload=function(){
+        const cf=Cashfree({mode:'production'});
+        cf.subscriptionsCheckout({subsSessionId:mandateSession,redirectTarget:'_self'});
+      };
+      document.head.appendChild(script);
+    };
+    return;
+  }
+
+  // Handle mandate success return
+  if(params.get('mandate')==='success'){
+    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+    document.querySelector('.hero').style.display='none';
+    document.getElementById('successScreen').innerHTML=`
+      <div class="success-icon">✅</div>
+      <h2>Auto-renewal set up!</h2>
+      <p>Your monthly payment is now fully automatic.<br><br>
+      You'll be charged every month automatically — no action needed from you.<br><br>
+      Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
+    document.getElementById('successScreen').style.display='block';
+    return;
+  }
+
   if(params.get('payment')==='success'){
     const brokerId=params.get('broker_id');
     const planFromUrl=params.get('plan');
