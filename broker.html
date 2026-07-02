@@ -193,12 +193,8 @@
       <input type="text" id="brokerName" placeholder="Your name">
     </div>
     <div class="field">
-      <label>Phone Number *</label>
-      <input type="tel" id="brokerPhone" maxlength="13" placeholder="10-digit mobile number">
-    </div>
-    <div class="field">
-      <label>WhatsApp Number <span style="font-weight:400;color:var(--ink3)">(leads delivered here — leave blank if same as above)</span></label>
-      <input type="tel" id="brokerWhatsapp" maxlength="13" placeholder="Only if different from phone number above">
+      <label>WhatsApp Number * <span style="font-weight:400;color:var(--ink3)">(leads will be delivered to this number)</span></label>
+      <input type="tel" id="brokerPhone" maxlength="13" placeholder="10-digit WhatsApp number">
     </div>
     <div class="area-section">
       <h3>Select your areas *</h3>
@@ -376,14 +372,10 @@ async function submitRegistration() {
   // Strip leading country code (91) if present and number is 12 digits
   if(phone.length===12 && phone.startsWith('91')) phone=phone.slice(2);
   if(phone.length===11 && phone.startsWith('0')) phone=phone.slice(1);
-  let waRaw=document.getElementById('brokerWhatsapp').value.trim().replace(/\D/g,'');
-  if(waRaw.length===12 && waRaw.startsWith('91')) waRaw=waRaw.slice(2);
-  if(waRaw.length===11 && waRaw.startsWith('0')) waRaw=waRaw.slice(1);
-  const wa=waRaw||phone;
+  const wa=phone; // leads go to this same WhatsApp number
 
   if(!name){alert('Please enter your name');return;}
-  if(phone.length!==10){alert('Please enter a valid 10-digit phone number');return;}
-  if(wa.length!==10){alert('Please enter a valid 10-digit WhatsApp number');return;}
+  if(phone.length!==10){alert('Please enter a valid 10-digit WhatsApp number');return;}
   if(!selectedPlan){alert('Please select a plan');return;}
   if(!selectedAreas.size){alert('Please select at least one area');return;}
 
