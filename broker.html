@@ -447,15 +447,15 @@ async function submitRegistration() {
     console.log('create-order response:', order);
     document.getElementById('processingOverlay').classList.remove('show');
 
-    const sessionId = order.payment_session_id;
+    const sessionId = order.subscription_session_id;
     if(!sessionId){
       const errorDetail = order.error || order.message || JSON.stringify(order);
       console.error('No session ID in response:', order);
-      alert('Payment setup failed: ' + errorDetail + '\n\nPlease try again.');
+      alert('Payment setup failed: ' + errorDetail);
       btn.disabled=false;btn.textContent='Register & Pay →';return;
     }
 
-    console.log('Got payment_session_id:', sessionId.slice(0,30)+'...');
+    console.log('Got subscription_session_id:', sessionId.slice(0,30)+'...');
 
     const script=document.createElement('script');
     script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
@@ -466,8 +466,8 @@ async function submitRegistration() {
     script.onload=function(){
       try {
         const cf=Cashfree({mode:'production'});
-        cf.checkout({
-          paymentSessionId: sessionId,
+        cf.subscriptionsCheckout({
+          subsSessionId: sessionId,
           redirectTarget: '_self'
         });
       } catch(sdkErr) {
