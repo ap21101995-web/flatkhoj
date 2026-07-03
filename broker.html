@@ -487,7 +487,15 @@ async function submitRegistration() {
 }
 
 window.onload=async function(){
-  const params=new URLSearchParams(window.location.search);
+  // Read params from both hash (#) and query string (?) —
+  // Cashfree subscription checkout POSTs to the return URL which GitHub Pages
+  // rejects with 405, so we use hash fragments (#param=value) that are never
+  // sent to the server. Query string kept as fallback for other flows.
+  const hashParams = new URLSearchParams(window.location.hash.replace('#',''));
+  const queryParams = new URLSearchParams(window.location.search);
+  const params = {
+    get: (k) => hashParams.get(k) || queryParams.get(k)
+  };
 
   // Handle mandate session redirect (from WhatsApp link — broker sets up auto-renewal)
   const mandateSession=params.get('mandate_session');
