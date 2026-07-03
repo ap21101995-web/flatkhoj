@@ -487,112 +487,67 @@ async function submitRegistration() {
 }
 
 window.onload=async function(){
-  // Read params from both hash (#) and query string (?) —
-  // Cashfree subscription checkout POSTs to the return URL which GitHub Pages
-  // rejects with 405, so we use hash fragments (#param=value) that are never
-  // sent to the server. Query string kept as fallback for other flows.
   const hashParams = new URLSearchParams(window.location.hash.replace('#',''));
   const queryParams = new URLSearchParams(window.location.search);
-  const params = {
-    get: (k) => hashParams.get(k) || queryParams.get(k)
-  };
+  const params = { get: (k) => hashParams.get(k) || queryParams.get(k) };
 
-  // Handle mandate session redirect (from WhatsApp link — broker sets up auto-renewal)
-  const mandateSession=params.get('mandate_session');
-  if(mandateSession){
+  // Handle return from Cashfree subscription checkout
+  const successSubId = params.get('success');
+  const paymentSuccess = params.get('payment');
+
+  if(successSubId || paymentSuccess === 'success'){
     document.querySelectorAll('.section').forEach(s=>s.style.display='none');
     document.querySelector('.hero').style.display='none';
+
+    // Show interim screen while webhook fires and activates broker
     document.getElementById('successScreen').innerHTML=`
-      <div class="success-icon">🔄</div>
-      <h2>Set up auto-renewal</h2>
-      <p>One-time UPI authorization to enable automatic monthly payments.<br><br>
-      You will <strong>not</strong> be charged now — this only sets up auto-debit for future months.</p>
-      <button class="submit-btn" id="mandateBtn" style="margin-top:20px">Authorize UPI Auto-debit →</button>`;
+      <div class="success-icon">⏳</div>
+      <h2>Setting up your account…</h2>
+      <p>Please wait a moment while we activate your subscription.</p>`;
     document.getElementById('successScreen').style.display='block';
-    document.getElementById('mandateBtn').onclick=function(){
-      const script=document.createElement('script');
-      script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
-      script.onload=function(){
-        const cf=Cashfree({mode:'production'});
-        cf.subscriptionsCheckout({subsSessionId:mandateSession,redirectTarget:'_self'});
-      };
-      document.head.appendChild(script);
-    };
-    return;
-  }
 
-  // Handle mandate success return
-  if(params.get('mandate')==='success'){
-    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-    document.querySelector('.hero').style.display='none';
-    document.getElementById('successScreen').innerHTML=`
-      <div class="success-icon">✅</div>
-      <h2>Auto-renewal set up!</h2>
-      <p>Your monthly payment is now fully automatic.<br><br>
-      You'll be charged every month automatically — no action needed from you.<br><br>
-      Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
-    document.getElementById('successScreen').style.display='block';
-    return;
-  }
-
-  if(params.get('payment')==='success'){
-    const brokerId=params.get('broker_id');
-    const planFromUrl=params.get('plan');
-    const billingFromUrl=params.get('billing');
-
-    if(brokerId){
-      // Poll for webhook activation — webhook is the source of truth for actual payment success.
-      // We do NOT force-activate here, since landing on this URL only means Cashfree redirected
-      // back, not that payment actually succeeded.
-      let attempts = 0;
+    // Poll DB for broker activation (webhook should fire within seconds)
+    if(successSubId){
       let activated = false;
-      let brokerRecord = null;
-      while(attempts < 10 && !activated){
-        const checkRes = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=is_active,subscription_status,phone,plan,billing_cycle,name`,{
+      for(let i=0; i<12; i++){
+        await new Promise(r=>setTimeout(r,2000));
+        const res = await fetch(`${SUPA_URL}/rest/v1/brokers?subscription_id=eq.${encodeURIComponent(successSubId)}&select=is_active,name,plan,billing_cycle`,{
           headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
         });
-        const brokerData = await checkRes.json();
-        brokerRecord = brokerData[0];
-        if(brokerRecord?.is_active && brokerRecord?.subscription_status === 'active'){
+        const data = await res.json();
+        if(data[0]?.is_active){
           activated = true;
+          const b = data[0];
+          const planLabels = {starter:'Starter',growth:'Growth',pro:'Pro',elite:'Elite'};
+          const quotas = {starter:10,growth:20,pro:30,elite:50};
+          document.getElementById('successScreen').innerHTML=`
+            <div class="success-icon">🎉</div>
+            <h2>You're live!</h2>
+            <p>Your FlatKhoj broker account is now active.<br><br>
+            Leads from your selected areas will arrive on your WhatsApp as soon as users post listings.<br><br>
+            <strong>Plan:</strong> ${planLabels[b.plan]||b.plan} (${b.billing_cycle==='annual'?'Annual':'Monthly'})<br>
+            <strong>Paid leads/month:</strong> ${quotas[b.plan]||10}<br><br>
+            You will also receive a WhatsApp confirmation shortly.<br><br>
+            Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
           break;
         }
-        if(brokerRecord?.subscription_status === 'payment_failed'){
-          break;
-        }
-        await new Promise(r=>setTimeout(r, 1500));
-        attempts++;
       }
-
-      document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-      document.querySelector('.hero').style.display='none';
-
-      if(activated){
-        // Store state for upgrade/support actions
-        window._activeBrokerId = brokerId;
-        window._activeBrokerPhone = brokerRecord.phone;
-        window._activeBrokerName = brokerRecord.name;
-        window._activePlan = brokerRecord.plan || planFromUrl;
-
-        // Show annual upgrade box only if currently on monthly billing
-        const billingCycle = brokerRecord.billing_cycle || billingFromUrl;
-        if (billingCycle === 'monthly') {
-          document.getElementById('upgradeAnnualBox').style.display = 'block';
-        }
-
-        document.getElementById('successScreen').style.display='block';
-      } else {
-        // Phone isn't confirmed yet at this point (webhook pending), so support
-        // link uses broker_id only — support.html can still find the conversation
-        // once they message, since we tag it by whatever identity is available.
-        document.getElementById('successScreen').innerHTML = `
-          <div class="success-icon">⏳</div>
-          <h2>Confirming your payment…</h2>
-          <p>If you completed the payment, your account will activate within a couple of minutes.<br><br>
-          If you closed the payment page or it failed, no charge was made — just refresh this page and try again.<br><br>
-          Still need help? <a href="javascript:void(0)" onclick="window.location.href='support.html?broker_id=${encodeURIComponent(params.get('broker_id')||'')}'" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
-        document.getElementById('successScreen').style.display='block';
+      if(!activated){
+        document.getElementById('successScreen').innerHTML=`
+          <div class="success-icon">✅</div>
+          <h2>Payment received!</h2>
+          <p>Your UPI mandate has been set up successfully.<br><br>
+          Your account will activate within a few minutes and you'll receive a WhatsApp confirmation.<br><br>
+          If you don't receive a WhatsApp within 10 minutes, please reach out:<br><br>
+          Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
       }
+    } else {
+      // Fallback for query param flow
+      document.getElementById('successScreen').innerHTML=`
+        <div class="success-icon">✅</div>
+        <h2>Payment received!</h2>
+        <p>Your account will activate shortly. You'll receive a WhatsApp confirmation.<br><br>
+        Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
     }
     return;
   }
