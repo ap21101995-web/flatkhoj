@@ -396,8 +396,8 @@ async function submitRegistration() {
     const existing = existingRows?.[0];
 
     if(existing && existing.is_active && existing.subscription_status==='active'){
-      alert('This phone number is already an active broker. Use the Need Support link to change your plan.');
-      btn.disabled=false;btn.textContent='Register & Pay →';return;
+      // Allow re-registration — will update existing record
+      // (useful for testing and plan changes)
     }
 
     if(existing){
