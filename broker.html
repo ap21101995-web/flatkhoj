@@ -468,7 +468,7 @@ async function submitRegistration() {
         const cf=Cashfree({mode:'production'});
         cf.subscriptionsCheckout({
           subsSessionId: sessionId,
-          redirectTarget: '_self'
+          redirectTarget: '_modal'
         });
       } catch(sdkErr) {
         console.error('Cashfree SDK error:', sdkErr);
