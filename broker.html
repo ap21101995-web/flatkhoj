@@ -457,6 +457,9 @@ async function submitRegistration() {
 
     console.log('Got subscription_session_id:', sessionId.slice(0,30)+'...');
 
+    // Suppress browser "Leave site?" warning before Cashfree redirects
+    window.onbeforeunload = null;
+
     const script=document.createElement('script');
     script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
     script.onerror=function(){
@@ -466,9 +469,15 @@ async function submitRegistration() {
     script.onload=function(){
       try {
         const cf=Cashfree({mode:'production'});
+        // Clear any beforeunload handlers before navigating to prevent
+        // browser's "Leave site?" popup
+        window.onbeforeunload = null;
+        window.addEventListener('beforeunload', function(e) {
+          e.stopImmediatePropagation();
+        }, true);
         cf.subscriptionsCheckout({
           subsSessionId: sessionId,
-          redirectTarget: '_modal'
+          redirectTarget: '_self'
         });
       } catch(sdkErr) {
         console.error('Cashfree SDK error:', sdkErr);
