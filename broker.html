@@ -501,7 +501,7 @@ window.onload=async function(){
   const params = { get: (k) => hashParams.get(k) || queryParams.get(k) };
 
   // Handle return from Cashfree subscription checkout
-  const successSubId = params.get('success');
+  const successSubId = params.get('success') || params.get('activated');
   const paymentSuccess = params.get('payment');
 
   if(successSubId || paymentSuccess === 'success'){
