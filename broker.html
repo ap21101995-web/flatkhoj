@@ -39,6 +39,7 @@
   .plan-top{display:flex;justify-content:space-between;align-items:center;}
   .plan-name{font-size:16px;font-weight:700;}
   .plan-contacts{font-size:13px;color:var(--ink2);margin-top:3px;}
+  .plan-free-note{font-size:11.5px;color:var(--teal);font-weight:600;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
   .plan-price{text-align:right;}
   .plan-price-main{font-size:22px;font-weight:800;color:var(--teal);}
   .plan-price-sub{font-size:12px;color:var(--ink3);}
@@ -121,7 +122,7 @@
       <div class="plan-top">
         <div>
           <div class="plan-name">Starter</div>
-          <div class="plan-contacts"><strong>10 contacts</strong> per month</div>
+          <div class="plan-contacts"><strong>10 paid contacts</strong> per month</div>
         </div>
         <div style="display:flex;align-items:center">
           <div class="plan-price">
@@ -132,12 +133,13 @@
           <div class="plan-check"></div>
         </div>
       </div>
+      <div class="plan-free-note">+ Unlimited free leads all month</div>
     </div>
     <div class="plan-card " id="plan-growth" onclick="selectPlan(this,'growth')">
       <div class="plan-top">
         <div>
           <div class="plan-name">Growth</div>
-          <div class="plan-contacts"><strong>20 contacts</strong> per month</div>
+          <div class="plan-contacts"><strong>20 paid contacts</strong> per month</div>
         </div>
         <div style="display:flex;align-items:center">
           <div class="plan-price">
@@ -148,12 +150,13 @@
           <div class="plan-check"></div>
         </div>
       </div>
+      <div class="plan-free-note">+ Unlimited free leads all month</div>
     </div>
     <div class="plan-card popular" id="plan-pro" onclick="selectPlan(this,'pro')">
       <div class="plan-top">
         <div>
           <div class="plan-name">Pro</div>
-          <div class="plan-contacts"><strong>30 contacts</strong> per month</div>
+          <div class="plan-contacts"><strong>30 paid contacts</strong> per month</div>
         </div>
         <div style="display:flex;align-items:center">
           <div class="plan-price">
@@ -164,12 +167,13 @@
           <div class="plan-check"></div>
         </div>
       </div>
+      <div class="plan-free-note">+ Unlimited free leads all month</div>
     </div>
     <div class="plan-card " id="plan-elite" onclick="selectPlan(this,'elite')">
       <div class="plan-top">
         <div>
           <div class="plan-name">Elite</div>
-          <div class="plan-contacts"><strong>50 contacts</strong> per month</div>
+          <div class="plan-contacts"><strong>50 paid contacts</strong> per month</div>
         </div>
         <div style="display:flex;align-items:center">
           <div class="plan-price">
@@ -180,7 +184,13 @@
           <div class="plan-check"></div>
         </div>
       </div>
+      <div class="plan-free-note">+ Unlimited free leads all month</div>
     </div>
+  </div>
+  <div style="margin-top:12px;background:var(--teal-bg);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--teal-dark,var(--teal));line-height:1.6">
+    <strong>Free leads included in every plan:</strong><br>
+    ✦ Flat hunters who prefer no brokerage — convince them, earn brokerage<br>
+    ✦ Flats &amp; rooms with no owner brokerage — find a tenant/flatmate, keep the brokerage
   </div>
 </div>
 
