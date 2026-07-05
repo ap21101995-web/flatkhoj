@@ -1246,6 +1246,30 @@ const PLAN_PRICES = {
 const PLAN_CONTACTS = { starter:10, growth:20, pro:30, elite:50 };
 const PLAN_LABELS = { starter:'Starter', growth:'Growth', pro:'Pro', elite:'Elite' };
 
+function switchBrokerTab(tab) {
+  // Toggle panels
+  document.getElementById('bpanel-active').style.display = tab === 'active' ? 'block' : 'none';
+  document.getElementById('bpanel-timelines').style.display = tab === 'timelines' ? 'block' : 'none';
+  // Toggle button styles
+  const activeBtn = document.getElementById('btab-active');
+  const timelinesBtn = document.getElementById('btab-timelines');
+  if(tab === 'active') {
+    activeBtn.style.fontWeight = '700';
+    activeBtn.style.color = 'var(--teal-light)';
+    activeBtn.style.borderBottom = '2px solid var(--teal-light)';
+    timelinesBtn.style.fontWeight = '600';
+    timelinesBtn.style.color = 'var(--ink3)';
+    timelinesBtn.style.borderBottom = '2px solid transparent';
+  } else {
+    timelinesBtn.style.fontWeight = '700';
+    timelinesBtn.style.color = 'var(--teal-light)';
+    timelinesBtn.style.borderBottom = '2px solid var(--teal-light)';
+    activeBtn.style.fontWeight = '600';
+    activeBtn.style.color = 'var(--ink3)';
+    activeBtn.style.borderBottom = '2px solid transparent';
+  }
+}
+
 async function loadBrokers() {
   try {
     const [brokers, leads, payments] = await Promise.all([
