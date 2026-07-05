@@ -319,10 +319,10 @@ function renderZones() {
     el.innerHTML = `
       <div class="zone-header" onclick="toggleZone(this)">
         <span>${zone}</span>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:16px">
           <span class="zone-count" id="cnt-${safe}"></span>
+          <span style="color:var(--ink3);font-size:18px;line-height:1">▼</span>
           <button class="select-all-btn" onclick="event.stopPropagation();selectAllZone('${zone}')">Select all</button>
-          <span style="color:var(--ink3);font-size:12px">▼</span>
         </div>
       </div>
       <div class="zone-areas" id="zone-${safe}">
