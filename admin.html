@@ -396,8 +396,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <!-- Actions -->
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-teal" id="bd-toggle" onclick="toggleBrokerActiveDetail()">Activate</button>
-          <button class="btn btn-ghost" onclick="resetBrokerCountDetail()">Reset monthly count</button>
-          <button class="btn btn-red" onclick="deleteBrokerDetail()">Delete broker</button>
+          <button class="btn btn-ghost" onclick="resetBrokerCountDetail()">Reset Monthly Count</button>
+          <button class="btn btn-ghost" onclick="giveExtraLeadsDetail()" style="background:var(--teal-bg);color:var(--teal-light);border:1px solid var(--teal-light)">+ Give Extra Leads</button>
+          <button class="btn btn-red" onclick="deleteBrokerDetail()">Delete Broker</button>
         </div>
       </div>
     </div>
@@ -1600,26 +1601,64 @@ async function openBrokerDetail(brokerId) {
 }
 
 async function toggleBrokerActiveDetail() {
-  const b = allBrokers.find(x=>x.id===window._detailBrokerId);
+  if(!window._detailBrokerId) return;
+  const { data: b } = await supabase.from('brokers').select('is_active,name').eq('id',window._detailBrokerId).single();
   if(!b) return;
   const newActive = !b.is_active;
-  const r = await supabase.from('brokers').update({is_active:newActive,subscription_status:newActive?'active':'cancelled'}).eq('id',b.id);
-  if(!r.error){ toast(newActive?'Broker activated':'Broker deactivated','ok'); loadBrokers(); go('brokers',document.querySelector('.nav-item[onclick*=brokers]')); }
+  const { error } = await supabase.from('brokers').update({
+    is_active: newActive,
+    subscription_status: newActive ? 'active' : 'cancelled'
+  }).eq('id', window._detailBrokerId);
+  if(!error){
+    toast(newActive ? 'Broker activated — leads will now flow' : 'Broker deactivated — leads stopped', 'ok');
+    openBrokerDetail(window._detailBrokerId);
+    loadBrokers();
+  } else {
+    toast('Error: ' + error.message, 'err');
+  }
 }
 
 async function resetBrokerCountDetail() {
   if(!window._detailBrokerId) return;
-  const r = await supabase.from('brokers').update({contacts_sent_this_month:0}).eq('id',window._detailBrokerId);
-  if(!r.error){ toast('Monthly count reset','ok'); openBrokerDetail(window._detailBrokerId); }
+  const { error } = await supabase.from('brokers').update({contacts_sent_this_month: 0}).eq('id', window._detailBrokerId);
+  if(!error){
+    toast('Monthly count reset to 0 — paid leads quota refreshed', 'ok');
+    openBrokerDetail(window._detailBrokerId);
+  } else {
+    toast('Error: ' + error.message, 'err');
+  }
+}
+
+async function giveExtraLeadsDetail() {
+  if(!window._detailBrokerId) return;
+  const extra = prompt('How many extra paid leads to give this broker this month?', '5');
+  if(!extra || isNaN(extra)) return;
+  const { data: b } = await supabase.from('brokers').select('contacts_per_month,contacts_sent_this_month').eq('id',window._detailBrokerId).single();
+  if(!b) return;
+  // Temporarily increase quota by the extra amount
+  const newQuota = (b.contacts_per_month || 10) + parseInt(extra);
+  const { error } = await supabase.from('brokers').update({contacts_per_month: newQuota}).eq('id', window._detailBrokerId);
+  if(!error){
+    toast(`Quota increased by ${extra} — broker can now receive ${newQuota} paid leads this month`, 'ok');
+    openBrokerDetail(window._detailBrokerId);
+  } else {
+    toast('Error: ' + error.message, 'err');
+  }
 }
 
 async function deleteBrokerDetail() {
   if(!window._detailBrokerId) return;
-  if(!confirm('Delete this broker permanently?')) return;
-  await supabase.from('broker_leads').delete().eq('broker_id',window._detailBrokerId);
-  await supabase.from('broker_payments').delete().eq('broker_id',window._detailBrokerId);
-  const r = await supabase.from('brokers').delete().eq('id',window._detailBrokerId);
-  if(!r.error){ toast('Broker deleted','ok'); loadBrokers(); go('brokers',document.querySelector('.nav-item[onclick*=brokers]')); }
+  if(!confirm('Delete this broker permanently? This cannot be undone.')) return;
+  await supabase.from('broker_leads').delete().eq('broker_id', window._detailBrokerId);
+  await supabase.from('broker_payments').delete().eq('broker_id', window._detailBrokerId);
+  const { error } = await supabase.from('brokers').delete().eq('id', window._detailBrokerId);
+  if(!error){
+    toast('Broker deleted', 'ok');
+    loadBrokers();
+    go('brokers', document.querySelector('.nav-item[onclick*=brokers]'));
+  } else {
+    toast('Error: ' + error.message, 'err');
+  }
 }
 
 async function loadBrokerLeads(brokerId) {
