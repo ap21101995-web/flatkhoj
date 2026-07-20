@@ -370,13 +370,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
     <!-- BROKER DETAIL PAGE -->
     <div class="page" id="pg-broker-detail">
-      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
-        <button class="btn btn-ghost" onclick="go('brokers',document.querySelector('.nav-item[onclick*=brokers]'))">&larr; Back to Brokers</button>
-        <div style="font-size:18px;font-weight:700" id="bd-name">Broker</div>
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="go('brokers',document.querySelector('.nav-item[onclick*=brokers]'))">&larr; Back</button>
+        <div style="font-size:18px;font-weight:700;flex:1" id="bd-name">Broker</div>
         <div style="font-size:13px;color:var(--ink3)" id="bd-phone"></div>
       </div>
 
-      <!-- Broker areas -->
+      <!-- Action buttons at TOP -->
+      <div style="padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-teal" id="bd-toggle" onclick="toggleBrokerActiveDetail()">Activate</button>
+        <button class="btn btn-ghost" onclick="resetBrokerCountDetail()">Reset Monthly Count</button>
+        <button class="btn btn-ghost" onclick="giveExtraLeadsDetail()" style="background:var(--teal-bg);color:var(--teal-light);border:1px solid var(--teal-light)">+ Give Extra Leads</button>
+        <button class="btn btn-red" onclick="deleteBrokerDetail()">Delete Broker</button>
+      </div>
+
       <div style="padding:16px 20px">
         <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:10px">SUBSCRIBED AREAS</div>
         <div id="bd-areas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px"></div>
@@ -391,14 +398,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <div id="bd-leads-count" style="font-size:13px;color:var(--teal-light)"></div>
           </div>
           <table id="bd-leads-table" style="width:100%"></table>
-        </div>
-
-        <!-- Actions -->
-        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-teal" id="bd-toggle" onclick="toggleBrokerActiveDetail()">Activate</button>
-          <button class="btn btn-ghost" onclick="resetBrokerCountDetail()">Reset Monthly Count</button>
-          <button class="btn btn-ghost" onclick="giveExtraLeadsDetail()" style="background:var(--teal-bg);color:var(--teal-light);border:1px solid var(--teal-light)">+ Give Extra Leads</button>
-          <button class="btn btn-red" onclick="deleteBrokerDetail()">Delete Broker</button>
         </div>
       </div>
     </div>
@@ -1553,6 +1552,7 @@ async function openBrokerDetail(brokerId) {
   // Set header
   document.getElementById('bd-name').textContent = b.name || '—';
   document.getElementById('bd-phone').textContent = '+91 ' + b.phone;
+  const toggleBtn = document.getElementById('bd-toggle');
   toggleBtn.textContent = b.is_active ? 'Deactivate' : 'Activate';
   toggleBtn.className = b.is_active ? 'btn btn-red' : 'btn btn-teal';
 
