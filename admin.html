@@ -1529,19 +1529,30 @@ function openBrokerModal(brokerId) {
 }
 
 async function openBrokerDetail(brokerId) {
-  const b = allBrokers.find(x=>x.id===brokerId);
-  if(!b) return;
   window._detailBrokerId = brokerId;
 
-  // Navigate to detail page
+  // Navigate to detail page first so user sees something immediately
   go('broker-detail', null);
+  document.getElementById('bd-name').textContent = 'Loading…';
+  document.getElementById('bd-areas').innerHTML = '';
+  document.getElementById('bd-stats').innerHTML = '';
+  document.getElementById('bd-leads-table').innerHTML = '';
+
+  // Fetch broker directly from DB — don't rely on allBrokers cache
+  const { data: b, error } = await supabase
+    .from('brokers')
+    .select('*')
+    .eq('id', brokerId)
+    .single();
+
+  if(error || !b) {
+    document.getElementById('bd-name').textContent = 'Error loading broker';
+    return;
+  }
 
   // Set header
   document.getElementById('bd-name').textContent = b.name || '—';
   document.getElementById('bd-phone').textContent = '+91 ' + b.phone;
-
-  // Set toggle button
-  const toggleBtn = document.getElementById('bd-toggle');
   toggleBtn.textContent = b.is_active ? 'Deactivate' : 'Activate';
   toggleBtn.className = b.is_active ? 'btn btn-red' : 'btn btn-teal';
 
