@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FlatKhoj Admin v2.3 - build 22072026 -->
+<!-- FlatKhoj Admin v2.4 - build 22072026b -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1592,11 +1592,23 @@ async function openBrokerDetail(brokerId) {
 
   // Load leads
   try {
-    const leads = await supaGet(`broker_leads?broker_id=eq.${brokerId}&order=sent_at.desc&select=*`);
     const lt = document.getElementById('bd-leads-table');
-    document.getElementById('bd-leads-count').textContent = `${leads.filter(l=>l.is_paid_lead).length} paid · ${leads.filter(l=>!l.is_paid_lead).length} free`;
-    if(!leads.length){
-      lt.innerHTML = '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--ink3)">No leads sent yet</td></tr>';
+    lt.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--ink3)">Loading leads…</td></tr>';
+    
+    const { data: leads, error: leadsError } = await supabase
+      .from('broker_leads')
+      .select('*')
+      .eq('broker_id', brokerId)
+      .order('sent_at', { ascending: false });
+
+    if(leadsError) throw leadsError;
+
+    const paidCount = (leads||[]).filter(l=>l.is_paid_lead).length;
+    const freeCount = (leads||[]).filter(l=>!l.is_paid_lead).length;
+    document.getElementById('bd-leads-count').textContent = `${paidCount} paid · ${freeCount} free`;
+
+    if(!leads || !leads.length){
+      lt.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--ink3)">No leads sent yet</td></tr>';
     } else {
       lt.innerHTML = '<tr><th>#</th><th>Type</th><th>Listing</th><th>Sent</th><th>Status</th></tr>' +
         leads.map((l,i)=>`<tr>
@@ -1609,7 +1621,10 @@ async function openBrokerDetail(brokerId) {
           <td style="font-size:12px">${l.whatsapp_status||'sent'}</td>
         </tr>`).join('');
     }
-  } catch(e) { console.error('loadBrokerDetail leads:', e); }
+  } catch(e) {
+    console.error('loadBrokerDetail leads:', e);
+    document.getElementById('bd-leads-table').innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--red)">Error loading leads</td></tr>';
+  }
 }
 
 async function toggleBrokerActiveDetail() {
