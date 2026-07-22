@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FlatKhoj Admin v2.5 - build 22072026c -->
+<!-- FlatKhoj Admin v2.6 - build 22072026d -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1529,6 +1529,7 @@ function openBrokerModal(brokerId) {
 }
 
 async function openBrokerDetail(brokerId) {
+  try {
   window._detailBrokerId = brokerId;
   go('broker-detail', null);
   document.getElementById('bd-name').textContent = 'Loading…';
@@ -1541,7 +1542,7 @@ async function openBrokerDetail(brokerId) {
   const b = brokers[0];
 
   if(!b) {
-    document.getElementById('bd-name').textContent = 'Error loading broker';
+    document.getElementById('bd-name').textContent = 'Error: broker not found';
     return;
   }
 
@@ -1608,6 +1609,10 @@ async function openBrokerDetail(brokerId) {
   } catch(e) {
     console.error('loadBrokerDetail leads:', e);
     document.getElementById('bd-leads-table').innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--red)">Error loading leads: '+e.message+'</td></tr>';
+  }
+  } catch(e) {
+    console.error('openBrokerDetail error:', e);
+    document.getElementById('bd-name').textContent = 'Error: ' + e.message;
   }
 }
 
