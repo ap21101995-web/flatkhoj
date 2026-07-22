@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FlatKhoj Admin v2.6 - build 22072026d -->
+<!-- FlatKhoj Admin v2.7 - build 22072026e -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1638,13 +1638,14 @@ async function resetBrokerCountDetail() {
 async function giveExtraLeadsDetail() {
   if(!window._detailBrokerId) return;
   const extra = prompt('How many extra paid leads to give this broker this month?', '5');
-  if(!extra || isNaN(extra)) return;
-  const brokers = await supaGet(`brokers?id=eq.${window._detailBrokerId}&select=contacts_per_month&limit=1`);
+  if(!extra || isNaN(extra) || parseInt(extra) <= 0) return;
+  const brokers = await supaGet(`brokers?id=eq.${window._detailBrokerId}&select=contacts_sent_this_month,contacts_per_month&limit=1`);
   const b = brokers[0];
   if(!b) return;
-  const newQuota = (b.contacts_per_month||10) + parseInt(extra);
-  await supaPatch('brokers', `id=eq.${window._detailBrokerId}`, {contacts_per_month:newQuota});
-  toast(`Quota increased by ${extra} — broker can now receive ${newQuota} paid leads this month`, 'ok');
+  // Reduce the sent count by extra — this creates headroom without changing permanent quota
+  const newSent = Math.max(0, (b.contacts_sent_this_month||0) - parseInt(extra));
+  await supaPatch('brokers', `id=eq.${window._detailBrokerId}`, {contacts_sent_this_month: newSent});
+  toast(`Done — broker can now receive ${parseInt(extra)} more paid leads this month`, 'ok');
   openBrokerDetail(window._detailBrokerId);
 }
 
