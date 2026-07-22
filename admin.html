@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FlatKhoj Admin v2.4 - build 22072026b -->
+<!-- FlatKhoj Admin v2.5 - build 22072026c -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1530,22 +1530,17 @@ function openBrokerModal(brokerId) {
 
 async function openBrokerDetail(brokerId) {
   window._detailBrokerId = brokerId;
-
-  // Navigate to detail page first so user sees something immediately
   go('broker-detail', null);
   document.getElementById('bd-name').textContent = 'Loading…';
   document.getElementById('bd-areas').innerHTML = '';
   document.getElementById('bd-stats').innerHTML = '';
   document.getElementById('bd-leads-table').innerHTML = '';
 
-  // Fetch broker directly from DB — don't rely on allBrokers cache
-  const { data: b, error } = await supabase
-    .from('brokers')
-    .select('*')
-    .eq('id', brokerId)
-    .single();
+  // Fetch broker using supaGet (raw fetch — no supabase client needed)
+  const brokers = await supaGet(`brokers?id=eq.${brokerId}&select=*&limit=1`);
+  const b = brokers[0];
 
-  if(error || !b) {
+  if(!b) {
     document.getElementById('bd-name').textContent = 'Error loading broker';
     return;
   }
@@ -1594,28 +1589,17 @@ async function openBrokerDetail(brokerId) {
   try {
     const lt = document.getElementById('bd-leads-table');
     lt.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--ink3)">Loading leads…</td></tr>';
-    
-    const { data: leads, error: leadsError } = await supabase
-      .from('broker_leads')
-      .select('*')
-      .eq('broker_id', brokerId)
-      .order('sent_at', { ascending: false });
-
-    if(leadsError) throw leadsError;
-
-    const paidCount = (leads||[]).filter(l=>l.is_paid_lead).length;
-    const freeCount = (leads||[]).filter(l=>!l.is_paid_lead).length;
+    const leads = await supaGet(`broker_leads?broker_id=eq.${brokerId}&order=sent_at.desc&select=*`);
+    const paidCount = leads.filter(l=>l.is_paid_lead).length;
+    const freeCount = leads.filter(l=>!l.is_paid_lead).length;
     document.getElementById('bd-leads-count').textContent = `${paidCount} paid · ${freeCount} free`;
-
-    if(!leads || !leads.length){
+    if(!leads.length){
       lt.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--ink3)">No leads sent yet</td></tr>';
     } else {
       lt.innerHTML = '<tr><th>#</th><th>Type</th><th>Listing</th><th>Sent</th><th>Status</th></tr>' +
         leads.map((l,i)=>`<tr>
           <td style="color:var(--ink3);font-size:12px">${i+1}</td>
-          <td>${l.is_paid_lead
-            ? '<span class="badge b-ok">Paid</span>'
-            : '<span class="badge b-pending">Free</span>'}</td>
+          <td>${l.is_paid_lead?'<span class="badge b-ok">Paid</span>':'<span class="badge b-pending">Free</span>'}</td>
           <td><a href="listing_detail.html?id=${l.listing_id}" target="_blank" style="font-size:11px;font-family:monospace;color:var(--teal-light);text-decoration:none;font-weight:600">${(l.listing_id||'').slice(0,8)}… ↗</a></td>
           <td style="font-size:12px;color:var(--ink3)">${timeAgo(l.sent_at)}</td>
           <td style="font-size:12px">${l.whatsapp_status||'sent'}</td>
@@ -1623,69 +1607,52 @@ async function openBrokerDetail(brokerId) {
     }
   } catch(e) {
     console.error('loadBrokerDetail leads:', e);
-    document.getElementById('bd-leads-table').innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--red)">Error loading leads</td></tr>';
+    document.getElementById('bd-leads-table').innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--red)">Error loading leads: '+e.message+'</td></tr>';
   }
 }
 
 async function toggleBrokerActiveDetail() {
   if(!window._detailBrokerId) return;
-  const { data: b } = await supabase.from('brokers').select('is_active,name').eq('id',window._detailBrokerId).single();
+  const brokers = await supaGet(`brokers?id=eq.${window._detailBrokerId}&select=is_active&limit=1`);
+  const b = brokers[0];
   if(!b) return;
   const newActive = !b.is_active;
-  const { error } = await supabase.from('brokers').update({
-    is_active: newActive,
-    subscription_status: newActive ? 'active' : 'cancelled'
-  }).eq('id', window._detailBrokerId);
-  if(!error){
-    toast(newActive ? 'Broker activated — leads will now flow' : 'Broker deactivated — leads stopped', 'ok');
-    openBrokerDetail(window._detailBrokerId);
-    loadBrokers();
-  } else {
-    toast('Error: ' + error.message, 'err');
-  }
+  await supaPatch('brokers', `id=eq.${window._detailBrokerId}`, {is_active:newActive, subscription_status:newActive?'active':'cancelled'});
+  toast(newActive ? 'Broker activated — leads will now flow' : 'Broker deactivated — leads stopped', 'ok');
+  openBrokerDetail(window._detailBrokerId);
+  loadBrokers();
 }
 
 async function resetBrokerCountDetail() {
   if(!window._detailBrokerId) return;
-  const { error } = await supabase.from('brokers').update({contacts_sent_this_month: 0}).eq('id', window._detailBrokerId);
-  if(!error){
-    toast('Monthly count reset to 0 — paid leads quota refreshed', 'ok');
-    openBrokerDetail(window._detailBrokerId);
-  } else {
-    toast('Error: ' + error.message, 'err');
-  }
+  await supaPatch('brokers', `id=eq.${window._detailBrokerId}`, {contacts_sent_this_month:0});
+  toast('Monthly count reset to 0 — paid leads quota refreshed', 'ok');
+  openBrokerDetail(window._detailBrokerId);
 }
 
 async function giveExtraLeadsDetail() {
   if(!window._detailBrokerId) return;
   const extra = prompt('How many extra paid leads to give this broker this month?', '5');
   if(!extra || isNaN(extra)) return;
-  const { data: b } = await supabase.from('brokers').select('contacts_per_month,contacts_sent_this_month').eq('id',window._detailBrokerId).single();
+  const brokers = await supaGet(`brokers?id=eq.${window._detailBrokerId}&select=contacts_per_month&limit=1`);
+  const b = brokers[0];
   if(!b) return;
-  // Temporarily increase quota by the extra amount
-  const newQuota = (b.contacts_per_month || 10) + parseInt(extra);
-  const { error } = await supabase.from('brokers').update({contacts_per_month: newQuota}).eq('id', window._detailBrokerId);
-  if(!error){
-    toast(`Quota increased by ${extra} — broker can now receive ${newQuota} paid leads this month`, 'ok');
-    openBrokerDetail(window._detailBrokerId);
-  } else {
-    toast('Error: ' + error.message, 'err');
-  }
+  const newQuota = (b.contacts_per_month||10) + parseInt(extra);
+  await supaPatch('brokers', `id=eq.${window._detailBrokerId}`, {contacts_per_month:newQuota});
+  toast(`Quota increased by ${extra} — broker can now receive ${newQuota} paid leads this month`, 'ok');
+  openBrokerDetail(window._detailBrokerId);
 }
 
 async function deleteBrokerDetail() {
   if(!window._detailBrokerId) return;
   if(!confirm('Delete this broker permanently? This cannot be undone.')) return;
-  await supabase.from('broker_leads').delete().eq('broker_id', window._detailBrokerId);
-  await supabase.from('broker_payments').delete().eq('broker_id', window._detailBrokerId);
-  const { error } = await supabase.from('brokers').delete().eq('id', window._detailBrokerId);
-  if(!error){
-    toast('Broker deleted', 'ok');
-    loadBrokers();
-    go('brokers', document.querySelector('.nav-item[onclick*=brokers]'));
-  } else {
-    toast('Error: ' + error.message, 'err');
-  }
+  const h = {'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`};
+  await fetch(`${SUPA_URL}/rest/v1/broker_leads?broker_id=eq.${window._detailBrokerId}`,{method:'DELETE',headers:h});
+  await fetch(`${SUPA_URL}/rest/v1/broker_payments?broker_id=eq.${window._detailBrokerId}`,{method:'DELETE',headers:h});
+  await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${window._detailBrokerId}`,{method:'DELETE',headers:h});
+  toast('Broker deleted', 'ok');
+  loadBrokers();
+  go('brokers', document.querySelector('.nav-item[onclick*=brokers]'));
 }
 
 async function loadBrokerLeads(brokerId) {
