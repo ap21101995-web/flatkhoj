@@ -982,9 +982,8 @@ async function loadListings(reset = true) {
     const selectedCity = getSelectedCity();
     if(selectedCity === 'pune') {
       url += `&city=eq.pune`;
-    } else if(selectedCity === 'mumbai') {
-      url += `&or=(city.eq.mumbai,city.is.null)`;
     }
+    // For Mumbai or no selection — show all (null city = mumbai, so no filter needed until Pune listings exist)
     // "Looking for Occupancy" shows both flatmate_wanted AND flat_listing
     if (activeFilter === 'flatmate_wanted') {
       url += `&listing_type=in.(flatmate_wanted,flat_listing)`;
