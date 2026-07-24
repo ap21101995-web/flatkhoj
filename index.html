@@ -622,12 +622,12 @@ body {
     <p style="font-size:14px;color:#6b6b68;margin:0 0 24px">We'll show you listings and areas near you</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <button onclick="setCity('mumbai')" style="background:#f0faf7;border:2px solid #0f7b6c;border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center">
-        <div style="font-size:32px;margin-bottom:8px">🏛️</div>
+        <div style="font-size:40px;margin-bottom:8px">🌉</div>
         <div style="font-size:16px;font-weight:700;color:#1a1a18">Mumbai</div>
-        <div style="font-size:11px;color:#6b6b68;margin-top:2px">Gateway City</div>
+        <div style="font-size:11px;color:#6b6b68;margin-top:2px">Financial Capital of India</div>
       </button>
-      <button onclick="setCity('pune')" style="background:#f0faf7;border:2px solid #e5e5e3;border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center">
-        <div style="font-size:32px;margin-bottom:8px">🏯</div>
+      <button onclick="setCity('pune')" style="background:#f5f5ff;border:2px solid #e5e5e3;border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center">
+        <div style="font-size:40px;margin-bottom:8px">🏰</div>
         <div style="font-size:16px;font-weight:700;color:#1a1a18">Pune</div>
         <div style="font-size:11px;color:#6b6b68;margin-top:2px">Oxford of the East</div>
       </button>
@@ -646,14 +646,6 @@ body {
 </div>
 <!-- CONTEXTUAL SUB-FILTERS -->
 <div id="subFilterBar" style="display:none;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap">
-</div>
-
-<!-- MUMBAI AREA QUICK SELECT -->
-<div class="area-bar">
-  <div class="area-chips" id="areaChips">
-    <button class="area-chip active" onclick="setArea(this,'all')">All areas</button>
-    <!-- Dynamic chips loaded by JS below -->
-  </div>
 </div>
 
 <!-- STATS -->
@@ -986,9 +978,13 @@ async function loadListings(reset = true) {
   try {
     const now = new Date().toISOString();
     let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&expires_at=gte.${now}`;
-    // Filter by selected city
+    // Filter by selected city — include listings with null city as mumbai (legacy)
     const selectedCity = getSelectedCity();
-    if(selectedCity) url += `&city=eq.${selectedCity}`;
+    if(selectedCity === 'pune') {
+      url += `&city=eq.pune`;
+    } else if(selectedCity === 'mumbai') {
+      url += `&or=(city.eq.mumbai,city.is.null)`;
+    }
     // "Looking for Occupancy" shows both flatmate_wanted AND flat_listing
     if (activeFilter === 'flatmate_wanted') {
       url += `&listing_type=in.(flatmate_wanted,flat_listing)`;
@@ -3250,7 +3246,7 @@ async function loadAreaChips() {
 
 // ── CITY SELECTOR ────────────────────────────────────────────────────────
 const CITIES = {
-  mumbai: { name: 'Mumbai', icon: '🏛️', tagline: 'Gateway City' },
+  mumbai: { name: 'Mumbai', icon: '🌊', tagline: 'Financial Capital of India' },
   pune:   { name: 'Pune',   icon: '🏯', tagline: 'Oxford of the East' },
 };
 
@@ -3262,7 +3258,7 @@ function setCity(city) {
   localStorage.setItem('fk_city', city);
   // Update city badge in header
   const badge = document.getElementById('cityBadge');
-  if(badge) badge.textContent = CITIES[city]?.name || city;
+  const cityIcons = {mumbai:'🌉', pune:'🏰'}; if(badge) badge.textContent = '📍 ' + (CITIES[city]?.name || city);
   // Close modal
   const modal = document.getElementById('cityModal');
   if(modal) modal.style.display = 'none';
@@ -3279,7 +3275,7 @@ let savedListingIds = new Set();
 let unlockedListingIds = new Set();
 
 // Load area chips (non-blocking — don't await)
-loadAreaChips();
+
 
 async function fetchUserData() {
   const user = getUser();
