@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>FlatKhoj — Find Flatmates & Rooms for Rent in Mumbai</title>
-<meta name="description" content="Looking for a flatmate or a room in Mumbai? FlatKhoj connects flat seekers, flatmate hunters and room owners directly — no broker spam. Filter by area and find serious listings only.">
-<meta name="keywords" content="flatmate Mumbai, room for rent Mumbai, flat wanted Mumbai, looking for flatmate Mumbai, shared flat Mumbai, single occupancy Mumbai, PG alternative Mumbai, flat hunting Mumbai">
+<title>FlatKhoj — Find Flatmates & Rooms for Rent — Mumbai & Pune</title>
+<meta name="description" content="FlatKhoj connects flat seekers and flatmate hunters directly — no broker spam. Available in Mumbai and Pune.">
+<meta name="keywords" content="flatmate Mumbai, room for rent Mumbai, flat wanted Pune, looking for flatmate Pune, shared flat Mumbai, flatmate Pune, flat hunting Mumbai, PG alternative Pune">
 <meta name="robots" content="index, follow">
 <meta name="author" content="FlatKhoj">
 <link rel="canonical" href="https://flatkhoj.com/">
 
 <!-- Open Graph (WhatsApp / Facebook preview) -->
-<meta property="og:title" content="FlatKhoj — Find Flatmates & Rooms for Rent in Mumbai">
-<meta property="og:description" content="Looking for a flatmate or a room in Mumbai? FlatKhoj connects flat seekers, flatmate hunters and room owners directly — no broker spam. Filter by area and find serious listings only.">
+<meta property="og:title" content="FlatKhoj — Find Flatmates & Rooms for Rent — Mumbai & Pune">
+<meta property="og:description" content="FlatKhoj connects flat seekers and flatmate hunters directly — no broker spam. Available in Mumbai and Pune.">
 <meta property="og:image" content="https://flatkhoj.com/og-image.png">
 <meta property="og:url" content="https://flatkhoj.com/">
 <meta property="og:type" content="website">
@@ -20,8 +20,8 @@
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="FlatKhoj — Find Flatmates & Rooms for Rent in Mumbai">
-<meta name="twitter:description" content="Looking for a flatmate or a room in Mumbai? FlatKhoj connects flat seekers, flatmate hunters and room owners directly — no broker spam. Filter by area and find serious listings only.">
+<meta name="twitter:title" content="FlatKhoj — Find Flatmates & Rooms for Rent — Mumbai & Pune">
+<meta name="twitter:description" content="FlatKhoj connects flat seekers and flatmate hunters directly — no broker spam. Available in Mumbai and Pune.">
 <meta name="twitter:image" content="https://flatkhoj.com/og-image.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -563,7 +563,7 @@ body {
   "@type": "WebSite",
   "name": "FlatKhoj",
   "url": "https://flatkhoj.com",
-  "description": "Find flatmates and rooms for rent in Mumbai. Direct connect, no brokers.",
+  "description": "Find flatmates and rooms for rent in Mumbai and Pune. Direct connect, no brokers.",
   "potentialAction": {
     "@type": "SearchAction",
     "target": "https://flatkhoj.com/?area={search_term_string}",
@@ -578,10 +578,10 @@ body {
   "name": "FlatKhoj",
   "url": "https://flatkhoj.com",
   "logo": "https://flatkhoj.com/og-image.png",
-  "description": "Mumbai's flat and flatmate finding platform. Find rooms, flatmates and full flats directly without brokers.",
+  "description": "FlatKhoj — flat and flatmate finding platform in Mumbai and Pune. Find rooms, flatmates and full flats directly without brokers.",
   "areaServed": {
     "@type": "City",
-    "name": "Mumbai"
+    "name": "FlatKhoj"
   }
 }
 </script>
@@ -594,6 +594,7 @@ body {
 <header class="topbar">
   <div class="topbar-inner">
     <a href="#" class="logo">Flat<span>Khoj</span></a>
+    <button onclick="openCitySelector()" id="cityBadge" style="background:#f0faf7;border:1.5px solid #0f7b6c;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:#0f7b6c;cursor:pointer;flex-shrink:0;white-space:nowrap">📍 City</button>
     <div class="area-wrap" id="homeAreaWrap" style="flex:1;min-width:0">
       <svg class="area-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input class="area-input-home" id="homeSearchInput" type="text" placeholder="Area" autocomplete="off"
@@ -612,6 +613,27 @@ body {
   </div>
   <div class="home-area-tags" id="homeAreaTagsRow"></div>
 </header>
+
+<!-- CITY SELECTOR MODAL -->
+<div id="cityModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center">
+    <div style="font-size:28px;margin-bottom:8px">🏠</div>
+    <h2 style="font-size:20px;font-weight:700;color:#1a1a18;margin:0 0 6px">Select your city</h2>
+    <p style="font-size:14px;color:#6b6b68;margin:0 0 24px">We'll show you listings and areas near you</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <button onclick="setCity('mumbai')" style="background:#f0faf7;border:2px solid #0f7b6c;border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">🏛️</div>
+        <div style="font-size:16px;font-weight:700;color:#1a1a18">Mumbai</div>
+        <div style="font-size:11px;color:#6b6b68;margin-top:2px">Gateway City</div>
+      </button>
+      <button onclick="setCity('pune')" style="background:#f0faf7;border:2px solid #e5e5e3;border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">🏯</div>
+        <div style="font-size:16px;font-weight:700;color:#1a1a18">Pune</div>
+        <div style="font-size:11px;color:#6b6b68;margin-top:2px">Oxford of the East</div>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- FILTER CHIPS — listing type -->
 <div class="filter-bar">
@@ -652,7 +674,7 @@ body {
   <div id="feedEmpty" style="display:none;text-align:center;padding:40px 20px">
     <div style="font-size:40px;margin-bottom:12px">🏠</div>
     <div style="font-size:16px;font-weight:700;color:#141414;margin-bottom:8px">No listings yet</div>
-    <div style="font-size:14px;color:#888;margin-bottom:20px">Be the first to post a listing in Mumbai!</div>
+    <div style="font-size:14px;color:#888;margin-bottom:20px">Be the first to post a listing here!</div>
     <button onclick="window.location.href='post_form.html'" style="background:#0f7b6c;color:white;border:none;border-radius:12px;padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer">Post a listing →</button>
   </div>
 
@@ -964,6 +986,9 @@ async function loadListings(reset = true) {
   try {
     const now = new Date().toISOString();
     let url = `${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&expires_at=gte.${now}`;
+    // Filter by selected city
+    const selectedCity = getSelectedCity();
+    if(selectedCity) url += `&city=eq.${selectedCity}`;
     // "Looking for Occupancy" shows both flatmate_wanted AND flat_listing
     if (activeFilter === 'flatmate_wanted') {
       url += `&listing_type=in.(flatmate_wanted,flat_listing)`;
@@ -1153,7 +1178,7 @@ function renderListings(listings) {
 
   listings.forEach(l => {
     try {
-      const areas = Array.isArray(l.areas) ? l.areas.join(' / ') : (l.areas || 'Mumbai');
+      const areas = Array.isArray(l.areas) ? l.areas.join(' / ') : (l.areas || '');
       const price = l.rent_amount ? `₹${l.rent_amount.toLocaleString('en-IN')}` : 'Price on request';
       const period = l.listing_type === 'flat_wanted' ? 'budget' : '/mo';
       const typeLabel = typeLabels[l.listing_type] || l.listing_type;
@@ -1225,7 +1250,7 @@ function renderListings(listings) {
         </div>
         <div class="card-location">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          ${escHtml(areas)}, Mumbai
+          ${escHtml(areas)}
         </div>
         ${tagsHTML ? `<div class="card-tags">${tagsHTML}</div>` : ''}
         ${(l.photos && l.photos.length > 0 && (l.listing_type === 'flat_listing' || l.listing_type === 'flatmate_wanted')) ? `<div style="font-size:11px;color:var(--teal);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> ${l.photos.length} photo${l.photos.length > 1 ? 's' : ''} available</div>` : ''}
@@ -3223,6 +3248,32 @@ async function loadAreaChips() {
   }
 }
 
+// ── CITY SELECTOR ────────────────────────────────────────────────────────
+const CITIES = {
+  mumbai: { name: 'Mumbai', icon: '🏛️', tagline: 'Gateway City' },
+  pune:   { name: 'Pune',   icon: '🏯', tagline: 'Oxford of the East' },
+};
+
+function getSelectedCity() {
+  return localStorage.getItem('fk_city') || null;
+}
+
+function setCity(city) {
+  localStorage.setItem('fk_city', city);
+  // Update city badge in header
+  const badge = document.getElementById('cityBadge');
+  if(badge) badge.textContent = CITIES[city]?.name || city;
+  // Close modal
+  const modal = document.getElementById('cityModal');
+  if(modal) modal.style.display = 'none';
+  // Reload listings for new city
+  loadListings(true);
+}
+
+function openCitySelector() {
+  document.getElementById('cityModal').style.display = 'flex';
+}
+
 // Global sets — must be declared before anything uses them
 let savedListingIds = new Set();
 let unlockedListingIds = new Set();
@@ -3261,7 +3312,18 @@ async function fetchUserData() {
 // Initial load
 (async () => {
   await fetchUserData();
-  loadListings();
+  // Update city badge if city already selected
+  const savedCity = getSelectedCity();
+  if(savedCity) {
+    const badge = document.getElementById('cityBadge');
+    if(badge) badge.textContent = '📍 ' + (CITIES[savedCity]?.name || savedCity);
+  }
+  // Show city selector if no city chosen yet
+  if(!savedCity) {
+    document.getElementById('cityModal').style.display = 'flex';
+  } else {
+    loadListings();
+  }
 })();
 
 // Re-fetch when user navigates back — fires on BOTH cached and fresh loads
