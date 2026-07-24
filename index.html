@@ -592,17 +592,11 @@ body {
 
 <!-- TOP BAR -->
 <header class="topbar">
+  <!-- Row 1: Logo | City badge | Coins | Post -->
   <div class="topbar-inner">
     <a href="#" class="logo">Flat<span>Khoj</span></a>
     <button onclick="openCitySelector()" id="cityBadge" style="background:#f0faf7;border:1.5px solid #0f7b6c;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:#0f7b6c;cursor:pointer;flex-shrink:0;white-space:nowrap">📍 City</button>
-    <div class="area-wrap" id="homeAreaWrap" style="flex:1;min-width:0">
-      <svg class="area-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input class="area-input-home" id="homeSearchInput" type="text" placeholder="Area" autocomplete="off"
-        oninput="homeAreaSearch(this)"
-        onfocus="homeAreaFocus(this)"
-        onkeydown="if(event.key==='Escape')document.getElementById('homeAreaDd').classList.remove('open')">
-      <div class="area-dropdown-home" id="homeAreaDd"></div>
-    </div>
+    <div style="flex:1"></div>
     <div id="navCoinBadge" style="display:none;align-items:center;gap:3px;background:#fffbee;border:1.5px solid #e6a817;border-radius:20px;padding:4px 9px;font-size:12px;font-weight:700;color:#b07d00;cursor:pointer;flex-shrink:0;white-space:nowrap" onclick="window.location.href='coins.html'">
       🪙<span id="navCoinCount">0</span>
     </div>
@@ -619,17 +613,20 @@ body {
   <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center">
     <div style="font-size:28px;margin-bottom:8px">🏠</div>
     <h2 style="font-size:20px;font-weight:700;color:#1a1a18;margin:0 0 6px">Select your city</h2>
-    <p style="font-size:14px;color:#6b6b68;margin:0 0 24px">We'll show you listings and areas near you</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <button onclick="setCity('mumbai')" style="background:#f0faf7;border:2px solid #0f7b6c;border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center">
+    <p style="font-size:14px;color:#6b6b68;margin:0 0 24px">We'll show you listings in your city</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="cityGrid">
+      <!-- Mumbai — available -->
+      <button id="cityBtn-mumbai" onclick="setCity('mumbai')" style="border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center;transition:all 0.15s">
         <div style="font-size:40px;margin-bottom:8px">🌉</div>
-        <div style="font-size:16px;font-weight:700;color:#1a1a18">Mumbai</div>
-        <div style="font-size:11px;color:#6b6b68;margin-top:2px">Financial Capital of India</div>
+        <div style="font-size:16px;font-weight:700">Mumbai</div>
+        <div style="font-size:11px;margin-top:2px">Financial Capital of India</div>
       </button>
-      <button onclick="setCity('pune')" style="background:#f5f5ff;border:2px solid #e5e5e3;border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center">
-        <div style="font-size:40px;margin-bottom:8px">🏰</div>
-        <div style="font-size:16px;font-weight:700;color:#1a1a18">Pune</div>
-        <div style="font-size:11px;color:#6b6b68;margin-top:2px">Oxford of the East</div>
+      <!-- Pune — locked/coming soon -->
+      <button id="cityBtn-pune" disabled style="border-radius:14px;padding:20px 12px;cursor:not-allowed;text-align:center;opacity:0.45;background:#f5f5f5;border:2px solid #ddd;position:relative">
+        <div style="font-size:40px;margin-bottom:8px;filter:grayscale(1)">🏰</div>
+        <div style="font-size:16px;font-weight:700;color:#999">Pune</div>
+        <div style="font-size:11px;color:#bbb;margin-top:2px">Coming Soon</div>
+        <div style="position:absolute;top:8px;right:8px;background:#e5e5e3;color:#999;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px">SOON</div>
       </button>
     </div>
   </div>
@@ -644,11 +641,22 @@ body {
     <button class="filter-chip" data-type="flatlisting" onclick="setFilter(this,'flatlisting')">🏢 Full Flat</button>
   </div>
 </div>
+
+<!-- SEARCH BAR — below filter chips -->
+<div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border)">
+  <div class="area-wrap" id="homeAreaWrap" style="width:100%">
+    <svg class="area-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="area-input-home" id="homeSearchInput" type="text" placeholder="Search by area…" autocomplete="off"
+      oninput="homeAreaSearch(this)"
+      onfocus="homeAreaFocus(this)"
+      onkeydown="if(event.key==='Escape')document.getElementById('homeAreaDd').classList.remove('open')">
+    <div class="area-dropdown-home" id="homeAreaDd"></div>
+  </div>
+</div>
+
 <!-- CONTEXTUAL SUB-FILTERS -->
 <div id="subFilterBar" style="display:none;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap">
 </div>
-
-<!-- STATS -->
 
 
 <!-- LOGIN NUDGE (shown to logged out users) -->
@@ -3253,20 +3261,30 @@ function getSelectedCity() {
   return localStorage.getItem('fk_city') || null;
 }
 
+function updateCityModalHighlight(city) {
+  const mb = document.getElementById('cityBtn-mumbai');
+  if(!mb) return;
+  mb.style.cssText = (city === 'mumbai')
+    ? 'border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center;transition:all 0.15s;background:#f0faf7;border:3px solid #0f7b6c;box-shadow:0 0 0 3px #0f7b6c33;color:#0f7b6c'
+    : 'border-radius:14px;padding:20px 12px;cursor:pointer;text-align:center;transition:all 0.15s;background:#fff;border:2px solid #ddd;color:#1a1a18';
+}
+
 function setCity(city) {
   localStorage.setItem('fk_city', city);
-  // Update city badge in header
   const badge = document.getElementById('cityBadge');
-  const cityIcons = {mumbai:'🌉', pune:'🏰'}; if(badge) badge.textContent = '📍 ' + (CITIES[city]?.name || city);
-  // Close modal
+  const cityNames = {mumbai:'🌉 Mumbai', pune:'🏰 Pune'};
+  if(badge) badge.textContent = '📍 ' + (cityNames[city] || city);
+  updateCityModalHighlight(city);
   const modal = document.getElementById('cityModal');
   if(modal) modal.style.display = 'none';
-  // Reload listings for new city
   loadListings(true);
 }
 
 function openCitySelector() {
-  document.getElementById('cityModal').style.display = 'flex';
+  const modal = document.getElementById('cityModal');
+  if(modal) modal.style.display = 'flex';
+  // Show current selection highlighted when modal opens
+  updateCityModalHighlight(getSelectedCity() || 'mumbai');
 }
 
 // Global sets — must be declared before anything uses them
@@ -3307,15 +3325,17 @@ async function fetchUserData() {
 // Initial load
 (async () => {
   await fetchUserData();
-  // Update city badge if city already selected
   const savedCity = getSelectedCity();
+  // Update badge if city already chosen
   if(savedCity) {
     const badge = document.getElementById('cityBadge');
-    if(badge) badge.textContent = '📍 ' + (CITIES[savedCity]?.name || savedCity);
+    const cityNames = {mumbai:'🌉 Mumbai', pune:'🏰 Pune'};
+    if(badge) badge.textContent = '📍 ' + (cityNames[savedCity] || savedCity);
   }
   // Show city selector if no city chosen yet
   if(!savedCity) {
     document.getElementById('cityModal').style.display = 'flex';
+    updateCityModalHighlight('mumbai'); // Default highlight Mumbai
   } else {
     loadListings();
   }
