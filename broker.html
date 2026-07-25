@@ -3,111 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FlatKhoj for Brokers — Get Fresh Leads on WhatsApp</title>
-<meta name="description" content="Subscribe to FlatKhoj broker feed. Get real Mumbai flat leads on WhatsApp the moment they are posted.">
-<link rel="preconnect" href="https://hbvdboxyppsmcuqgbpwp.supabase.co">
+<title>FlatKhoj Broker Network — Get Real Leads on WhatsApp</title>
+<meta name="description" content="Join FlatKhoj broker network. Receive verified flat seeker leads on WhatsApp for your selected areas.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
-  :root{--teal:#0f7b6c;--teal-bg:#e8f5f3;--teal-dark:#0a5c50;--gold:#e6a817;--gold-bg:#fef9ec;--ink:#1a1a1a;--ink2:#444;--ink3:#888;--bg:#fff;--bg2:#f8fafa;--border:#e0e8e6;--red:#e53e3e;--font:-apple-system,'Segoe UI',sans-serif;--radius:14px;}
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:var(--font);background:var(--bg);color:var(--ink);}
-  .hero{background:linear-gradient(135deg,#0a5c50 0%,#0f7b6c 60%,#1a9e8a 100%);color:white;padding:48px 20px 40px;text-align:center;}
-  .hero-logo{font-size:22px;font-weight:800;margin-bottom:20px;opacity:.9;}
-  .hero-logo span{color:#7fe8d6;}
-  .hero h1{font-size:28px;font-weight:800;line-height:1.2;margin-bottom:12px;}
-  .hero h1 em{color:#7fe8d6;font-style:normal;}
-  .hero p{font-size:15px;opacity:.85;max-width:360px;margin:0 auto 24px;line-height:1.5;}
-  .hero-stats{display:flex;justify-content:center;gap:32px;}
-  .stat{text-align:center;}
-  .stat-num{font-size:26px;font-weight:800;color:#7fe8d6;}
-  .stat-label{font-size:11px;opacity:.75;margin-top:2px;}
-  .section{padding:28px 20px;}
-  .section h2{font-size:18px;font-weight:700;text-align:center;margin-bottom:6px;}
-  .section>p{text-align:center;font-size:13px;color:var(--ink3);margin-bottom:20px;}
-  .bg2{background:var(--bg2);}
-  .steps{display:flex;flex-direction:column;gap:10px;max-width:480px;margin:16px auto 0;}
-  .step{display:flex;align-items:flex-start;gap:14px;background:white;border-radius:12px;padding:14px 16px;border:1px solid var(--border);}
-  .step-num{background:var(--teal);color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
-  .step-text{font-size:14px;color:var(--ink2);line-height:1.4;}
-  .billing-toggle{display:flex;justify-content:center;gap:0;max-width:240px;margin:0 auto 12px;background:var(--bg2);border:1.5px solid var(--border);border-radius:30px;padding:4px;}
-  .billing-btn{flex:1;padding:8px 16px;border:none;border-radius:26px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);background:transparent;color:var(--ink3);transition:all .15s;}
-  .billing-btn.active{background:var(--teal);color:white;}
-  .saving-badge{text-align:center;background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:#a07000;display:none;margin:0 auto 16px;}
-  .plans{display:flex;flex-direction:column;gap:12px;max-width:480px;margin:0 auto;}
-  .plan-card{border:2px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .15s;position:relative;}
-  .plan-card.selected{border-color:var(--teal);background:var(--teal-bg);}
-  .plan-card.popular::before{content:'Most Popular';position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--gold);color:white;font-size:11px;font-weight:700;padding:3px 12px;border-radius:20px;}
-  .plan-top{display:flex;justify-content:space-between;align-items:center;}
-  .plan-name{font-size:16px;font-weight:700;}
-  .plan-contacts{font-size:13px;color:var(--ink2);margin-top:3px;}
-  .plan-free-note{font-size:11.5px;color:var(--teal);font-weight:600;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
-  .plan-price{text-align:right;}
-  .plan-price-main{font-size:22px;font-weight:800;color:var(--teal);}
-  .plan-price-sub{font-size:12px;color:var(--ink3);}
-  .plan-price-orig{font-size:11px;color:var(--ink3);text-decoration:line-through;min-height:16px;}
-  .plan-check{width:20px;height:20px;border:2px solid var(--border);border-radius:50%;flex-shrink:0;margin-left:12px;transition:all .15s;}
-  .plan-card.selected .plan-check{background:var(--teal);border-color:var(--teal);background-image:url("data:image/svg+xml,%3Csvg width='12' height='10' viewBox='0 0 12 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5L4.5 8.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;}
-  .form-wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
-  .field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px;}
-  .field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:var(--font);color:var(--ink);outline:none;transition:border-color .15s;}
-  .field input:focus{border-color:var(--teal);}
-  .field-hint{font-size:12px;color:var(--ink3);margin-top:4px;}
-  .area-section{max-width:480px;margin:0 auto;}
-  .area-section h3{font-size:15px;font-weight:700;margin-bottom:4px;}
-  .area-section>p{font-size:13px;color:var(--ink3);margin-bottom:14px;}
-  .zone{margin-bottom:12px;}
-  .zone-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg2);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid var(--border);margin-bottom:6px;}
-  .zone-count{font-size:12px;color:var(--teal);font-weight:700;}
-  .zone-areas{display:none;flex-wrap:wrap;gap:6px;padding:0 4px;}
-  .zone-areas.open{display:flex;}
-  .area-pill{padding:5px 12px;border-radius:20px;font-size:13px;cursor:pointer;border:1.5px solid var(--border);background:white;color:var(--ink2);transition:all .12s;}
-  .area-pill.selected{border-color:var(--teal);background:var(--teal-bg);color:var(--teal);font-weight:600;}
-  .select-all-btn{font-size:12px;color:var(--teal);background:none;border:none;cursor:pointer;font-weight:600;padding:0;}
-  .selected-summary{background:var(--teal-bg);border:1.5px solid var(--teal);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--teal);font-weight:600;margin-bottom:16px;display:none;}
-  .submit-btn{width:100%;background:var(--teal);color:white;border:none;border-radius:var(--radius);padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font);margin-top:8px;transition:background .15s;}
-  .submit-btn:active{background:var(--teal-dark);}
-  .submit-btn:disabled{opacity:.6;cursor:not-allowed;}
-  .note{font-size:12px;color:var(--ink3);text-align:center;margin-top:10px;line-height:1.5;}
-  .divider{height:1px;background:var(--border);max-width:480px;margin:0 auto 24px;}
-  .success-screen{display:none;padding:60px 20px;text-align:center;max-width:480px;margin:0 auto;}
-  .success-icon{font-size:56px;margin-bottom:16px;}
-  .success-screen h2{font-size:22px;font-weight:800;margin-bottom:10px;}
-  .success-screen p{font-size:15px;color:var(--ink2);line-height:1.6;}
-  .processing-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
-  .processing-overlay.show{display:flex;}
-  .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;}
-  .proc-text{color:white;font-size:15px;font-weight:600;}
-  @keyframes spin{to{transform:rotate(360deg);}}
+:root { --teal:#0f7b6c; --teal-bg:#f0faf7; --teal-light:#0f7b6c; --ink:#1a1a18; --ink2:#3d3d3a; --ink3:#6b6b68; --bg:#fff; --bg2:#f8f8f6; --border:#e5e5e3; --red:#e53e3e; --green:#16a34a; --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--font); color:var(--ink); background:var(--bg); max-width:540px; margin:0 auto; padding-bottom:40px; }
+a { color:var(--teal); }
+.hero { padding:28px 20px 20px; text-align:center; }
+.logo { font-size:22px; font-weight:800; color:var(--ink); text-decoration:none; }
+.logo span { color:var(--teal); }
+.hero h1 { font-size:26px; font-weight:800; line-height:1.2; margin:16px 0 10px; }
+.hero h1 span { color:var(--teal); }
+.hero p { font-size:15px; color:var(--ink2); line-height:1.6; }
+.how-it-works { background:var(--bg2); border-radius:14px; margin:16px; padding:18px; }
+.how-it-works h2 { font-size:14px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:14px; }
+.how-item { display:flex; gap:12px; margin-bottom:14px; align-items:flex-start; }
+.how-item:last-child { margin-bottom:0; }
+.how-num { width:28px; height:28px; border-radius:50%; background:var(--teal); color:#fff; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.how-text { font-size:14px; color:var(--ink2); line-height:1.5; padding-top:4px; }
+.section { margin:0 16px 16px; }
+.form-wrap { background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:20px; }
+.field { margin-bottom:16px; }
+.field label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--ink2); }
+.field input { width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:var(--font); outline:none; }
+.field input:focus { border-color:var(--teal); }
+.area-section h3 { font-size:15px; font-weight:700; margin-bottom:4px; }
+.area-section p { font-size:13px; color:var(--ink3); margin-bottom:12px; }
+.selected-summary { min-height:36px; margin-bottom:12px; display:flex; flex-wrap:wrap; gap:6px; }
+.sel-pill { background:var(--teal-bg); border:1px solid var(--teal); border-radius:20px; padding:4px 10px; font-size:12px; color:var(--teal); font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px; }
+.zone { border:1px solid var(--border); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+.zone-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer; background:var(--bg2); user-select:none; }
+.zone-header span:first-child { font-size:14px; font-weight:600; }
+.zone-count { font-size:12px; color:var(--teal); font-weight:700; }
+.zone-areas { display:none; flex-wrap:wrap; gap:6px; padding:12px; background:#fff; }
+.zone-areas.open { display:flex; }
+.area-pill { padding:6px 12px; border-radius:20px; border:1.5px solid var(--border); font-size:13px; cursor:pointer; transition:all .15s; }
+.area-pill.selected { background:var(--teal); border-color:var(--teal); color:#fff; font-weight:600; }
+.select-all-btn { font-size:11px; color:var(--teal); font-weight:700; background:var(--teal-bg); border:none; cursor:pointer; padding:4px 8px; border-radius:6px; }
+.submit-btn { width:100%; padding:15px; background:var(--teal); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; margin-top:20px; font-family:var(--font); }
+.submit-btn:disabled { background:#aaa; cursor:not-allowed; }
+.note { text-align:center; font-size:12px; color:var(--ink3); margin-top:10px; }
+.plan-section { background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:20px; }
+.plan-section h2 { font-size:18px; font-weight:700; margin-bottom:6px; }
+.plan-section p { font-size:14px; color:var(--ink3); margin-bottom:16px; }
+.billing-toggle { display:flex; gap:8px; margin-bottom:16px; background:var(--bg2); border-radius:10px; padding:4px; }
+.billing-btn { flex:1; padding:8px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:none; color:var(--ink3); font-family:var(--font); }
+.billing-btn.active { background:#fff; color:var(--teal); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+.saving-badge { font-size:11px; font-weight:700; background:#dcfce7; color:var(--green); padding:3px 8px; border-radius:8px; margin-left:8px; }
+.plans-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.plan-card { border:2px solid var(--border); border-radius:12px; padding:14px; cursor:pointer; transition:all .15s; }
+.plan-card.selected { border-color:var(--teal); background:var(--teal-bg); }
+.plan-card.popular { border-color:var(--teal); }
+.plan-badge { font-size:10px; font-weight:700; color:var(--teal); background:var(--teal-bg); padding:2px 6px; border-radius:6px; margin-bottom:6px; display:inline-block; }
+.plan-name { font-size:14px; font-weight:700; margin-bottom:2px; }
+.plan-contacts { font-size:12px; color:var(--ink3); margin-bottom:8px; }
+.plan-price { text-align:right; }
+.plan-price-main { font-size:22px; font-weight:800; color:var(--teal); }
+.plan-price-sub { font-size:12px; color:var(--ink3); }
+.plan-price-orig { font-size:11px; color:var(--ink3); text-decoration:line-through; min-height:16px; }
+#zonesContainer { max-height:60vh; overflow-y:auto; }
+.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
 </style>
 </head>
 <body>
-
-<div class="processing-overlay" id="processingOverlay">
-  <div class="spinner"></div>
-  <div class="proc-text">Processing payment…</div>
-</div>
-
 <div class="hero">
-  <div class="hero-logo">Flat<span>Khoj</span> for Brokers</div>
-  <h1>Get Mumbai flat leads<br><em>straight on WhatsApp</em></h1>
-  <p>The moment someone posts in your area, you get the contact. No chasing. No portals. Just fresh leads.</p>
-  <div class="hero-stats">
-    <div class="stat"><div class="stat-num">1,000+</div><div class="stat-label">Active listings</div></div>
-    <div class="stat"><div class="stat-num">50+</div><div class="stat-label">Areas covered</div></div>
-    <div class="stat"><div class="stat-num">Real-time</div><div class="stat-label">WhatsApp delivery</div></div>
-  </div>
+  <a href="index.html" class="logo">Flat<span>Khoj</span></a>
+  <h1>Get Real Leads.<br><span>Earn More Brokerage.</span></h1>
+  <p>FlatKhoj sends you verified flat hunters and available inventories directly on WhatsApp — only in your chosen areas.</p>
 </div>
-
-<div class="section bg2">
+<div class="how-it-works">
   <h2>How it works</h2>
-  <div class="steps">
-    <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Select your areas</strong> — choose any Mumbai localities you work in</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Pick a plan</strong> — 10 to 50 contacts per month</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Get leads on WhatsApp</strong> — the moment a flat seeker posts in your area</div></div>
-    <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Auto-renews monthly or annually</strong> — save 25% with annual billing</div></div>
-  </div>
+  <div class="how-item"><div class="how-num">1</div><div class="how-text">Select your city and the areas you work in. We only send leads from your areas — no random city-wide spam.</div></div>
+  <div class="how-item"><div class="how-num">2</div><div class="how-text">Choose a plan and pay via UPI mandate. ₹1 authorization to set up — your account activates immediately after.</div></div>
+  <div class="how-item"><div class="how-num">3</div><div class="how-text">Receive flat seekers and available inventories on WhatsApp — including contact details — the moment they post.</div></div>
 </div>
-
-
 <div class="section" id="formSection">
   <div class="divider"></div>
   <div class="form-wrap">
@@ -115,168 +87,80 @@
     <div class="field">
       <label>City *</label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
-        <button type="button" id="city-mumbai" onclick="selectBrokerCity('mumbai')" style="padding:12px;border:2px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer">🏛️ Mumbai</button>
-        <button type="button" id="city-pune" onclick="selectBrokerCity('pune')" style="padding:12px;border:2px solid var(--border);border-radius:10px;background:transparent;color:var(--ink2);font-weight:600;font-size:14px;cursor:pointer">🏯 Pune</button>
+        <button type="button" id="city-mumbai" onclick="selectBrokerCity('mumbai')" style="padding:12px;border:3px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 2px #0f7b6c33">🌉 Mumbai</button>
+        <button type="button" id="city-pune" disabled style="padding:12px;border:2px solid #ddd;border-radius:10px;background:#f5f5f5;color:#bbb;font-weight:600;font-size:14px;cursor:not-allowed;opacity:0.55">🏰 Pune<span style="display:block;font-size:10px;color:#bbb">Coming Soon</span></button>
       </div>
     </div>
-    <div class="field">
-      <label>Full Name *</label>
-      <input type="text" id="brokerName" placeholder="Your name">
-    </div>
-    <div class="field">
-      <label>WhatsApp Number * <span style="font-weight:400;color:var(--ink3)">(leads will be delivered to this number)</span></label>
-      <input type="tel" id="brokerPhone" maxlength="13" placeholder="10-digit WhatsApp number">
-    </div>
+    <div class="field"><label>Full Name *</label><input type="text" id="brokerName" placeholder="Your name"></div>
+    <div class="field"><label>WhatsApp Number * <span style="font-weight:400;color:var(--ink3)">(leads delivered here)</span></label><input type="tel" id="brokerPhone" maxlength="13" placeholder="10-digit WhatsApp number"></div>
     <div class="area-section">
       <h3>Select your areas *</h3>
-      <p>Choose all areas you want leads from. Tap a zone to expand.</p>
+      <p>Tap a zone to expand it. Select all areas you want leads from.</p>
       <div id="selectedSummary" class="selected-summary"></div>
       <div id="zonesContainer"></div>
     </div>
-    <button class="submit-btn" id="submitBtn" onclick="submitRegistration()">Register & Pay →</button>
+    <button class="submit-btn" id="submitBtn" onclick="submitRegistration()">Continue to Plan Selection →</button>
     <p class="note">Secured by Cashfree · UPI, Cards, Netbanking</p>
   </div>
 </div>
-
-<div class="success-screen" id="successScreen">
-  <div class="success-icon">🎉</div>
-  <h2>Payment successful!</h2>
-  <p>Your broker account is now active.<br><br>
-  Leads from your selected areas will start arriving on WhatsApp as soon as new listings are posted.</p>
-
-  <div id="upgradeAnnualBox" style="display:none;margin-top:20px;background:var(--gold-bg);border:1.5px solid var(--gold);border-radius:12px;padding:16px;text-align:left">
-    <div style="font-weight:700;font-size:14px;margin-bottom:4px">💰 Switch to Annual & Save 25%</div>
-    <div style="font-size:13px;color:var(--ink2);margin-bottom:12px">Same WhatsApp feed every month — you're just billed once a year instead of monthly.</div>
-    <button class="submit-btn" style="padding:12px" onclick="switchToAnnual()">Switch to Annual →</button>
+<div class="section" id="planSection" style="display:none">
+  <div class="plan-section">
+    <h2>Choose your plan</h2>
+    <p>Paid leads = flat hunters okay with brokerage. Free leads (unlimited) = everyone else in your areas.</p>
+    <div class="billing-toggle">
+      <button class="billing-btn active" id="btnMonthly" onclick="setBilling('monthly')">Monthly</button>
+      <button class="billing-btn" id="btnAnnual" onclick="setBilling('annual')">Annual <span class="saving-badge" id="savingBadge" style="display:none">Save 25%</span></button>
+    </div>
+    <div class="plans-grid">
+      <div class="plan-card" id="plan-starter" onclick="selectPlan(this,'starter')">
+        <div class="plan-name">Starter</div><div class="plan-contacts">10 paid leads/mo</div>
+        <div class="plan-price"><div class="plan-price-main">₹1,299</div><div class="plan-price-sub">/month</div><div class="plan-price-orig"></div></div>
+      </div>
+      <div class="plan-card popular" id="plan-growth" onclick="selectPlan(this,'growth')">
+        <div class="plan-badge">Popular</div><div class="plan-name">Growth</div><div class="plan-contacts">20 paid leads/mo</div>
+        <div class="plan-price"><div class="plan-price-main">₹2,199</div><div class="plan-price-sub">/month</div><div class="plan-price-orig"></div></div>
+      </div>
+      <div class="plan-card" id="plan-pro" onclick="selectPlan(this,'pro')">
+        <div class="plan-name">Pro</div><div class="plan-contacts">30 paid leads/mo</div>
+        <div class="plan-price"><div class="plan-price-main">₹2,999</div><div class="plan-price-sub">/month</div><div class="plan-price-orig"></div></div>
+      </div>
+      <div class="plan-card" id="plan-elite" onclick="selectPlan(this,'elite')">
+        <div class="plan-name">Elite</div><div class="plan-contacts">50 paid leads/mo</div>
+        <div class="plan-price"><div class="plan-price-main">₹3,999</div><div class="plan-price-sub">/month</div><div class="plan-price-orig"></div></div>
+      </div>
+    </div>
+    <button class="submit-btn" id="payBtn" onclick="proceedToPayment()" disabled>Select a plan to continue</button>
+    <p class="note">₹1 authorization to set up UPI mandate · Refunded immediately</p>
+    <p class="note" style="margin-top:8px"><a href="javascript:void(0)" onclick="document.getElementById('formSection').style.display='block';document.getElementById('planSection').style.display='none'">← Back to edit details</a></p>
   </div>
-
-  <p style="margin-top:20px">Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>
 </div>
-
+<div id="successScreen" style="display:none;padding:40px 20px;text-align:center">
+  <div style="font-size:60px">✅</div>
+  <h2 style="font-size:24px;font-weight:800;color:var(--teal);margin:16px 0 8px">You're all set!</h2>
+  <p id="successMsg" style="color:var(--ink2);font-size:15px;line-height:1.6;padding:0 10px"></p>
+</div>
 <script>
 const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
-const CITY_ZONES = {
-  mumbai: {"South Bombay": ["Abdul Rehman Street", "Afghan Church Area", "Agripada", "Altamount Road", "Apollo Bunder", "Arthur Bunder Road", "Arthur Road", "August Kranti Marg", "Azad Maidan", "Back Bay", "Backbay Reclamation", "Ballard Estate", "Bandra Fort", "Banganga", "Bhendi Bazaar", "Bhindi Bazaar", "Bhoiwada", "Bhulabhai Desai Marg", "Bhulabhai Desai Road", "Bhuleshwar", "Breach Candy", "Byculla", "Byculla East", "Byculla Station", "Byculla West", "CSMT", "Cadell Road", "Carmichael Road", "Carnac Bridge", "Carnac Bunder", "Chaityabhoomi", "Charni Road", "Charni Road Station", "Chinchpokli Station", "Chowpatty", "Churchgate", "Churchgate Station", "Churchgate West", "Clare Road", "Colaba", "Colaba Causeway", "Colaba Market", "Cooperage", "Crawford Market", "Cross Maidan", "Cuffe Parade", "Cumballa Hill", "Curry Road", "Cusrow Baug", "Dadar Chowpatty", "Delisle Road", "Dhobi Talao", "Dockyard", "Dockyard Road", "Dongri", "Electric House", "Electric House Colaba", "Falkland Road", "Finlay Mills", "Flora Fountain", "Forjett Street", "Fort", "Fort Area", "Gamdevi", "Gateway of India", "Girgaon", "Gokhale Road", "Grant Road", "Grant Road East", "Grant Road Station", "Grant Road West", "Haji Ali", "Hanging Gardens Area", "Hughes Road", "Hutatma Chowk", "Jacob Circle", "Juhu Chowpatty", "Kalbadevi", "Kamala Mills", "Kamala Nehru Park Area", "Kemp Corner", "Kemp Corner South", "Kemps Corner", "King Circle", "Kirti College Area", "Laburnum Road", "Lady Jamshedji Road", "Lal Bahadur Shastri Road", "Lamington Road", "Little Gibbs Road", "Lohar Chawl", "Mahalaxmi", "Mahalaxmi Racecourse", "Mahalaxmi Station", "Mahalaxmi Western Station", "Malabar Hill", "Mandvi", "Mantralaya Area", "Marine Drive", "Marine Lines", "Marine Lines Station", "Masjid Bunder", "Maulana Shaukat Ali Road", "Mazgaon", "Merewether Road", "Metro Cinema Area", "Mumbadevi", "Mumbai Central", "Mumbai Central Station", "Musafirkhana", "NCPA", "NM Joshi Marg", "Nagpada", "Naigaum", "Nana Chowk", "Napean Sea Road", "Napeansea Road", "Nariman Point", "Navy Nagar", "Nepean Sea Road", "Nesbit Road", "Null Bazaar", "Old Custom House", "Oval Maidan", "Pali Market", "Peddar Road", "Pedder Road", "Portugese Church Area", "Princess Street", "Pydhonie", "Rajabai Tower Area", "Ranade Road", "Reay Road", "Reay Road Station", "Regal Cinema", "Regal Cinema Area", "Ridge Road", "SV Road", "Sandhurst Road", "Saraswat Colony", "Sassoon Dock", "Sassoon Dock Area", "Strand Cinema Area", "Tardeo", "Tardeo AC Market", "Teen Batti", "Teen Batti Naka", "Telang Road", "VP Road", "VT Area", "Vadgadi", "Vidyanagari Marg", "Walkeshwar", "Walton Road", "Warden Road", "Wodehouse Road", "World Trade Centre", "Zaveri Bazaar"], "Parel / Lower Parel / Worli": ["Anik", "Annie Besant Road", "Antop Hill", "Atria Mall Area", "Century Mills Area", "Chinchpokli", "Cotton Green", "Cotton Green Station", "Currey Road", "Dadar", "Dadar East", "Dadar West", "Dr Annie Besant Road", "Eastern Express Highway", "Eastern Freeway", "Elphinstone Road", "Elphinstone Road Station", "Francis D Souza Road", "GTB Nagar", "GTB Nagar Station", "Haji Ali Juice Centre Area", "High Street Phoenix", "Indiabulls Finance Centre", "Kamala City", "Khairani Road", "Lalbaug", "Lower Parel Station", "Lower Parel West", "Mahul", "Mahul Road", "One Indiabulls", "Parel Station", "Parel Village", "Peddar Road South", "Peninsula Corporate Park", "Phoenix Mills Area", "Phoenix Mills Lower Parel", "Prabhadevi", "R C Marg", "Senapati Bapat Marg", "Senapati Bapat Road", "Sewri", "Sewri East", "Sewri Station", "Sewri West", "Shivadi", "Shivaji Park", "Tulsi Pipe Road", "Tulsi Pipe Road Worli", "WEH Junction", "Wadala", "Wadala East", "Wadala Monorail", "Wadala Road Station", "Wadala Truck Terminal", "Wadala West", "Western Express Highway", "Western Express Highway Andheri", "Worli BKC", "Worli Dairy", "Worli Koliwada", "Worli Naka", "Worli Sea Face", "Worli Village"], "Dadar / Mahim / Sion": ["60 Feet Road Dharavi", "90 Feet Road Dharavi", "Antop Hill Wadala", "Byculla Zoo Area", "Dadar Central Station", "Dadar Chowk", "Dadar East", "Dadar Kabutarkhana", "Dadar Market", "Dadar Phool Galli", "Dadar Station", "Dadar TT", "Dadar West", "Dadar Western Station", "Dharavi", "Dharavi 60 Feet Road", "Dharavi 90 Feet Road", "Dharavi Main Junction", "Dharavi Main Road", "Five Gardens", "Five Gardens Matunga", "Hindu Colony", "Hindu Colony Dadar", "Hindu Colony Matunga", "Kings Circle", "Kings Circle Station", "LJ Road Dadar", "Mahim Causeway", "Mahim Church", "Mahim Dargah", "Mahim East", "Mahim Station", "Mahim West", "Matunga", "Matunga Central Station", "Matunga East", "Matunga Labour Camp", "Matunga Road Station", "Matunga West", "Mazgaon Dock", "RC Church Byculla", "Ruia College Area", "Ruia Park", "Ruia Park Area", "SV Road Mahim", "Sewri Fort", "Shivaji Park Dadar", "Sion Circle", "Sion East", "Sion Fort Area", "Sion Hospital Area", "Sion Koliwada", "Sion West", "Transit Camp Dharavi"], "Bandra / Khar": ["16th Road Khar", "17th Road Khar", "20th Road Khar", "BKC", "Bandra Bandstand", "Bandra Bazar", "Bandra Bazar Road", "Bandra Carter Road", "Bandra East", "Bandra East Station", "Bandra Hill Road", "Bandra Kurla Complex", "Bandra Kurla Link Road", "Bandra Linking Road", "Bandra Pali Hill", "Bandra Reclamation", "Bandra Reclamation Road", "Bandra Talao", "Bandra West", "Bandra West Station", "Bandstand", "Bhakti Vedanta Marg", "C Block BKC", "Carter Road", "Central Park Kharghar", "Chapel Road", "Chapel Road Bandra", "Chuim Village", "E Block BKC", "G Block BKC", "Hill Road Bandra", "Kalanagar", "Kalina", "Khar Danda", "Khar East", "Khar Gymkhana", "Khar Linking Road", "Khar Road", "Khar Station", "Khar West", "Kharghar Hills", "Kharghar Sector 13", "Kharghar Sector 15", "Kharghar Sector 18", "Kharghar Sector 20", "Kharghar Sector 23", "Kharghar Sector 25", "Kharghar Sector 27", "Khernagar", "Land End", "Linking Road Bandra", "Linking Road Khar", "MMRDA Ground Area", "Mount Mary", "National Library Road", "Pali Hill", "Pali Market", "Pali Naka Bandra", "Perry Cross Road", "Perry Road", "Ranwar", "Ranwar Village", "Reclamation", "Sonapur Lane", "St Andrews Road", "Swami Vivekanand Road", "Turner Road", "Turner Road Bandra", "Union Park", "Union Park Khar", "Vakola", "Vakola Market", "Vakola Pipeline Road", "Waroda Road", "Waterfield Road"], "Santacruz / Vile Parle / Juhu": ["Airport Road Juhu", "Birla College Area Kalyan", "Irla", "Irla Bridge", "Irla Market", "JVPD Scheme Juhu", "Juhu Beach", "Juhu Chaupati", "Juhu Circle", "Juhu Koliwada", "Juhu Scheme", "Juhu Tara Road", "Juhu Versova Link Road", "Kalina", "Kalina University Area", "Navpada Santacruz", "Navpada Vile Parle", "Nehru Road Vile Parle", "Parle", "Parle East", "Parle West", "Railway Colony Vile Parle", "SV Road Vile Parle", "Santacruz Airport Area", "Santacruz East", "Santacruz Market", "Santacruz Station", "Santacruz Telephone Exchange", "Santacruz West", "Santacruz West Market", "Shastri Nagar Juhu", "Tilak Road Santacruz", "Vakola", "Vakola Bridge", "Vidyanagari Marg", "Vile Parle East", "Vile Parle Market", "Vile Parle Navpada", "Vile Parle SV Road", "Vile Parle West", "Vinobha Bhave Nagar"], "Andheri West": ["Amboli", "Amboli Naka", "Andheri Link Road", "Andheri Lokhandwala Market", "Andheri Oshiwara Market", "Andheri Sports Complex", "Andheri Sports Complex Area", "Andheri Station", "Andheri Teli Galli", "Andheri West SV Road", "Aram Nagar", "Aram Nagar Part 1", "Aram Nagar Part 2", "Azad Nagar", "Azad Nagar Kurla", "Azad Nagar Metro", "Bharat Nagar Andheri", "Bharat Nagar Andheri West", "D N Nagar Metro", "DN Nagar", "DN Nagar Metro Station", "Erangal", "Four Bungalows", "Four Bungalows Andheri", "Gilbert Hill", "Gilbert Hill Andheri", "Infinity Mall Andheri", "Infinity Mall Area", "JP Road", "JVPD Scheme", "Laxmi Industrial Estate", "Laxmi Nagar Andheri", "Lokhandwala", "Lokhandwala Complex", "Lokhandwala Market", "Lower Oshiwara", "Madh Island", "Mahakali Caves Road", "Nehru Nagar", "Nehru Nagar Andheri", "New Link Road", "New Link Road Andheri", "Oshiwara", "Oshiwara Colony", "Oshiwara Depot Area", "Oshiwara Market", "Pali Naka", "Pali Village", "SV Road Andheri", "Seven Bungalows", "Seven Bungalows Andheri", "Shastri Nagar Andheri", "Upper Oshiwara", "Veera Desai Road", "Versova", "Versova Beach", "Versova Beach Road", "Versova Village", "Yari Road"], "Andheri East / Marol / Sakinaka": ["Airport Colony Andheri", "Airport Road", "Andheri East SV Road", "Andheri East Station", "Andheri Kurla Road", "Andheri Kurla Road North", "Andheri Kurla Road South", "Andheri Station East", "Andheri Station West", "CSIA Area", "Chakala", "Chakala Junction", "Chakala Metro", "Gundavali", "JB Nagar", "JB Nagar Andheri", "JB Nagar Metro", "JVLR", "Kondivita", "Kondivita Village", "MIDC Andheri", "MIDC Phase 1", "MIDC Phase 2", "Marol Maroshi Road", "Marol Military Road", "Marol Naka", "Marol Naka Junction", "Marol Pipeline", "Mogra Naka", "Mogra Village", "Navpada", "SEEPZ", "SEEPZ Gate", "SVP Nagar", "Sahar", "Sahar Market", "Sahar Road", "Sahar Village", "Saki Naka", "Saki Naka Junction", "Saki Vihar", "Saki Vihar Road", "Sakinaka Junction", "WEH", "WEH Andheri"], "Jogeshwari / Goregaon": ["Aarey Colony", "Aarey Colony Road", "Bangur Nagar Goregaon", "Bhatwadi", "Dindoshi", "Dindoshi Bus Depot", "Dindoshi Village", "Ekta Nagar Jogeshwari", "Film City", "Film City Road", "Film City Road Goregaon", "Filmcity Studio Area", "Goregaon East", "Goregaon Sports Club", "Goregaon Station East", "Goregaon Station West", "Goregaon West", "Hanuman Nagar Jogeshwari", "Hub Mall Area", "JP Nagar", "Jawahar Nagar Goregaon", "Jogeshwari Caves Area", "Jogeshwari East", "Jogeshwari Link Road", "Jogeshwari Station", "Jogeshwari Station East", "Jogeshwari Station West", "Jogeshwari Vikhroli Link Road", "Jogeshwari West", "Link Road Goregaon", "MHB Colony Goregaon", "Mahananda Dairy Area", "Majas Depot Area", "Milind Nagar", "Mindspace", "Mindspace IT Park", "Motilal Nagar", "Motilal Nagar 1", "Motilal Nagar 2", "Motilal Nagar 3", "NESCO", "Nagari Niwara", "Nesco IT Park", "New Link Road Goregaon", "Nityanand Nagar", "Oberoi Garden City", "Oberoi Mall Area", "Oshiwara River Side", "Pahadi Goregaon", "Rahul Nagar", "Ram Mandir Road", "SV Road Jogeshwari", "Saidham Nagar", "Shastri Nagar Goregaon", "Shree Nagar Jogeshwari", "Shreyas Colony", "Sidharth Nagar Goregaon", "Versova Andheri Link Road", "Western Express Highway Goregaon", "Yashodham", "Yashodham Complex", "Yashodhan Society"], "Malad / Kandivali": ["Akurli Naka", "Akurli Road", "Akurli Road Kandivali", "Bangur Nagar", "Bangur Nagar East", "Bangur Nagar West", "Charkop", "Charkop Market", "Charkop Sector 1", "Charkop Sector 2", "Charkop Sector 3", "Charkop Sector 4", "Charkop Sector 5", "Charkop Sector 6", "Charkop Sector 7", "Charkop Sector 8", "Charkop Village", "Chincholi Bunder", "Chincholi Bunder Road", "Dahanukarwadi", "Dahanukarwadi Station", "Evershine Nagar", "Ganesh Nagar Kandivali", "Holy Cross Road Malad", "IC Colony Malad", "Inorbit Mall Area", "Jankalyan Nagar Malad", "Kanchpada", "Kandivali East", "Kandivali East Station Road", "Kandivali Link Road", "Kandivali SV Road", "Kandivali Station", "Kandivali Station East", "Kandivali Station West", "Kandivali West", "Kandivali West SV Road", "Kurar", "Kurar Village", "Kurar Village Malad", "Liberty Garden", "Liberty Garden Malad", "Lokhandwala Kandivali", "Lokhandwala Township Kandivali", "MHADA Colony", "MHADA Colony Andheri", "MHADA Colony Malad", "MHB Colony", "Mahavir Nagar Kandivali", "Mahavir Nagar Kandivali West", "Malad East", "Malad Evershine Nagar", "Malad Link Road", "Malad Station East", "Malad Station West", "Malad West", "Malvani", "Malvani Colony", "Marve", "Marve Road", "Marve Road Malad", "Natwar Parekh Colony Malad", "Orlem", "Orlem Mary Immaculate", "Parekh Nagar", "Poisar", "Poisar Depot", "Poisar Gymkhana", "Poisar Kandivali", "Pushpa Park Malad", "SV Road Kandivali", "Samata Nagar", "Samata Nagar Kandivali", "Shankar Lane", "Shankar Nagar", "Shanti Nagar Kandivali", "Thakur Complex", "Thakur Complex Road", "Thakur Nagar", "Thakur Village", "Thakur Village Kandivali", "Thakurli", "Thakurli Station", "Vijay Park"], "Borivali / Dahisar": ["Anand Nagar Dahisar", "Anand Nagar Dahisar East", "Borivali East", "Borivali East Station Road", "Borivali Link Road", "Borivali SV Road", "Borivali Station", "Borivali Station East", "Borivali Station West", "Borivali West", "Chadha Colony", "Chadha Market", "Chandavarkar Lane", "Chandavarkar Road", "Dahisar Check Naka", "Dahisar East", "Dahisar River Side", "Dahisar Station", "Dahisar Station East", "Dahisar Station West", "Dahisar West", "Eksar", "Eksar Road Borivali", "Eksar Village", "Ekta Nagar Dahisar", "Ganesh Nagar Dahisar", "Govind Nagar Borivali", "IC Colony", "IC Colony Borivali", "IC Colony Borivali West", "Kandarpada", "Kandarpada Dahisar", "Kastur Park Borivali", "Kulupwadi", "Kulupwadi Road", "MHB Colony Borivali", "Mandapeshwar", "Mandapeshwar Road", "Mandpeshwar", "Milan Nagar Dahisar", "National Park Area Borivali", "National Park Borivali", "Naya Nagar", "New Link Road Borivali", "Nutan Nagar", "Penkarpada Road", "Pimpripada Dahisar", "Pushpak Nagar", "Rajendra Nagar Borivali", "Rajendra Nagar Borivali West", "Rawalpada", "Rawalpada Dahisar", "SV Road Borivali", "SV Road Dahisar", "SVP Nagar Dahisar", "Sadguru Nagar", "Sanjay Gandhi National Park", "Shimpoli", "Shimpoli Road", "Shimpoli Road Borivali", "Suresh Nagar", "Suresh Nagar Borivali", "Vasant Vihar Borivali", "Vazira Naka", "Vinayak Nagar"], "Mira Road / Bhayandar / Vasai / Virar": ["Achole", "Achole Road Nalasopara", "Adharpada", "Anand Nagar Mira Road", "Arnala", "Arnala Beach Area", "Beverly Park", "Bharat Nagar Mira Road", "Bhavani Nagar", "Bhayandar East", "Bhayandar Station", "Bhayandar West", "Bhayander Market", "Bhayander Station", "Bhayander Station East", "Bhayander Station West", "Evershine City", "Gaurav Woods", "Geeta Nagar Mira Road", "Golden Nest Mira Road", "Kashimira", "Kashimira Mira Road", "Manikpur", "Manor Road", "Mira Bhayandar", "Mira Road East", "Mira Road East Market", "Mira Road Station", "Naigaon", "Naigaon East", "Naigaon Station", "Naigaon West", "Nalasopara", "Nalasopara East", "Nalasopara East Market", "Nalasopara Station", "Nalasopara West", "Nalasopara West Market", "Navghar", "Navghar Bhayander", "Papdy", "Papdy Vasai", "Pelhar", "Pelhar Vasai Road", "Penkarpada", "Poonam Garden", "Poonam Sagar", "Sai Baba Nagar Mira Road", "Santosh Nagar Mira Road", "Shanti Nagar Mira Road", "Shanti Park Mira Road", "Vasai East", "Vasai Fort Area", "Vasai Road", "Vasai Road East", "Vasai Road Station", "Vasai Road West", "Vasai Station", "Vasai West", "Virar East", "Virar Market", "Virar Station", "Virar Station East", "Virar Station West", "Virar West"], "Powai / Vikhroli / Kanjurmarg / Bhandup": ["Adi Shankaracharya Marg", "Anjur", "Bhandup Complex Road", "Bhandup East", "Bhandup Station East", "Bhandup Station West", "Bhandup West", "Central Avenue Hiranandani", "Central Avenue Powai", "Chandivali", "Chandivali Farm Road", "Chandivali Studio Road", "Godrej Colony Road", "Godrej Colony Vikhroli", "Hiranandani Gardens", "Hiranandani Powai", "Hiranandani Powai Market", "IIT Bombay Area", "IIT Bombay Gate", "IIT Powai", "JVLR Junction", "JVLR Powai", "Kanjur Village", "Kanjurmarg East", "Kanjurmarg Road", "Kanjurmarg Station", "Kanjurmarg Station East", "Kanjurmarg Station West", "Kanjurmarg West", "Kannamwar Nagar", "Kannamwar Nagar 1", "Kannamwar Nagar 2", "Kopar", "LBS Marg", "LBS Marg Vikhroli", "LBS Marg Vikhroli West", "LBS Road Kanjurmarg", "NITIE Area", "NITIE Road Powai", "Nahur", "Nahur Mulund", "Nahur Station", "Nahur West", "New Powai", "Nirvana Park", "Parksite Colony", "Powai Galleria", "Powai Galleria Area", "Powai Hiranandani", "Powai Lake", "Powai Lake View", "Powai Market", "Powai Plaza", "Raheja Vihar", "Raheja Vihar Powai", "Ram Nagar Bhandup", "Rambaug Colony Powai", "Saki Vihar Powai Road", "Somaiya Road", "Somaiya Vidyavihar", "Sonapur Bhandup", "Tagore Nagar", "Tagore Nagar Vikhroli", "Vikhroli East", "Vikhroli Park Site", "Vikhroli Park Site Road", "Vikhroli Station", "Vikhroli Station East", "Vikhroli Station West", "Vikhroli West"], "Ghatkopar / Kurla / Chembur": ["Amar Mahal", "Asalpha", "Asalpha Ghatkopar", "Asalpha Village", "BPCL Colony", "BPCL Colony Road", "CST Road Kurla", "Cheeta Camp", "Cheetah Camp", "Chembur Camp", "Chembur Colony", "Chembur East", "Chembur Metro", "Chembur Naka", "Chembur Station", "Collector Colony", "Deonar", "Deonar Colony", "Diamond Garden", "Diamond Garden Area", "Diamond Garden Road", "Garodia Nagar", "Garodia Nagar Road", "Ghatkopar East", "Ghatkopar LBS Road", "Ghatkopar Metro Station", "Ghatkopar Pant Nagar", "Ghatkopar Station", "Ghatkopar Station East", "Ghatkopar Station West", "Ghatkopar West", "Ghatla", "Ghatla Village Chembur", "Govandi", "Govandi East", "Govandi Station", "Govandi Station East", "Govandi Station Road", "Jawahar Nagar Ghatkopar", "Kamgar Nagar Chembur", "Kurla Depot", "Kurla East", "Kurla Market", "Kurla Station", "Kurla Station East", "Kurla Station West", "Kurla West", "LBS Marg Kurla", "LBS Marg Kurla West", "LBS Road Ghatkopar", "LBS Road Kurla", "Laxmi Nagar Ghatkopar", "Mankhurd", "Mankhurd Station", "Mankhurd Station Road", "Natwar Parekh Colony", "Navpada Kurla", "Nehru Nagar Chembur", "Nehru Nagar Kurla", "Nehru Nagar Kurla East", "Pant Nagar", "Pant Nagar Ghatkopar", "Pestom Sagar", "Pestom Sagar Colony", "Pestom Sagar Road", "Prakash Nagar Kurla", "Qureshi Nagar", "RCF Colony", "RCF Colony Road", "Rajawadi", "Rajawadi Hospital Area", "Rajiv Gandhi Nagar", "Ramabai Colony", "Ramabai Nagar Ghatkopar", "Safed Pool", "Safed Pool Kurla", "Sher E Punjab", "Shivaji Nagar Govandi", "Shivaji Nagar Govandi Road", "Sindhi Camp Chembur", "Sindhi Colony", "Sindhi Society", "Subhash Nagar Ghatkopar", "Tagore Nagar", "Tilak Nagar", "Tilak Nagar Ghatkopar", "Tilak Nagar Kurla", "Tilak Nagar Station", "Trombay", "Trombay Road", "Vidyavihar", "Vidyavihar East", "Vidyavihar Station", "Vidyavihar West", "Vikrant Circle", "Vinobha Bhave Nagar"], "Mulund / Thane": ["Agra Road Thane", "Agra Road Thane West", "Balkum", "Balkum Naka", "Balkum Road", "Bhandup Complex", "Bhandup Station", "Bharat Nagar Mulund", "Brahmand", "Brahmand Society", "Cadbury Junction", "Cadbury Junction Thane", "Charai", "Charai Road Thane", "Dhokali", "Dhokali Thane", "Eastern Express Highway Thane", "Gaimukh", "Ghodbunder", "Ghodbunder Road", "Ghodbunder Road North", "Ghodbunder Road South", "Gokul Nagari", "Gokul Township", "Harbour Line", "Hiranandani Estate Road", "Hiranandani Estate Thane", "Hiranandani Thane", "Jambli Naka", "Jambli Naka Thane", "Kalwa", "Kalwa Station", "Kalwa Station Road", "Kapurbawdi", "Kapurbawdi Junction", "Kasarvadavali", "Khopat", "Kolbad", "Kolbad Road Thane", "Kolshet", "Kolshet Road", "Kopri", "Kopri Colony", "LBS Marg Mulund", "LBS Marg Mulund West", "LBS Road Mulund", "Louis Wadi", "Louis Wadi Road", "MG Road Mulund", "MG Road Mulund West", "Majiwada", "Majiwada Junction", "Manpada", "Manpada Road", "Mokadam", "Mokadam Thane", "Mulund Check Naka", "Mulund Colony", "Mulund Colony Road", "Mulund East", "Mulund Gaon", "Mulund Gaon Village", "Mulund Station", "Mulund Station East", "Mulund Station West", "Mulund West", "Mulund West SV Road", "Mumbai Nashik Highway", "Nagothane", "Nahur", "Naupada", "Naupada Road Thane", "Owale", "Owale Thane", "Panchpakhadi", "Panchpakhadi Thane", "Patlipada", "Patlipada Road", "Pokhran Road", "Pokhran Road 1", "Pokhran Road 2", "Pokhran Road No 1", "Pokhran Road No 2", "Ram Maruti Road", "Ram Maruti Road Thane", "Ram Nagar Mulund", "Ramnagar Thane", "Ramnagar Thane East", "Samarth Nagar", "Sarvodaya Nagar", "Savarkar Nagar Thane", "Savarkar Nagar Thane East", "Savarkarnagar", "Shantinagar Mulund", "Shivai Nagar", "Shivai Nagar Thane", "Shivaji Path", "Shivaji Path Thane", "Teen Haath Naka", "Teen Haath Naka Thane", "Tembhi Naka", "Tembhi Naka Thane", "Thane Belapur Road", "Thane East", "Thane Station", "Thane Station East", "Thane Station West", "Thane West", "Upvan Lake", "Upvan Lake Area", "Uthalsar", "Uthalsar Thane", "Vartak Nagar", "Vartak Nagar Road", "Vasant Vihar Thane", "Vasant Vihar Thane West", "Veena Nagar", "Wada", "Wagle Estate", "Wagle Estate Road", "Yeoor", "Yeoor Hills", "Yeoor Village"], "Navi Mumbai": ["Airoli", "Airoli Sector 1", "Airoli Sector 2", "Airoli Sector 3", "Airoli Sector 4", "Airoli Sector 5", "Airoli Sector 6", "Airoli Sector 7", "Airoli Sector 8", "Airoli Station", "Belapur", "Belapur Sector 11", "Belapur Sector 12", "Belapur Sector 15", "Belapur Sector 8", "Belapur Station", "CBD Belapur", "CBD Belapur Road", "CIDCO", "Digha", "Digha Airoli", "Dronagiri", "Dronagiri Uran", "Ghansoli", "Ghansoli Sector 1", "Ghansoli Sector 2", "Ghansoli Sector 3", "Ghansoli Station", "Juinagar", "Juinagar Station", "Kalamboli", "Kalamboli Junction", "Kalamboli Sector 1", "Kalamboli Sector 2", "Kamothe", "Kamothe Sector 1", "Kamothe Sector 20", "Kamothe Sector 4", "Kamothe Sector 6", "Kamothe Sector 7", "Kamothe Sector 8", "Kamothe Station", "Karanjade", "Khanda Colony Panvel", "Khandeshwar", "Kharghar", "Kharghar Sector 1", "Kharghar Sector 10", "Kharghar Sector 11", "Kharghar Sector 12", "Kharghar Sector 2", "Kharghar Sector 3", "Kharghar Sector 4", "Kharghar Sector 5", "Kharghar Sector 6", "Kharghar Sector 7", "Kharghar Sector 8", "Kharghar Sector 9", "Kharghar Station", "Kharghar Valley", "Kopar Khairane", "Koparkhairane", "Koparkhairane Station", "MIDC", "MMRDA Colony", "Mahape", "Mahape Road", "Nerul", "Nerul Sector 1", "Nerul Sector 12", "Nerul Sector 15", "Nerul Sector 2", "Nerul Sector 20", "Nerul Sector 21", "Nerul Sector 24", "Nerul Sector 25", "Nerul Sector 4", "Nerul Sector 6", "Nerul Sector 9", "Nerul Station", "New Panvel", "New Panvel West", "Old Panvel", "Old Panvel Market", "Palm Beach Road", "Palm Beach Road Vashi", "Panvel", "Panvel Highway", "Panvel Station", "Parsik Hill", "Pawne", "Rabale", "Rabale MIDC", "Rabale Station", "Roadpali", "Roadpali Kalamboli", "Sanpada", "Sanpada Sector 1", "Sanpada Sector 2", "Sanpada Sector 3", "Sanpada Sector 4", "Sanpada Sector 5", "Sanpada Station", "Seawoods", "Seawoods Darave", "Seawoods Station", "TTC MIDC", "Taloja", "Taloja MIDC", "Turbhe", "Turbhe MIDC", "Turbhe Station", "Ulwe", "Ulwe Sector 1", "Ulwe Sector 12", "Ulwe Sector 17", "Ulwe Sector 19", "Ulwe Sector 5", "Ulwe Sector 6", "Ulwe Sector 8", "Vashi", "Vashi Plaza", "Vashi Sector 1", "Vashi Sector 10", "Vashi Sector 12", "Vashi Sector 15", "Vashi Sector 17", "Vashi Sector 2", "Vashi Sector 3", "Vashi Sector 4", "Vashi Sector 5", "Vashi Sector 6", "Vashi Sector 7", "Vashi Sector 8", "Vashi Sector 9", "Vashi Station"], "Dombivli / Kalyan / Ambernath": ["Ambernath East", "Ambernath Station", "Ambernath West", "Ambivli", "Ayre Road", "Dombivli East", "Dombivli MIDC", "Dombivli Market", "Dombivli Station", "Dombivli Station East", "Dombivli Station West", "Dombivli West", "Ganesh Nagar Kalyan", "Kalher", "Kalyan East", "Kalyan Market", "Kalyan Station", "Kalyan Station East", "Kalyan Station West", "Kalyan West", "Kasheli", "Khidkali", "Lodha Palava", "Lodha Palava City", "Manjarli", "Nandivali", "Narpoli", "Padgha", "Ramnagar Dombivli", "Shahad", "Shahad Station", "Shastri Nagar Dombivli", "Shil Phata", "Shil Road", "Shil Road Dombivli", "Shilphata", "Titwala", "Titwala Station", "Ulhasnagar", "Ulhasnagar 1", "Ulhasnagar 2", "Ulhasnagar 3", "Ulhasnagar 4", "Ulhasnagar 5", "Ulhasnagar Station", "Vasant Vihar Dombivli", "Vithalwadi", "Vithalwadi Station"], "Mumbra / Diva / Bhiwandi": ["Diva Station", "Kausa", "Khopoli", "Mumbra Station"], "Beyond Mumbai (Karjat / Khopoli / Palghar)": ["Badlapur", "Badlapur East", "Badlapur West", "Boisar", "Dahanu", "Karjat", "Kasara", "Murbad", "Palghar", "Pen", "Roha", "Sagaon", "Shahapur", "Sopara"]},
-  pune: {"Shivajinagar": ["FC Road", "Ganeshkhind Road", "University Road", "Senapati Bapat Road", "Law College Road", "Prabhat Road", "Deccan Gymkhana"], "Deccan": ["Appa Balwant Chowk", "Tilak Road", "Sadashiv Peth", "Narayan Peth", "Kasba Peth", "Budhwar Peth", "Mangalwar Peth"], "Koregaon Park": ["North Main Road KP", "Lane 1 KP", "Lane 5 KP", "Lane 6 KP", "Mundhwa Road", "Aga Khan Palace Area", "Boat Club Road Pune"], "Kalyani Nagar": ["Viman Nagar", "Dhole Patil Road", "Airport Road Pune", "Weikfield IT Area", "Wadgaon Sheri", "Nagar Road Pune"], "Pune Camp": ["East Street", "MG Road Pune", "Bund Garden Road", "Sangamvadi", "Raikar Mala", "Ghorpadi", "Wanowrie Road"], "Hadapsar": ["Magarpatta City", "Fursungi", "Manjari", "Ramtekdi", "Hadapsar MIDC", "Phursungi", "Amanora"], "Kharadi": ["EON IT Park Area", "Wagholi", "Sasane Nagar", "Kesnand Road", "Lonikand"], "Kondhwa": ["Kondhwa Khurd", "Undri", "Pisoli", "Ambegaon Budruk", "Mohammadwadi", "Katraj South"], "Bibwewadi": ["Katraj", "Dhankawadi", "Anand Nagar Pune", "Sinhagad Road", "Ambegaon Pathar"], "Wanowrie": ["Fatima Nagar", "Ramwadi", "Salisbury Park", "Lullanagar", "NIBM Road"], "Baner": ["Balewadi", "Sus Road", "Pashan", "Baner Road", "Sus Village"], "Aundh": ["Aundh Road", "Parihar Chowk", "ITI Road Aundh", "Vivek Colony Aundh"], "Wakad": ["Hinjewadi", "Pimple Saudagar", "Pimple Nilakh", "Thergaon", "Rahatani"], "Kothrud": ["Karve Road", "Warje", "Bavdhan", "Ideal Colony", "Erandwane", "Market Yard"], "Hinjewadi": ["Hinjewadi Phase 1", "Hinjewadi Phase 2", "Hinjewadi Phase 3", "Marunji", "Maan", "Mann"], "Pimpri Chinchwad": ["Pimpri", "Chinchwad", "Akurdi", "Nigdi", "Pradhikaran", "Bhosari", "Moshi", "Chikhali"], "Vishrantwadi": ["Lohegaon", "Dhanori", "Alandi Road", "Yerwada", "Vishrantwadi Road"], "Mundhwa": ["Keshavnagar", "Ghorpadi East", "Koregaon Park Annexe", "Yewalewadi"], "Shivaji Nagar": ["Model Colony", "Bhamburda", "Navi Peth", "Apte Road"], "Peth Area": ["Kasba Peth", "Somwar Peth", "Raviwar Peth", "Guruwar Peth", "Shanwar Peth", "Ganjve Peth"], "Viman Nagar": ["Clover Park", "Phoenix Mall Pune Area", "Sakore Nagar", "Tulja Bhavani Nagar"], "Chinchwad": ["Old Chinchwad", "Akurdi Station Area", "Kalewadi", "Ravet", "Punawale"]},
-};
-function getZONES() { return CITY_ZONES[getBrokerCity()] || CITY_ZONES.mumbai; }
-const CITY_PLANS = {
-  mumbai: {
-    starter: {name:"Starter", contacts:10, monthly:1299, annual:11691},
-    growth:  {name:"Growth",  contacts:20, monthly:2199, annual:19791},
-    pro:     {name:"Pro",     contacts:30, monthly:2999, annual:26991},
-    elite:   {name:"Elite",   contacts:50, monthly:3999, annual:35991},
-  },
-  pune: {
-    starter: {name:"Starter", contacts:10, monthly:899,  annual:8091},
-    growth:  {name:"Growth",  contacts:20, monthly:1599, annual:14391},
-    pro:     {name:"Pro",     contacts:30, monthly:2199, annual:19791},
-    elite:   {name:"Elite",   contacts:50, monthly:2999, annual:26991},
-  },
-};
-function getBrokerCity() { return localStorage.getItem('fk_city') || 'mumbai'; }
-function getPLANS() { return CITY_PLANS[getBrokerCity()] || CITY_PLANS.mumbai; }
-const PLANS = getPLANS(); // fallback for legacy refs
+const CITY_ZONES = {"mumbai": {"Andheri": ["Andheri West", "Andheri East", "Andheri Station", "DN Nagar", "Azad Nagar", "Lokhandwala", "Oshiwara", "Lower Oshiwara", "Four Bungalows", "Seven Bungalows", "Yari Road", "Versova", "Gilbert Hill", "New Link Road", "Andheri Link Road", "JVPD Scheme", "Bharat Nagar Andheri", "SV Road Andheri", "Andheri Station West", "Andheri Station East", "WEH", "JVLR", "Marol", "Sakinaka", "Saki Naka", "Chakala", "MIDC Andheri", "SEEPZ", "JB Nagar", "Kondivita", "Airport Road", "Andheri Kurla Road", "Marol Naka", "Marol Pipeline", "Kondivita Village", "Gundavali", "SVP Nagar", "Mogra Village", "Mogra Naka", "Saki Vihar", "Veera Desai Road", "Infinity Mall Area", "Aram Nagar", "Marol Maroshi Road", "Andheri East Station", "JB Nagar Andheri", "Marol Military Road", "Chakala Junction", "Chakala Metro", "JB Nagar Metro", "Marol Naka Junction", "SEEPZ Gate", "Saki Naka Junction", "Saki Vihar Road", "Sakinaka Junction", "WEH Andheri"], "Andheri West": ["DN Nagar", "Azad Nagar", "Lokhandwala", "Oshiwara", "Lower Oshiwara", "Four Bungalows", "Seven Bungalows", "Yari Road", "Gilbert Hill", "New Link Road", "Andheri Link Road", "JVPD Scheme", "Versova", "Bharat Nagar Andheri", "SV Road Andheri", "Andheri Station", "Veera Desai Road", "Infinity Mall Area", "Aram Nagar"], "Andheri East": ["Marol", "Sakinaka", "Saki Naka", "Chakala", "MIDC Andheri", "SEEPZ", "JB Nagar", "Kondivita", "Airport Road", "Andheri Kurla Road", "Marol Naka", "Marol Pipeline", "Kondivita Village", "Gundavali", "SVP Nagar", "Mogra Village", "Mogra Naka", "Saki Vihar", "WEH", "JVLR", "Marol Maroshi Road", "Andheri East Station", "JB Nagar Andheri", "Marol Military Road", "Chakala Junction", "Chakala Metro", "JB Nagar Metro", "Marol Naka Junction", "SEEPZ Gate", "Saki Naka Junction", "Saki Vihar Road", "Sakinaka Junction", "WEH Andheri"], "Bandra": ["Bandra West", "Bandra East", "Pali Hill", "Carter Road", "Bandstand", "Mount Mary", "Land End", "BKC", "Vakola", "Kalina", "Linking Road Bandra", "Turner Road Bandra", "Hill Road Bandra", "Chapel Road", "Waroda Road", "Ranwar", "Perry Road", "Reclamation", "Bandra Reclamation", "Kalanagar", "Khernagar", "Sonapur Lane", "National Library Road"], "Bandra West": ["Pali Hill", "Carter Road", "Bandstand", "Mount Mary", "Land End", "Linking Road Bandra", "Turner Road Bandra", "Hill Road Bandra", "Chapel Road", "Waroda Road", "Ranwar", "Perry Road", "Reclamation", "Bandra Reclamation", "National Library Road", "Waterfield Road"], "Bandra East": ["BKC", "Vakola", "Kalina", "Kalanagar", "Khernagar", "Sonapur Lane"], "Santacruz": ["Santacruz West", "Santacruz East", "Santacruz Station", "Vakola", "Navpada Santacruz", "Saraswat Colony", "Francis D Souza Road"], "Vile Parle": ["Vile Parle West", "Vile Parle East", "Irla", "Irla Market", "Nehru Road Vile Parle", "Navpada Vile Parle", "Airport Road Juhu"], "Vile Parle West": ["Irla", "Irla Market", "Nehru Road Vile Parle", "Navpada Vile Parle"], "Goregaon": ["Goregaon West", "Goregaon East", "Film City", "Aarey Colony", "Mindspace", "Film City Road", "Aarey", "Dindoshi", "Dindoshi Village", "JP Nagar", "Motilal Nagar", "Motilal Nagar 1", "Motilal Nagar 2", "Motilal Nagar 3", "Milind Nagar", "Rahul Nagar", "Ram Mandir Road", "Shreyas Colony", "Saidham Nagar", "NESCO", "Oberoi Garden City", "Yashodham", "Yashodham Complex", "Mahananda Dairy Area", "Bhatwadi"], "Goregaon West": ["Mindspace", "JP Nagar", "Motilal Nagar", "Milind Nagar", "Rahul Nagar", "Ram Mandir Road", "Shreyas Colony", "Bhatwadi"], "Goregaon East": ["Film City", "Aarey Colony", "Dindoshi", "Dindoshi Village", "NESCO", "Saidham Nagar", "Oberoi Garden City", "Yashodham", "Yashodham Complex", "Mahananda Dairy Area"], "Malad": ["Malad West", "Malad East", "Marve", "Bangur Nagar", "Malvani", "Chincholi Bunder", "Orlem", "Liberty Garden", "Kanchpada", "MHADA Colony", "Kurar", "Kurar Village", "Evershine Nagar"], "Malad West": ["Marve", "Bangur Nagar", "Malvani", "Chincholi Bunder", "Orlem", "Liberty Garden", "Kanchpada", "Evershine Nagar"], "Malad East": ["Kurar", "Kurar Village", "MHADA Colony"], "Kandivali": ["Kandivali West", "Kandivali East", "Thakur Village", "Thakur Complex", "Poisar", "Lokhandwala Kandivali", "Akurli Road", "Akurli Naka", "Charkop Sector 1", "Charkop Sector 2", "Charkop Sector 3", "Charkop Sector 4", "Charkop Sector 5", "Charkop Sector 6", "Charkop Sector 7", "Charkop Sector 8", "MHB Colony", "Parekh Nagar", "Mahavir Nagar Kandivali", "Thakur Nagar", "Shankar Lane", "Shankar Nagar", "Samata Nagar", "Vijay Park", "Dahanukarwadi", "Kandivali Station"], "Kandivali West": ["Poisar", "Lokhandwala Kandivali", "Akurli Road", "Akurli Naka", "Charkop Sector 1", "Charkop Sector 2", "Charkop Sector 3", "Charkop Sector 4", "Charkop Sector 5", "Charkop Sector 6", "Charkop Sector 7", "Charkop Sector 8", "MHB Colony", "Parekh Nagar", "Mahavir Nagar Kandivali", "Shankar Lane", "Vijay Park", "Dahanukarwadi"], "Kandivali East": ["Thakur Village", "Thakur Complex", "Thakur Nagar", "Shankar Nagar", "Samata Nagar"], "Borivali": ["Borivali West", "Borivali East", "IC Colony", "Eksar", "Shimpoli", "Chandavarkar Road", "Rajendra Nagar Borivali", "Mandapeshwar", "Mandpeshwar", "IC Colony Borivali", "Suresh Nagar", "Eksar Village", "Shimpoli Road", "Kulupwadi", "Kulupwadi Road", "Pushpak Nagar", "Vinayak Nagar", "Sadguru Nagar", "Nutan Nagar", "Chadha Colony", "Chadha Market", "Vazira Naka"], "Borivali West": ["IC Colony", "Eksar", "Shimpoli", "Chandavarkar Road", "Rajendra Nagar Borivali", "Mandapeshwar", "Suresh Nagar", "Sadguru Nagar", "Nutan Nagar", "Chadha Colony", "Vazira Naka"], "Borivali East": ["Kulupwadi", "Kulupwadi Road", "Pushpak Nagar", "Vinayak Nagar"], "Dahisar": ["Dahisar West", "Dahisar East", "Rawalpada", "Kandarpada", "Anand Nagar Dahisar", "Naya Nagar"], "Jogeshwari": ["Jogeshwari West", "Jogeshwari East", "Ekta Nagar Jogeshwari", "Hanuman Nagar Jogeshwari", "Nagari Niwara", "Nityanand Nagar", "Majas Depot Area"], "Kurla": ["Kurla West", "Kurla East", "LBS Marg Kurla", "Nehru Nagar Kurla", "Safed Pool", "Navpada", "Qureshi Nagar", "Vinobha Bhave Nagar"], "Ghatkopar": ["Ghatkopar West", "Ghatkopar East", "Pant Nagar", "Asalpha", "Ghatkopar Pant Nagar", "Vikrant Circle", "Natwar Parekh Colony", "Rajawadi", "Ramabai Colony", "Garodia Nagar", "Vidyavihar", "Vidyavihar East", "Vidyavihar West"], "Ghatkopar West": ["Asalpha", "Ghatkopar Pant Nagar", "Vikrant Circle", "Natwar Parekh Colony", "Vidyavihar", "Vidyavihar West"], "Ghatkopar East": ["Pant Nagar", "Rajawadi", "Ramabai Colony", "Garodia Nagar", "Vidyavihar East"], "Vikhroli": ["Vikhroli West", "Vikhroli East", "Vikhroli Park Site", "LBS Marg Vikhroli", "Somaiya Road", "Godrej Colony Vikhroli", "Parksite Colony", "Kannamwar Nagar", "Kannamwar Nagar 1", "Kannamwar Nagar 2", "Tagore Nagar Vikhroli"], "Powai": ["Hiranandani Gardens", "IIT Powai", "Chandivali", "Powai Lake", "Central Avenue Powai", "Powai Hiranandani", "Powai Galleria", "Powai Plaza", "NITIE Area", "IIT Bombay Area", "Nirvana Park", "Raheja Vihar", "Adi Shankaracharya Marg"], "Kanjurmarg": ["Kanjurmarg West", "Kanjurmarg East", "Kanjurmarg Station"], "Mulund": ["Mulund West", "Mulund East", "Mulund Colony", "Mulund Gaon", "LBS Marg Mulund", "LBS Road Mulund", "MG Road Mulund", "Nahur", "Veena Nagar", "Sarvodaya Nagar", "Bharat Nagar Mulund"], "Bhandup": ["Bhandup West", "Bhandup East", "Bhandup Station", "Bhandup Complex"], "Chembur": ["Tilak Nagar", "Pestom Sagar", "Diamond Garden", "Chembur Naka", "Sindhi Colony", "RCF Colony", "BPCL Colony", "Collector Colony", "Sindhi Society", "R C Marg", "Amar Mahal", "Ghatla", "Chembur East"], "Dadar": ["Dadar West", "Dadar East", "Dadar TT", "Dadar Chowk", "Dadar Station", "Shivaji Park", "Portuguese Church Area", "Cadell Road", "Gokhale Road", "Ranade Road", "Kirti College Area", "Chaityabhoomi", "Naigaum", "Hindu Colony"], "Mahim": ["Lady Jamshedji Road", "Tulsi Pipe Road", "Dharavi Cross Road"], "Matunga": ["Matunga West", "Matunga East", "King Circle", "Telang Road", "Ruia College Area", "Ruia Park"], "Sion": ["Sion Circle", "Sion Koliwada"], "Parel": ["Lalbaug", "Currey Road", "Curry Road", "Elphinstone Road", "Bhoiwada"], "Lower Parel": ["Delisle Road", "Senapati Bapat Marg", "NM Joshi Marg", "Kamala Mills", "Phoenix Mills Area"], "Wadala": ["Wadala East", "Wadala West", "Cotton Green", "Antop Hill", "GTB Nagar", "Anik", "Shivadi"], "Worli": ["Worli Sea Face", "Worli Village", "Worli Naka", "Worli Koliwada", "Annie Besant Road"], "Khar": ["Khar West", "Khar East", "Khar Station", "Khar Danda", "16th Road Khar", "17th Road Khar", "20th Road Khar", "Chuim Village", "Union Park"], "Juhu": ["Juhu Beach", "Juhu Scheme", "Juhu Tara Road", "Airport Road Juhu", "Bhakti Vedanta Marg"], "Thane": ["Thane West", "Thane East", "Wagle Estate", "Kopri", "Kolbad", "Naupada", "Vartak Nagar", "Louis Wadi", "Teen Haath Naka", "Cadbury Junction", "Majiwada", "Ghodbunder Road", "Balkum", "Hiranandani Thane", "Hiranandani Estate Thane", "Agra Road Thane", "Dhokali", "Manpada", "Kolshet", "Panchpakhadi", "Kapurbawdi", "Jambli Naka", "Tembhi Naka", "Charai", "Ramnagar Thane", "Savarkar Nagar Thane", "Patlipada", "Ram Maruti Road", "Shivai Nagar", "Khopat", "Owale", "Vasant Vihar Thane", "Savarkarnagar", "Upvan Lake", "Gokul Township", "Brahmand", "Ghodbunder", "Pokhran Road"], "Mira Road": ["Mira Road East", "Beverly Park", "Bhavani Nagar", "Poonam Garden", "Poonam Sagar", "Gaurav Woods", "Kashimira", "Penkarpada", "Navghar"], "Vashi": ["Vashi Sector 1", "Vashi Sector 2", "Vashi Sector 3", "Vashi Sector 4", "Vashi Sector 5", "Vashi Sector 6", "Vashi Sector 7", "Vashi Sector 8", "Vashi Sector 9", "Vashi Sector 10", "Sanpada", "Turbhe", "CIDCO"], "Nerul": ["Nerul Sector 1", "Nerul Sector 2", "Nerul Sector 4", "Nerul Sector 6", "Juinagar", "Seawoods"], "Kharghar": ["Kharghar Sector 1", "Kharghar Sector 2", "Kharghar Sector 3", "Kharghar Sector 4", "Kharghar Sector 5", "Kharghar Sector 6", "Kharghar Sector 7", "Kharghar Sector 8", "Kharghar Sector 9", "Kharghar Sector 10", "Kharghar Sector 11", "Kharghar Sector 12"], "Belapur": ["CBD Belapur", "Parsik Hill"], "Airoli": ["Airoli Sector 1", "Airoli Sector 2", "Airoli Sector 3", "Airoli Sector 4", "Airoli Sector 5", "Airoli Sector 6", "Airoli Sector 7", "Airoli Sector 8"], "Colaba": ["Cuffe Parade", "Colaba Causeway", "Gateway of India", "Navy Nagar", "Sassoon Dock", "Cusrow Baug", "Merewether Road", "Walton Road", "Wodehouse Road", "Arthur Bunder Road", "Regal Cinema Area"], "Fort": ["Ballard Estate", "CSMT", "Azad Maidan", "Cooperage", "Cross Maidan", "Carnac Bunder", "Crawford Market"], "Marine Lines": ["Charni Road", "Chowpatty", "Girgaon", "Gamdevi", "Marine Drive"], "Grant Road": ["Nana Chowk", "Laburnum Road", "Gamdevi", "Tardeo"], "Byculla": ["Reay Road", "Chinchpokli", "Nagpada", "Agripada", "Clare Road", "Sandhurst Road", "Mazgaon", "Nesbit Road", "Dockyard Road"], "Mahalaxmi": ["Haji Ali", "Peddar Road", "Warden Road", "Kemps Corner", "Bhulabhai Desai Road", "Mahalaxmi Racecourse"], "Malabar Hill": ["Walkeshwar", "Banganga", "Ridge Road", "Teen Batti", "Napeansea Road", "Altamount Road", "Carmichael Road", "Nepean Sea Road", "Cumballa Hill", "August Kranti Marg"], "Kalbadevi": ["Zaveri Bazaar", "Bhendi Bazaar", "Bhuleshwar", "Crawford Market", "Null Bazaar", "Dongri", "Mandvi", "Pydhonie", "VP Road", "Abdul Rehman Street", "Princess Street", "Vadgadi", "Lohar Chawl"], "Dharavi": ["60 Feet Road Dharavi", "90 Feet Road Dharavi", "Dharavi 90 Feet Road", "Dharavi Main Road", "Dharavi Cross Road"], "Vasai": ["Vasai East", "Vasai West", "Papdy", "Manikpur", "Achole", "Adharpada", "Pelhar", "Evershine City"], "Nalasopara": ["Nalasopara West", "Nalasopara East"], "Virar": ["Virar West", "Virar East"], "Dombivli": ["Dombivli East", "Dombivli West", "Ayre Road", "Thakurli", "Shil Road", "Shil Phata", "Shilphata", "Lodha Palava"], "Kalyan": ["Kalyan East", "Kalyan West", "Shahad", "Vithalwadi", "Birla College Area Kalyan", "Ganesh Nagar Kalyan"], "Govandi": ["Govandi East", "Shivaji Nagar Govandi", "Cheeta Camp", "Cheetah Camp", "Govandi Station"], "Mankhurd": ["Mankhurd Station"], "Mumbra": ["Mumbra Station", "Kausa"], "Chembur East": ["Deonar", "Trombay", "Govandi", "Mankhurd", "Chembur Camp", "RCF Colony", "BPCL Colony", "Nehru Nagar Chembur", "Kamgar Nagar Chembur", "Sindhi Camp Chembur", "Deonar Colony"]}, "pune": {"Shivajinagar": ["FC Road", "Ganeshkhind Road", "University Road", "Senapati Bapat Road", "Law College Road", "Prabhat Road", "Deccan Gymkhana"], "Deccan": ["Appa Balwant Chowk", "Tilak Road", "Sadashiv Peth", "Narayan Peth", "Kasba Peth", "Budhwar Peth", "Mangalwar Peth"], "Koregaon Park": ["North Main Road KP", "Lane 1 KP", "Lane 5 KP", "Lane 6 KP", "Mundhwa Road", "Aga Khan Palace Area", "Boat Club Road Pune"], "Kalyani Nagar": ["Viman Nagar", "Dhole Patil Road", "Airport Road Pune", "Weikfield IT Area", "Wadgaon Sheri", "Nagar Road Pune"], "Pune Camp": ["East Street", "MG Road Pune", "Bund Garden Road", "Sangamvadi", "Raikar Mala", "Ghorpadi", "Wanowrie Road"], "Hadapsar": ["Magarpatta City", "Fursungi", "Manjari", "Ramtekdi", "Hadapsar MIDC", "Phursungi", "Amanora"], "Kharadi": ["EON IT Park Area", "Wagholi", "Sasane Nagar", "Kesnand Road", "Lonikand"], "Kondhwa": ["Kondhwa Khurd", "Undri", "Pisoli", "Ambegaon Budruk", "Mohammadwadi", "Katraj South"], "Bibwewadi": ["Katraj", "Dhankawadi", "Anand Nagar Pune", "Sinhagad Road", "Ambegaon Pathar"], "Wanowrie": ["Fatima Nagar", "Ramwadi", "Salisbury Park", "Lullanagar", "NIBM Road"], "Baner": ["Balewadi", "Sus Road", "Pashan", "Baner Road", "Sus Village"], "Aundh": ["Aundh Road", "Parihar Chowk", "ITI Road Aundh", "Vivek Colony Aundh"], "Wakad": ["Hinjewadi", "Pimple Saudagar", "Pimple Nilakh", "Thergaon", "Rahatani"], "Kothrud": ["Karve Road", "Warje", "Bavdhan", "Ideal Colony", "Erandwane", "Market Yard"], "Hinjewadi": ["Hinjewadi Phase 1", "Hinjewadi Phase 2", "Hinjewadi Phase 3", "Marunji", "Maan", "Mann"], "Pimpri Chinchwad": ["Pimpri", "Chinchwad", "Akurdi", "Nigdi", "Pradhikaran", "Bhosari", "Moshi", "Chikhali"], "Vishrantwadi": ["Lohegaon", "Dhanori", "Alandi Road", "Yerwada", "Vishrantwadi Road"], "Mundhwa": ["Keshavnagar", "Ghorpadi East", "Koregaon Park Annexe", "Yewalewadi"], "Shivaji Nagar": ["Model Colony", "Bhamburda", "Navi Peth", "Apte Road"], "Peth Area": ["Kasba Peth", "Somwar Peth", "Raviwar Peth", "Guruwar Peth", "Shanwar Peth", "Ganjve Peth"], "Viman Nagar": ["Clover Park", "Phoenix Mall Pune Area", "Sakore Nagar", "Tulja Bhavani Nagar"], "Chinchwad": ["Old Chinchwad", "Akurdi Station Area", "Kalewadi", "Ravet", "Punawale"]}};
+const CITY_PLANS = {"mumbai": {"starter": {"name": "Starter", "contacts": 10, "monthly": 1299, "annual": 11691}, "growth": {"name": "Growth", "contacts": 20, "monthly": 2199, "annual": 19791}, "pro": {"name": "Pro", "contacts": 30, "monthly": 2999, "annual": 26991}, "elite": {"name": "Elite", "contacts": 50, "monthly": 3999, "annual": 35991}}, "pune": {"starter": {"name": "Starter", "contacts": 10, "monthly": 899, "annual": 8091}, "growth": {"name": "Growth", "contacts": 20, "monthly": 1599, "annual": 14391}, "pro": {"name": "Pro", "contacts": 30, "monthly": 2199, "annual": 19791}, "elite": {"name": "Elite", "contacts": 50, "monthly": 2999, "annual": 26991}}};
 
+function getBrokerCity() { return localStorage.getItem('fk_city') || 'mumbai'; }
+function getZONES() { return CITY_ZONES[getBrokerCity()] || CITY_ZONES.mumbai; }
+function getPLANS() { return CITY_PLANS[getBrokerCity()] || CITY_PLANS.mumbai; }
+
+let selectedAreas = new Set();
 let selectedPlan = null;
 let billing = 'monthly';
-let selectedAreas = new Set();
 
 function selectBrokerCity(city) {
-  localStorage.setItem('fk_city', city);
-  // Update button styles
-  document.getElementById('city-mumbai').style.cssText = city==='mumbai'
-    ? 'padding:12px;border:2px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer'
-    : 'padding:12px;border:2px solid var(--border);border-radius:10px;background:transparent;color:var(--ink2);font-weight:600;font-size:14px;cursor:pointer';
-  document.getElementById('city-pune').style.cssText = city==='pune'
-    ? 'padding:12px;border:2px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer'
-    : 'padding:12px;border:2px solid var(--border);border-radius:10px;background:transparent;color:var(--ink2);font-weight:600;font-size:14px;cursor:pointer';
-  // Clear selected areas and re-render zones for new city
+  if(city !== 'mumbai') return;
+  localStorage.setItem('fk_city', 'mumbai');
+  document.getElementById('city-mumbai').style.cssText = 'padding:12px;border:3px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 2px #0f7b6c33';
   selectedAreas.clear();
   updatePills(); updateSummary();
   renderZones();
-  // Re-render plan prices for new city
   setBilling(billing);
-}
-
-function openBrokerSupport() {
-  const params = new URLSearchParams(window.location.search);
-  const brokerId = params.get('broker_id') || window._activeBrokerId || '';
-  const brokerPhone = window._activeBrokerPhone || '';
-  window.location.href = `support.html?broker=${encodeURIComponent(brokerPhone)}&broker_id=${encodeURIComponent(brokerId)}`;
-}
-
-async function switchToAnnual() {
-  const brokerId = window._activeBrokerId;
-  const currentPlan = window._activePlan;
-  if (!brokerId || !currentPlan) return;
-
-  const btn = document.querySelector('#upgradeAnnualBox button');
-  btn.disabled = true; btn.textContent = 'Processing…';
-
-  try {
-    const planObj = PLANS[currentPlan];
-    const amount = planObj.annual;
-
-    const oRes = await fetch(`${SUPA_URL}/functions/v1/create-order`, {
-      method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: brokerId, phone: window._activeBrokerPhone, name: window._activeBrokerName || 'Broker', amount,
-        isBroker: true, brokerPlan: currentPlan, billingCycle: 'annual'
-      })
-    });
-    const order = await oRes.json();
-    const sessionId = order.subscription_session_id;
-    if (!sessionId) { alert('Could not start annual upgrade. Please use the Need Support link below.'); btn.disabled=false; btn.textContent='Switch to Annual →'; return; }
-
-    const cfScript = document.createElement('script');
-    cfScript.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-    cfScript.onload = function() {
-      const cf = Cashfree({ mode: 'production' });
-      cf.subscriptionsCheckout({
-        subsSessionId: sessionId,
-        redirectTarget: '_self'
-      });
-    };
-    document.head.appendChild(cfScript);
-  } catch(e) {
-    alert('Something went wrong. Please use the Need Support link below.');
-    btn.disabled = false; btn.textContent = 'Switch to Annual →';
-  }
-}
-
-function setBilling(type) {
-  billing = type;
-  document.getElementById('btnMonthly').classList.toggle('active', type==='monthly');
-  document.getElementById('btnAnnual').classList.toggle('active', type==='annual');
-  const badge = document.getElementById('savingBadge');
-  badge.style.display = type==='annual' ? 'inline-block' : 'none';
-  // Update all plan prices using city-aware plans
-  const plans = getPLANS();
-  Object.entries(plans).forEach(([id, plan]) => {
-    const card = document.getElementById('plan-'+id);
-    if (!card) return;
-    const main = card.querySelector('.plan-price-main');
-    const sub = card.querySelector('.plan-price-sub');
-    const orig = card.querySelector('.plan-price-orig');
-    if (type === 'annual') {
-      main.textContent = '₹' + plan.annual.toLocaleString('en-IN');
-      sub.textContent = '/year';
-      orig.textContent = '₹' + (plan.monthly*12).toLocaleString('en-IN') + ' normally';
-    } else {
-      main.textContent = '₹' + plan.monthly.toLocaleString('en-IN');
-      sub.textContent = '/month';
-      orig.textContent = '';
-    }
-  });
-}
-
-function selectPlan(el, planId) {
-  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedPlan = planId;
 }
 
 function renderZones() {
@@ -284,21 +168,21 @@ function renderZones() {
   container.innerHTML = '';
   const zones = getZONES();
   Object.entries(zones).forEach(([zone, areas]) => {
-    const safe = zone.replace(/[^a-z]/gi,'_');
+    const safe = zone.replace(/[^a-z0-9]/gi,'_');
     const el = document.createElement('div');
     el.className = 'zone';
-    el.innerHTML = `
-      <div class="zone-header" onclick="toggleZone(this)">
-        <span>${zone}</span>
-        <div style="display:flex;align-items:center;gap:16px">
-          <span class="zone-count" id="cnt-${safe}"></span>
-          <span style="color:var(--ink3);font-size:18px;line-height:1">▼</span>
-          <button class="select-all-btn" onclick="event.stopPropagation();selectAllZone('${zone}')">Select all</button>
-        </div>
-      </div>
-      <div class="zone-areas" id="zone-${safe}">
-        ${areas.map(a=>`<div class="area-pill" onclick="toggleArea(this,'${a}')" data-area="${a}">${a}</div>`).join('')}
-      </div>`;
+    el.innerHTML =
+      '<div class="zone-header" onclick="toggleZone(this)">' +
+        '<span>' + zone + '</span>' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          '<span class="zone-count" id="cnt-' + safe + '"></span>' +
+          '<button class="select-all-btn" onclick="event.stopPropagation();selectAllZone(this.dataset.zone)" data-zone="' + zone.replace(/"/g,'&quot;') + '">Select all</button>' +
+          '<span style="color:var(--ink3)">▼</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="zone-areas" id="zone-' + safe + '">' +
+        areas.map(a => '<div class="area-pill" onclick="toggleArea(this,this.dataset.area)" data-area="' + a.replace(/"/g,'&quot;') + '">' + a + '</div>').join('') +
+      '</div>';
     container.appendChild(el);
   });
 }
@@ -306,323 +190,193 @@ function renderZones() {
 function toggleZone(h) {
   const d = h.nextElementSibling;
   d.classList.toggle('open');
-  h.querySelector('span:last-child').textContent = d.classList.contains('open') ? '▲' : '▼';
+  const arr = h.querySelector('span:last-child');
+  if(arr) arr.textContent = d.classList.contains('open') ? '▲' : '▼';
 }
 
 function selectAllZone(zone) {
   const areas = getZONES()[zone] || [];
-  const all = areas.every(a=>selectedAreas.has(a));
-  areas.forEach(a=>all?selectedAreas.delete(a):selectedAreas.add(a));
+  const all = areas.every(a => selectedAreas.has(a));
+  areas.forEach(a => all ? selectedAreas.delete(a) : selectedAreas.add(a));
   updatePills(); updateSummary();
 }
 
-function toggleArea(pill, area) {
-  selectedAreas.has(area)?selectedAreas.delete(area):selectedAreas.add(area);
-  updatePills(); updateSummary();
+function toggleArea(el, area) {
+  const a = area || el.dataset.area;
+  if(selectedAreas.has(a)) selectedAreas.delete(a);
+  else selectedAreas.add(a);
+  el.classList.toggle('selected', selectedAreas.has(a));
+  updateSummary();
 }
 
 function updatePills() {
-  document.querySelectorAll('.area-pill').forEach(p=>p.classList.toggle('selected',selectedAreas.has(p.dataset.area)));
-  Object.entries(ZONES).forEach(([zone,areas])=>{
-    const n=areas.filter(a=>selectedAreas.has(a)).length;
-    const el=document.getElementById('cnt-'+zone.replace(/[^a-z]/gi,'_'));
-    if(el) el.textContent=n>0?n+' selected':'';
+  document.querySelectorAll('.area-pill').forEach(p => {
+    p.classList.toggle('selected', selectedAreas.has(p.dataset.area));
+  });
+  const zones = getZONES();
+  Object.entries(zones).forEach(([zone, areas]) => {
+    const safe = zone.replace(/[^a-z0-9]/gi,'_');
+    const cnt = document.getElementById('cnt-'+safe);
+    if(!cnt) return;
+    const n = areas.filter(a => selectedAreas.has(a)).length;
+    cnt.textContent = n > 0 ? n + ' selected' : '';
   });
 }
 
 function updateSummary() {
-  const s=document.getElementById('selectedSummary');
-  if(!selectedAreas.size){s.style.display='none';return;}
-  s.style.display='block';
-  s.textContent=`✓ ${selectedAreas.size} area${selectedAreas.size>1?'s':''} selected`;
+  updatePills();
+  const s = document.getElementById('selectedSummary');
+  if(selectedAreas.size === 0) { s.innerHTML = '<span style="font-size:13px;color:var(--ink3)">No areas selected yet</span>'; return; }
+  s.innerHTML = [...selectedAreas].map(a =>
+    '<span class="sel-pill" onclick="selectedAreas.delete(this.dataset.area);updateSummary()" data-area="' + a.replace(/"/g,'&quot;') + '">' + a + ' ×</span>'
+  ).join('');
 }
 
-async function submitRegistration() {
+function setBilling(type) {
+  billing = type;
+  document.getElementById('btnMonthly').classList.toggle('active', type==='monthly');
+  document.getElementById('btnAnnual').classList.toggle('active', type==='annual');
+  const badge = document.getElementById('savingBadge');
+  if(badge) badge.style.display = type==='annual' ? 'inline-block' : 'none';
+  const plans = getPLANS();
+  Object.entries(plans).forEach(([id, plan]) => {
+    const card = document.getElementById('plan-'+id);
+    if(!card) return;
+    const main = card.querySelector('.plan-price-main');
+    const sub = card.querySelector('.plan-price-sub');
+    const orig = card.querySelector('.plan-price-orig');
+    if(type === 'annual') {
+      main.textContent = '₹' + plan.annual.toLocaleString('en-IN');
+      sub.textContent = '/year';
+      orig.textContent = '₹' + (plan.monthly*12).toLocaleString('en-IN') + ' normally';
+    } else {
+      main.textContent = '₹' + plan.monthly.toLocaleString('en-IN');
+      sub.textContent = '/month';
+      if(orig) orig.textContent = '';
+    }
+  });
+}
+
+function selectPlan(el, plan) {
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPlan = plan;
+  const payBtn = document.getElementById('payBtn');
+  payBtn.disabled = false;
+  const plans = getPLANS();
+  const price = billing === 'annual' ? plans[plan].annual : plans[plan].monthly;
+  payBtn.textContent = 'Pay ₹' + price.toLocaleString('en-IN') + ' & Activate →';
+}
+
+function submitRegistration() {
   const brokerCity = getBrokerCity();
-  const name=document.getElementById('brokerName').value.trim();
-  let phone=document.getElementById('brokerPhone').value.trim().replace(/\D/g,'');
-  // Strip leading country code (91) if present and number is 12 digits
-  if(phone.length===12 && phone.startsWith('91')) phone=phone.slice(2);
-  if(phone.length===11 && phone.startsWith('0')) phone=phone.slice(1);
-  const wa=phone; // leads go to this same WhatsApp number
+  const name = document.getElementById('brokerName').value.trim();
+  let phone = document.getElementById('brokerPhone').value.trim().replace(/\D/g,'');
+  if(phone.length===12 && phone.startsWith('91')) phone = phone.slice(2);
+  if(phone.length===11 && phone.startsWith('0')) phone = phone.slice(1);
+  if(!name) { alert('Please enter your name'); return; }
+  if(phone.length!==10) { alert('Please enter a valid 10-digit WhatsApp number'); return; }
+  if(!selectedAreas.size) { alert('Please select at least one area'); return; }
+  window._brokerFormData = { name, phone, city: brokerCity };
+  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('planSection').style.display = 'block';
+  setBilling('monthly');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
 
-  if(!name){alert('Please enter your name');return;}
-  if(phone.length!==10){alert('Please enter a valid 10-digit WhatsApp number');return;}
-  if(!selectedPlan){alert('Please select a plan');return;}
-  if(!selectedAreas.size){alert('Please select at least one area');return;}
-
-  const btn=document.getElementById('submitBtn');
-  btn.disabled=true; btn.textContent='Processing…';
-
-  const plan=PLANS[selectedPlan];
-  const amount=billing==='annual'?plan.annual:plan.monthly;
-
+async function proceedToPayment() {
+  if(!selectedPlan) return;
+  const fd = window._brokerFormData || {};
+  const name = fd.name, phone = fd.phone, brokerCity = fd.city || getBrokerCity();
+  if(!name || !phone) { alert('Please go back and fill your details'); return; }
+  const plans = getPLANS();
+  const plan = plans[selectedPlan];
+  const price = billing === 'annual' ? plan.annual : plan.monthly;
+  const payBtn = document.getElementById('payBtn');
+  payBtn.disabled = true;
+  payBtn.textContent = 'Setting up...';
   try {
-    let brokerId;
+    const existing = await fetch(SUPA_URL + '/rest/v1/brokers?phone=eq.' + phone + '&select=id,subscription_id,is_active', {
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY}
+    }).then(r=>r.json());
 
-    // Check if this phone is already registered (e.g. previous failed/abandoned payment attempt)
-    const existingRes = await fetch(`${SUPA_URL}/rest/v1/brokers?phone=eq.${phone}&select=id,is_active,subscription_status`,{
-      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
-    });
-    const existingRows = await existingRes.json();
-    const existing = existingRows?.[0];
-
-    if(existing && existing.is_active && existing.subscription_status==='active'){
-      // Allow re-registration — will update existing record
-      // (useful for testing and plan changes)
-    }
-
-    if(existing){
-      // Update the existing (pending/inactive) record instead of blocking
-      brokerId = existing.id;
-      await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}`,{
+    let userId = null;
+    if(existing.length > 0) {
+      const old = existing[0];
+      if(old.subscription_id) {
+        await fetch(SUPA_URL + '/functions/v1/create-order', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer ' + SUPA_KEY},
+          body:JSON.stringify({cancelSubscription: old.subscription_id})
+        });
+      }
+      userId = old.id;
+      await fetch(SUPA_URL + '/rest/v1/brokers?id=eq.' + userId, {
         method:'PATCH',
-        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
-        body:JSON.stringify({name,whatsapp_number:wa,areas:[...selectedAreas],plan:selectedPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,city:brokerCity})
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer ' + SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({name, whatsapp_number:phone, areas:[...selectedAreas], plan:selectedPlan, contacts_per_month:plan.contacts, billing_cycle:billing, subscription_status:'pending', is_active:false, city:brokerCity})
       });
     } else {
-      // Save new broker record
-      const bRes=await fetch(`${SUPA_URL}/rest/v1/brokers`,{
+      const ins = await fetch(SUPA_URL + '/rest/v1/brokers', {
         method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'},
-        body:JSON.stringify({name,phone,whatsapp_number:wa,areas:[...selectedAreas],plan:selectedPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,billing_cycle_start:new Date().toISOString().split('T')[0],city:brokerCity})
-      });
-
-      if(!bRes.ok){
-        throw new Error('Registration failed');
-      }
-      const bData=await bRes.json();
-      brokerId=bData[0]?.id;
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer ' + SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify({name, phone, whatsapp_number:phone, areas:[...selectedAreas], plan:selectedPlan, contacts_per_month:plan.contacts, billing_cycle:billing, subscription_status:'pending', is_active:false, billing_cycle_start:new Date().toISOString().split('T')[0], city:brokerCity})
+      }).then(r=>r.json());
+      userId = ins[0]&&ins[0].id;
     }
 
-    document.getElementById('processingOverlay').classList.add('show');
-
-    // Create payment order
-    const oRes=await fetch(`${SUPA_URL}/functions/v1/create-order`,{
+    const order = await fetch(SUPA_URL + '/functions/v1/create-order', {
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
-      body:JSON.stringify({userId:brokerId,phone,name,amount,pack:`broker_${selectedPlan}_${billing}`,coins:0,isBroker:true,brokerPlan:selectedPlan,billingCycle:billing})
-    });
+      headers:{'Content-Type':'application/json','Authorization':'Bearer ' + SUPA_KEY},
+      body:JSON.stringify({userId, name, phone, brokerPlan:selectedPlan, billingCycle:billing, amount:price, isBroker:true, city:brokerCity})
+    }).then(r=>r.json());
 
-    let order;
-    try {
-      order = await oRes.json();
-    } catch(parseErr) {
-      const rawText = await oRes.text().catch(()=>'(could not read response)');
-      console.error('create-order returned non-JSON. Status:', oRes.status, 'Body:', rawText);
-      document.getElementById('processingOverlay').classList.remove('show');
-      alert('Payment setup error (server returned invalid response, status ' + oRes.status + '). Details logged to console — please check Supabase Edge Function logs for create-order.');
-      btn.disabled=false;btn.textContent='Register & Pay →';return;
-    }
+    if(order.error) throw new Error(order.error);
 
-    console.log('create-order response:', order);
-    console.log('create-order response:', order);
-    document.getElementById('processingOverlay').classList.remove('show');
-
-    const sessionId = order.subscription_session_id;
-    if(!sessionId){
-      const errorDetail = order.error || order.message || JSON.stringify(order);
-      console.error('No session ID in response:', order);
-      alert('Payment setup failed: ' + errorDetail);
-      btn.disabled=false;btn.textContent='Register & Pay →';return;
-    }
-
-    console.log('Got subscription_session_id:', sessionId.slice(0,30)+'...');
-
-    // Suppress browser "Leave site?" warning before Cashfree redirects
-    window.onbeforeunload = null;
-
-    const script=document.createElement('script');
-    script.src='https://sdk.cashfree.com/js/v3/cashfree.js';
-    script.onerror=function(){
-      alert('Could not load payment SDK. Please check your internet and try again.');
-      btn.disabled=false;btn.textContent='Register & Pay →';
+    const cfScript = document.createElement('script');
+    cfScript.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    document.head.appendChild(cfScript);
+    cfScript.onload = () => {
+      const cashfree = Cashfree({ mode: 'production' });
+      cashfree.checkout({
+        paymentSessionId: order.payment_session_id,
+        returnUrl: 'https://flatkhoj.com/broker_return.html?order_id=' + order.order_id + '&name=' + encodeURIComponent(name) + '&plan=' + selectedPlan + '&billing=' + billing + '&phone=' + phone,
+      });
     };
-    script.onload=function(){
-      try {
-        const cf=Cashfree({mode:'production'});
-        // Clear any beforeunload handlers before navigating to prevent
-        // browser's "Leave site?" popup
-        window.onbeforeunload = null;
-        window.addEventListener('beforeunload', function(e) {
-          e.stopImmediatePropagation();
-        }, true);
-        cf.subscriptionsCheckout({
-          subsSessionId: sessionId,
-          redirectTarget: '_self'
-        });
-      } catch(sdkErr) {
-        console.error('Cashfree SDK error:', sdkErr);
-        alert('Payment error: ' + (sdkErr.message||sdkErr));
-        btn.disabled=false;btn.textContent='Register & Pay →';
-      }
-    };
-    document.head.appendChild(script);
-
   } catch(e) {
-    document.getElementById('processingOverlay').classList.remove('show');
-    console.error('submitRegistration error:', e);
-    alert('Something went wrong: ' + (e.message || e) + '\n\nPlease try again. If this keeps happening, use the Need Support link on the next screen, or contact us through flatkhoj.com/support.html');
-    btn.disabled=false;btn.textContent='Register & Pay →';
+    console.error(e);
+    alert('Something went wrong: ' + e.message);
+    payBtn.disabled = false;
+    payBtn.textContent = 'Try again';
   }
 }
 
-window.onload=async function(){
-  const hashParams = new URLSearchParams(window.location.hash.replace('#',''));
-  const queryParams = new URLSearchParams(window.location.search);
-  const params = { get: (k) => hashParams.get(k) || queryParams.get(k) };
+function openBrokerSupport() {
+  window.open('https://wa.me/919538584612?text=Hi, I need help with my FlatKhoj broker registration', '_blank');
+}
 
-  // Handle return from Cashfree subscription checkout
-  const successSubId = params.get('success') || params.get('activated');
-  const paymentSuccess = params.get('payment');
+// Check for return from payment
+const urlParams = new URLSearchParams(window.location.search);
+if(urlParams.get('payment_status') === 'SUCCESS' || urlParams.get('order_status') === 'PAID') {
+  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('planSection').style.display = 'none';
+  const ss = document.getElementById('successScreen');
+  ss.style.display = 'block';
+  const rName = urlParams.get('name') || 'there';
+  const rPlan = urlParams.get('plan') || 'starter';
+  const planLabels = {starter:'Starter',growth:'Growth',pro:'Pro',elite:'Elite'};
+  const quotas = {starter:10,growth:20,pro:30,elite:50};
+  document.getElementById('successMsg').innerHTML =
+    'Welcome aboard, ' + decodeURIComponent(rName) + '! Your ' + (planLabels[rPlan]||rPlan) + ' plan is activating. You will receive a WhatsApp confirmation shortly with your lead quota and area details. Need help? ' +
+    '<a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a>';
+} else {
+  window.addEventListener('load', () => {
+    selectBrokerCity('mumbai');
+    setBilling('monthly');
+    updateSummary();
+  });
+}
 
-  if(successSubId || paymentSuccess === 'success'){
-    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-    document.querySelector('.hero').style.display='none';
-
-    // Show interim screen while webhook fires and activates broker
-    document.getElementById('successScreen').innerHTML=`
-      <div class="success-icon">⏳</div>
-      <h2>Setting up your account…</h2>
-      <p>Please wait a moment while we activate your subscription.</p>`;
-    document.getElementById('successScreen').style.display='block';
-
-    // Poll DB for broker activation (webhook should fire within seconds)
-    if(successSubId){
-      let activated = false;
-      for(let i=0; i<12; i++){
-        await new Promise(r=>setTimeout(r,2000));
-        const res = await fetch(`${SUPA_URL}/rest/v1/brokers?subscription_id=eq.${encodeURIComponent(successSubId)}&select=is_active,name,plan,billing_cycle`,{
-          headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
-        });
-        const data = await res.json();
-        if(data[0]?.is_active){
-          activated = true;
-          const b = data[0];
-          const planLabels = {starter:'Starter',growth:'Growth',pro:'Pro',elite:'Elite'};
-          const quotas = {starter:10,growth:20,pro:30,elite:50};
-          document.getElementById('successScreen').innerHTML=`
-            <div class="success-icon">🎉</div>
-            <h2>You're live!</h2>
-            <p>Your FlatKhoj broker account is now active.<br><br>
-            Leads from your selected areas will arrive on your WhatsApp as soon as users post listings.<br><br>
-            <strong>Plan:</strong> ${planLabels[b.plan]||b.plan} (${b.billing_cycle==='annual'?'Annual':'Monthly'})<br>
-            <strong>Paid leads/month:</strong> ${quotas[b.plan]||10}<br><br>
-            You will also receive a WhatsApp confirmation shortly.<br><br>
-            Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
-          break;
-        }
-      }
-      if(!activated){
-        document.getElementById('successScreen').innerHTML=`
-          <div class="success-icon">✅</div>
-          <h2>Payment received!</h2>
-          <p>Your UPI mandate has been set up successfully.<br><br>
-          Your account will activate within a few minutes and you'll receive a WhatsApp confirmation.<br><br>
-          If you don't receive a WhatsApp within 10 minutes, please reach out:<br><br>
-          Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
-      }
-    } else {
-      // Fallback for query param flow
-      document.getElementById('successScreen').innerHTML=`
-        <div class="success-icon">✅</div>
-        <h2>Payment received!</h2>
-        <p>Your account will activate shortly. You'll receive a WhatsApp confirmation.<br><br>
-        Need Support? <a href="javascript:void(0)" onclick="openBrokerSupport()" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Message us here →</a></p>`;
-    }
-    return;
-  }
-  // Initialize city button state and zones
-  selectBrokerCity(getBrokerCity());
-  setBilling('monthly');
-};
 </script>
 </body>
-</html
-
-<div class="section">
-  <h2>Choose your plan</h2>
-  <p>All plans include unlimited area selection.</p>
-  <div style="text-align:center;margin-bottom:16px">
-    <div class="billing-toggle">
-      <button class="billing-btn active" id="btnMonthly" onclick="setBilling('monthly')">Monthly</button>
-      <button class="billing-btn" id="btnAnnual" onclick="setBilling('annual')">Annual</button>
-    </div>
-    <div class="saving-badge" id="savingBadge">🎉 Save 25% — 3 months free!</div>
-  </div>
-  <div class="plans">
-    <div class="plan-card " id="plan-starter" onclick="selectPlan(this,'starter')">
-      <div class="plan-top">
-        <div>
-          <div class="plan-name">Starter</div>
-          <div class="plan-contacts"><strong>10 paid contacts</strong> per month</div>
-        </div>
-        <div style="display:flex;align-items:center">
-          <div class="plan-price">
-            <div class="plan-price-main">&#8377;1,299</div>
-            <div class="plan-price-sub">/month</div>
-            <div class="plan-price-orig"></div>
-          </div>
-          <div class="plan-check"></div>
-        </div>
-      </div>
-      <div class="plan-free-note">+ Unlimited free leads all month</div>
-    </div>
-    <div class="plan-card " id="plan-growth" onclick="selectPlan(this,'growth')">
-      <div class="plan-top">
-        <div>
-          <div class="plan-name">Growth</div>
-          <div class="plan-contacts"><strong>20 paid contacts</strong> per month</div>
-        </div>
-        <div style="display:flex;align-items:center">
-          <div class="plan-price">
-            <div class="plan-price-main">&#8377;2,199</div>
-            <div class="plan-price-sub">/month</div>
-            <div class="plan-price-orig"></div>
-          </div>
-          <div class="plan-check"></div>
-        </div>
-      </div>
-      <div class="plan-free-note">+ Unlimited free leads all month</div>
-    </div>
-    <div class="plan-card popular" id="plan-pro" onclick="selectPlan(this,'pro')">
-      <div class="plan-top">
-        <div>
-          <div class="plan-name">Pro</div>
-          <div class="plan-contacts"><strong>30 paid contacts</strong> per month</div>
-        </div>
-        <div style="display:flex;align-items:center">
-          <div class="plan-price">
-            <div class="plan-price-main">&#8377;2,999</div>
-            <div class="plan-price-sub">/month</div>
-            <div class="plan-price-orig"></div>
-          </div>
-          <div class="plan-check"></div>
-        </div>
-      </div>
-      <div class="plan-free-note">+ Unlimited free leads all month</div>
-    </div>
-    <div class="plan-card " id="plan-elite" onclick="selectPlan(this,'elite')">
-      <div class="plan-top">
-        <div>
-          <div class="plan-name">Elite</div>
-          <div class="plan-contacts"><strong>50 paid contacts</strong> per month</div>
-        </div>
-        <div style="display:flex;align-items:center">
-          <div class="plan-price">
-            <div class="plan-price-main">&#8377;3,999</div>
-            <div class="plan-price-sub">/month</div>
-            <div class="plan-price-orig"></div>
-          </div>
-          <div class="plan-check"></div>
-        </div>
-      </div>
-      <div class="plan-free-note">+ Unlimited free leads all month</div>
-    </div>
-  </div>
-  <div style="margin-top:12px;background:var(--teal-bg);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--teal-dark,var(--teal));line-height:1.6">
-    <strong>Free leads included in every plan:</strong><br>
-    ✦ Flat hunters who prefer no brokerage — convince them, earn brokerage<br>
-    ✦ Flats &amp; rooms with no owner brokerage — find a tenant/flatmate, keep the brokerage
-  </div>
-</div>>
+</html>
