@@ -344,7 +344,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div id="bpanel-active">
         <div class="stats-grid" style="margin-bottom:16px">
           <div class="stat-card"><div class="stat-label">Active Brokers</div><div class="stat-value" id="bs-active">—</div><div class="stat-sub" id="bs-active-sub">Loading…</div></div>
-          <div class="stat-card"><div class="stat-label">Broker Revenue</div><div class="stat-value" id="bs-revenue">—</div><div class="stat-sub" id="bs-revenue-sub">From subscriptions</div></div>
+          <div class="stat-card"><div class="stat-label">Broker Revenue</div><div class="stat-value" id="bs-revenue">—</div><div class="stat-sub" id="bs-revenue-sub">This month · all time · payments</div></div>
           <div class="stat-card"><div class="stat-label">Leads Sent</div><div class="stat-value" id="bs-leads">—</div><div class="stat-sub" id="bs-leads-sub">This month</div></div>
           <div class="stat-card"><div class="stat-label">Quota Fill Rate</div><div class="stat-value" id="bs-fill">—</div><div class="stat-sub" id="bs-fill-sub">Avg across brokers</div></div>
         </div>
@@ -1310,7 +1310,7 @@ async function loadBrokers() {
     document.getElementById('bs-active').textContent = active.length;
     document.getElementById('bs-active-sub').textContent = brokers.length + ' total registered';
     document.getElementById('bs-revenue').textContent = '₹' + revenueThisMonth.toLocaleString('en-IN');
-    document.getElementById('bs-revenue-sub').textContent = '₹'+totalRevenue.toLocaleString('en-IN')+' total received · '+payments.length+' payments';
+    document.getElementById('bs-revenue-sub').textContent = 'This month · ₹'+totalRevenue.toLocaleString('en-IN')+' all time · '+payments.length+' payment'+(payments.length!==1?'s':'');
     document.getElementById('bs-leads').textContent = paidLeads.length;
     document.getElementById('bs-leads-sub').textContent = leadsThisMonth.length + ' total (paid + free)';
     document.getElementById('bs-fill').textContent = fillRate + '%';
