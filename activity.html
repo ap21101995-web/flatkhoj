@@ -93,7 +93,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <body>
 
 <header class="topbar">
-  <button class="back-btn" onclick="window.location.href='index.html'">←</button>
+  <button class="back-btn" onclick="nav('index.html')">←</button>
   <div class="topbar-title">My Activity</div>
   <button onclick="logout()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer">Sign out</button>
 </header>
@@ -124,19 +124,19 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <button class="nav-item" onclick="window.location.href='index.html'">
+  <button class="nav-item" onclick="nav('index.html')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     Home
   </button>
-  <button class="nav-item" onclick="window.location.href='post_form.html'">
+  <button class="nav-item" onclick="nav('post_form.html')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
     Post
   </button>
-  <button class="nav-item" onclick="window.location.href='saved.html'">
+  <button class="nav-item" onclick="nav('saved.html')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
     Saved
   </button>
-  <button class="nav-item" onclick="window.location.href='support.html'">
+  <button class="nav-item" onclick="nav('support.html')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     Support
   </button>
@@ -213,7 +213,7 @@ function timeAgo(d) {
 
 window.onload = async function() {
   const user = getUser();
-  if (!user) { window.location.href = 'login.html?trigger=account'; return; }
+  if (!user) { nav('login.html?trigger=account'); return; }
 
   // Update fresh coin balance
   try {
@@ -275,7 +275,7 @@ async function loadMyPosts(user) {
       const isClaimed = p.claimed_by_user_id === user.userId && p.user_id !== user.userId;
       const div = document.createElement('div');
       div.className = 'activity-card';
-      div.onclick = () => window.location.href = `listing_detail.html?id=${p.id}`;
+      div.onclick = () => nav('listing_detail.html?id=${p.id}');
       div.innerHTML = `
         <div class="activity-type">${typeLabels[p.listing_type] || p.listing_type}${isClaimed ? ' <span style="background:var(--gold-bg);color:var(--gold);padding:2px 6px;border-radius:4px;font-size:10px">Added for you</span>' : ''}</div>
         <div class="activity-title">${p.description?.slice(0,80) || 'Listing in ' + areas}</div>
@@ -320,7 +320,7 @@ async function loadUnlockedContacts(user) {
       if (isDeleted) return;
       const div = document.createElement('div');
       div.className = 'activity-card';
-      div.onclick = () => window.location.href = `listing_detail.html?id=${u.listing_id}`;
+      div.onclick = () => nav('listing_detail.html?id=${u.listing_id}');
       div.innerHTML = `
         <div class="activity-type">${typeLabel}</div>
         <div class="activity-title">${description}</div>
@@ -343,8 +343,16 @@ function logout() {
   if (confirm('Are you sure you want to sign out?')) {
     localStorage.removeItem('fmh_user');
     localStorage.removeItem('fk_unlocked');
-    window.location.href = 'index.html';
+    nav('index.html');
   }
+}
+
+// Navigation helper — new tab on desktop, same tab on mobile
+function nav(url, e) {
+  const isDesktop = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+  if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { window.open(url, '_blank'); }
+  else if (isDesktop) { window.open(url, '_blank'); }
+  else { window.location.href = url; }
 }
 </script>
 </body>

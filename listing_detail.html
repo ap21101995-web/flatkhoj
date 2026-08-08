@@ -357,6 +357,14 @@ body {
     // If owner, leave visible (default in HTML)
   } catch(e) { document.write('<style>#ownerControls{display:none}</style>'); }
 })();
+
+// Navigation helper — new tab on desktop, same tab on mobile
+function nav(url, e) {
+  const isDesktop = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+  if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { window.open(url, '_blank'); }
+  else if (isDesktop) { window.open(url, '_blank'); }
+  else { window.location.href = url; }
+}
 </script>
 
 <!-- TOP BAR -->
@@ -743,7 +751,7 @@ function handleUnlockBtn(){
   const user = getUser();
   const lid = new URLSearchParams(window.location.search).get('id');
   if(!user){
-    window.location.href = 'login.html?trigger=unlock&listing_id=' + lid;
+    nav('login.html?trigger=unlock&listing_id=') + lid;
     return;
   }
   openSheet('unlock');
@@ -761,10 +769,10 @@ async function supaPost(table,data){
 window.onload=async function(){
   const params=new URLSearchParams(window.location.search);
   const listingId=params.get('id');
-  if(!listingId){window.location.href='index.html';return;}
+  if(!listingId){nav('index.html');return;}
   try{
     const listings=await supaGet(`listings?id=eq.${listingId}&select=*`);
-    if(!listings||listings.length===0){window.location.href='index.html';return;}
+    if(!listings||listings.length===0){nav('index.html');return;}
     listing=listings[0];
 
     // ── RENDER IMMEDIATELY — don't wait for secondary fetches ──
@@ -1088,7 +1096,7 @@ function renderListing(){
 
 async function confirmUnlock(){
   const user=getUser();
-  if(!user){window.location.href='login.html?trigger=unlock&listing_id='+listing.id;return;}
+  if(!user){nav('login.html?trigger=unlock&listing_id=')+listing.id;return;}
   const btn=document.querySelector('.confirm-unlock-btn');
   btn.textContent='Unlocking…';btn.disabled=true;
   try{
@@ -1103,7 +1111,7 @@ async function confirmUnlock(){
       if(currentCoins < UNLOCK_COST){
         btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;
         closeSheet('unlock');
-        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
+        nav('coins.html?return_to=') + encodeURIComponent(window.location.href);
         return;
       }
 
@@ -1199,7 +1207,7 @@ async function reportAsSold() {
 }
 
 function openWhatsApp(){if(!posterPhone)return;window.open(`https://wa.me/91${posterPhone}?text=Hi, I saw your listing on FlatKhoj.com and I'm interested.`,'_blank');}
-function makeCall(){if(!posterPhone)return;window.location.href=`tel:+91${posterPhone}`;}
+function makeCall(){if(!posterPhone)return;nav('tel:+91${posterPhone}');}
 
 async function submitReport(reason){
   const user=getUser();
@@ -1224,7 +1232,7 @@ function updatePhoto(){document.getElementById('photoSlides').style.transform=`t
 function updatePhotoCounter(){document.getElementById('photoCounter').textContent=`${currentPhoto+1} / ${totalPhotos}`;}
 async function toggleSave(){
   const user=getUser();
-  if(!user){window.location.href='login.html?trigger=save';return;}
+  if(!user){nav('login.html?trigger=save');return;}
   const btn=document.getElementById('saveBtn');
 
   isSaved=!isSaved;
@@ -1368,7 +1376,7 @@ function editPhotos() {
 
 function editListing() {
   if (!listing) return;
-  window.location.href = `post_form.html?edit=${listing.id}`;
+  nav('post_form.html?edit=${listing.id}');
 }
 
 async function saveEdit() {
@@ -1433,7 +1441,7 @@ async function activateFreeContact() {
   const coins = data[0]?.coins || 0;
 
   if (coins < 500) {
-    window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href);
+    nav('coins.html?return_to=') + encodeURIComponent(window.location.href);
     return;
   }
 
@@ -1500,7 +1508,7 @@ function goBack() {
   // If arrived from edit form, history.back() would loop — always go home
   const ref = document.referrer;
   if (ref && ref.includes('post_form')) {
-    window.location.href = 'index.html';
+    nav('index.html');
   } else {
     window.history.back();
   }
