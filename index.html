@@ -1207,11 +1207,19 @@ function renderListings(listings) {
       const avatarColor = getColor(l.user_id);
 
       const tags = [];
+      // Gender preference always first for flatmate listings so it's never cut off
+      if (l.listing_type === 'flatmate_wanted' && l.gender_preference && l.gender_preference.toLowerCase() !== 'any') {
+        const gLabel = l.gender_preference.toLowerCase().includes('male') ? '👨 Male only' :
+                       l.gender_preference.toLowerCase().includes('female') ? '👩 Female only' :
+                       l.gender_preference;
+        tags.push(gLabel);
+      }
       if (l.flat_type) tags.push(l.flat_type);
       if (l.room_type && l.listing_type !== 'flat_listing') tags.push(l.room_type);
       if (l.furnishing) tags.push(l.furnishing);
       if (l.food_preference) tags.push(l.food_preference);
-      if (l.gender_preference) tags.push(l.gender_preference);
+      // For non-flatmate listings, still show gender if present
+      if (l.listing_type !== 'flatmate_wanted' && l.gender_preference && l.gender_preference.toLowerCase() !== 'any') tags.push(l.gender_preference);
       const tagsHTML = tags.slice(0,4).map(t => `<span class="card-tag">${escHtml(t)}</span>`).join('');
 
       let cardTitle;
@@ -1239,8 +1247,18 @@ function renderListings(listings) {
       const isNew = lastVisit && new Date(l.created_at) > new Date(lastVisit);
       card.onclick = function(e) {
         if (!e.target.closest('.unlock-btn') && !e.target.closest('.save-btn')) {
-          window.location.href = 'listing_detail.html?id=' + l.id;
+          const url = 'listing_detail.html?id=' + l.id;
+          // Open in new tab on desktop (non-touch), same tab on mobile
+          if (e.ctrlKey || e.metaKey || e.shiftKey || window.matchMedia('(hover:hover)').matches) {
+            window.open(url, '_blank');
+          } else {
+            window.location.href = url;
+          }
         }
+      };
+      // Support middle-click to open in new tab
+      card.onauxclick = function(e) {
+        if (e.button === 1) window.open('listing_detail.html?id=' + l.id, '_blank');
       };
 
       card.innerHTML = `
@@ -1296,7 +1314,7 @@ function buildUnlockBtn(l, areas) {
     (l.claimed_by_user_id && user.userId === l.claimed_by_user_id)
   );
   if (isOwn) {
-    return '<button class="unlock-btn" style="background:var(--bg2);color:var(--ink3);border:1.5px solid var(--border);cursor:default;font-size:12px" onclick="window.location.href=\'listing_detail.html?id=' + l.id + '\'">Your listing</button>';
+    return '<button class="unlock-btn" style="background:var(--bg2);color:var(--ink3);border:1.5px solid var(--border);cursor:default;font-size:12px" onclick="openListing(\''+l.id+'\',event)">Your listing</button>';
   }
   if (unlockedListingIds.has(l.id) || getUnlockedListings().includes(l.id)) {
     return '<button class="unlock-btn" style="background:var(--teal-bg);color:var(--teal);border:1.5px solid var(--teal)" data-unlocked-id="' + l.id + '" onclick="event.stopPropagation();viewUnlockedContact(\'' + l.id + '\')">✓ Contact unlocked — view</button>';
@@ -1393,7 +1411,7 @@ function markOwnListings() {
       btn.style.border = '1.5px solid var(--border)';
       btn.style.cursor = 'default';
       btn.style.fontSize = '12px';
-      btn.onclick = function(e) { e.stopPropagation(); window.location.href = 'listing_detail.html?id=' + listingId; };
+      btn.onclick = function(e) { e.stopPropagation(); openListing(listingId, e); };
     }
   });
 }
@@ -3284,7 +3302,17 @@ function openCitySelector() {
   updateCityModalHighlight(getSelectedCity() || 'mumbai');
 }
 
-// Global sets — must be declared before anything uses them
+// Open listing — new tab on desktop, same tab on mobile
+function openListing(id, e) {
+  const url = 'listing_detail.html?id=' + id;
+  if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) {
+    window.open(url, '_blank');
+  } else if (window.matchMedia('(hover:hover)').matches) {
+    window.open(url, '_blank');
+  } else {
+    window.location.href = url;
+  }
+}
 let savedListingIds = new Set();
 let unlockedListingIds = new Set();
 
