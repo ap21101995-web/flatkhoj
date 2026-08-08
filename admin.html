@@ -1586,9 +1586,9 @@ async function openBrokerDetail(brokerId) {
       <div style="font-weight:700">${planLabel}</div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px">
-      <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">THIS MONTH</div>
-      <div style="font-weight:700">${b.contacts_sent_this_month||0} / ${b.contacts_per_month||0} used</div>
-      <div style="font-size:12px;color:var(--teal)">${(b.contacts_per_month||0)-(b.contacts_sent_this_month||0)} remaining</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">LEADS QUOTA</div>
+      <div style="font-weight:700">${b.contacts_sent_this_month||0} / ${b.contacts_per_month||0}</div>
+      <div style="font-size:12px;color:var(--teal)">${(b.contacts_per_month||0)-(b.contacts_sent_this_month||0)} remaining · adds ${b.plan==='growth'?20:b.plan==='pro'?30:b.plan==='elite'?50:10} on ${nextBilling}</div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px">
       <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">ALL TIME SENT</div>
@@ -1652,10 +1652,11 @@ async function giveExtraLeadsDetail() {
   const brokers = await supaGet(`brokers?id=eq.${window._detailBrokerId}&select=contacts_sent_this_month,contacts_per_month&limit=1`);
   const b = brokers[0];
   if(!b) return;
-  // Reduce the sent count by extra — this creates headroom without changing permanent quota
-  const newSent = Math.max(0, (b.contacts_sent_this_month||0) - parseInt(extra));
-  await supaPatch('brokers', `id=eq.${window._detailBrokerId}`, {contacts_sent_this_month: newSent});
-  toast(`Done — broker can now receive ${parseInt(extra)} more paid leads this month`, 'ok');
+  // Increase contacts_per_month (the quota) — correct approach
+  const newQuota = (b.contacts_per_month||10) + parseInt(extra);
+  await supaPatch('brokers', `id=eq.${window._detailBrokerId}`, {contacts_per_month: newQuota});
+  const remaining = newQuota - (b.contacts_sent_this_month||0);
+  toast(`Quota increased to ${newQuota} — ${remaining} leads remaining this month`, 'ok');
   openBrokerDetail(window._detailBrokerId);
 }
 
