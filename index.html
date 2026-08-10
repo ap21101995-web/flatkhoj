@@ -1248,10 +1248,9 @@ function renderListings(listings) {
       card.onclick = function(e) {
         if (!e.target.closest('.unlock-btn') && !e.target.closest('.save-btn')) {
           const url = 'listing_detail.html?id=' + l.id;
-          // Open in new tab on desktop (non-touch), same tab on mobile
-          if (e.ctrlKey || e.metaKey || e.shiftKey || window.matchMedia('(hover:hover)').matches) {
+          if (e.ctrlKey || e.metaKey || e.shiftKey) {
             window.open(url, '_blank');
-          } else if (isDesktop) {
+          } else if (isDesktopDevice()) {
             window.open(url, '_blank');
           } else {
             window.location.href = url;
@@ -3305,11 +3304,15 @@ function openCitySelector() {
 }
 
 // Navigation helper — new tab on desktop, same tab on mobile
+function isDesktopDevice() {
+  // Only open new tab on true desktop — not on touch devices
+  // touchstart support = mobile/tablet, no touchstart = desktop
+  return !('ontouchstart' in window) && !navigator.maxTouchPoints;
+}
 function nav(url, e) {
-  const isDesktop = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
   if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) {
     window.open(url, '_blank');
-  } else if (isDesktop) {
+  } else if (isDesktopDevice()) {
     window.open(url, '_blank');
   } else {
     window.location.href = url;
@@ -3321,7 +3324,7 @@ function openListing(id, e) {
   const url = 'listing_detail.html?id=' + id;
   if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) {
     window.open(url, '_blank');
-  } else if (window.matchMedia('(hover:hover)').matches) {
+  } else if (isDesktopDevice()) {
     window.open(url, '_blank');
   } else {
     window.location.href = url;

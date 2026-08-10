@@ -349,7 +349,7 @@ function logout() {
 
 // Navigation helper — new tab on desktop, same tab on mobile
 function nav(url, e) {
-  const isDesktop = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+  const isDesktop = isDesktopDevice();
   if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { window.open(url, '_blank'); }
   else if (isDesktop) { window.open(url, '_blank'); }
   else { window.location.href = url; }
