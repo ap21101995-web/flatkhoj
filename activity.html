@@ -275,7 +275,7 @@ async function loadMyPosts(user) {
       const isClaimed = p.claimed_by_user_id === user.userId && p.user_id !== user.userId;
       const div = document.createElement('div');
       div.className = 'activity-card';
-      div.onclick = () => nav('listing_detail.html?id=${p.id}');
+      div.onclick = () => window.location.href = 'listing_detail.html?id=' + p.id;
       div.innerHTML = `
         <div class="activity-type">${typeLabels[p.listing_type] || p.listing_type}${isClaimed ? ' <span style="background:var(--gold-bg);color:var(--gold);padding:2px 6px;border-radius:4px;font-size:10px">Added for you</span>' : ''}</div>
         <div class="activity-title">${p.description?.slice(0,80) || 'Listing in ' + areas}</div>
@@ -320,7 +320,7 @@ async function loadUnlockedContacts(user) {
       if (isDeleted) return;
       const div = document.createElement('div');
       div.className = 'activity-card';
-      div.onclick = () => nav('listing_detail.html?id=${u.listing_id}');
+      div.onclick = () => window.location.href = 'listing_detail.html?id=' + u.listing_id;
       div.innerHTML = `
         <div class="activity-type">${typeLabel}</div>
         <div class="activity-title">${description}</div>
