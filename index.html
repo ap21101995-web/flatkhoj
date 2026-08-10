@@ -1209,8 +1209,9 @@ function renderListings(listings) {
       const tags = [];
       // Gender preference always first for flatmate listings so it's never cut off
       if (l.listing_type === 'flatmate_wanted' && l.gender_preference && l.gender_preference.toLowerCase() !== 'any') {
-        const gLabel = l.gender_preference.toLowerCase().includes('male') ? '👨 Male only' :
-                       l.gender_preference.toLowerCase().includes('female') ? '👩 Female only' :
+        const gLabel = l.gender_preference.toLowerCase().includes('female') ? '👩 Female only' :
+                       l.gender_preference.toLowerCase().includes('male') ? '👨 Male only' :
+                       l.gender_preference.toLowerCase().includes('family') ? '👨‍👩‍👧 Family' :
                        l.gender_preference;
         tags.push(gLabel);
       }
