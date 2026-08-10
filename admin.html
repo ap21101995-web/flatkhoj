@@ -1309,8 +1309,8 @@ async function loadBrokers() {
 
     document.getElementById('bs-active').textContent = active.length;
     document.getElementById('bs-active-sub').textContent = brokers.length + ' total registered';
-    document.getElementById('bs-revenue').textContent = '₹' + revenueThisMonth.toLocaleString('en-IN');
-    document.getElementById('bs-revenue-sub').textContent = 'This month · ₹'+totalRevenue.toLocaleString('en-IN')+' all time · '+payments.length+' payment'+(payments.length!==1?'s':'');
+    document.getElementById('bs-revenue').innerHTML = '₹' + revenueThisMonth.toLocaleString('en-IN') + '<span style="font-size:12px;font-weight:500;color:var(--ink3);margin-left:6px">this month</span>';
+    document.getElementById('bs-revenue-sub').textContent = '₹'+totalRevenue.toLocaleString('en-IN')+' all time · '+payments.length+' payment'+(payments.length!==1?'s':'');
     document.getElementById('bs-leads').textContent = paidLeads.length;
     document.getElementById('bs-leads-sub').textContent = leadsThisMonth.length + ' total (paid + free)';
     document.getElementById('bs-fill').textContent = fillRate + '%';
