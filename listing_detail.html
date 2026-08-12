@@ -359,10 +359,12 @@ body {
 })();
 
 // Navigation helper — new tab on desktop, same tab on mobile
+function isDesktopDevice() {
+  return !('ontouchstart' in window) && !navigator.maxTouchPoints;
+}
 function nav(url, e) {
-  const isDesktop = isDesktopDevice();
   if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { window.open(url, '_blank'); }
-  else if (isDesktop) { window.open(url, '_blank'); }
+  else if (isDesktopDevice()) { window.open(url, '_blank'); }
   else { window.location.href = url; }
 }
 </script>

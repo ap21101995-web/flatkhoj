@@ -2340,7 +2340,7 @@ async function submitListing() {
         console.error('PATCH error:', res.status, errText);
         throw new Error(errText);
       }
-      window.location.href = `listing_detail.html?id=${window._editListingId}`;
+      window.location.href = 'index.html';
       return;
     }
     formData.user_id = user.userId;
@@ -3146,9 +3146,9 @@ function nextStep(){
 }
 function prevStep(){
   if(window._editListingId){
-    // Edit mode: step 3 → step 2 (questionnaire), step 2 → back to listing
+    // Edit mode: step 3 → step 2, step 2 → homepage (not back to listing detail)
     if(step === 3){ step = 2; updateUI(); return; }
-    window.location.href = 'listing_detail.html?id=' + window._editListingId;
+    window.location.href = 'index.html';
     return;
   }
   if(step>1){ step--; updateUI(); }
