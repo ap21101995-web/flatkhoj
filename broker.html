@@ -397,14 +397,50 @@ async function doPayment(){
       var ins=await fetch(SUPA_URL+'/rest/v1/brokers',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({name:name,phone:phone,whatsapp_number:phone,areas:Array.from(sel),plan:selPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,billing_cycle_start:new Date().toISOString().split('T')[0],city:city})}).then(function(r){return r.json();});
       userId=ins[0]&&ins[0].id;
     }
-    var order=await fetch(SUPA_URL+'/functions/v1/create-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},body:JSON.stringify({userId:userId,name:name,phone:phone,brokerPlan:selPlan,billingCycle:billing,amount:price,isBroker:true,city:city})}).then(function(r){return r.json();});
+    if(!userId)throw new Error('Could not create broker profile. Please try again.');
+    payBtn.textContent='Creating payment...';
+    var orderRes=await fetch(SUPA_URL+'/functions/v1/create-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},body:JSON.stringify({userId:userId,name:name,phone:phone,brokerPlan:selPlan,billingCycle:billing,amount:price,isBroker:true,city:city})});
+    if(!orderRes.ok){var errText=await orderRes.text();throw new Error('Payment setup failed: '+errText);}
+    var order=await orderRes.json();
     if(order.error)throw new Error(order.error);
-    var cfs=document.createElement('script');cfs.src='https://sdk.cashfree.com/js/v3/cashfree.js';document.head.appendChild(cfs);
-    cfs.onload=function(){
-      var cf=Cashfree({mode:'production'});
-      cf.checkout({paymentSessionId:order.payment_session_id,returnUrl:'https://flatkhoj.com/broker_return.html?order_id='+order.order_id+'&name='+encodeURIComponent(name)+'&plan='+selPlan+'&billing='+billing+'&phone='+phone});
-    };
-  }catch(e){console.error(e);alert('Something went wrong: '+e.message);payBtn.disabled=false;payBtn.textContent='Try again';}
+    payBtn.textContent='Opening payment...';
+
+    // Generate Cashfree hosted payment link — broker opens this on their phone
+    // This avoids UPI redirecting to YOUR phone's UPI app
+    var paymentLink = 'https://payments.cashfree.com/forms?session_id=' + order.payment_session_id;
+    var waMsg = 'Hi ' + name + ', please complete your FlatKhoj broker subscription payment here:\n\n' + paymentLink + '\n\nThis link expires in 24 hours.';
+    var waLink = 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(waMsg);
+
+    // Show options — send to broker via WhatsApp OR pay now yourself
+    var choice = confirm(
+      'Payment set up for ' + name + ' (' + phone + ')\n\n' +
+      'Click OK to send payment link to broker via WhatsApp\n' +
+      'Click Cancel to open payment here instead'
+    );
+
+    if (choice) {
+      // Send to broker via WhatsApp
+      window.open(waLink, '_blank');
+      payBtn.disabled=false;
+      payBtn.textContent='Link sent — waiting for payment';
+    } else {
+      // Open payment yourself (may redirect to UPI on your phone)
+      var cfs=document.createElement('script');cfs.src='https://sdk.cashfree.com/js/v3/cashfree.js';document.head.appendChild(cfs);
+      cfs.onload=function(){
+        var cf=Cashfree({mode:'production'});
+        cf.checkout({paymentSessionId:order.payment_session_id,returnUrl:'https://flatkhoj.com/broker_return.html?order_id='+order.order_id+'&name='+encodeURIComponent(name)+'&plan='+selPlan+'&billing='+billing+'&phone='+phone});
+      };
+      cfs.onerror=function(){
+        alert('Could not load payment. Open this link manually:\n' + paymentLink);
+        payBtn.disabled=false;payBtn.textContent='Try again';
+      };
+    }
+  }catch(e){
+    console.error(e);
+    alert('Something went wrong: '+e.message);
+    payBtn.disabled=false;
+    payBtn.textContent='Try again';
+  }
 }
 
 function openSupport(){window.open('https://wa.me/919538584612?text=Hi, I need help with my FlatKhoj broker registration','_blank');}
