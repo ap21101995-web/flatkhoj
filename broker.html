@@ -411,27 +411,29 @@ async function doPayment(){
     var waMsg = 'Hi ' + name + ', please complete your FlatKhoj broker subscription payment here:\n\n' + paymentLink + '\n\nThis link expires in 24 hours.';
     var waLink = 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(waMsg);
 
-    // Show options — send to broker via WhatsApp OR pay now yourself
     var choice = confirm(
-      'Payment set up for ' + name + ' (' + phone + ')\n\n' +
-      'Click OK to send payment link to broker via WhatsApp\n' +
-      'Click Cancel to open payment here instead'
+      'Payment set up!\n\nClick OK to send payment link to broker on WhatsApp\nClick Cancel to pay directly here'
     );
 
     if (choice) {
-      // Send to broker via WhatsApp
-      window.open(waLink, '_blank');
-      payBtn.disabled=false;
-      payBtn.textContent='Link sent — waiting for payment';
+      // Show the WhatsApp link as a tappable button on screen
+      payBtn.textContent = '✅ Tap below to send on WhatsApp';
+      payBtn.disabled = false;
+      var waBtn = document.createElement('a');
+      waBtn.href = waLink;
+      waBtn.target = '_blank';
+      waBtn.rel = 'noopener';
+      waBtn.style.cssText = 'display:block;margin-top:12px;padding:14px;background:#25D366;color:#fff;border-radius:12px;text-align:center;font-weight:700;font-size:15px;text-decoration:none';
+      waBtn.textContent = '📲 Send payment link to ' + name + ' on WhatsApp';
+      payBtn.parentNode.insertBefore(waBtn, payBtn.nextSibling);
     } else {
-      // Open payment yourself (may redirect to UPI on your phone)
       var cfs=document.createElement('script');cfs.src='https://sdk.cashfree.com/js/v3/cashfree.js';document.head.appendChild(cfs);
       cfs.onload=function(){
         var cf=Cashfree({mode:'production'});
         cf.checkout({paymentSessionId:order.payment_session_id,returnUrl:'https://flatkhoj.com/broker_return.html?order_id='+order.order_id+'&name='+encodeURIComponent(name)+'&plan='+selPlan+'&billing='+billing+'&phone='+phone});
       };
       cfs.onerror=function(){
-        alert('Could not load payment. Open this link manually:\n' + paymentLink);
+        alert('Payment link: ' + paymentLink);
         payBtn.disabled=false;payBtn.textContent='Try again';
       };
     }
