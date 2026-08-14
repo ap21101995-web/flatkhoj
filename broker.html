@@ -407,36 +407,24 @@ async function doPayment(){
 
     // Generate Cashfree hosted payment link — broker opens this on their phone
     // This avoids UPI redirecting to YOUR phone's UPI app
-    var paymentLink = 'https://payments.cashfree.com/forms?session_id=' + order.payment_session_id;
+    // Broker uses subscription_session_id, not payment_session_id
+    var sessionId = order.subscription_session_id || order.payment_session_id;
+    if (!sessionId) { throw new Error('No session ID returned from payment setup'); }
+
+    // Cashfree hosted subscription payment URL
+    var paymentLink = 'https://payments.cashfree.com/links/' + sessionId;
     var waMsg = 'Hi ' + name + ', please complete your FlatKhoj broker subscription payment here:\n\n' + paymentLink + '\n\nThis link expires in 24 hours.';
     var waLink = 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(waMsg);
 
-    var choice = confirm(
-      'Payment set up!\n\nClick OK to send payment link to broker on WhatsApp\nClick Cancel to pay directly here'
-    );
-
-    if (choice) {
-      // Show the WhatsApp link as a tappable button on screen
-      payBtn.textContent = '✅ Tap below to send on WhatsApp';
-      payBtn.disabled = false;
-      var waBtn = document.createElement('a');
-      waBtn.href = waLink;
-      waBtn.target = '_blank';
-      waBtn.rel = 'noopener';
-      waBtn.style.cssText = 'display:block;margin-top:12px;padding:14px;background:#25D366;color:#fff;border-radius:12px;text-align:center;font-weight:700;font-size:15px;text-decoration:none';
-      waBtn.textContent = '📲 Send payment link to ' + name + ' on WhatsApp';
-      payBtn.parentNode.insertBefore(waBtn, payBtn.nextSibling);
-    } else {
-      var cfs=document.createElement('script');cfs.src='https://sdk.cashfree.com/js/v3/cashfree.js';document.head.appendChild(cfs);
-      cfs.onload=function(){
-        var cf=Cashfree({mode:'production'});
-        cf.checkout({paymentSessionId:order.payment_session_id,returnUrl:'https://flatkhoj.com/broker_return.html?order_id='+order.order_id+'&name='+encodeURIComponent(name)+'&plan='+selPlan+'&billing='+billing+'&phone='+phone});
-      };
-      cfs.onerror=function(){
-        alert('Payment link: ' + paymentLink);
-        payBtn.disabled=false;payBtn.textContent='Try again';
-      };
-    }
+    // Replace the pay button with a single WhatsApp link — no popup issues
+    payBtn.style.display = 'none';
+    var waBtn = document.createElement('a');
+    waBtn.href = waLink;
+    waBtn.target = '_blank';
+    waBtn.rel = 'noopener noreferrer';
+    waBtn.style.cssText = 'display:block;padding:16px;background:#25D366;color:#fff;border-radius:14px;text-align:center;font-weight:700;font-size:16px;text-decoration:none;margin-top:8px';
+    waBtn.textContent = '📲 Send payment link to ' + name + ' on WhatsApp';
+    payBtn.parentNode.insertBefore(waBtn, payBtn);
   }catch(e){
     console.error(e);
     alert('Something went wrong: '+e.message);
