@@ -413,13 +413,22 @@ async function doPayment(){
     var waLink = 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(waMsg);
 
     payBtn.style.display = 'none';
+
+    // WhatsApp share button
     var waBtn = document.createElement('a');
     waBtn.href = waLink;
     waBtn.target = '_blank';
     waBtn.rel = 'noopener noreferrer';
-    waBtn.style.cssText = 'display:block;padding:16px;background:#25D366;color:#fff;border-radius:14px;text-align:center;font-weight:700;font-size:16px;text-decoration:none;margin-top:8px';
+    waBtn.style.cssText = 'display:block;padding:14px;background:#25D366;color:#fff;border-radius:14px;text-align:center;font-weight:700;font-size:15px;text-decoration:none;margin-top:8px';
     waBtn.textContent = '📲 Send payment link to ' + name + ' on WhatsApp';
     payBtn.parentNode.insertBefore(waBtn, payBtn);
+
+    // Pay directly on this device button
+    var directBtn = document.createElement('a');
+    directBtn.href = payPageUrl;
+    directBtn.style.cssText = 'display:block;padding:14px;background:transparent;color:var(--teal);border:1.5px solid var(--teal);border-radius:14px;text-align:center;font-weight:700;font-size:15px;text-decoration:none;margin-top:10px';
+    directBtn.textContent = '💳 Pay directly on this device';
+    payBtn.parentNode.insertBefore(directBtn, payBtn);
   }catch(e){
     console.error(e);
     alert('Something went wrong: '+e.message);
