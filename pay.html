@@ -49,16 +49,37 @@ async function startPayment() {
   btn.textContent = 'Opening payment...';
 
   try {
+    // If nothing happens in 5 seconds, show error
+    setTimeout(function() {
+      if (btn.disabled) {
+        btn.disabled = false;
+        btn.textContent = 'Pay Now →';
+        document.getElementById('errMsg').textContent = 'Payment page did not open. The session may have expired — please ask for a new payment link.';
+        document.getElementById('errMsg').style.display = 'block';
+      }
+    }, 5000);
+
     var cf = Cashfree({ mode: 'production' });
     // Broker subscriptions use subscriptionsCheckout, not checkout
-    cf.subscriptionsCheckout({
+    var result = cf.subscriptionsCheckout({
       subscriptionSessionId: sessionId,
       returnUrl: returnUrl + (orderId ? (returnUrl.includes('?') ? '&' : '?') + 'order_id=' + orderId : '')
     });
+    // Handle promise rejection if SDK fails
+    if (result && result.then) {
+      result.catch(function(err) {
+        console.error('subscriptionsCheckout error:', err);
+        btn.disabled = false;
+        btn.textContent = 'Pay Now →';
+        document.getElementById('errMsg').textContent = 'Payment error: ' + (err.message || JSON.stringify(err));
+        document.getElementById('errMsg').style.display = 'block';
+      });
+    }
   } catch(e) {
+    console.error('Checkout error:', e);
     btn.disabled = false;
     btn.textContent = 'Pay Now →';
-    document.getElementById('errMsg').textContent = 'Could not open payment. Please try again.';
+    document.getElementById('errMsg').textContent = 'Could not open payment: ' + (e.message || e);
     document.getElementById('errMsg').style.display = 'block';
   }
 }
