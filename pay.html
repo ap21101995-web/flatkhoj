@@ -50,9 +50,10 @@ async function startPayment() {
 
   try {
     var cf = Cashfree({ mode: 'production' });
-    cf.checkout({
-      paymentSessionId: sessionId,
-      returnUrl: returnUrl + (orderId ? '?order_id=' + orderId : '')
+    // Broker subscriptions use subscriptionsCheckout, not checkout
+    cf.subscriptionsCheckout({
+      subscriptionSessionId: sessionId,
+      returnUrl: returnUrl + (orderId ? (returnUrl.includes('?') ? '&' : '?') + 'order_id=' + orderId : '')
     });
   } catch(e) {
     btn.disabled = false;
