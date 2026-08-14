@@ -14,18 +14,18 @@
   .plan-box { background: #f0faf7; border: 1.5px solid #1a7a6e; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; }
   .plan-name { font-size: 15px; font-weight: 700; color: #1a7a6e; }
   .plan-price { font-size: 26px; font-weight: 900; color: #1a1a1a; margin-top: 4px; }
-  .plan-cycle { font-size: 13px; color: #888; }
+  .plan-cycle { font-size: 13px; color: #888; margin-top: 2px; }
   .btn { width: 100%; padding: 16px; background: #1a7a6e; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; }
   .btn:disabled { background: #aaa; cursor: not-allowed; }
   .secure { font-size: 12px; color: #aaa; margin-top: 14px; }
-  .err { color: #e53e3e; font-size: 13px; margin-top: 12px; display: none; }
+  .err { color: #e53e3e; font-size: 13px; margin-top: 12px; display: none; line-height: 1.5; }
   .loading { color: #888; font-size: 14px; padding: 20px 0; }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">🏠 FlatKhoj</div>
-  <div id="s-loading" class="loading">Loading...</div>
+  <div id="s-loading" class="loading">Loading your payment details...</div>
   <div id="s-pay" style="display:none">
     <div class="title" id="t-title">Complete Your Subscription</div>
     <div class="sub">You're one step away from receiving property leads.</div>
@@ -38,6 +38,10 @@
     <div class="err" id="errMsg"></div>
     <div class="secure">🔒 Secured by Cashfree · UPI, Cards, Netbanking</div>
   </div>
+  <div id="s-done" style="display:none">
+    <div class="title" style="color:#1a7a6e">✅ All Set!</div>
+    <div class="sub">Your subscription is active. You will start receiving leads on WhatsApp shortly.</div>
+  </div>
   <div id="s-err" style="display:none">
     <div class="title" style="color:#e53e3e">⚠️ Problem</div>
     <div class="sub" id="errDetail">Something went wrong. Please contact support.</div>
@@ -46,82 +50,118 @@
     </div>
   </div>
 </div>
-<script>
-var SUPA_URL='https://hbvdboxyppsmcuqgbpwp.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
-var PLAN_LABELS={starter:'Starter',growth:'Growth',pro:'Pro',elite:'Elite'};
-var PLAN_PRICES={starter_monthly:1299,growth_monthly:2199,pro_monthly:2999,elite_monthly:3999,starter_annual:11691,growth_annual:19791,pro_annual:26991,elite_annual:35991};
-var broker=null;
 
-function p(id){return document.getElementById(id);}
-function showErr(msg){p('s-loading').style.display='none';p('s-pay').style.display='none';p('s-err').style.display='block';if(msg)p('errDetail').textContent=msg;}
-function param(k){return new URLSearchParams(window.location.search).get(k);}
+<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+<script>
+var SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+var PLAN_LABELS = {starter:'Starter',growth:'Growth',pro:'Pro',elite:'Elite'};
+var PLAN_PRICES = {starter_monthly:1299,growth_monthly:2199,pro_monthly:2999,elite_monthly:3999,starter_annual:11691,growth_annual:19791,pro_annual:26991,elite_annual:35991};
+var broker = null;
+
+function p(id){ return document.getElementById(id); }
+function param(k){ return new URLSearchParams(window.location.search).get(k); }
+
+function showErr(msg){
+  p('s-loading').style.display='none';
+  p('s-pay').style.display='none';
+  p('s-err').style.display='block';
+  if(msg) p('errDetail').textContent = msg;
+}
 
 async function init(){
-  var id=param('broker_id');
-  if(!id){showErr('Invalid link. Missing broker ID. Please ask for a new payment link.');return;}
+  var id = param('broker_id');
+  if(!id){ showErr('Invalid link — missing broker ID. Please ask for a new payment link.'); return; }
+
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/brokers?id=eq.'+id+'&select=id,name,phone,plan,billing_cycle,is_active,subscription_status,city',
-      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    var d=await r.json();
-    if(!d||!d.length){showErr('Broker record not found. Please contact support.');return;}
-    broker=d[0];
-    if(broker.is_active&&broker.subscription_status==='active'){
-      showErr('Your subscription is already active! You will receive leads shortly.');return;
+    var r = await fetch(SUPA_URL+'/rest/v1/brokers?id=eq.'+id+'&select=id,name,phone,plan,billing_cycle,is_active,subscription_status,city', {
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY}
+    });
+    var d = await r.json();
+    if(!d || !d.length){ showErr('Broker record not found. Please contact support on WhatsApp.'); return; }
+    broker = d[0];
+
+    if(broker.is_active && broker.subscription_status === 'active'){
+      p('s-loading').style.display='none';
+      p('s-done').style.display='block';
+      return;
     }
-    var key=broker.plan+'_'+(broker.billing_cycle||'monthly');
-    var price=PLAN_PRICES[key]||0;
-    p('t-title').textContent='Hi '+broker.name+', activate your subscription';
-    p('t-plan').textContent=(PLAN_LABELS[broker.plan]||broker.plan)+' Plan · '+(broker.city==='pune'?'Pune':'Mumbai');
-    p('t-price').textContent='₹'+price.toLocaleString('en-IN');
-    p('t-cycle').textContent=(broker.billing_cycle==='annual'?'billed annually':'billed monthly')+' · auto-renews';
+
+    var key = broker.plan+'_'+(broker.billing_cycle||'monthly');
+    var price = PLAN_PRICES[key]||0;
+    p('t-title').textContent = 'Hi '+broker.name+', activate your subscription';
+    p('t-plan').textContent = (PLAN_LABELS[broker.plan]||broker.plan)+' Plan · '+(broker.city==='pune'?'Pune':'Mumbai');
+    p('t-price').textContent = '₹'+price.toLocaleString('en-IN');
+    p('t-cycle').textContent = (broker.billing_cycle==='annual'?'billed annually':'billed monthly')+' · auto-renews';
     p('s-loading').style.display='none';
     p('s-pay').style.display='block';
-  }catch(e){showErr('Could not load details: '+e.message);}
+  }catch(e){
+    showErr('Could not load details: '+e.message+'. Please contact support.');
+  }
 }
 
 async function pay(){
-  if(!broker)return;
-  var btn=p('payBtn');
-  btn.disabled=true;btn.textContent='Setting up...';
-  p('errMsg').style.display='none';
+  if(!broker) return;
+  var btn = p('payBtn');
+  btn.disabled = true;
+  btn.textContent = 'Setting up...';
+  p('errMsg').style.display = 'none';
+
   try{
-    var r=await fetch(SUPA_URL+'/functions/v1/create-order',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-      body:JSON.stringify({userId:broker.id,name:broker.name,phone:broker.phone,brokerPlan:broker.plan,billingCycle:broker.billing_cycle||'monthly',isBroker:true,city:broker.city||'mumbai'})
+    // Create fresh subscription session right now
+    var r = await fetch(SUPA_URL+'/functions/v1/create-order', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+      body: JSON.stringify({
+        userId: broker.id,
+        name: broker.name,
+        phone: broker.phone,
+        brokerPlan: broker.plan,
+        billingCycle: broker.billing_cycle||'monthly',
+        isBroker: true,
+        city: broker.city||'mumbai'
+      })
     });
-    var order=await r.json();
-    if(order.error)throw new Error(order.error);
-    var sessionId=order.subscription_session_id||order.payment_session_id;
-    if(!sessionId)throw new Error('No session ID from payment system. Please try again.');
-    btn.textContent='Opening payment...';
-    // Load Cashfree SDK and open checkout — same pattern as original broker.html that worked for Anil
-    var s=document.createElement('script');
-    s.src='https://sdk.cashfree.com/js/v3/cashfree.js';
-    s.onload=function(){
-      try{
-        var cf=Cashfree({mode:'production'});
-        // Try subscriptionsCheckout first, fall back to checkout
-        var fn=cf.subscriptionsCheckout||cf.checkout;
-        var opts=cf.subscriptionsCheckout
-          ?{subscriptionSessionId:sessionId,returnUrl:'https://flatkhoj.com/broker_return.html?name='+encodeURIComponent(broker.name)+'&plan='+broker.plan+'&billing='+(broker.billing_cycle||'monthly')+'&phone='+broker.phone}
-          :{paymentSessionId:sessionId,returnUrl:'https://flatkhoj.com/broker_return.html?name='+encodeURIComponent(broker.name)+'&plan='+broker.plan+'&billing='+(broker.billing_cycle||'monthly')+'&phone='+broker.phone};
-        fn.call(cf,opts);
-      }catch(e){
-        btn.disabled=false;btn.textContent='Try Again';
-        p('errMsg').textContent='Payment error: '+e.message;p('errMsg').style.display='block';
+    var order = await r.json();
+    if(order.error) throw new Error(order.error);
+
+    var sessionId = order.subscription_session_id;
+    if(!sessionId) throw new Error('No subscription session ID returned. Please try again.');
+
+    btn.textContent = 'Opening payment...';
+
+    // Use exact API from Cashfree docs:
+    // cashfree.subscriptionsCheckout({ subsSessionId: "...", redirectTarget: "_self" })
+    var cashfree = Cashfree({mode:'production'});
+    var returnUrl = 'https://flatkhoj.com/broker_return.html'
+      +'?name='+encodeURIComponent(broker.name)
+      +'&plan='+broker.plan
+      +'&billing='+(broker.billing_cycle||'monthly')
+      +'&phone='+broker.phone;
+
+    cashfree.subscriptionsCheckout({
+      subsSessionId: sessionId,
+      redirectTarget: '_self'
+    }).then(function(result){
+      if(result && result.error){
+        btn.disabled = false;
+        btn.textContent = 'Pay Now & Activate →';
+        p('errMsg').textContent = 'Payment error: '+(result.error.message||JSON.stringify(result.error));
+        p('errMsg').style.display = 'block';
       }
-    };
-    s.onerror=function(){
-      btn.disabled=false;btn.textContent='Try Again';
-      p('errMsg').textContent='Could not load payment system. Check your internet and try again.';
-      p('errMsg').style.display='block';
-    };
-    document.head.appendChild(s);
+      // On success, Cashfree redirects automatically
+    }).catch(function(e){
+      btn.disabled = false;
+      btn.textContent = 'Pay Now & Activate →';
+      p('errMsg').textContent = 'Payment failed: '+(e.message||e);
+      p('errMsg').style.display = 'block';
+    });
+
   }catch(e){
-    btn.disabled=false;btn.textContent='Pay Now & Activate →';
-    p('errMsg').textContent=e.message;p('errMsg').style.display='block';
+    btn.disabled = false;
+    btn.textContent = 'Pay Now & Activate →';
+    p('errMsg').textContent = e.message;
+    p('errMsg').style.display = 'block';
   }
 }
 
