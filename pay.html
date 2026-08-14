@@ -11,88 +11,146 @@
   .logo { font-size: 24px; font-weight: 900; color: #1a7a6e; margin-bottom: 8px; }
   .title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
   .sub { font-size: 14px; color: #888; margin-bottom: 28px; line-height: 1.5; }
-  .btn { width: 100%; padding: 16px; background: #1a7a6e; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; }
-  .btn:disabled { background: #aaa; cursor: not-allowed; }
+  .plan-box { background: #f0faf7; border: 1.5px solid #1a7a6e; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+  .plan-name { font-size: 16px; font-weight: 700; color: #1a7a6e; }
+  .plan-price { font-size: 24px; font-weight: 900; color: #1a1a1a; margin-top: 4px; }
+  .plan-cycle { font-size: 13px; color: #888; }
+  .btn { width: 100%; padding: 16px; background: #1a7a6e; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity 0.2s; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .secure { font-size: 12px; color: #aaa; margin-top: 16px; }
-  .error { color: #e53e3e; font-size: 14px; margin-top: 16px; display: none; }
+  .errMsg { color: #e53e3e; font-size: 13px; margin-top: 12px; display: none; line-height: 1.5; }
+  .loading { color: #888; font-size: 14px; margin: 20px 0; }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">🏠 FlatKhoj</div>
-  <div class="title">Complete Your Subscription</div>
-  <div class="sub">Tap the button below to set up your broker subscription payment securely.</div>
-  <button class="btn" id="payBtn" onclick="startPayment()">Pay Now →</button>
-  <div class="error" id="errMsg"></div>
-  <div class="secure">🔒 Secured by Cashfree · UPI, Cards, Netbanking</div>
+  <div id="loadingState" class="loading">Loading your payment details...</div>
+  <div id="payState" style="display:none">
+    <div class="title" id="brokerTitle">Complete Your Subscription</div>
+    <div class="sub">You're one step away from receiving property leads in your area.</div>
+    <div class="plan-box">
+      <div class="plan-name" id="planName">—</div>
+      <div class="plan-price" id="planPrice">—</div>
+      <div class="plan-cycle" id="planCycle">—</div>
+    </div>
+    <button class="btn" id="payBtn" onclick="startPayment()">Pay Now & Activate →</button>
+    <div class="errMsg" id="errMsg"></div>
+    <div class="secure">🔒 Secured by Cashfree · UPI, Cards, Netbanking</div>
+  </div>
+  <div id="errorState" style="display:none">
+    <div class="title" style="color:#e53e3e">Invalid Link</div>
+    <div class="sub">This payment link is invalid or has expired. Please contact FlatKhoj support.</div>
+  </div>
 </div>
 
 <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 <script>
+var SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+
+var brokerData = null;
+
+var PLAN_LABELS = { starter: 'Starter', growth: 'Growth', pro: 'Pro', elite: 'Elite' };
+var PLAN_PRICES = {
+  starter_monthly: 1299, growth_monthly: 2199, pro_monthly: 2999, elite_monthly: 3999,
+  starter_annual: 11691, growth_annual: 19791, pro_annual: 26991, elite_annual: 35991
+};
+
 function getParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }
 
-async function startPayment() {
-  var sessionId = getParam('session');
-  var orderId = getParam('order_id');
-  var returnUrl = getParam('return_url') || 'https://flatkhoj.com/broker_return.html';
+function showError(msg) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('payState').style.display = 'none';
+  document.getElementById('errorState').style.display = 'block';
+  if (msg) document.getElementById('errorState').querySelector('.sub').textContent = msg;
+}
 
-  if (!sessionId) {
-    document.getElementById('errMsg').textContent = 'Invalid payment link. Please contact support.';
-    document.getElementById('errMsg').style.display = 'block';
-    return;
-  }
-
-  var btn = document.getElementById('payBtn');
-  btn.disabled = true;
-  btn.textContent = 'Opening payment...';
+async function loadBroker() {
+  var brokerId = getParam('broker_id');
+  if (!brokerId) { showError('Invalid payment link — missing broker ID.'); return; }
 
   try {
-    // If nothing happens in 5 seconds, show error
-    setTimeout(function() {
-      if (btn.disabled) {
-        btn.disabled = false;
-        btn.textContent = 'Pay Now →';
-        document.getElementById('errMsg').textContent = 'Payment page did not open. The session may have expired — please ask for a new payment link.';
-        document.getElementById('errMsg').style.display = 'block';
-      }
-    }, 5000);
+    var res = await fetch(SUPA_URL + '/rest/v1/brokers?id=eq.' + brokerId + '&select=id,name,phone,plan,billing_cycle,subscription_status,is_active,city', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    var data = await res.json();
+    if (!data || !data.length) { showError('Broker not found. Please contact FlatKhoj support.'); return; }
+
+    brokerData = data[0];
+
+    // If already active — no need to pay again
+    if (brokerData.is_active && brokerData.subscription_status === 'active') {
+      showError('This subscription is already active! You are all set to receive leads.');
+      return;
+    }
+
+    var planKey = brokerData.plan + '_' + (brokerData.billing_cycle || 'monthly');
+    var price = PLAN_PRICES[planKey] || 0;
+    var cycle = brokerData.billing_cycle === 'annual' ? '/year' : '/month';
+
+    document.getElementById('brokerTitle').textContent = 'Hi ' + brokerData.name + ', complete your subscription';
+    document.getElementById('planName').textContent = (PLAN_LABELS[brokerData.plan] || brokerData.plan) + ' Plan — ' + (brokerData.city === 'pune' ? 'Pune' : 'Mumbai');
+    document.getElementById('planPrice').textContent = '₹' + price.toLocaleString('en-IN');
+    document.getElementById('planCycle').textContent = cycle + ' · Auto-renews every ' + (brokerData.billing_cycle === 'annual' ? 'year' : 'month');
+
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('payState').style.display = 'block';
+
+  } catch(e) {
+    showError('Could not load payment details. Please try again or contact support.');
+  }
+}
+
+async function startPayment() {
+  if (!brokerData) return;
+  var btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.textContent = 'Setting up payment...';
+  document.getElementById('errMsg').style.display = 'none';
+
+  try {
+    // Create fresh session now — not when admin filled the form
+    var orderRes = await fetch(SUPA_URL + '/functions/v1/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY },
+      body: JSON.stringify({
+        userId: brokerData.id,
+        name: brokerData.name,
+        phone: brokerData.phone,
+        brokerPlan: brokerData.plan,
+        billingCycle: brokerData.billing_cycle || 'monthly',
+        isBroker: true,
+        city: brokerData.city || 'mumbai'
+      })
+    });
+
+    var order = await orderRes.json();
+    if (order.error) throw new Error(order.error);
+
+    var sessionId = order.subscription_session_id || order.payment_session_id;
+    if (!sessionId) throw new Error('No session ID returned. Please try again.');
+
+    btn.textContent = 'Opening payment...';
 
     var cf = Cashfree({ mode: 'production' });
-    // Broker subscriptions use subscriptionsCheckout, not checkout
-    var result = cf.subscriptionsCheckout({
+    cf.subscriptionsCheckout({
       subscriptionSessionId: sessionId,
-      returnUrl: returnUrl + (orderId ? (returnUrl.includes('?') ? '&' : '?') + 'order_id=' + orderId : '')
+      returnUrl: 'https://flatkhoj.com/broker_return.html?name=' + encodeURIComponent(brokerData.name) + '&plan=' + brokerData.plan + '&billing=' + (brokerData.billing_cycle || 'monthly') + '&phone=' + brokerData.phone
     });
-    // Handle promise rejection if SDK fails
-    if (result && result.then) {
-      result.catch(function(err) {
-        console.error('subscriptionsCheckout error:', err);
-        btn.disabled = false;
-        btn.textContent = 'Pay Now →';
-        document.getElementById('errMsg').textContent = 'Payment error: ' + (err.message || JSON.stringify(err));
-        document.getElementById('errMsg').style.display = 'block';
-      });
-    }
+
   } catch(e) {
-    console.error('Checkout error:', e);
+    console.error(e);
     btn.disabled = false;
-    btn.textContent = 'Pay Now →';
-    document.getElementById('errMsg').textContent = 'Could not open payment: ' + (e.message || e);
+    btn.textContent = 'Pay Now & Activate →';
+    document.getElementById('errMsg').textContent = 'Something went wrong: ' + (e.message || e) + '. Please try again.';
     document.getElementById('errMsg').style.display = 'block';
   }
 }
 
-// Auto-start on load
-window.onload = function() {
-  var sessionId = getParam('session');
-  if (!sessionId) {
-    document.getElementById('errMsg').textContent = 'Invalid payment link.';
-    document.getElementById('errMsg').style.display = 'block';
-    document.getElementById('payBtn').disabled = true;
-  }
-};
+loadBroker();
 </script>
 </body>
 </html>

@@ -398,25 +398,20 @@ async function doPayment(){
       userId=ins[0]&&ins[0].id;
     }
     if(!userId)throw new Error('Could not create broker profile. Please try again.');
-    payBtn.textContent='Creating payment...';
-    var orderRes=await fetch(SUPA_URL+'/functions/v1/create-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},body:JSON.stringify({userId:userId,name:name,phone:phone,brokerPlan:selPlan,billingCycle:billing,amount:price,isBroker:true,city:city})});
-    if(!orderRes.ok){var errText=await orderRes.text();throw new Error('Payment setup failed: '+errText);}
-    var order=await orderRes.json();
-    if(order.error)throw new Error(order.error);
-    payBtn.textContent='Opening payment...';
+    payBtn.textContent='Generating link...';
+
+    // Send broker_id in the link — session created fresh when broker opens it
+    // This avoids session expiry issues
 
     // Generate Cashfree hosted payment link — broker opens this on their phone
     // This avoids UPI redirecting to YOUR phone's UPI app
-    var sessionId = order.subscription_session_id || order.payment_session_id;
-    if (!sessionId) { throw new Error('No session ID returned from payment setup'); }
-
-    var orderId = order.order_id || '';
-    var returnUrl = encodeURIComponent('https://flatkhoj.com/broker_return.html?name=' + encodeURIComponent(name) + '&plan=' + selPlan + '&billing=' + billing + '&phone=' + phone);
-    var payPageUrl = 'https://flatkhoj.com/pay.html?session=' + encodeURIComponent(sessionId) + '&order_id=' + encodeURIComponent(orderId) + '&return_url=' + returnUrl;
-    var waMsg = 'Hi ' + name + ', please complete your FlatKhoj broker subscription payment:\n\n' + payPageUrl + '\n\nTap the link and press Pay Now. Expires in 24 hours.';
+    // Send broker_id in the link — session created fresh when broker opens it
+    // This avoids session expiry issues
+    var brokerId = userId;
+    var payPageUrl = 'https://flatkhoj.com/pay.html?broker_id=' + encodeURIComponent(brokerId);
+    var waMsg = 'Hi ' + name + ', please complete your FlatKhoj broker subscription payment:\n\n' + payPageUrl + '\n\nTap the link and press "Pay Now & Activate" to get started.';
     var waLink = 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(waMsg);
 
-    // Replace the pay button with a single WhatsApp link — no popup issues
     payBtn.style.display = 'none';
     var waBtn = document.createElement('a');
     waBtn.href = waLink;
