@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlatKhoj — Complete Payment</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .card { background: #fff; border-radius: 20px; padding: 32px 24px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .logo { font-size: 24px; font-weight: 900; color: #1a7a6e; margin-bottom: 8px; }
+  .title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+  .sub { font-size: 14px; color: #888; margin-bottom: 28px; line-height: 1.5; }
+  .btn { width: 100%; padding: 16px; background: #1a7a6e; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn:disabled { background: #aaa; cursor: not-allowed; }
+  .secure { font-size: 12px; color: #aaa; margin-top: 16px; }
+  .error { color: #e53e3e; font-size: 14px; margin-top: 16px; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🏠 FlatKhoj</div>
+  <div class="title">Complete Your Subscription</div>
+  <div class="sub">Tap the button below to set up your broker subscription payment securely.</div>
+  <button class="btn" id="payBtn" onclick="startPayment()">Pay Now →</button>
+  <div class="error" id="errMsg"></div>
+  <div class="secure">🔒 Secured by Cashfree · UPI, Cards, Netbanking</div>
+</div>
+
+<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+<script>
+function getParam(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+async function startPayment() {
+  var sessionId = getParam('session');
+  var orderId = getParam('order_id');
+  var returnUrl = getParam('return_url') || 'https://flatkhoj.com/broker_return.html';
+
+  if (!sessionId) {
+    document.getElementById('errMsg').textContent = 'Invalid payment link. Please contact support.';
+    document.getElementById('errMsg').style.display = 'block';
+    return;
+  }
+
+  var btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.textContent = 'Opening payment...';
+
+  try {
+    var cf = Cashfree({ mode: 'production' });
+    cf.checkout({
+      paymentSessionId: sessionId,
+      returnUrl: returnUrl + (orderId ? '?order_id=' + orderId : '')
+    });
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Pay Now →';
+    document.getElementById('errMsg').textContent = 'Could not open payment. Please try again.';
+    document.getElementById('errMsg').style.display = 'block';
+  }
+}
+
+// Auto-start on load
+window.onload = function() {
+  var sessionId = getParam('session');
+  if (!sessionId) {
+    document.getElementById('errMsg').textContent = 'Invalid payment link.';
+    document.getElementById('errMsg').style.display = 'block';
+    document.getElementById('payBtn').disabled = true;
+  }
+};
+</script>
+</body>
+</html>
