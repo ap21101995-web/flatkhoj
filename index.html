@@ -622,18 +622,45 @@ body {
         <div style="font-size:16px;font-weight:700">Mumbai</div>
         <div style="font-size:11px;margin-top:2px">Financial Capital of India</div>
       </button>
-      <!-- Pune — locked/coming soon -->
+      <!-- Pune — locked for regular users, unlocked for admins -->
       <button id="cityBtn-pune" disabled style="border-radius:14px;padding:20px 12px;cursor:not-allowed;text-align:center;opacity:0.45;background:#f5f5f5;border:2px solid #ddd;position:relative">
         <div style="font-size:40px;margin-bottom:8px;filter:grayscale(1)">🏰</div>
         <div style="font-size:16px;font-weight:700;color:#999">Pune</div>
-        <div style="font-size:11px;color:#bbb;margin-top:2px">Coming Soon</div>
-        <div style="position:absolute;top:8px;right:8px;background:#e5e5e3;color:#999;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px">SOON</div>
+        <div id="puneLabel" style="font-size:11px;color:#bbb;margin-top:2px">Coming Soon</div>
+        <div id="puneBadge" style="position:absolute;top:8px;right:8px;background:#e5e5e3;color:#999;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px">SOON</div>
       </button>
     </div>
   </div>
 </div>
 
 <!-- FILTER CHIPS — listing type -->
+<script>
+// Unlock Pune for admins immediately on load
+(function() {
+  try {
+    var u = JSON.parse(localStorage.getItem('fk_login_v2') || '{}');
+    var ph = String(u.phone || '').replace(/\D/g, '').slice(-10);
+    var isAdmin = ph === '9538584612' || ph === '9004325226' || u.isOwner === true || u.isOwner === 'true';
+    if (isAdmin) {
+      var btn = document.getElementById('cityBtn-pune');
+      if (btn) {
+        btn.disabled = false;
+        btn.style.cursor = 'pointer';
+        btn.style.opacity = '1';
+        btn.style.background = '#f5f0ff';
+        btn.style.border = '2px solid #8b5cf6';
+        btn.onclick = function() { setCity('pune'); };
+        var lbl = document.getElementById('puneLabel');
+        if (lbl) { lbl.textContent = 'Admin Preview'; lbl.style.color = '#7c3aed'; }
+        var badge = document.getElementById('puneBadge');
+        if (badge) { badge.textContent = 'ADMIN'; badge.style.background = '#ede9fe'; badge.style.color = '#7c3aed'; }
+        var icon = btn.querySelector('div');
+        if (icon) icon.style.filter = 'none';
+      }
+    }
+  } catch(e) {}
+})();
+</script>
 <div class="filter-bar">
   <div class="filter-inner">
     <button class="filter-chip active" data-type="all" onclick="setFilter(this,'all')">All</button>
