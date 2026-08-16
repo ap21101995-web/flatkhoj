@@ -148,7 +148,7 @@ function getActiveHier(){return getBrokerCity()==='pune'?PUNE_HIER:HIER;}
 // Enable Pune for admins only
 (function(){
   try{
-    var u=JSON.parse(localStorage.getItem('fk_login_v2')||'{}');
+    var u=JSON.parse(localStorage.getItem('fmh_user')||localStorage.getItem('fk_login_v2')||'{}');
     var ph=String(u.phone||'').replace(/\D/g,'').slice(-10);
     var isAdmin=ph==='9538584612'||ph==='9004325226'||u.isOwner===true||u.isOwner==='true';
     if(isAdmin){

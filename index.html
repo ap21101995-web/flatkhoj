@@ -635,31 +635,32 @@ body {
 
 <!-- FILTER CHIPS — listing type -->
 <script>
-// Unlock Pune for admins immediately on load
-(function() {
+function unlockPuneIfAdmin() {
   try {
-    var u = JSON.parse(localStorage.getItem('fk_login_v2') || '{}');
+    // Check both possible storage keys
+    var u = JSON.parse(localStorage.getItem('fmh_user') || localStorage.getItem('fk_login_v2') || '{}');
     var ph = String(u.phone || '').replace(/\D/g, '').slice(-10);
     var isAdmin = ph === '9538584612' || ph === '9004325226' || u.isOwner === true || u.isOwner === 'true';
+    var btn = document.getElementById('cityBtn-pune');
+    if (!btn) return;
     if (isAdmin) {
-      var btn = document.getElementById('cityBtn-pune');
-      if (btn) {
-        btn.disabled = false;
-        btn.style.cursor = 'pointer';
-        btn.style.opacity = '1';
-        btn.style.background = '#f5f0ff';
-        btn.style.border = '2px solid #8b5cf6';
-        btn.onclick = function() { setCity('pune'); };
-        var lbl = document.getElementById('puneLabel');
-        if (lbl) { lbl.textContent = 'Admin Preview'; lbl.style.color = '#7c3aed'; }
-        var badge = document.getElementById('puneBadge');
-        if (badge) { badge.textContent = 'ADMIN'; badge.style.background = '#ede9fe'; badge.style.color = '#7c3aed'; }
-        var icon = btn.querySelector('div');
-        if (icon) icon.style.filter = 'none';
-      }
+      btn.disabled = false;
+      btn.style.cursor = 'pointer';
+      btn.style.opacity = '1';
+      btn.style.background = '#f5f0ff';
+      btn.style.border = '2px solid #8b5cf6';
+      btn.onclick = function() { setCity('pune'); };
+      var lbl = document.getElementById('puneLabel');
+      if (lbl) { lbl.textContent = 'Admin Preview'; lbl.style.color = '#7c3aed'; }
+      var badge = document.getElementById('puneBadge');
+      if (badge) { badge.textContent = 'ADMIN'; badge.style.background = '#ede9fe'; badge.style.color = '#7c3aed'; }
+      btn.querySelectorAll('div').forEach(function(d) { d.style.filter = 'none'; });
     }
   } catch(e) {}
-})();
+}
+// Run immediately and also after DOM ready
+unlockPuneIfAdmin();
+document.addEventListener('DOMContentLoaded', unlockPuneIfAdmin);
 </script>
 <div class="filter-bar">
   <div class="filter-inner">
@@ -868,6 +869,7 @@ if (adminSignin) {
   try {
     const userData = JSON.parse(atob(adminSignin));
     localStorage.setItem('fmh_user', JSON.stringify(userData));
+    unlockPuneIfAdmin();
     window.history.replaceState({}, '', window.location.pathname);
   } catch(e) {}
 }
@@ -902,6 +904,7 @@ async function refreshCoins(forceDB = true) {
       coins = data[0].coins;
       user.coins = coins;
       localStorage.setItem('fmh_user', JSON.stringify(user));
+      unlockPuneIfAdmin();
     }
   } catch(e) {}
   updateCoinDisplays(coins);
@@ -1519,6 +1522,7 @@ async function handleUnlock(listingId, area) {
     const fresh = data[0]?.coins ?? 0;
     user.coins = fresh;
     localStorage.setItem('fmh_user', JSON.stringify(user));
+      unlockPuneIfAdmin();
     document.getElementById('unlockSheetBalance').textContent = `🪙 ${fresh} coins`;
 
     if (fresh < UNLOCK_COST) {
@@ -1627,6 +1631,7 @@ async function confirmUnlock() {
     // Sync fresh balance to localStorage and update ALL coin displays
     user.coins = newCoins;
     localStorage.setItem('fmh_user', JSON.stringify(user));
+      unlockPuneIfAdmin();
     updateCoinDisplays(newCoins);
 
     // Re-enable btn and mark as unlocked
