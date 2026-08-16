@@ -382,7 +382,7 @@ function getUser() {
 window.onload = async function() {
   const user = getUser();
   if (!user) {
-    window.location.href = 'login.html?trigger=coins';
+    nav('login.html?trigger=coins');
     return;
   }
 
@@ -424,7 +424,7 @@ window.onload = async function() {
     document.getElementById('successCoins').textContent = '✅ ' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan';
     document.getElementById('successSub').textContent = `Your ${plan} posting plan is now active for 30 days.`;
     document.getElementById('successReturnBtn').textContent = 'Start posting →';
-    document.getElementById('successReturnBtn').onclick = () => window.location.href = 'post_form.html';
+    document.getElementById('successReturnBtn').onclick = () => nav('post_form.html');
     document.getElementById('successOverlay').classList.add('show');
     return;
   }
@@ -467,7 +467,7 @@ function selectPack(pack, price, coins) {
 // ── INITIATE PAYMENT ───────────────────────────────────────
 async function initiatePayment() {
   const user = getUser();
-  if (!user) { window.location.href = 'login.html?trigger=coins'; return; }
+  if (!user) { nav('login.html?trigger=coins'); return; }
 
   if (CASHFREE_APP_ID === 'YOUR_CASHFREE_APP_ID') {
     showProcessing();
@@ -717,7 +717,7 @@ function setPostBilling(type) {
 // ── POSTING PLAN PURCHASE ──────────────────────────────────
 async function buyPostingPlan(plan, billing) {
   const user = getUser();
-  if (!user) { window.location.href = 'login.html?trigger=coins'; return; }
+  if (!user) { nav('login.html?trigger=coins'); return; }
   const prices = {
     basic: { monthly: 499, annual: 4491 },
     pro:   { monthly: 999, annual: 8991 }
@@ -798,9 +798,20 @@ function goBack() {
   if (document.referrer && document.referrer !== window.location.href) {
     window.history.back();
   } else {
-    window.location.href = 'index.html';
+    nav('index.html');
   }
 }
+
+// Navigation — new tab on desktop, same tab on mobile
+function isDesktopDevice() {
+  return !('ontouchstart' in window) && !navigator.maxTouchPoints;
+}
+function nav(url, e) {
+  if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { window.open(url, '_blank'); return; }
+  if (isDesktopDevice()) { window.open(url, '_blank'); return; }
+  window.location.href = url;
+}
+
 </script>
 <!-- LEGAL INFO — Required by payment gateway -->
 <div style="margin:24px 16px 0;background:var(--bg3);border-radius:12px;padding:16px">
