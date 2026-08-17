@@ -88,7 +88,7 @@ window._BLR_HIER={"Indiranagar": {"Indiranagar": {"Indiranagar": ["100 Feet Road
       <label>City *</label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
         <button type="button" id="city-mumbai" onclick="selectCity('mumbai')" style="padding:12px;border:3px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 2px #0f7b6c33">🌉 Mumbai</button>
-        <button type="button" id="city-pune" onclick="handlePuneClick()" style="padding:12px;border:2px solid #ddd;border-radius:10px;background:#f5f5f5;color:#bbb;font-weight:600;font-size:14px;cursor:pointer;opacity:0.55">🏰 Pune<span id="pune-label" style="display:block;font-size:10px;color:#bbb">Coming Soon</span></button>
+        <button type="button" id="city-pune" onclick="handlePuneClick()" style="padding:12px;border:2px solid #ddd;border-radius:10px;background:#f5f5f5;color:#bbb;font-weight:600;font-size:14px;cursor:pointer;opacity:0.55">🏰 Pune<span id="pune-label" style="display:block;font-size:10px">Coming Soon</span></button>
         <button type="button" id="city-bengaluru" onclick="handleBengaluruClick()" style="padding:12px;border:2px solid #ddd;border-radius:10px;background:#f5f5f5;color:#bbb;font-weight:600;font-size:14px;cursor:pointer;opacity:0.55">🌆 Bengaluru<span id="blr-label" style="display:block;font-size:10px;color:#bbb">Coming Soon</span></button>
       </div>
     </div>
@@ -215,23 +215,25 @@ let sel=new Set(),selPlan=null,billing='monthly';
 
 function selectCity(city){
   localStorage.setItem('fk_city', city);
-  var mbtn = document.getElementById('city-mumbai');
-  var pbtn = document.getElementById('city-pune');
-  var activeStyle = 'padding:12px;border:3px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 2px #0f7b6c33';
-  var inactiveStyle = 'padding:12px;border:2px solid #ddd;border-radius:10px;background:#f5f5f0;color:#666;font-weight:600;font-size:14px;cursor:pointer';
-  var puneActiveStyle = 'padding:12px;border:3px solid #8b5cf6;border-radius:10px;background:#f5f0ff;color:#7c3aed;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 2px #8b5cf633';
-  if(city==='bengaluru'){
-    if(mbtn) mbtn.style.cssText=inactiveStyle;
-    if(pbtn && !pbtn.disabled) pbtn.style.cssText=inactiveStyle;
-    var bblr=document.getElementById('city-bengaluru');
-    if(bblr) bblr.style.cssText='padding:12px;border:3px solid #f97316;border-radius:10px;background:#fff5e6;color:#f97316;font-weight:700;font-size:14px;cursor:pointer';
-  } else if(city==='pune'){
-    if(mbtn) mbtn.style.cssText = inactiveStyle;
-    if(pbtn) pbtn.style.cssText = puneActiveStyle;
-  } else {
-    if(mbtn) mbtn.style.cssText = activeStyle;
-    if(pbtn && !pbtn.disabled) pbtn.style.cssText = inactiveStyle;
-  }
+  // Reset all city buttons first
+  var allBtns = ['city-mumbai','city-pune','city-bengaluru'];
+  allBtns.forEach(function(id){
+    var btn = document.getElementById(id);
+    if(!btn) return;
+    if(id === 'city-mumbai'){
+      btn.style.cssText = city==='mumbai'
+        ? 'padding:12px;border:3px solid var(--teal);border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 3px #0f7b6c33'
+        : 'padding:12px;border:2px solid #ddd;border-radius:10px;background:#f5f5f0;color:#666;font-weight:600;font-size:14px;cursor:pointer';
+    } else if(id === 'city-pune'){
+      if(btn.onclick) btn.style.cssText = city==='pune'
+        ? 'padding:12px;border:3px solid #8b5cf6;border-radius:10px;background:#f5f0ff;color:#7c3aed;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 3px #8b5cf633'
+        : 'padding:12px;border:2px solid #8b5cf6;border-radius:10px;background:#f5f0ff;color:#7c3aed;font-weight:600;font-size:14px;cursor:pointer';
+    } else if(id === 'city-bengaluru'){
+      if(btn.onclick) btn.style.cssText = city==='bengaluru'
+        ? 'padding:12px;border:3px solid #f97316;border-radius:10px;background:#fff5e6;color:#f97316;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 0 0 3px #f9731633'
+        : 'padding:12px;border:2px solid #f97316;border-radius:10px;background:#fff5e6;color:#f97316;font-weight:600;font-size:14px;cursor:pointer';
+    }
+  });
   sel.clear();renderZones();renderSummary();setBilling(billing);
 }
 
