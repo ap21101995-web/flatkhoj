@@ -860,7 +860,6 @@ const adminSignin=new URLSearchParams(window.location.search).get("admin_signin"
     if(!aStart && bStart) return 1;
     return a.length - b.length;
   });
-  t = t.slice(0, 50);
   if(t.length>0){renderHomeDropdown(t,val);r.classList.add('open');}
   else{r.innerHTML='<div class="area-option-home" style="color:var(--ink3);cursor:default">📍 No areas found for "'+val+'"</div>';r.classList.add('open');}
 }
