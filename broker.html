@@ -177,11 +177,11 @@ var CITY_META={
 };
 
 function setupCityDropdown(){
-  var sel=document.getElementById('citySelect');
-  if(!sel)return;
+  var dd=document.getElementById('citySelect');
+  if(!dd)return;
   var admin=isAdminUser();
   ['pune','bengaluru','hyderabad'].forEach(function(c){
-    var opt=sel.querySelector('option[value="'+c+'"]');
+    var opt=dd.querySelector('option[value="'+c+'"]');
     if(!opt)return;
     if(admin){
       opt.disabled=false;
@@ -193,7 +193,7 @@ function setupCityDropdown(){
   });
   var saved=localStorage.getItem('fk_city')||'mumbai';
   if(!admin&&saved!=='mumbai')saved='mumbai';
-  sel.value=saved;
+  dd.value=saved;
   handleCityChange(saved);
 }
 
@@ -209,13 +209,13 @@ function handleCityChange(city){
 
 function selectCity(city){
   localStorage.setItem('fk_city',city);
-  var sel=document.getElementById('citySelect');
-  if(sel)sel.value=city;
+  var dd=document.getElementById('citySelect');
+  if(dd)dd.value=city;
   var meta=CITY_META[city]||CITY_META.mumbai;
-  if(sel){
-    sel.style.borderColor=meta.color;
-    sel.style.color=meta.color;
-    sel.style.background=meta.bg;
+  if(dd){
+    dd.style.borderColor=meta.color;
+    dd.style.color=meta.color;
+    dd.style.background=meta.bg;
   }
   var badge=document.getElementById('cityBadge');
   if(badge){
@@ -552,7 +552,7 @@ if(urlP.get('payment_status')==='SUCCESS'||urlP.get('order_status')==='PAID'){
   });
 }else{
   document.addEventListener('DOMContentLoaded',function(){
-    selectCity('mumbai');setBilling('monthly');renderSummary();
+    setupCityDropdown();setBilling('monthly');renderSummary();
   });
 }
 
