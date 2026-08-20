@@ -671,7 +671,7 @@ function unlockBengaluruIfAdmin(){
     var btn=document.getElementById('cityBtn-bengaluru');
     if(!btn)return;
     if(isAdmin){
-      btn.style.opacity='1';
+      btn.disabled=false;btn.style.cursor='pointer';btn.style.opacity='1';
       btn.style.background='#fff5e6';
       btn.style.border='2px solid #f97316';
       btn.onclick=function(){setCity('bengaluru');};
@@ -684,7 +684,7 @@ function unlockBengaluruIfAdmin(){
   }catch(e){}
 }
 
-function unlockPuneIfAdmin(){try{var e=JSON.parse(localStorage.getItem("fmh_user")||localStorage.getItem("fk_login_v2")||"{}"),t=String(e.phone||"").replace(/\D/g,"").slice(-10),n="9538584612"===t||"9004325226"===t||!0===e.isOwner||"true"===e.isOwner,o=document.getElementById("cityBtn-pune");if(!o)return;if(n){o.disabled=!1,o.style.cursor="pointer",o.style.opacity="1",o.style.background="#f5f0ff",o.style.border="2px solid #8b5cf6",o.onclick=function(){setCity("pune")};var l=document.getElementById("puneLabel");l&&(l.textContent="Admin Preview",l.style.color="#7c3aed");var c=document.getElementById("puneBadge");c&&(c.textContent="ADMIN",c.style.background="#ede9fe",c.style.color="#7c3aed"),o.querySelectorAll("div").forEach(function(e){e.style.filter="none"})}}catch(e){}}unlockPuneIfAdmin(),document.addEventListener("DOMContentLoaded",unlockPuneIfAdmin);
+function unlockPuneIfAdmin(){try{var e=JSON.parse(localStorage.getItem("fmh_user")||localStorage.getItem("fk_login_v2")||"{}"),t=String(e.phone||"").replace(/\D/g,"").slice(-10),n="9538584612"===t||"9004325226"===t||!0===e.isOwner||"true"===e.isOwner,o=document.getElementById("cityBtn-pune");if(!o)return;if(n){o.disabled=!1,o.style.cursor="pointer",o.style.opacity="1",o.style.background="#f5f0ff",o.style.border="2px solid #8b5cf6",o.onclick=function(){setCity("pune")};var l=document.getElementById("puneLabel");l&&(l.textContent="Admin Preview",l.style.color="#7c3aed");var c=document.getElementById("puneBadge");c&&(c.textContent="ADMIN",c.style.background="#ede9fe",c.style.color="#7c3aed"),o.querySelectorAll("div").forEach(function(e){e.style.filter="none"})}}catch(e){}}unlockPuneIfAdmin();unlockBengaluruIfAdmin();document.addEventListener("DOMContentLoaded",function(){unlockPuneIfAdmin();unlockBengaluruIfAdmin();});
 </script>
 <div class="filter-bar">
   <div class="filter-inner">
@@ -980,6 +980,8 @@ function handleBrokerClick(t){window._brokerDidDrag?window._brokerDidDrag=!1:nav
 </script>
 
 </html>
+
+
 
 
 
