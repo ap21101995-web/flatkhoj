@@ -169,6 +169,10 @@ function isAdminUser(){
   }catch(e){return false;}
 }
 
+var sel=new Set();
+var selPlan=null;
+var billing='monthly';
+
 var CITY_META={
   mumbai:{name:'Mumbai',emoji:'🌉',color:'#0f7b6c',bg:'#e8f5f2'},
   pune:{name:'Pune',emoji:'🏰',color:'#7c3aed',bg:'#f5f0ff'},
