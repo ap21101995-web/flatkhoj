@@ -352,7 +352,7 @@ body {
     var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
     if (!u) { document.write('<style>#ownerControls{display:none}</style>'); return; }
     var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
-    var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
+    var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222'||ph==='9960395782' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
     if (!isOwner) { document.write('<style>#ownerControls{display:none}</style>'); }
     // If owner, leave visible (default in HTML)
   } catch(e) { document.write('<style>#ownerControls{display:none}</style>'); }
@@ -828,7 +828,7 @@ window.onload=async function(){
     // Hide unlock button if this is user's own listing
     if(user){
       const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
-      const isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222' || ph==='9004325226' || user.isOwner===true || user.isOwner==='true';
+      const isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222'||ph==='9960395782' || ph==='9004325226' || user.isOwner===true || user.isOwner==='true';
       const isOwnListing = user.userId && listing.user_id && user.userId === listing.user_id;
       const isClaimed = listing.claimed_by_user_id && user.userId === listing.claimed_by_user_id;
       if(isOwner || isOwnListing || isClaimed){
@@ -1279,7 +1279,7 @@ function showOwnerControls() {
     var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
     if (!u) return;
     var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
-    var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
+    var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222'||ph==='9960395782' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
     var isPoster = u.userId && listing && listing.user_id && u.userId===listing.user_id;
     var isClaimed = u.userId && listing && listing.claimed_by_user_id && u.userId===listing.claimed_by_user_id;
     var ctrl = document.getElementById('ownerControls');
@@ -1489,7 +1489,7 @@ async function activateFreeContact() {
 
 async function deleteListing() {
   const user = getUser();
-  const isAppOwner = user && (user.isOwner === true || user.isOwner === 'true' || ['9538584612','8001517396','9225248222','9004325226'].includes(String(user.phone||'').replace(/\D/g,'').slice(-10)));
+  const isAppOwner = user && (user.isOwner === true || user.isOwner === 'true' || ['9538584612','8001517396','9225248222','9004325226','9960395782'].includes(String(user.phone||'').replace(/\D/g,'').slice(-10)));
   if (!user || (!isAppOwner && user.userId !== listing.user_id && user.userId !== listing.claimed_by_user_id)) return;
 
   const deleteBtn = document.querySelector('[onclick="deleteListing()"]');
