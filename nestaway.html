@@ -169,29 +169,38 @@ function objectAfterIntent(n){
   return best;
 }
 
-function isSeeker(t){
+function classify(t){
   var n=norm(t);
-
-  // they refer to a place as theirs -> they are offering it
   var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
 
-  if(REPLACEMENT.test(n)) return false;
+  if(REPLACEMENT.test(n)) return 'provider';
 
   var hard=0;
   HARD_PROV.forEach(function(r){ if(r.test(n)) hard++; });
 
   var obj=objectAfterIntent(n);
 
-  if(obj==='person') return false;          // wants a person -> has a place
+  if(obj==='person') return 'provider';
   if(obj==='place'){
-    if(owns) return false;                  // "someone for my room"
-    return hard===0 || hard===1 && !owns ? true : false;
+    if(owns) return 'provider';
+    if(hard>1) return 'provider';
+    if(hard===1) return 'unsure';
+    return 'seeker';
   }
 
-  if(hard>0) return false;
-  // no intent verb, no advert language: budget talk still reads as seeking
-  if(/\bbudget\b/.test(n) && !owns) return true;
-  return false;
+  if(hard>0) return 'provider';
+
+  // an intent verb with no recognisable noun: never discard silently
+  INTENT.lastIndex=0;
+  if(INTENT.test(n) && !owns) return 'unsure';
+  INTENT.lastIndex=0;
+
+  // no clear verb+noun pair — decide how promising it looks
+  var placeWord=new RegExp('\\b'+PLACE_N+'\\b').test(n);
+  var wantish=/\b(chahiye|chaiye|dhundh|talash|urgent|asap|immediately|budget|shift|move)\b/.test(n);
+  if(placeWord && wantish && !owns) return 'unsure';
+  if(/\bbudget\b/.test(n) && !owns) return 'unsure';
+  return 'provider';
 }
 
 /* areas */
@@ -386,7 +395,8 @@ document.getElementById('run').onclick=async function(){
       var when;
       try{ when=toDate(m.date,m.time,m.ap); }catch(e){ return; }
       if(cutoff && when<cutoff){ stale++; return; }
-      if(!isSeeker(m.text)) return;
+      var verdict=classify(m.text);
+      if(verdict==='provider') return;
       seekers++;
       var ph=phoneOf(m.sender,m.text);
       if(!ph){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
@@ -398,9 +408,9 @@ document.getElementById('run').onclick=async function(){
       batchSeen[pk]=1;
       var nm=pickName(m.sender,m.text);
       var row={Name:nm,'Phone Number':ph,Gender:gender(nm,m.text,group),
-               Area:(ha||ht),Group:group,
+               Area:(ha||ht),Group:group,conf:verdict,keep:(verdict==='seeker'),
                'Posted On':when.toLocaleString('en-IN'),
-               Message:m.text.replace(/\s+/g,' ').slice(0,180)};
+               Message:m.text.replace(/\s+/g,' ').slice(0,220)};
       if(ha) RESULT.a.push(row); else RESULT.t.push(row);
     });
   }
@@ -413,21 +423,57 @@ document.getElementById('run').onclick=async function(){
   log('collapsed — duplicate posts by the same number: '+repeatPost);
   log('EXTRACTED — Andheri&Goregaon: '+RESULT.a.length+' | Thane: '+RESULT.t.length);
 
-  var pv=RESULT.a.concat(RESULT.t).slice(0,25);
-  var html='<table><tr><th>Name</th><th>Phone</th><th>Gender</th><th>Area</th><th>Group</th></tr>';
-  pv.forEach(function(r){
-    var g=r.Gender==='Female'?'g-f':r.Gender==='Male'?'g-m':'g-n';
-    html+='<tr><td>'+r.Name+'</td><td>'+r['Phone Number']+'</td><td><span class="pill '+g+'">'+r.Gender+
-          '</span></td><td>'+r.Area+'</td><td>'+r.Group+'</td></tr>';
-  });
-  html+='</table>';
-  if(pv.length===0) html='<p class="hint">Nothing extracted. Check the log above — if "no matching area" is high, the posts may not name areas we recognise.</p>';
-  else if(RESULT.a.length+RESULT.t.length>25) html+='<p class="hint">Showing first 25. Download for the full list.</p>';
-  document.getElementById('preview').innerHTML=html;
+  renderReview();
   document.getElementById('results').style.display='block';
 
   this.disabled=false; this.textContent='Extract leads \u2192';
 };
+
+/* ---------- review ---------- */
+function allRows(){ return RESULT.a.concat(RESULT.t); }
+
+function renderReview(){
+  var rows=allRows();
+  var host=document.getElementById('preview');
+  if(!rows.length){
+    host.innerHTML='<p class="hint">Nothing found in this window. Check the log above — a high "area not in our list" count means the posts name places we do not recognise.</p>';
+    return;
+  }
+  var unsure=rows.filter(function(r){return r.conf==='unsure'}).length;
+  var h='<div class="row" style="margin:14px 0 6px">'+
+    '<button class="btn ghost" onclick="setAll(true)">Select all</button>'+
+    '<button class="btn ghost" onclick="setAll(false)">Clear all</button>'+
+    '<span id="selCount" class="hint" style="margin-left:6px"></span></div>';
+  if(unsure) h+='<div class="warn">'+unsure+' post'+(unsure>1?'s':'')+' could not be judged confidently — shown in amber. Read the message and tick the genuine seekers.</div>';
+  h+='<table><tr><th style="width:34px"></th><th>Name</th><th>Phone</th><th>Gender</th><th>Area</th><th>Message</th></tr>';
+  rows.forEach(function(r,i){
+    var g=r.Gender==='Female'?'g-f':r.Gender==='Male'?'g-m':'g-n';
+    var amber=r.conf==='unsure'?' style="background:#fff9ec"':'';
+    h+='<tr'+amber+'><td><input type="checkbox" data-i="'+i+'"'+(r.keep?' checked':'')+
+       ' onchange="toggleRow(this)" style="width:17px;height:17px;cursor:pointer"></td>'+
+       '<td>'+r.Name+'</td><td>'+r['Phone Number']+'</td>'+
+       '<td><span class="pill '+g+'">'+r.Gender+'</span></td>'+
+       '<td>'+r.Area+'</td><td style="font-size:12px;color:#555">'+
+       r.Message.replace(/</g,'&lt;')+'</td></tr>';
+  });
+  h+='</table>';
+  host.innerHTML=h;
+  updCount();
+}
+
+function toggleRow(el){ allRows()[+el.dataset.i].keep=el.checked; updCount(); }
+function setAll(v){
+  allRows().forEach(function(r){r.keep=v});
+  document.querySelectorAll('#preview input[type=checkbox]').forEach(function(x){x.checked=v});
+  updCount();
+}
+function updCount(){
+  var rows=allRows(), n=rows.filter(function(r){return r.keep}).length;
+  var a=RESULT.a.filter(function(r){return r.keep}).length;
+  var t=RESULT.t.filter(function(r){return r.keep}).length;
+  var el=document.getElementById('selCount');
+  if(el) el.textContent=n+' of '+rows.length+' selected  ·  Andheri & Goregaon: '+a+'  ·  Thane: '+t;
+}
 
 /* ---------- export ---------- */
 function stamp(){var d=new Date();
@@ -452,8 +498,8 @@ function download(rows,label){
   commitRun();
 }
 
-document.getElementById('dl1').onclick=function(){download(RESULT.a,'Andheri & Goregaon')};
-document.getElementById('dl2').onclick=function(){download(RESULT.t,'Thane')};
+document.getElementById('dl1').onclick=function(){download(RESULT.a.filter(function(r){return r.keep}),'Andheri & Goregaon')};
+document.getElementById('dl2').onclick=function(){download(RESULT.t.filter(function(r){return r.keep}),'Thane')};
 
 document.getElementById('resetWm').onclick=function(){
   if(!confirm('Clear the watermark? The next run will process every message in the uploaded files.'))return;
