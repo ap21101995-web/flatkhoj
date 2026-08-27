@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlatKhoj — NestAway Lead Extractor</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a18;padding:24px}
+.wrap{max-width:1000px;margin:0 auto}
+h1{font-size:22px;font-weight:900;color:#0f7b6c;margin-bottom:4px}
+.sub{font-size:13px;color:#6b6b68;margin-bottom:24px}
+.card{background:#fff;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+label{display:block;font-size:12px;font-weight:700;color:#3a3a38;margin-bottom:8px;letter-spacing:.3px}
+select{width:100%;max-width:340px;padding:12px;border:2px solid #e0e0dc;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;background:#fff;cursor:pointer}
+#drop{border:2px dashed #b8d8d2;border-radius:14px;padding:44px 20px;text-align:center;background:#f0faf7;cursor:pointer;transition:.15s}
+#drop.over{background:#dff2ed;border-color:#0f7b6c}
+#drop .big{font-size:40px;margin-bottom:10px}
+#drop .t{font-size:15px;font-weight:700;color:#0f7b6c}
+#drop .s{font-size:12px;color:#6b6b68;margin-top:6px}
+#files{margin-top:14px}
+.f{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:#f7f7f4;border-radius:9px;margin-bottom:6px;font-size:13px}
+.f b{font-weight:600}
+.f span{color:#888;font-size:11px}
+.btn{padding:14px 22px;background:#0f7b6c;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn:disabled{background:#bbb;cursor:not-allowed}
+.btn.ghost{background:transparent;color:#0f7b6c;border:2px solid #0f7b6c}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.stat{display:inline-block;background:#f0faf7;border:1px solid #b8d8d2;border-radius:10px;padding:10px 16px;margin:4px 6px 4px 0}
+.stat b{display:block;font-size:22px;font-weight:900;color:#0f7b6c}
+.stat span{font-size:11px;color:#6b6b68;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+th{background:#0f7b6c;color:#fff;padding:9px;text-align:left;font-size:11px;letter-spacing:.4px}
+td{padding:8px 9px;border-bottom:1px solid #eee}
+tr:nth-child(even) td{background:#fafafa}
+.pill{padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700}
+.g-f{background:#fce7f3;color:#be185d}.g-m{background:#dbeafe;color:#1d4ed8}.g-n{background:#f3f4f6;color:#6b7280}
+.warn{background:#fff4e5;border:1px solid #f59e0b;color:#92400e;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:14px}
+.gate{max-width:420px;margin:80px auto;text-align:center}
+.log{font-family:ui-monospace,monospace;font-size:11px;background:#1a1a18;color:#8fd9cb;padding:14px;border-radius:10px;max-height:200px;overflow-y:auto;margin-top:12px;white-space:pre-wrap}
+.hint{font-size:12px;color:#6b6b68;margin-top:10px;line-height:1.6}
+</style></head><body>
+
+<div id="gate" class="gate card" style="display:none">
+  <h1>Restricted</h1>
+  <p class="sub">This tool is available to FlatKhoj admins only.</p>
+  <a href="index.html" style="color:#0f7b6c;font-weight:700">← Back to FlatKhoj</a>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+  <h1>NestAway Lead Extractor</h1>
+  <p class="sub">Upload exported WhatsApp group chats. Occupancy seekers are extracted, deduplicated and exported to Excel.</p>
+
+  <div class="card">
+    <label>CITY</label>
+    <select id="city">
+      <option value="mumbai">Mumbai &amp; Thane</option>
+      <option value="bengaluru">Bengaluru</option>
+      <option value="pune">Pune</option>
+    </select>
+    <div class="hint" id="cityHint">Generates two files — <b>Andheri &amp; Goregaon</b> and <b>Thane</b>.</div>
+  </div>
+
+  <div class="card">
+    <label>WHATSAPP EXPORTS (.txt)</label>
+    <div id="drop">
+      <div class="big">&#128194;</div>
+      <div class="t">Drop exported chat files here</div>
+      <div class="s">or click to browse &middot; multiple files supported</div>
+    </div>
+    <input type="file" id="picker" multiple accept=".txt" style="display:none">
+    <div id="files"></div>
+  </div>
+
+  <div class="card">
+    <div id="wm" class="warn" style="display:none"></div>
+    <div class="row">
+      <button class="btn" id="run" disabled>Extract leads &rarr;</button>
+      <button class="btn ghost" id="resetWm">Reset watermark</button>
+      <button class="btn ghost" id="clearSeen">Clear sent history</button>
+    </div>
+    <div class="log" id="log" style="display:none"></div>
+  </div>
+
+  <div class="card" id="results" style="display:none">
+    <div id="stats"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="dl1">&#11015; Andheri &amp; Goregaon</button>
+      <button class="btn" id="dl2">&#11015; Thane</button>
+    </div>
+    <div id="preview"></div>
+  </div>
+</div>
+
+<script>
+var ANDHERI = ["Aarey", "Aarey Colony", "Aarey Road", "Airport Road", "Airport Road Juhu", "Akurli Naka", "Akurli Road", "Amboli", "Amboli Naka", "Andheri", "Andheri E", "Andheri East", "Andheri East Station", "Andheri Kurla Road", "Andheri Link Road", "Andheri Sports Complex Area", "Andheri Station", "Andheri Station East", "Andheri Station West", "Andheri W", "Andheri West", "Aram Nagar", "Azad Nagar", "Azad Nagar Andheri", "Bangur Nagar", "Bangur Nagar East", "Bangur Nagar West", "Bharat Nagar Andheri", "CSIA Area", "Chadha Colony", "Chadha Market", "Chakala", "Chakala Junction", "Chakala Metro", "Charkop", "Charkop Sector 1", "Charkop Sector 2", "Charkop Sector 3", "Charkop Sector 4", "Charkop Sector 5", "Charkop Sector 6", "Charkop Sector 7", "Charkop Sector 8", "Charkop Village", "Chincholi Bunder", "D N Nagar Metro", "DN Nagar", "Dahanukarwadi", "Dattapada", "Dindoshi", "Dindoshi Village", "Ekta Nagar Jogeshwari", "Erangal", "Evershine City", "Evershine Nagar", "Film City", "Film City Area", "Film City Road", "Four Bungalows", "Gaimukh", "Ganesh Nagar Kandivali", "Gaurav Woods", "Gilbert Hill", "Gokul Township", "Goregaon", "Goregaon E", "Goregaon East", "Goregaon W", "Goregaon West", "Gulmohar Road Juhu", "Gundavali", "Hanuman Nagar Jogeshwari", "IC Colony Malad", "Infinity Mall Area", "Irla", "Irla Market", "JB Nagar", "JB Nagar Andheri", "JB Nagar Metro", "JP Nagar", "JP Road", "JVLR", "JVPD Scheme", "Jawahar Nagar Goregaon", "Jogeshwari", "Jogeshwari E", "Jogeshwari East", "Jogeshwari Station", "Jogeshwari Vikhroli Link Road", "Jogeshwari W", "Jogeshwari West", "Juhu", "Juhu Beach", "Juhu Chowpatty", "Juhu Scheme", "Juhu Tara Road", "Juhu Versova Link Road", "Kalina", "Kanchpada", "Kandivali", "Kandivali E", "Kandivali East", "Kandivali Station", "Kandivali W", "Kandivali West", "Kondivita", "Kondivita Village", "Kurar", "Kurar Village", "Laxmi Nagar Andheri", "Liberty Garden", "Link Road", "Link Road Goregaon", "Lokhandwala", "Lokhandwala Complex", "Lokhandwala Kandivali", "Lokhandwala Market", "Lower Oshiwara", "MHADA Colony Andheri", "MHB Colony", "MHB Colony Goregaon", "MIDC", "MIDC Andheri", "Madh Island", "Mahakali Caves Road", "Mahavir Nagar Kandivali", "Malad", "Malad E", "Malad East", "Malad Link Road", "Malad Station", "Malad W", "Malad West", "Malvani", "Manish Nagar", "Marol", "Marol Maroshi Road", "Marol Military Road", "Marol Naka", "Marol Naka Junction", "Marol Pipeline", "Marve", "Marve Road", "Mindspace", "Mogra Naka", "Mogra Village", "Motilal Nagar", "Motilal Nagar 1", "Motilal Nagar 2", "Motilal Nagar 3", "NESCO", "Navpada Santacruz", "Navpada Vile Parle", "Nehru Nagar Andheri", "Nehru Road Vile Parle", "New Link Road", "New Link Road Goregaon", "Nityanand Nagar", "Nutan Nagar", "Oberoi Garden City", "Orlem", "Oshiwara", "Oshiwara Colony", "Oshiwara Depot Area", "Oshiwara Market", "Pahadi Goregaon", "Parekh Nagar", "Parle", "Parle East", "Parle West", "Parsi Colony Andheri", "Poisar", "Poisar Depot", "Poisar Kandivali", "Poonam Garden", "Pushpak Nagar", "Rahul Nagar", "Railway Colony Vile Parle", "Ramabai Colony", "Ruia College Area", "Ruia Park", "SEEPZ", "SEEPZ Gate", "SV Road Kandivali", "SV Road Vile Parle", "Sadguru Nagar", "Sahar", "Sahar Market", "Sahar Road", "Sahar Village", "Saidham Nagar", "Saki Naka", "Saki Naka Junction", "Saki Vihar", "Saki Vihar Road", "Sakinaka", "Sakinaka Junction", "Samarth Nagar", "Samata Nagar", "Santacruz", "Santacruz East", "Santacruz Station", "Santacruz West", "Sarvodaya Nagar", "Seven Bungalows", "Shastri Nagar Goregaon", "Shastri Nagar Juhu", "Sher E Punjab", "Shitladevi Chawl", "Shree Nagar Jogeshwari", "Siddharth Nagar Goregaon", "Thakur Complex", "Thakur Nagar", "Thakur Village", "Tilak Road Santacruz", "Upper Oshiwara", "Vakola", "Vakola Bridge", "Vakola Market", "Vakola Pipeline Road", "Vazira Naka", "Veera Desai", "Veera Desai Industrial Estate", "Veera Desai Road", "Versova", "Versova Beach", "Versova Village", "Vijay Park", "Vile Parle", "Vile Parle E", "Vile Parle East", "Vile Parle W", "Vile Parle West", "Vinayak Nagar", "WEH", "WEH Andheri", "Western Express Highway Andheri", "Western Express Highway Goregaon", "Yari Road", "Yashodham", "Yashodham Complex"];
+var THANE   = ["Agra Road Thane", "Bhavani Nagar", "Bhiwandi", "Brahmand", "Charai", "Chirak Nagar", "Dhokali", "Diva", "Diva Station", "Ghodbunder", "Ghodbunder Road", "Hiranandani Estate Thane", "Hiranandani Thane", "Jambli Naka", "Kalwa", "Kalwa Station", "Kapurbawdi", "Kasarvadavali", "Khopat", "Kolbad", "Kolshet", "Kopri", "Lodha Palava", "Louis Wadi", "Majiwada", "Manpada", "Mumbra", "Mumbra Station", "Naupada", "Owale", "Padgha", "Panchpakhadi", "Parsik Hill", "Patlipada", "Pokhran", "Pokhran Road", "Pokhran Road 1", "Pokhran Road 2", "R C Marg", "Ram Maruti Road", "Ramnagar Thane", "Samata Nagar", "Savarkar Nagar Thane", "Savarkarnagar", "Shahapur", "Shil Phata", "Shil Road", "Shilphata", "Teen Haath Naka Thane", "Tembhi Naka", "Thane", "Thane E", "Thane East", "Thane Station", "Thane W", "Thane West", "Uthalsar", "Vartak Nagar", "Vasant Vihar Thane", "Wada", "Waghbil", "Wagle Estate", "Yeoor", "Yeoor Hills"];
+
+/* ---------- admin gate ---------- */
+(function(){
+  var u={}; try{u=JSON.parse(localStorage.getItem('fmh_user')||'{}')}catch(e){}
+  var ph=String(u.phone||'').replace(/\D/g,'').slice(-10);
+  var ok = ph==='9538584612'||ph==='9004325226'||u.isOwner===true||u.isOwner==='true';
+  document.getElementById(ok?'app':'gate').style.display='block';
+})();
+
+/* ---------- helpers ---------- */
+function log(m){var l=document.getElementById('log');l.style.display='block';l.textContent+=m+'\n';l.scrollTop=l.scrollHeight;}
+function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+
+/* seeker vs provider */
+var SEEK=[/\blooking for\b/,/\bneed(ed|s)? (a |an |1 )?(room|bed|flat|pg|place|accommodation|sharing|occupancy)/,
+ /\brequire(d|ment)?\b/,/\bsearching for\b/,/\bwant(ed)? (a |an )?(room|bed|flat|pg|place)/,
+ /\bshifting to\b/,/\brelocating to\b/,/\bin search of\b/,/\bany (room|bed|flat|pg|vacancy) available\b/,
+ /\bneed accommodation\b/,/\blooking out for\b/,/\bplace required\b/,/\broom required\b/,/\bbed required\b/];
+var PROV=[/\bavailable\b/,/\bvacancy\b/,/\bvacant\b/,/\bfor rent\b/,/\brent out\b/,/\bwe have\b/,
+ /\bi have\b/,/\baccommodation available\b/,/\bflat available\b/,/\bbed available\b/,/\broom available\b/,
+ /\bno brokerage\b.*\bavailable\b/,/\bcontact.*owner\b/,/\bready to move\b/,/\bimmediate possession\b/,
+ /\bsq\s?ft\b/,/\bcarpet area\b/,/\bfurnished flat\b/,/\brent\s*[:\-]?\s*\d{4,}/];
+
+function isSeeker(t){
+  var n=norm(t); var s=0,p=0;
+  SEEK.forEach(function(r){if(r.test(n))s++;});
+  PROV.forEach(function(r){if(r.test(n))p++;});
+  if(/\blooking for (a )?(replacement|flatmate|roommate)\b/.test(n)) p+=2; // they HAVE a place
+  return s>0 && s>=p;
+}
+
+/* areas */
+function areaHit(text,list){
+  var n=' '+norm(text)+' ';
+  for(var i=0;i<list.length;i++){
+    var a=norm(list[i]); if(a.length<4) continue;
+    if(n.indexOf(' '+a+' ')>-1) return list[i];
+  }
+  return null;
+}
+
+/* gender */
+var FEM=['priya','pooja','neha','sneha','shruti','shreya','anjali','divya','kavya','riya','isha',
+'aditi','ananya','deepika','swati','sakshi','simran','tanvi','payal','nikita','megha','rashmi','komal',
+'jyoti','sonal','kirti','preeti','ritu','sunita','geeta','asha','rekha','manisha','vaishali','pallavi',
+'aarti','bhavna','chhaya','dimple','ekta','falguni','harshita','ishita','jhanvi','kajal','lata','mansi',
+'nandini','ojaswi','pinky','rachana','sarika','trupti','urvashi','vidya','yamini','zoya','sana','fatima',
+'ayesha','sara','maria','pratika','vanita','shweta','snehal','madhuri','archana','supriya','namrata'];
+var MAL=['rahul','amit','rohit','vikas','sunil','anil','ajay','arun','deepak','gaurav','harsh','jatin',
+'karan','manish','nikhil','pankaj','rajesh','sachin','tarun','vishal','yash','abhishek','akash','ankit',
+'arjun','ashish','chirag','dinesh','ganesh','hitesh','imran','jayesh','kunal','lokesh','mahesh','naveen',
+'omkar','prashant','ravi','sagar','shubham','siddharth','suraj','tushar','umesh','varun','vivek','aditya',
+'atharv','bhavya','ajinkya','sandeep','santosh','pravin','nitin','kiran','mayur','swapnil','rupesh'];
+
+function gender(name,text,group){
+  var g=norm(group), t=norm(text);
+  if(/\b(girls?|female|ladies|women|womens)\b/.test(g)) return 'Female';
+  if(/\b(boys?|male|gents|mens)\b/.test(g)) return 'Male';
+  if(/\b(female|girl|lady|f\b)\b/.test(t)) return 'Female';
+  if(/\b(male|boy|gent|guy)\b/.test(t)) return 'Male';
+  var f=norm(name).split(' ')[0];
+  if(f){ if(FEM.indexOf(f)>-1) return 'Female'; if(MAL.indexOf(f)>-1) return 'Male'; }
+  return 'Not Clear';
+}
+
+/* name */
+function pickName(sender,text){
+  if(sender && !/^\+?\d[\d\s\-]{6,}$/.test(sender.trim())) return sender.trim();
+  var m = text.match(/\b(?:my name is|name\s*[:\-]|i am|this is|myself)\s+([A-Z][a-zA-Z]{2,15})/i);
+  if(m) return m[1];
+  return 'Not Available';
+}
+
+/* WhatsApp export parser — Android + iOS */
+function parseChat(txt){
+  var out=[], lines=txt.split(/\r?\n/), cur=null;
+  var reA=/^(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2})(?::\d{2})?\s*([ap]\.?m\.?)?\s*-\s*([^:]+):\s?([\s\S]*)$/i;
+  var reI=/^\[(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2})(?::\d{2})?\s*([ap]\.?m\.?)?\]\s*([^:]+):\s?([\s\S]*)$/i;
+  lines.forEach(function(ln){
+    var m=reA.exec(ln)||reI.exec(ln);
+    if(m){
+      if(cur) out.push(cur);
+      cur={date:m[1],time:m[2],ap:(m[3]||'').toLowerCase(),sender:m[4],text:m[5]||''};
+    } else if(cur){ cur.text += '\n'+ln; }
+  });
+  if(cur) out.push(cur);
+  return out;
+}
+
+function toDate(d,t,ap){
+  var p=d.split('/'); var dd=+p[0], mm=+p[1], yy=+p[2];
+  if(yy<100) yy+=2000;
+  var hp=t.split(':'); var h=+hp[0], mi=+hp[1];
+  if(ap){ if(ap[0]==='p'&&h<12)h+=12; if(ap[0]==='a'&&h===12)h=0; }
+  return new Date(yy,mm-1,dd,h,mi);
+}
+
+function phoneOf(sender,text){
+  var s=(sender||'').replace(/\D/g,'');
+  if(s.length>=10) return s.slice(-10);
+  var m=(text||'').match(/(?:\+?91[\s\-]?)?([6-9]\d{9})\b/);
+  return m?m[1]:null;
+}
+
+/* ---------- state ---------- */
+var FILES=[], RESULT={a:[],t:[]};
+
+function wmKey(){return 'nw_wm_'+document.getElementById('city').value;}
+function seenKey(){return 'nw_seen_'+document.getElementById('city').value;}
+function getSeen(){try{return JSON.parse(localStorage.getItem(seenKey())||'[]')}catch(e){return[]}}
+
+function showWm(){
+  var w=localStorage.getItem(wmKey()), el=document.getElementById('wm');
+  if(w){ var d=new Date(+w);
+    el.style.display='block';
+    el.innerHTML='Last extract: <b>'+d.toLocaleString('en-IN')+'</b>. Only messages from 2 hours before this point onward will be processed.';
+  } else { el.style.display='block'; el.innerHTML='No previous extract found — <b>all messages</b> in these files will be processed.'; }
+}
+
+document.getElementById('city').addEventListener('change',function(){
+  var m=this.value==='mumbai';
+  document.getElementById('cityHint').innerHTML = m
+    ? 'Generates two files — <b>Andheri &amp; Goregaon</b> and <b>Thane</b>.'
+    : 'Area lists for this city are not configured yet. Only Mumbai &amp; Thane is active.';
+  document.getElementById('dl2').style.display = m?'':'none';
+  showWm();
+});
+
+/* ---------- upload ---------- */
+var drop=document.getElementById('drop'), picker=document.getElementById('picker');
+drop.onclick=function(){picker.click()};
+drop.ondragover=function(e){e.preventDefault();drop.classList.add('over')};
+drop.ondragleave=function(){drop.classList.remove('over')};
+drop.ondrop=function(e){e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files)};
+picker.onchange=function(){addFiles(this.files)};
+
+function addFiles(fl){
+  Array.prototype.forEach.call(fl,function(f){
+    if(!/\.txt$/i.test(f.name)) return;
+    if(FILES.some(function(x){return x.name===f.name})) return;
+    FILES.push(f);
+  });
+  renderFiles();
+}
+function renderFiles(){
+  var c=document.getElementById('files'); c.innerHTML='';
+  FILES.forEach(function(f,i){
+    var d=document.createElement('div'); d.className='f';
+    d.innerHTML='<b>'+f.name+'</b><span>'+(f.size/1024).toFixed(0)+' KB &nbsp; &times;</span>';
+    d.querySelector('span').onclick=function(){FILES.splice(i,1);renderFiles()};
+    c.appendChild(d);
+  });
+  document.getElementById('run').disabled = FILES.length===0;
+}
+
+/* ---------- extraction ---------- */
+document.getElementById('run').onclick=async function(){
+  this.disabled=true; this.textContent='Working...';
+  document.getElementById('log').textContent='';
+  RESULT={a:[],t:[]};
+
+  var wm=localStorage.getItem(wmKey());
+  var cutoff = wm ? new Date(+wm - 2*3600*1000) : null;
+  if(cutoff) log('Cutoff: '+cutoff.toLocaleString('en-IN')+' (last run minus 2h)');
+  else log('No watermark — processing everything.');
+
+  var seen=getSeen(), seenSet={}; seen.forEach(function(p){seenSet[p]=1});
+  var totalMsgs=0, seekers=0, dupes=0, stale=0, noPhone=0, noArea=0;
+  var batchSeen={};
+
+  for(var i=0;i<FILES.length;i++){
+    var f=FILES[i];
+    var txt=await f.text();
+    var group=f.name.replace(/^WhatsApp Chat with /i,'').replace(/\.txt$/i,'');
+    var msgs=parseChat(txt);
+    log(f.name+' -> '+msgs.length+' messages');
+    totalMsgs+=msgs.length;
+
+    msgs.forEach(function(m){
+      var when;
+      try{ when=toDate(m.date,m.time,m.ap); }catch(e){ return; }
+      if(cutoff && when<cutoff){ stale++; return; }
+      if(!isSeeker(m.text)) return;
+      seekers++;
+      var ph=phoneOf(m.sender,m.text);
+      if(!ph){ noPhone++; return; }
+      if(seenSet[ph]||batchSeen[ph]){ dupes++; return; }
+
+      var ha=areaHit(m.text,ANDHERI), ht=areaHit(m.text,THANE);
+      if(!ha&&!ht){ noArea++; return; }
+      batchSeen[ph]=1;
+      var nm=pickName(m.sender,m.text);
+      var row={Name:nm,'Phone Number':ph,Gender:gender(nm,m.text,group),
+               Area:(ha||ht),Group:group,
+               'Posted On':when.toLocaleString('en-IN'),
+               Message:m.text.replace(/\s+/g,' ').slice(0,180)};
+      if(ha) RESULT.a.push(row); else RESULT.t.push(row);
+    });
+  }
+
+  log('---');
+  log('messages: '+totalMsgs+' | seeker posts: '+seekers);
+  log('skipped — older than cutoff: '+stale+', no phone: '+noPhone+', no matching area: '+noArea+', already sent: '+dupes);
+  log('EXTRACTED — Andheri&Goregaon: '+RESULT.a.length+' | Thane: '+RESULT.t.length);
+
+  document.getElementById('stats').innerHTML=
+    '<div class="stat"><b>'+RESULT.a.length+'</b><span>ANDHERI &amp; GOREGAON</span></div>'+
+    '<div class="stat"><b>'+RESULT.t.length+'</b><span>THANE</span></div>'+
+    '<div class="stat"><b>'+dupes+'</b><span>ALREADY SENT</span></div>'+
+    '<div class="stat"><b>'+totalMsgs+'</b><span>MESSAGES READ</span></div>';
+
+  var pv=RESULT.a.concat(RESULT.t).slice(0,25);
+  var html='<table><tr><th>Name</th><th>Phone</th><th>Gender</th><th>Area</th><th>Group</th></tr>';
+  pv.forEach(function(r){
+    var g=r.Gender==='Female'?'g-f':r.Gender==='Male'?'g-m':'g-n';
+    html+='<tr><td>'+r.Name+'</td><td>'+r['Phone Number']+'</td><td><span class="pill '+g+'">'+r.Gender+
+          '</span></td><td>'+r.Area+'</td><td>'+r.Group+'</td></tr>';
+  });
+  html+='</table>';
+  if(pv.length===0) html='<p class="hint">Nothing extracted. Check the log above — if "no matching area" is high, the posts may not name areas we recognise.</p>';
+  else if(RESULT.a.length+RESULT.t.length>25) html+='<p class="hint">Showing first 25. Download for the full list.</p>';
+  document.getElementById('preview').innerHTML=html;
+  document.getElementById('results').style.display='block';
+
+  this.disabled=false; this.textContent='Extract leads \u2192';
+};
+
+/* ---------- export ---------- */
+function stamp(){var d=new Date();
+  return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2)+'_'+
+         ('0'+d.getHours()).slice(-2)+('0'+d.getMinutes()).slice(-2);}
+
+function commitRun(rows){
+  var seen=getSeen();
+  rows.forEach(function(r){seen.push(r['Phone Number'])});
+  seen=seen.slice(-8000);
+  localStorage.setItem(seenKey(),JSON.stringify(seen));
+  localStorage.setItem(wmKey(),String(Date.now()));
+  showWm();
+}
+
+function download(rows,label){
+  if(!rows.length){alert('No leads to export for '+label);return;}
+  var gen=new Date().toLocaleString('en-IN');
+  var data=rows.map(function(r){return {Name:r.Name,'Phone Number':r['Phone Number'],Gender:r.Gender}});
+  var ws=XLSX.utils.json_to_sheet(data);
+  XLSX.utils.sheet_add_aoa(ws,[['Generated: '+gen+'  |  '+label+'  |  '+rows.length+' leads']],{origin:'A'+(data.length+3)});
+  ws['!cols']=[{wch:24},{wch:16},{wch:12}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Leads');
+  XLSX.writeFile(wb,'NestAway_'+label.replace(/[^A-Za-z]/g,'')+'_'+stamp()+'.xlsx');
+  commitRun(rows);
+}
+
+document.getElementById('dl1').onclick=function(){download(RESULT.a,'Andheri & Goregaon')};
+document.getElementById('dl2').onclick=function(){download(RESULT.t,'Thane')};
+
+document.getElementById('resetWm').onclick=function(){
+  if(!confirm('Clear the watermark? The next run will process every message in the uploaded files.'))return;
+  localStorage.removeItem(wmKey()); showWm();
+};
+document.getElementById('clearSeen').onclick=function(){
+  if(!confirm('Clear sent history? Previously exported numbers can then appear again.'))return;
+  localStorage.removeItem(seenKey()); alert('Cleared.');
+};
+
+showWm();
+</script></body></html>
