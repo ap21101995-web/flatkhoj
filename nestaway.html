@@ -118,22 +118,56 @@ var THANE   = ["Agra Road Thane", "Bhavani Nagar", "Bhiwandi", "Brahmand", "Char
 function log(m){var l=document.getElementById('log');l.style.display='block';l.textContent+=m+'\n';l.scrollTop=l.scrollHeight;}
 function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
 
-/* seeker vs provider */
-var SEEK=[/\blooking for\b/,/\bneed(ed|s)? (a |an |1 )?(room|bed|flat|pg|place|accommodation|sharing|occupancy)/,
- /\brequire(d|ment)?\b/,/\bsearching for\b/,/\bwant(ed)? (a |an )?(room|bed|flat|pg|place)/,
- /\bshifting to\b/,/\brelocating to\b/,/\bin search of\b/,/\bany (room|bed|flat|pg|vacancy) available\b/,
- /\bneed accommodation\b/,/\blooking out for\b/,/\bplace required\b/,/\broom required\b/,/\bbed required\b/];
-var PROV=[/\bavailable\b/,/\bvacancy\b/,/\bvacant\b/,/\bfor rent\b/,/\brent out\b/,/\bwe have\b/,
- /\bi have\b/,/\baccommodation available\b/,/\bflat available\b/,/\bbed available\b/,/\broom available\b/,
- /\bno brokerage\b.*\bavailable\b/,/\bcontact.*owner\b/,/\bready to move\b/,/\bimmediate possession\b/,
- /\bsq\s?ft\b/,/\bcarpet area\b/,/\bfurnished flat\b/,/\brent\s*[:\-]?\s*\d{4,}/];
+/* seeker vs provider ------------------------------------------------
+   Order matters. A hard provider signal wins outright, because an
+   advert saying "looking for tenants" would otherwise read as a seeker. */
+
+// unambiguous "I am offering a place" phrases
+var HARD_PROV=[
+ /\blooking for (a )?(tenant|tenants|flatmate|flat mate|roommate|room mate|paying guest|pg|girl|boy|female|male|someone|anyone|candidate)s? (to |for |who )/,
+ /\b(tenant|flatmate|roommate|paying guest)s? (wanted|required|needed)\b/,
+ /\b(room|bed|flat|pg|accommodation|occupancy|sharing|vacancy)\s*(is |are )?(available|vacant)\b/,
+ /\b(available|vacant)\s*(from|now|immediately|for)\b/,
+ /\bvacanc(y|ies)\b/,
+ /\bfor rent\b/,/\brent out\b/,/\bon rent\b/,/\bto let\b/,
+ /\bcarpet area\b/,/\bsq\s?\.?\s?ft\b/,/\bbuilt ?up area\b/,
+ /\bdeposit\s*[:\-]?\s*\d/,/\brent\s*[:\-]?\s*(rs\.?|inr|₹)?\s*\d{4,}/,
+ /\bbrokerage\s*[:\-]?\s*\d/,/\bone month brokerage\b/,
+ /\bcontact (the )?owner\b/,/\bdirect owner\b/,/\bimmediate possession\b/,
+ /\bfully furnished\b.*\b(flat|room|bhk)\b/,
+ /\b\d\s?bhk\b.*\b(available|rent|vacant)\b/,
+ /\bshifting out\b/,/\bvacating\b/,/\bleaving the (flat|room|pg)\b/,
+ /\bneed (a )?(replacement|someone to replace)\b/
+];
+
+// unambiguous "I want a place" phrases
+var HARD_SEEK=[
+ /\b(looking|searching|hunting) for (a |an |1 )?(single|double|triple|shared|sharing )?(room|bed|flat|pg|place|accommodation|occupancy|space|paying guest)\b/,
+ /\bneed(ed|s)? (a |an |1 )?(single|double|triple|shared|sharing )?(room|bed|flat|pg|place|accommodation|occupancy|space)\b/,
+ /\b(room|bed|flat|pg|place|accommodation|occupancy|space)\s*(is )?(required|needed|wanted)\b/,
+ /\brequire(d)? (a |an |1 )?(room|bed|flat|pg|place|accommodation|occupancy)\b/,
+ /\bin search of (a |an )?(room|bed|flat|pg|place|accommodation)\b/,
+ /\b(want|wanted) (a |an |1 )?(room|bed|flat|pg|place|accommodation)\b/,
+ /\bany (room|bed|flat|pg|place|accommodation|vacancy)\b.*\b(available|vacant)\b.*\?/,
+ /\blooking out for (a |an )?(room|bed|flat|pg|place)\b/,
+ /\bneed accommodation\b/,/\baccommodation required\b/,
+ /\b(shifting|relocating|moving) to\b/,
+ /\bcan anyone (help|suggest|share)\b.*\b(room|flat|pg|place)\b/
+];
 
 function isSeeker(t){
-  var n=norm(t); var s=0,p=0;
-  SEEK.forEach(function(r){if(r.test(n))s++;});
-  PROV.forEach(function(r){if(r.test(n))p++;});
-  if(/\blooking for (a )?(replacement|flatmate|roommate)\b/.test(n)) p+=2; // they HAVE a place
-  return s>0 && s>=p;
+  var n=norm(t);
+  var hp=0, hs=0;
+  HARD_PROV.forEach(function(r){ if(r.test(n)) hp++; });
+  HARD_SEEK.forEach(function(r){ if(r.test(n)) hs++; });
+
+  // an offer phrase beats a want phrase — adverts often contain both
+  if(hp>0 && hp>=hs) return false;
+  if(hs>0) return true;
+
+  // nothing decisive: budget talk without any offer language leans seeker
+  if(/\bbudget\b/.test(n) && hp===0) return true;
+  return false;
 }
 
 /* areas */
@@ -211,11 +245,20 @@ function toDate(d,t,ap){
 }
 
 function phoneOf(sender,text){
-  var s=(sender||'').replace(/\D/g,'');
-  if(s.length>=10) return s.slice(-10);
+  // 1. sender line is a number -> keep it in full, including country code
+  var raw=(sender||'').trim();
+  if(/^\+?\d[\d\s\-()]{6,}$/.test(raw)){
+    var d=raw.replace(/[^\d+]/g,'');
+    if(d[0]!=='+') d='+'+d;
+    return d;
+  }
+  // 2. otherwise take a number written inside the post; +91 is implied
   var m=(text||'').match(/(?:\+?91[\s\-]?)?([6-9]\d{9})\b/);
-  return m?m[1]:null;
+  if(m) return '+91'+m[1];
+  return null;
 }
+
+function phoneKey(p){ return (p||'').replace(/\D/g,'').slice(-10); }
 
 /* ---------- state ---------- */
 var FILES=[], RESULT={a:[],t:[]};
@@ -323,11 +366,12 @@ document.getElementById('run').onclick=async function(){
       seekers++;
       var ph=phoneOf(m.sender,m.text);
       if(!ph){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
-      if(batchSeen[ph]){ repeatPost++; return; }
+      var pk=phoneKey(ph);
+      if(batchSeen[pk]){ repeatPost++; return; }
 
       var ha=areaHit(m.text,ANDHERI), ht=areaHit(m.text,THANE);
       if(!ha&&!ht){ noArea++; return; }
-      batchSeen[ph]=1;
+      batchSeen[pk]=1;
       var nm=pickName(m.sender,m.text);
       var row={Name:nm,'Phone Number':ph,Gender:gender(nm,m.text,group),
                Area:(ha||ht),Group:group,
