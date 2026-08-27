@@ -155,14 +155,23 @@ var HARD_PROV=[
  /\bcarpet area\b/,/\bsq\s?\.?\s?ft\b/,/\bbuilt ?up area\b/,
  /\bdeposit\s*[:\-]?\s*\d/,/\brent\s*[:\-]?\s*(?:rs\.?|inr)?\s*\d{4,}/,
  /\bbrokerage\s*[:\-]?\s*\d/,/\bone month brokerage\b/,
- /\bcontact (?:the )?owner\b/,/\bdirect owner\b/,/\bimmediate possession\b/,
+ /\bcontact (?:the )?owner\b/,
+ /\b(?:share|send|dm|drop|whatsapp) (?:me )?your (?:requirement|requirements|details|budget)\b/,
+ /\bproperty updates?\b/,/\bflats? (?:&|and) propert/,
+ /\bdaily updates?\b/,/\bjoin (?:our|the) (?:group|channel)\b/,
+ /\bfor more (?:details|options|info)[,\s]*(?:dm|ping|contact|call|whatsapp)\b/,
+ /\bwe (?:have|provide|offer|deal in)\b[^.]{0,40}\b(?:flats?|rooms?|pg|propert|accommodation)\b/,
+ /\bgenuine (?:owner|clients?|enquir)/,/\bno brokerage charges?\b/,/\bdirect owner\b/,/\bimmediate possession\b/,
  /\bfully furnished\b/,/\bsemi furnished\b/,
  /\b(?:tenant|flatmate|roommate|paying guest)s?\s+(?:wanted|required|needed)\b/
 ];
 
 // leaving their own place and needing someone to take over
 // requests that have nothing to do with accommodation
-var NOT_HOUSING=/\b(tiffin|dabba|cook|maid|bai|servant|driver|cleaning|laundry|internship|intern|hiring|freelanc|job|vacancy for|candidate for|designer|developer|artist|blender|photographer|tutor|gym|salon|doctor|dentist|lawyer|ca\b|loan|insurance|sell|selling|buy|second hand|furniture|mattress|fridge|washing machine)\b/;
+var NOT_HOUSING=/\b(tiffin|dabba|cook|maid|bai|servant|driver|cleaning|laundry|internship|intern|hiring|freelanc|job opening|vacancy for|candidate for|designer|developer|artist|blender|photographer|tutor|gym|salon|dentist|loan|insurance|second hand|furniture|mattress|fridge|washing machine|almirah|cupboard|sofa|for sale|selling my)\b/;
+
+// lift shares, tickets, travel plans — never accommodation leads
+var TRAVEL=/\b(?:travel+ing|travell?ing to|road trip|carpool|car pool|cab share|seats? (?:are )?available|seat avl|ticket|tickets|pnr|train name|flight|jyotirlinga|drop till|pick ?up from .* drop)\b/;
 
 // advertising shape: invites contact and quotes a price
 var ADVERT_SHAPE=/\b(ping me|dm me|dmm me|message me|contact me|whatsapp me|reach out to me|interested (?:people |ppl )?(?:can )?(?:ping|dm|contact)|inbox me)\b/;
@@ -213,6 +222,12 @@ var ADVERT_EVIDENCE=[
  /\bstep into\b/,/\bpremium apartment\b/,/\bluxur(?:y|ious)\b/,
  /\bamenities\b/,
  /\bcontact (?:the )?owner\b/,
+ /\b(?:share|send|dm|drop|whatsapp) (?:me )?your (?:requirement|requirements|details|budget)\b/,
+ /\bproperty updates?\b/,/\bflats? (?:&|and) propert/,
+ /\bdaily updates?\b/,/\bjoin (?:our|the) (?:group|channel)\b/,
+ /\bfor more (?:details|options|info)[,\s]*(?:dm|ping|contact|call|whatsapp)\b/,
+ /\bwe (?:have|provide|offer|deal in)\b[^.]{0,40}\b(?:flats?|rooms?|pg|propert|accommodation)\b/,
+ /\bgenuine (?:owner|clients?|enquir)/,/\bno brokerage charges?\b/,
  /\b(?:ping|dm|message|contact|whatsapp) me (?:up )?(?:at|on)\s*\+?\d/,
  /\b(?:roommate|flatmate|tenant|paying guest)s? (?:required|wanted|needed)\b/
 ];
@@ -225,6 +240,8 @@ function classify(t){
 
   // 1. not about accommodation at all
   if(NOT_HOUSING.test(n)) return 'provider';
+  if(TRAVEL.test(n) && !/\b(?:room|flat|pg|bhk|occupancy|accommodation|flatmate)\b/.test(n)) return 'provider';
+  if(/\b(?:seats?|ticket)\b/.test(n) && /\b(?:available|avl|join)\b/.test(n)) return 'provider';
 
   // 2. they call a place their own, or are leaving one
   var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
