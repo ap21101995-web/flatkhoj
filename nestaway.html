@@ -72,6 +72,16 @@ tr:nth-child(even) td{background:#fafafa}
   </div>
 
   <div class="card">
+    <label>CONTACTS FILE <span style="font-weight:500;color:#6b6b68">(optional &mdash; recovers numbers for people saved in your phone)</span></label>
+    <div id="cdrop" style="border:2px dashed #e0d8b8;border-radius:12px;padding:18px;text-align:center;background:#fffdf3;cursor:pointer">
+      <div style="font-size:13px;font-weight:700;color:#8a6d1f">Drop a contacts .csv or .vcf here</div>
+      <div style="font-size:11px;color:#6b6b68;margin-top:4px">Google Contacts &rarr; Export &rarr; CSV, or iPhone vCard</div>
+    </div>
+    <input type="file" id="cpicker" accept=".csv,.vcf,.txt" style="display:none">
+    <div id="cinfo" class="hint"></div>
+  </div>
+
+  <div class="card">
     <label>EXTRACT FROM</label>
     <div class="row" style="margin-bottom:10px">
       <select id="mode" style="max-width:300px">
@@ -136,6 +146,12 @@ var HARD_PROV=[
  /\b(?:room|bed|flat|pg|accommodation|occupancy|sharing|vacancy|bhk)\s*(?:is |are )?(?:available|vacant)\b/,
  /\b(?:available|vacant)\s*(?:from|now|immediately|for|in)\b/,
  /\bvacanc(?:y|ies)\b/,/\brent out\b/,/\bto let\b/,
+ /\brent\s*[-:]?\s*\d+(?:\.\d+)?\s*(?:l|lakh|lacs?|k|thousand)\b/,
+ /\b\d+(?:\.\d+)?\s*(?:l|lakh|lacs?)\b[^.]{0,20}\brent\b/,
+ /\brent (?:out )?(?:the )?entire (?:flat|house|place)\b/,
+ /\bneed to rent (?:out )?(?:the )?entire\b/,
+ /\bplease (?:don'?t|do not|dont) ask for\b/,
+ /\bno bachelors?\b/,/\bfamily only\b/,/\bbachelors? allowed\b/,
  /\bcarpet area\b/,/\bsq\s?\.?\s?ft\b/,/\bbuilt ?up area\b/,
  /\bdeposit\s*[:\-]?\s*\d/,/\brent\s*[:\-]?\s*(?:rs\.?|inr)?\s*\d{4,}/,
  /\bbrokerage\s*[:\-]?\s*\d/,/\bone month brokerage\b/,
@@ -185,6 +201,12 @@ var ADVERT_EVIDENCE=[
  /\d{4,}\s*\/?-/,
  /\d{4,}\s*(?:per month|pm|monthly|p\/m|\/month)/,
  /₹\s*\d{3,}/,
+ /\brent\s*[-:]?\s*\d+(?:\.\d+)?\s*(?:l|lakh|lacs?|k|thousand)\b/,
+ /\b\d+(?:\.\d+)?\s*(?:l|lakh|lacs?)\b[^.]{0,20}\brent\b/,
+ /\brent (?:out )?(?:the )?entire (?:flat|house|place)\b/,
+ /\bneed to rent (?:out )?(?:the )?entire\b/,
+ /\bplease (?:don'?t|do not|dont) ask for\b/,
+ /\bno bachelors?\b/,/\bfamily only\b/,/\bbachelors? allowed\b/,
  /\bcarpet area\b/,/\bsq\s?\.?\s?ft\b/,/\bbuilt ?up area\b/,
  /\b(?:fully|semi)[\s-]?furnished\b/,
  /\bimmediate (?:possession|occupancy)\b/,
@@ -331,10 +353,87 @@ function phoneOf(sender,text){
     if(d[0]!=='+') d='+'+d;
     return d;
   }
-  // 2. otherwise take a number written inside the post; +91 is implied
+  // 2. a number written inside the post; +91 is implied
   var m=(text||'').match(/(?:\+?91[\s\-]?)?([6-9]\d{9})\b/);
   if(m) return '+91'+m[1];
+  // 3. sender is a saved contact -> look them up in the uploaded contacts file
+  var key=cnorm(raw.replace(/^~\s*/,''));
+  if(key && CONTACTS[key]) return CONTACTS[key];
   return null;
+}
+
+var CONTACTS={};
+
+// never sell our own people or our own brokers as leads
+var BLOCK_NUMBERS=['9538584612','9004325226','9506146000','9960395782',
+ '9967085352','8082077375','8949005824','9326924131','6266495488',
+ '8779721715','9136862603'];
+var BLOCK_NAME=/\b(broker|flatkhoj|admin|agent|realt|properties|estate|hommiiz|coliving)\b/i;
+
+function cnorm(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+
+function parseContacts(txt,fname){
+  var n=0;
+  if(/\.vcf$/i.test(fname)||/BEGIN:VCARD/i.test(txt)){
+    txt.split(/BEGIN:VCARD/i).forEach(function(card){
+      var fn=card.match(/\nFN[^:]*:(.+)/i);
+      var tel=card.match(/\nTEL[^:]*:([+\d\s\-()]+)/i);
+      if(fn&&tel){
+        var d=tel[1].replace(/[^\d+]/g,'');
+        if(d.replace(/\D/g,'').length>=10){
+          CONTACTS[cnorm(fn[1])]= d[0]==='+'?d:'+91'+d.replace(/\D/g,'').slice(-10); n++;
+        }
+      }
+    });
+    return n;
+  }
+  var lines=txt.split(/\r?\n/).filter(function(l){return l.trim()});
+  if(!lines.length) return 0;
+  function cells(l){
+    var out=[],cur='',q=false;
+    for(var i=0;i<l.length;i++){var ch=l[i];
+      if(ch==='"'){q=!q;continue;}
+      if(ch===','&&!q){out.push(cur);cur='';continue;}
+      cur+=ch;}
+    out.push(cur); return out;
+  }
+  var hdr=cells(lines[0]).map(function(h){return h.replace(/^\uFEFF/,'').toLowerCase().trim()});
+  function col(re){ for(var i=0;i<hdr.length;i++) if(re.test(hdr[i])) return i; return -1; }
+  var iFirst=col(/^first name$/), iMid=col(/^middle name$/), iLast=col(/^last name$/);
+  var iFile=col(/^file as$/), iNick=col(/^nickname$/);
+  var iName=col(/^(name|full name|display name)$/);
+  var pis=[]; hdr.forEach(function(h,i){ if(/phone\s*\d*\s*-\s*value|^phone$|^mobile$|^tel/.test(h)) pis.push(i); });
+  if(!pis.length) pis=hdr.map(function(h,i){return /phone|mobile|tel/.test(h)?i:-1}).filter(function(i){return i>=0});
+  if(iName<0 && iFirst<0) return 0;
+  if(!pis.length) return 0;
+
+  for(var r=1;r<lines.length;r++){
+    var cl=cells(lines[r]);
+    var ph=null;
+    for(var j=0;j<pis.length;j++){
+      var raw=(cl[pis[j]]||'').split(':::')[0].trim();
+      var d=raw.replace(/[^\d+]/g,'');
+      var digits=d.replace(/\D/g,'');
+      if(digits.length>=10){ ph = d[0]==='+'? d : '+91'+digits.slice(-10); break; }
+    }
+    if(!ph) continue;
+    var names=[];
+    if(iName>=0) names.push(cl[iName]);
+    if(iFirst>=0){
+      var full=[cl[iFirst],iMid>=0?cl[iMid]:'',iLast>=0?cl[iLast]:'']
+                .map(function(x){return (x||'').trim()}).filter(Boolean).join(' ');
+      names.push(full); names.push(cl[iFirst]);
+    }
+    if(iFile>=0) names.push(cl[iFile]);
+    if(iNick>=0) names.push(cl[iNick]);
+    var added=false;
+    names.forEach(function(nm){
+      var k=cnorm(nm);
+      if(k && k.length>1){ CONTACTS[k]=ph; added=true; }
+    });
+    if(added) n++;
+  }
+  return n;
 }
 
 function phoneKey(p){ return (p||'').replace(/\D/g,'').slice(-10); }
@@ -389,6 +488,22 @@ document.getElementById('city').addEventListener('change',function(){
   showWm();
 });
 
+/* ---------- contacts upload ---------- */
+var cdrop=document.getElementById('cdrop'), cpicker=document.getElementById('cpicker');
+cdrop.onclick=function(){cpicker.click()};
+cdrop.ondragover=function(e){e.preventDefault();cdrop.style.background='#fbf3d9'};
+cdrop.ondragleave=function(){cdrop.style.background='#fffdf3'};
+cdrop.ondrop=function(e){e.preventDefault();cdrop.style.background='#fffdf3';loadContacts(e.dataTransfer.files[0])};
+cpicker.onchange=function(){loadContacts(this.files[0])};
+
+async function loadContacts(f){
+  if(!f) return;
+  var n=parseContacts(await f.text(), f.name);
+  document.getElementById('cinfo').innerHTML = n
+    ? '<b>'+n+'</b> contacts loaded from '+f.name+' — saved names will now resolve to numbers.'
+    : 'Could not read '+f.name+'. Expected a CSV with a name column and a phone column, or a .vcf file.';
+}
+
 /* ---------- upload ---------- */
 var drop=document.getElementById('drop'), picker=document.getElementById('picker');
 drop.onclick=function(){picker.click()};
@@ -426,7 +541,7 @@ document.getElementById('run').onclick=async function(){
   if(cutoff) log('Cutoff: '+cutoff.toLocaleString('en-IN'));
   else log('No cutoff — processing every message in the files.');
 
-  var totalMsgs=0, seekers=0, repeatPost=0, stale=0, noPhone=0, noArea=0, namedNoPhone=0;
+  var totalMsgs=0, seekers=0, repeatPost=0, stale=0, noPhone=0, noArea=0, namedNoPhone=0, blocked=0;
   var batchSeen={};
 
   for(var i=0;i<FILES.length;i++){
@@ -446,6 +561,8 @@ document.getElementById('run').onclick=async function(){
       seekers++;
       var ph=phoneOf(m.sender,m.text);
       if(!ph){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
+      if(BLOCK_NUMBERS.indexOf(phoneKey(ph))>-1){ blocked++; return; }
+      if(BLOCK_NAME.test(m.sender||'')){ blocked++; return; }
       var pk=phoneKey(ph);
       if(batchSeen[pk]){ repeatPost++; return; }
 
@@ -467,6 +584,7 @@ document.getElementById('run').onclick=async function(){
   log('skipped — no phone number found: '+noPhone+' (of which '+namedNoPhone+' had a name but no number)');
   log('skipped — area not in our list: '+noArea);
   log('collapsed — duplicate posts by the same number: '+repeatPost);
+  log('skipped — our own team or brokers: '+blocked);
   log('EXTRACTED — Andheri&Goregaon: '+RESULT.a.length+' | Thane: '+RESULT.t.length);
 
   renderReview();
