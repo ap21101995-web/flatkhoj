@@ -89,7 +89,6 @@ tr:nth-child(even) td{background:#fafafa}
     <div class="row">
       <button class="btn" id="run" disabled>Extract leads &rarr;</button>
       <button class="btn ghost" id="resetWm">Reset watermark</button>
-      <button class="btn ghost" id="clearSeen">Clear sent history</button>
     </div>
     <div class="log" id="log" style="display:none"></div>
   </div>
@@ -222,8 +221,6 @@ function phoneOf(sender,text){
 var FILES=[], RESULT={a:[],t:[]};
 
 function wmKey(){return 'nw_wm_'+document.getElementById('city').value;}
-function seenKey(){return 'nw_seen_'+document.getElementById('city').value;}
-function getSeen(){try{return JSON.parse(localStorage.getItem(seenKey())||'[]')}catch(e){return[]}}
 
 function computeCutoff(){
   var mode=document.getElementById('mode').value;
@@ -307,8 +304,7 @@ document.getElementById('run').onclick=async function(){
   if(cutoff) log('Cutoff: '+cutoff.toLocaleString('en-IN'));
   else log('No cutoff — processing every message in the files.');
 
-  var seen=getSeen(), seenSet={}; seen.forEach(function(p){seenSet[p]=1});
-  var totalMsgs=0, seekers=0, prevSent=0, repeatPost=0, stale=0, noPhone=0, noArea=0, namedNoPhone=0;
+  var totalMsgs=0, seekers=0, repeatPost=0, stale=0, noPhone=0, noArea=0, namedNoPhone=0;
   var batchSeen={};
 
   for(var i=0;i<FILES.length;i++){
@@ -327,7 +323,6 @@ document.getElementById('run').onclick=async function(){
       seekers++;
       var ph=phoneOf(m.sender,m.text);
       if(!ph){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
-      if(seenSet[ph]){ prevSent++; return; }
       if(batchSeen[ph]){ repeatPost++; return; }
 
       var ha=areaHit(m.text,ANDHERI), ht=areaHit(m.text,THANE);
@@ -347,8 +342,7 @@ document.getElementById('run').onclick=async function(){
   log('skipped — older than cutoff: '+stale);
   log('skipped — no phone number found: '+noPhone+' (of which '+namedNoPhone+' had a name but no number)');
   log('skipped — area not in our list: '+noArea);
-  log('collapsed — same person posted again in this batch: '+repeatPost);
-  log('skipped — exported in a previous run: '+prevSent);
+  log('collapsed — duplicate posts by the same number: '+repeatPost);
   log('EXTRACTED — Andheri&Goregaon: '+RESULT.a.length+' | Thane: '+RESULT.t.length);
 
   var pv=RESULT.a.concat(RESULT.t).slice(0,25);
@@ -372,11 +366,7 @@ function stamp(){var d=new Date();
   return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2)+'_'+
          ('0'+d.getHours()).slice(-2)+('0'+d.getMinutes()).slice(-2);}
 
-function commitRun(rows){
-  var seen=getSeen();
-  rows.forEach(function(r){seen.push(r['Phone Number'])});
-  seen=seen.slice(-8000);
-  localStorage.setItem(seenKey(),JSON.stringify(seen));
+function commitRun(){
   localStorage.setItem(wmKey(),String(Date.now()));
   showWm();
 }
@@ -391,7 +381,7 @@ function download(rows,label){
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Leads');
   XLSX.writeFile(wb,'NestAway_'+label.replace(/[^A-Za-z]/g,'')+'_'+stamp()+'.xlsx');
-  commitRun(rows);
+  commitRun();
 }
 
 document.getElementById('dl1').onclick=function(){download(RESULT.a,'Andheri & Goregaon')};
@@ -400,10 +390,6 @@ document.getElementById('dl2').onclick=function(){download(RESULT.t,'Thane')};
 document.getElementById('resetWm').onclick=function(){
   if(!confirm('Clear the watermark? The next run will process every message in the uploaded files.'))return;
   localStorage.removeItem(wmKey()); showWm();
-};
-document.getElementById('clearSeen').onclick=function(){
-  if(!confirm('Clear sent history? Previously exported numbers can then appear again.'))return;
-  localStorage.removeItem(seenKey()); alert('Cleared.');
 };
 
 showWm();
