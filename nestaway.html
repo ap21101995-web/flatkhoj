@@ -116,6 +116,7 @@ var THANE   = ["Agra Road Thane", "Bhavani Nagar", "Bhiwandi", "Brahmand", "Char
 
 /* ---------- helpers ---------- */
 function log(m){var l=document.getElementById('log');l.style.display='block';l.textContent+=m+'\n';l.scrollTop=l.scrollHeight;}
+function normP(s){return (s||'').toLowerCase().replace(/\s+/g,' ').trim();}
 function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
 
 /* seeker vs provider ------------------------------------------------
@@ -177,17 +178,21 @@ function objectAfterIntent(n){
 
 // markers only an advertiser uses — specs, pricing, marketing language
 var ADVERT_EVIDENCE=[
- /\brent\s*[:\-]?\s*(?:rs\.?|inr)?\s*\d{3,}/,
- /\bdeposit\s*[:\-]?\s*\d/,
+ /\brent\s*[:\-]?\s*(?:rs\.?|inr|₹)?\s*\d{3,}/,
+ /\bdeposit\s*[:\-]?\s*(?:rs\.?|inr|₹)?\s*\d/,
+ /\d+\s*k?\s*(?:rs\.?|₹)?\s*(?:deposit|security)/,
  /\bbrokerage\s*[:\-]?\s*\d/,
- /\d{4,}\s*(?:\/-|per month|pm|monthly|p\/m)\b/,
+ /\d{4,}\s*\/?-/,
+ /\d{4,}\s*(?:per month|pm|monthly|p\/m|\/month)/,
+ /₹\s*\d{3,}/,
  /\bcarpet area\b/,/\bsq\s?\.?\s?ft\b/,/\bbuilt ?up area\b/,
  /\b(?:fully|semi)[\s-]?furnished\b/,
  /\bimmediate (?:possession|occupancy)\b/,
  /\bstep into\b/,/\bpremium apartment\b/,/\bluxur(?:y|ious)\b/,
- /\bamenities\b/,/\bmove[\s-]?in (?:ready|date)\b/,
- /\bcontact (?:the )?owner\b/,/\bno brokerage\b.*\b(?:available|occupancy)\b/,
- /\bwalking distance from\b.*\bmetro\b.*\b(?:rent|occupancy|furnished)\b/
+ /\bamenities\b/,
+ /\bcontact (?:the )?owner\b/,
+ /\b(?:ping|dm|message|contact|whatsapp) me (?:up )?(?:at|on)\s*\+?\d/,
+ /\b(?:roommate|flatmate|tenant|paying guest)s? (?:required|wanted|needed)\b/
 ];
 
 // first-person statements of wanting a place
@@ -205,8 +210,9 @@ function classify(t){
 
   var obj=objectAfterIntent(n);
 
+  var np=normP(t);
   var adv=0;
-  ADVERT_EVIDENCE.forEach(function(r){ if(r.test(n)) adv++; });
+  ADVERT_EVIDENCE.forEach(function(r){ if(r.test(np)||r.test(n)) adv++; });
   var hard=0;
   HARD_PROV.forEach(function(r){ if(r.test(n)) hard++; });
 
@@ -282,11 +288,14 @@ function pickName(sender,text){
   // saved contact -> sender is already a name
   if(s && !/^\+?\d[\d\s\-]{6,}$/.test(s)) return s;
   // otherwise pull a name out of the post itself
-  var m = text.match(/\b(?:my name is|name\s*[:\-]|i am|i'm|this is|myself|regards|thanks)[\s,\-]+([A-Z][a-zA-Z]{2,15})/i);
-  if(m) return m[1];
+  var STOP=/^(looking|searching|hunting|need|needed|require|required|want|wanted|interested|currently|really|fairly|urgently|planning|shifting|moving|working|female|male|from|here|also|still|glad|happy|able|going|trying|available|there|this|that|just|very|quite|good|fine|okay)$/i;
+  var m = text.match(/\b(?:my name is|name\s*[:\-]|myself|this is)[\s,\-]+([A-Z][a-zA-Z]{2,15})/i);
+  if(m && !STOP.test(m[1])) return m[1];
+  m = text.match(/\b(?:i am|i'm|im)\s+([A-Z][a-zA-Z]{2,15})\b/);
+  if(m && !STOP.test(m[1])) return m[1];
   var tail = text.trim().split(/\n/).pop().trim();
   var sig = tail.match(/(?:^|[\-\u2013,])\s*([A-Z][a-z]{2,14})\s*$/);
-  if(sig) return sig[1];
+  if(sig && !STOP.test(sig[1])) return sig[1];
   return 'Not Available';
 }
 
