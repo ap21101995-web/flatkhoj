@@ -72,6 +72,19 @@ tr:nth-child(even) td{background:#fafafa}
   </div>
 
   <div class="card">
+    <label>EXTRACT FROM</label>
+    <div class="row" style="margin-bottom:10px">
+      <select id="mode" style="max-width:300px">
+        <option value="default">Default &mdash; since last extract (minus 2 hrs)</option>
+        <option value="hours">Last N hours from now</option>
+        <option value="all">Everything in the files</option>
+      </select>
+      <span id="hrsWrap" style="display:none">
+        <input type="number" id="hrs" value="24" min="1" max="8760"
+          style="width:110px;padding:12px;border:2px solid #e0e0dc;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit">
+        <span style="font-size:13px;color:#6b6b68;font-weight:600">hours back</span>
+      </span>
+    </div>
     <div id="wm" class="warn" style="display:none"></div>
     <div class="row">
       <button class="btn" id="run" disabled>Extract leads &rarr;</button>
@@ -213,13 +226,41 @@ function wmKey(){return 'nw_wm_'+document.getElementById('city').value;}
 function seenKey(){return 'nw_seen_'+document.getElementById('city').value;}
 function getSeen(){try{return JSON.parse(localStorage.getItem(seenKey())||'[]')}catch(e){return[]}}
 
-function showWm(){
-  var w=localStorage.getItem(wmKey()), el=document.getElementById('wm');
-  if(w){ var d=new Date(+w);
-    el.style.display='block';
-    el.innerHTML='Last extract: <b>'+d.toLocaleString('en-IN')+'</b>. Only messages from 2 hours before this point onward will be processed.';
-  } else { el.style.display='block'; el.innerHTML='No previous extract found — <b>all messages</b> in these files will be processed.'; }
+function computeCutoff(){
+  var mode=document.getElementById('mode').value;
+  if(mode==='all') return null;
+  if(mode==='hours'){
+    var h=parseFloat(document.getElementById('hrs').value);
+    if(!(h>0)) h=24;
+    return new Date(Date.now()-h*3600*1000);
+  }
+  var w=localStorage.getItem(wmKey());
+  return w ? new Date(+w - 2*3600*1000) : null;
 }
+
+function showWm(){
+  var el=document.getElementById('wm'), mode=document.getElementById('mode').value;
+  var w=localStorage.getItem(wmKey());
+  el.style.display='block';
+  if(mode==='all'){
+    el.innerHTML='Processing <b>every message</b> in the uploaded files, ignoring the last-extract point.';
+  } else if(mode==='hours'){
+    var h=parseFloat(document.getElementById('hrs').value)||24;
+    var d=new Date(Date.now()-h*3600*1000);
+    el.innerHTML='Processing messages posted after <b>'+d.toLocaleString('en-IN')+'</b> &mdash; the last '+h+' hours.';
+  } else if(w){
+    var lw=new Date(+w), cut=new Date(+w-2*3600*1000);
+    el.innerHTML='Last extract: <b>'+lw.toLocaleString('en-IN')+'</b>. Processing from <b>'+cut.toLocaleString('en-IN')+'</b> onward (2-hour overlap).';
+  } else {
+    el.innerHTML='No previous extract found &mdash; <b>all messages</b> in these files will be processed.';
+  }
+}
+
+document.getElementById('mode').addEventListener('change',function(){
+  document.getElementById('hrsWrap').style.display = this.value==='hours' ? '' : 'none';
+  showWm();
+});
+document.getElementById('hrs').addEventListener('input',showWm);
 
 document.getElementById('city').addEventListener('change',function(){
   var m=this.value==='mumbai';
@@ -263,10 +304,9 @@ document.getElementById('run').onclick=async function(){
   document.getElementById('log').textContent='';
   RESULT={a:[],t:[]};
 
-  var wm=localStorage.getItem(wmKey());
-  var cutoff = wm ? new Date(+wm - 2*3600*1000) : null;
-  if(cutoff) log('Cutoff: '+cutoff.toLocaleString('en-IN')+' (last run minus 2h)');
-  else log('No watermark — processing everything.');
+  var cutoff=computeCutoff();
+  if(cutoff) log('Cutoff: '+cutoff.toLocaleString('en-IN'));
+  else log('No cutoff — processing every message in the files.');
 
   var seen=getSeen(), seenSet={}; seen.forEach(function(p){seenSet[p]=1});
   var totalMsgs=0, seekers=0, dupes=0, stale=0, noPhone=0, noArea=0, namedNoPhone=0;
