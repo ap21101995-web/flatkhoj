@@ -119,54 +119,78 @@ function log(m){var l=document.getElementById('log');l.style.display='block';l.t
 function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
 
 /* seeker vs provider ------------------------------------------------
-   Order matters. A hard provider signal wins outright, because an
-   advert saying "looking for tenants" would otherwise read as a seeker. */
+   The verb alone means nothing. "Looking for a room" wants a place;
+   "looking for a flatmate" already has one. So we locate the intent
+   verb, then take whichever noun appears first after it.            */
 
-// unambiguous "I am offering a place" phrases
+// nouns describing a PLACE -> the poster wants somewhere to live
+var PLACE_N='(?:room|rooms|bed|beds|bedspace|flat|flats|pg|place|places|accommodation|occupancy|space|apartment|house|home|stay|hostel|studio|\\d\\s?bhk|1rk|rk)';
+// nouns describing a PERSON -> the poster has a place and wants it filled
+var PERSON_N='(?:flatmate|flat mate|flatmates|roommate|room mate|roommates|tenant|tenants|paying guest|replacement|someone|somebody|anyone|candidate|occupant|partner|girl|girls|boy|boys|female|females|male|males|lady|guy|guys|bachelor|bachelors|student|students|professional|professionals)';
+
+var INTENT=/\b(?:looking|searching|hunting)\s+(?:out\s+)?for\b|\bneed(?:ed|s)?\b|\brequire(?:d|s)?\b|\bwant(?:ed|s)?\b|\bin search of\b|\blooking out for\b/g;
+
+// adverts that carry no intent verb at all
 var HARD_PROV=[
- /\blooking for (a )?(tenant|tenants|flatmate|flat mate|roommate|room mate|paying guest|pg|girl|boy|female|male|someone|anyone|candidate)s? (to |for |who )/,
- /\b(tenant|flatmate|roommate|paying guest)s? (wanted|required|needed)\b/,
- /\b(room|bed|flat|pg|accommodation|occupancy|sharing|vacancy)\s*(is |are )?(available|vacant)\b/,
- /\b(available|vacant)\s*(from|now|immediately|for)\b/,
- /\bvacanc(y|ies)\b/,
- /\bfor rent\b/,/\brent out\b/,/\bon rent\b/,/\bto let\b/,
+ /\b(?:room|bed|flat|pg|accommodation|occupancy|sharing|vacancy|bhk)\s*(?:is |are )?(?:available|vacant)\b/,
+ /\b(?:available|vacant)\s*(?:from|now|immediately|for|in)\b/,
+ /\bvacanc(?:y|ies)\b/,/\bfor rent\b/,/\brent out\b/,/\bon rent\b/,/\bto let\b/,
  /\bcarpet area\b/,/\bsq\s?\.?\s?ft\b/,/\bbuilt ?up area\b/,
- /\bdeposit\s*[:\-]?\s*\d/,/\brent\s*[:\-]?\s*(rs\.?|inr|₹)?\s*\d{4,}/,
+ /\bdeposit\s*[:\-]?\s*\d/,/\brent\s*[:\-]?\s*(?:rs\.?|inr)?\s*\d{4,}/,
  /\bbrokerage\s*[:\-]?\s*\d/,/\bone month brokerage\b/,
- /\bcontact (the )?owner\b/,/\bdirect owner\b/,/\bimmediate possession\b/,
- /\bfully furnished\b.*\b(flat|room|bhk)\b/,
- /\b\d\s?bhk\b.*\b(available|rent|vacant)\b/,
- /\bshifting out\b/,/\bvacating\b/,/\bleaving the (flat|room|pg)\b/,
- /\bneed (a )?(replacement|someone to replace)\b/
+ /\bcontact (?:the )?owner\b/,/\bdirect owner\b/,/\bimmediate possession\b/,
+ /\bfully furnished\b/,/\bsemi furnished\b/,
+ /\b(?:tenant|flatmate|roommate|paying guest)s?\s+(?:wanted|required|needed)\b/
 ];
 
-// unambiguous "I want a place" phrases
-var HARD_SEEK=[
- /\b(looking|searching|hunting) for (a |an |1 )?(single|double|triple|shared|sharing )?(room|bed|flat|pg|place|accommodation|occupancy|space|paying guest)\b/,
- /\bneed(ed|s)? (a |an |1 )?(single|double|triple|shared|sharing )?(room|bed|flat|pg|place|accommodation|occupancy|space)\b/,
- /\b(room|bed|flat|pg|place|accommodation|occupancy|space)\s*(is )?(required|needed|wanted)\b/,
- /\brequire(d)? (a |an |1 )?(room|bed|flat|pg|place|accommodation|occupancy)\b/,
- /\bin search of (a |an )?(room|bed|flat|pg|place|accommodation)\b/,
- /\b(want|wanted) (a |an |1 )?(room|bed|flat|pg|place|accommodation)\b/,
- /\bany (room|bed|flat|pg|place|accommodation|vacancy)\b.*\b(available|vacant)\b.*\?/,
- /\blooking out for (a |an )?(room|bed|flat|pg|place)\b/,
- /\bneed accommodation\b/,/\baccommodation required\b/,
- /\b(shifting|relocating|moving) to\b/,
- /\bcan anyone (help|suggest|share)\b.*\b(room|flat|pg|place)\b/
-];
+// leaving their own place and needing someone to take over
+var REPLACEMENT=/\b(?:replacement|shifting out|moving out|vacating|leaving the (?:flat|room|pg|house))\b/;
+
+function objectAfterIntent(n){
+  INTENT.lastIndex=0;
+  var m, best=null;
+  while((m=INTENT.exec(n))!==null){
+    // "room required", "bed needed" — place noun sits before the verb
+    var head=n.slice(Math.max(0,m.index-22), m.index);
+    if(new RegExp('\\b'+PLACE_N+'\\b\\s*$').test(head)){
+      if(best===null||best==='place'){ best='place'; continue; }
+    }
+    var tail=n.slice(m.index+m[0].length, m.index+m[0].length+70);
+    var pl=tail.search(new RegExp('\\b'+PLACE_N+'\\b'));
+    var pe=tail.search(new RegExp('\\b'+PERSON_N+'\\b'));
+    if(pl<0 && pe<0) continue;
+    var verdict;
+    if(pl<0) verdict='person';
+    else if(pe<0) verdict='place';
+    else verdict = pl<pe ? 'place' : 'person';
+    if(best===null) best=verdict;
+    else if(best!==verdict) best='place';   // mixed -> favour seeker, checked later
+  }
+  return best;
+}
 
 function isSeeker(t){
   var n=norm(t);
-  var hp=0, hs=0;
-  HARD_PROV.forEach(function(r){ if(r.test(n)) hp++; });
-  HARD_SEEK.forEach(function(r){ if(r.test(n)) hs++; });
 
-  // an offer phrase beats a want phrase — adverts often contain both
-  if(hp>0 && hp>=hs) return false;
-  if(hs>0) return true;
+  // they refer to a place as theirs -> they are offering it
+  var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
 
-  // nothing decisive: budget talk without any offer language leans seeker
-  if(/\bbudget\b/.test(n) && hp===0) return true;
+  if(REPLACEMENT.test(n)) return false;
+
+  var hard=0;
+  HARD_PROV.forEach(function(r){ if(r.test(n)) hard++; });
+
+  var obj=objectAfterIntent(n);
+
+  if(obj==='person') return false;          // wants a person -> has a place
+  if(obj==='place'){
+    if(owns) return false;                  // "someone for my room"
+    return hard===0 || hard===1 && !owns ? true : false;
+  }
+
+  if(hard>0) return false;
+  // no intent verb, no advert language: budget talk still reads as seeking
+  if(/\bbudget\b/.test(n) && !owns) return true;
   return false;
 }
 
