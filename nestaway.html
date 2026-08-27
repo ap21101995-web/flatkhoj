@@ -161,9 +161,17 @@ function gender(name,text,group){
 
 /* name */
 function pickName(sender,text){
-  if(sender && !/^\+?\d[\d\s\-]{6,}$/.test(sender.trim())) return sender.trim();
-  var m = text.match(/\b(?:my name is|name\s*[:\-]|i am|this is|myself)\s+([A-Z][a-zA-Z]{2,15})/i);
+  var s=(sender||'').trim();
+  // unsaved group members often appear as their profile nick, prefixed with ~
+  if(/^~/.test(s)){ var nick=s.replace(/^~\s*/,'').trim(); if(nick && !/^\+?\d/.test(nick)) return nick; }
+  // saved contact -> sender is already a name
+  if(s && !/^\+?\d[\d\s\-]{6,}$/.test(s)) return s;
+  // otherwise pull a name out of the post itself
+  var m = text.match(/\b(?:my name is|name\s*[:\-]|i am|i'm|this is|myself|regards|thanks)[\s,\-]+([A-Z][a-zA-Z]{2,15})/i);
   if(m) return m[1];
+  var tail = text.trim().split(/\n/).pop().trim();
+  var sig = tail.match(/(?:^|[\-\u2013,])\s*([A-Z][a-z]{2,14})\s*$/);
+  if(sig) return sig[1];
   return 'Not Available';
 }
 
@@ -261,7 +269,7 @@ document.getElementById('run').onclick=async function(){
   else log('No watermark — processing everything.');
 
   var seen=getSeen(), seenSet={}; seen.forEach(function(p){seenSet[p]=1});
-  var totalMsgs=0, seekers=0, dupes=0, stale=0, noPhone=0, noArea=0;
+  var totalMsgs=0, seekers=0, dupes=0, stale=0, noPhone=0, noArea=0, namedNoPhone=0;
   var batchSeen={};
 
   for(var i=0;i<FILES.length;i++){
@@ -279,7 +287,7 @@ document.getElementById('run').onclick=async function(){
       if(!isSeeker(m.text)) return;
       seekers++;
       var ph=phoneOf(m.sender,m.text);
-      if(!ph){ noPhone++; return; }
+      if(!ph){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
       if(seenSet[ph]||batchSeen[ph]){ dupes++; return; }
 
       var ha=areaHit(m.text,ANDHERI), ht=areaHit(m.text,THANE);
@@ -296,7 +304,7 @@ document.getElementById('run').onclick=async function(){
 
   log('---');
   log('messages: '+totalMsgs+' | seeker posts: '+seekers);
-  log('skipped — older than cutoff: '+stale+', no phone: '+noPhone+', no matching area: '+noArea+', already sent: '+dupes);
+  log('skipped — older than cutoff: '+stale+', no phone: '+noPhone+' (of which '+namedNoPhone+' had a name but no number), no matching area: '+noArea+', already sent: '+dupes);
   log('EXTRACTED — Andheri&Goregaon: '+RESULT.a.length+' | Thane: '+RESULT.t.length);
 
   document.getElementById('stats').innerHTML=
