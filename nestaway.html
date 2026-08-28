@@ -137,9 +137,8 @@ function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replac
 // nouns describing a PLACE -> the poster wants somewhere to live
 var PLACE_N='(?:room|rooms|bed|beds|bedspace|flat|flats|pg|place|places|accommodation|occupancy|space|apartment|house|home|stay|hostel|studio|\\d\\s?bhk|1rk|rk)';
 // nouns describing a PERSON -> the poster has a place and wants it filled
-var PERSON_N='(?:flatmate|flat mate|flatmates|roommate|room mate|roommates|tenant|tenants|paying guest|replacement|someone|somebody|anyone|candidate|occupant|partner|girl|girls|boy|boys|female|females|male|males|lady|guy|guys|bachelor|bachelors|student|students|professional|professionals)';
-
-var INTENT=/\b(?:looking|searching|hunting)\s+(?:out\s+)?for\b|\bneed(?:ed|s)?\b|\brequire(?:d|s)?\b|\bwant(?:ed|s)?\b|\bin search of\b|\blooking out for\b/g;
+var PERSON_N='(?:flatmate|flat mate|flatmates|roommate|room mate|roommates|tenant|tenants|paying guest|replacement|someone|somebody|anyone|candidate|occupant|partner|bachelor|bachelors)';
+var INTENT=/\b(?:looking|searching|hunting)\s+(?:out\s+)?(?:for|to)\b|\bneed(?:ed|s)?\b|\brequire(?:d|s)?\b|\bwant(?:ed|s)?\b|\bin search of\b|\blooking out for\b|\b(?:let'?s |to )?find(?:ing)?\b/g;
 
 // adverts that carry no intent verb at all
 var HARD_PROV=[
@@ -161,7 +160,7 @@ var HARD_PROV=[
  /\bdaily updates?\b/,/\bjoin (?:our|the) (?:group|channel)\b/,
  /\bfor more (?:details|options|info)[,\s]*(?:dm|ping|contact|call|whatsapp)\b/,
  /\bwe (?:have|provide|offer|deal in)\b[^.]{0,40}\b(?:flats?|rooms?|pg|propert|accommodation)\b/,
- /\bgenuine (?:owner|clients?|enquir)/,/\bno brokerage charges?\b/,/\bdirect owner\b/,/\bimmediate possession\b/,
+ /\bgenuine (?:owner|clients?|enquir)/,/\bno brokerage charges?\b/,/\bdirect owner\b/,
  /\bfully furnished\b/,/\bsemi furnished\b/,
  /\b(?:tenant|flatmate|roommate|paying guest)s?\s+(?:wanted|required|needed)\b/
 ];
@@ -192,7 +191,8 @@ function objectAfterIntent(n){
     var pe=tail.search(new RegExp('\\b'+PERSON_N+'\\b'));
     if(pl<0 && pe<0) continue;
     var verdict;
-    if(pl<0) verdict='person';
+    if(pe>=0 && pl>pe && pl-pe<=14) verdict='place';   // "flatmate accommodation"
+    else if(pl<0) verdict='person';
     else if(pe<0) verdict='place';
     else verdict = pl<pe ? 'place' : 'person';
     if(best===null) best=verdict;
@@ -218,7 +218,6 @@ var ADVERT_EVIDENCE=[
  /\bno bachelors?\b/,/\bfamily only\b/,/\bbachelors? allowed\b/,
  /\bcarpet area\b/,/\bsq\s?\.?\s?ft\b/,/\bbuilt ?up area\b/,
  /\b(?:fully|semi)[\s-]?furnished\b/,
- /\bimmediate (?:possession|occupancy)\b/,
  /\bstep into\b/,/\bpremium apartment\b/,/\bluxur(?:y|ious)\b/,
  /\bamenities\b/,
  /\bcontact (?:the )?owner\b/,
@@ -235,6 +234,8 @@ var ADVERT_EVIDENCE=[
 // first-person statements of wanting a place
 var SELF_SEEK=/\b(?:i am|i'm|im|we are|we're|me and my|myself|urgently looking|urgent(?:ly)? need|if anyone has|anyone knows|does anyone have|pls (?:dm|help)|please (?:dm|help|suggest))\b/;
 
+function placeWord0(n){return new RegExp('\\b'+PLACE_N+'\\b').test(n);}
+
 function classify(t){
   var n=norm(t);
 
@@ -246,6 +247,13 @@ function classify(t){
   // 2. they call a place their own, or are leaving one
   var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
   if(REPLACEMENT.test(n)) return 'provider';
+  // "anyone looking for a 1bhk?" -> they are offering, not seeking.
+  // But ignore it inside "if you know someone looking for..." which seekers write.
+  var mAny=n.match(/\b(?:anyone|any one|anybody|someone|somebody|any1)\s+(?:is\s+)?(?:looking|searching)\s+for\b/);
+  if(mAny){
+    var pre=n.slice(Math.max(0,mAny.index-18), mAny.index);
+    if(!/\b(?:know|knows|knew|find|meet|if you|refer|tell)\s*$/.test(pre)) return 'provider';
+  }
 
   var obj=objectAfterIntent(n);
 
@@ -269,19 +277,21 @@ function classify(t){
   if(adv>0) return 'provider';
   if(owns) return 'provider';
 
-  if(obj==='place') return hard>1 ? 'provider' : hard===1 ? 'unsure' : 'seeker';
+  if(obj==='place') return hard>1 ? 'provider' : 'seeker';
 
   if(hard>0) return 'provider';
 
   // 7. intent verb but no recognisable noun — surface rather than discard
   INTENT.lastIndex=0;
-  if(INTENT.test(n)){ INTENT.lastIndex=0; return 'unsure'; }
+  if(INTENT.test(n)){ INTENT.lastIndex=0; return placeWord0(n) ? 'seeker' : 'provider'; }
   INTENT.lastIndex=0;
 
   var placeWord=new RegExp('\\b'+PLACE_N+'\\b').test(n);
+  // "if anyone has a room", "anyone knows a flat", "pls suggest a pg"
+  if(placeWord && SELF_SEEK.test(n) && !owns) return 'seeker';
   var wantish=/\b(chahiye|chaiye|dhundh|talash|urgent|asap|immediately|budget|shift|move)\b/.test(n);
-  if(placeWord && wantish) return 'unsure';
-  if(/\bbudget\b/.test(n)) return 'unsure';
+  if(placeWord && wantish) return 'seeker';
+  if(/\bbudget\b/.test(n) && placeWord) return 'seeker';
   return 'provider';
 }
 
@@ -581,6 +591,7 @@ document.getElementById('run').onclick=async function(){
       if(cutoff && when<cutoff){ stale++; return; }
       var verdict=classify(m.text);
       if(verdict==='provider') return;
+      verdict='seeker';
       seekers++;
       var ph=phoneOf(m.sender,m.text);
       if(!ph){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
@@ -594,7 +605,6 @@ document.getElementById('run').onclick=async function(){
       batchSeen[pk]=1;
       var nm=pickName(m.sender,m.text);
       var areaName=(ha||ht);
-      if(TRANSIT_ONLY.test(areaName)) verdict='unsure';
       var row={Name:nm,'Phone Number':ph,Gender:gender(nm,m.text,group),
                Area:areaName,Group:group,conf:verdict,keep:(verdict==='seeker'),
                'Posted On':when.toLocaleString('en-IN'),
