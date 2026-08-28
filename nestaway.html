@@ -330,7 +330,11 @@ function pickName(sender,text){
   var STOP=/^(looking|searching|hunting|need|needed|require|required|want|wanted|interested|currently|really|fairly|urgently|planning|shifting|moving|working|female|male|from|here|also|still|glad|happy|able|going|trying|available|there|this|that|just|very|quite|good|fine|okay)$/i;
   var m = text.match(/\b(?:my name is|name\s*[:\-]|myself|this is)[\s,\-]+([A-Z][a-zA-Z]{2,15})/i);
   if(m && !STOP.test(m[1])) return m[1];
-  m = text.match(/\b(?:i am|i'm|im)\s+([A-Z][a-zA-Z]{2,15})\b/);
+  m = text.match(/\b(?:i am|i'm|i m|im)\s+([A-Z][a-zA-Z]{2,15})\b/i);
+  if(m && /^[A-Z]/.test(m[1]) && !STOP.test(m[1])) return m[1];
+  m = text.match(/\b(?:hi|hello|hey)[,!\s]+([A-Z][a-zA-Z]{2,15})\s+here\b/i);
+  if(m && !STOP.test(m[1])) return m[1];
+  m = text.match(/\b([A-Z][a-zA-Z]{2,15})\s+here[,.\s]/);
   if(m && !STOP.test(m[1])) return m[1];
   var tail = text.trim().split(/\n/).pop().trim();
   var sig = tail.match(/(?:^|[\-\u2013,])\s*([A-Z][a-z]{2,14})\s*$/);
