@@ -251,6 +251,11 @@ function classify(t){
   // 2. they call a place their own, or are leaving one
   var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
   if(REPLACEMENT.test(n)) return 'provider';
+  // "looking for one female to share a 2bhk" -> they hold the place
+  if(/\b(?:looking|searching)\s+for\s+(?:\d+|one|a|an|any)?\s*(?:female|male|girl|boy|lady|guy|person|people|bachelor|working professional|student)s?\s+(?:to|who (?:can|wants?)|for)\s+(?:share|shift|join|occupy|take|move)/.test(n)) return 'provider';
+  // "with a couple", "we are already 2" -> existing occupants
+  if(/\bwith (?:a |the )?(?:couple|family|us|me)\b/.test(n) && /\b(?:share|sharing|occupancy|flat)\b/.test(n)
+     && !/\b(?:i am|i'm|we are) looking\b/.test(n)) return 'provider';
   // "anyone looking for a 1bhk?" -> they are offering, not seeking.
   // But ignore it inside "if you know someone looking for..." which seekers write.
   var mAny=n.match(/\b(?:anyone|any one|anybody|someone|somebody|any1)\s+(?:is\s+)?(?:looking|searching)\s+for\b/);
