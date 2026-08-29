@@ -231,6 +231,9 @@ var ADVERT_EVIDENCE=[
  /\b(?:roommate|flatmate|tenant|paying guest)s? (?:required|wanted|needed)\b/
 ];
 
+// asking the group to refer a place — a seeker, even with no verb like "looking"
+var ASK_LEAD=/\b(?:if\s+)?(?:anyone|any\s?one|anybody|someone|somebody|any1|you|u|ppl|people)\s+(?:has|have|had|got|knows?|know of|comes across)\b|\bany\s+(?:leads?|options?|suggestions?|references?|contacts?)\b|\b(?:please|pls|plz|kindly)\s+(?:dm|share|suggest|help|refer|let me know|inform)\b|\b(?:dm|message|ping|contact) me if\b|\blet me know if\b|\bdo let me know\b|\breach out\b/;
+
 // first-person statements of wanting a place
 var SELF_SEEK=/\b(?:i am|i'm|im|we are|we're|me and my|myself|urgently looking|urgent(?:ly)? need|if anyone has|anyone knows|does anyone have|pls (?:dm|help)|please (?:dm|help|suggest))\b/;
 
@@ -262,8 +265,16 @@ function classify(t){
   ADVERT_EVIDENCE.forEach(function(r){ if(r.test(np)||r.test(n)) adv++; });
   var hard=0;
   HARD_PROV.forEach(function(r){ if(r.test(n)) hard++; });
+  // "immediate possession" cuts both ways: a seeker means "I can move in now",
+  // an owner means "you can move in now". Only count it as an advert when
+  // nothing else in the post points at someone seeking a place.
+  if(/\bimmediate (?:possession|occupancy|move ?in)\b/.test(n)
+     && obj!=='place' && !SELF_SEEK.test(n) && !ASK_LEAD.test(n)) adv++;
 
-  // 3. clearly first-person seeking a place, and not advertising one
+  // 3. asking the group to refer a place
+  if(ASK_LEAD.test(n) && placeWord0(n) && !owns && adv===0) return 'seeker';
+
+  // 3b. clearly first-person seeking a place, and not advertising one
   if(SELF_SEEK.test(n) && obj==='place' && !owns && adv===0) return 'seeker';
 
   // 4. asking whether anything is available — a query, not an advert
