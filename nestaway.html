@@ -203,13 +203,14 @@ function objectAfterIntent(n){
 
 // markers only an advertiser uses — specs, pricing, marketing language
 var ADVERT_EVIDENCE=[
- /\brent\s*[:\-]?\s*(?:rs\.?|inr|₹)?\s*\d{3,}/,
+ /(?<!budget[^.]{0,12})\brent\s*[:\-]?\s*(?:rs\.?|inr|₹)?\s*\d[\d,]{2,}/,
  /\bdeposit\s*[:\-]?\s*(?:rs\.?|inr|₹)?\s*\d/,
+ /\d[\d,]{3,}\s*(?:total|per person|each|pp)\b/,
  /\d+\s*k?\s*(?:rs\.?|₹)?\s*(?:deposit|security)/,
  /\bbrokerage\s*[:\-]?\s*\d/,
  /\d{4,}\s*\/?-/,
  /\d{4,}\s*(?:per month|pm|monthly|p\/m|\/month)/,
- /₹\s*\d{3,}/,
+ 
  /\brent\s*[-:]?\s*\d+(?:\.\d+)?\s*(?:l|lakh|lacs?|k|thousand)\b/,
  /\b\d+(?:\.\d+)?\s*(?:l|lakh|lacs?)\b[^.]{0,20}\brent\b/,
  /\brent (?:out )?(?:the )?entire (?:flat|house|place)\b/,
@@ -331,10 +332,12 @@ var MAL=['rahul','amit','rohit','vikas','sunil','anil','ajay','arun','deepak','g
 
 function gender(name,text,group){
   var g=norm(group), t=norm(text);
-  if(/\b(girls?|female|ladies|women|womens)\b/.test(g)) return 'Female';
-  if(/\b(boys?|male|gents|mens)\b/.test(g)) return 'Male';
-  if(/\b(female|girl|lady|f\b)\b/.test(t)) return 'Female';
-  if(/\b(male|boy|gent|guy)\b/.test(t)) return 'Male';
+  // the post's own words come first — a male can post in a girls' group
+  if(/\b(?:male|boy|gents?|guy|bachelor)\b/.test(t) && !/\bfemale\b/.test(t)) return 'Male';
+  if(/\b(?:female|girl|lady|ladies|woman)\b/.test(t)) return 'Female';
+  // otherwise fall back to the group it came from
+  if(/\b(?:girls?|female|ladies|women|womens)\b/.test(g)) return 'Female';
+  if(/\b(?:boys?|male|gents|mens)\b/.test(g)) return 'Male';
   var f=norm(name).split(' ')[0];
   if(f){ if(FEM.indexOf(f)>-1) return 'Female'; if(MAL.indexOf(f)>-1) return 'Male'; }
   return 'Not Clear';
