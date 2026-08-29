@@ -135,7 +135,7 @@ function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replac
    verb, then take whichever noun appears first after it.            */
 
 // nouns describing a PLACE -> the poster wants somewhere to live
-var PLACE_N='(?:room|rooms|bed|beds|bedspace|flat|flats|pg|place|places|accommodation|occupancy|space|apartment|house|home|stay|hostel|studio|\\d\\s?bhk|1rk|rk)';
+var PLACE_N='(?:room|rooms|bed|beds|bedspace|flat|flats|pg|place|places|accommodation|occupancy|sharing|space|apartment|house|home|stay|hostel|studio|\\d\\s?bhk|1rk|rk)';
 // nouns describing a PERSON -> the poster has a place and wants it filled
 var PERSON_N='(?:flatmate|flat mate|flatmates|roommate|room mate|roommates|tenant|tenants|paying guest|replacement|someone|somebody|anyone|candidate|occupant|partner|bachelor|bachelors)';
 var INTENT=/\b(?:looking|searching|hunting)\s+(?:out\s+)?(?:for|to)\b|\bneed(?:ed|s)?\b|\brequire(?:d|s)?\b|\bwant(?:ed|s)?\b|\bin search of\b|\blooking out for\b|\b(?:let'?s |to )?find(?:ing)?\b/g;
