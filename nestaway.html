@@ -251,6 +251,13 @@ function classify(t){
   // 2. they call a place their own, or are leaving one
   var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
   if(REPLACEMENT.test(n)) return 'provider';
+
+  // someone posting on behalf of a friend who needs a place
+  var REFERRAL=/\b(?:his|her|their)\s+(?:budget|requirement|preference|contact|number)\b|\b(?:my|a|our)\s+friend\b|\bfriend of mine\b|\b(?:he|she|they)\s+(?:is|are|needs?|wants?|requires?|will)\s|\bon behalf of\b|\bposting (?:this )?for\b/;
+  if(REFERRAL.test(n) && placeWord0(n)
+     && !/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society)\b/.test(n)
+     && !/\b(?:looking|searching)\s+for\s+(?:a\s+)?(?:flatmate|roommate|tenant)\b/.test(n)) return 'seeker';
+
   // "looking for one female to share a 2bhk" -> they hold the place
   if(/\b(?:looking|searching)\s+for\s+(?:\d+|one|a|an|any)?\s*(?:female|male|girl|boy|lady|guy|person|people|bachelor|working professional|student)s?\s+(?:to|who (?:can|wants?)|for)\s+(?:share|shift|join|occupy|take|move)/.test(n)) return 'provider';
   // "with a couple", "we are already 2" -> existing occupants
@@ -395,32 +402,13 @@ function toDate(d,t,ap){
   return new Date(yy,mm-1,dd,h,mi);
 }
 
-function phoneOf(sender,text){
-  // 1. sender line is a number -> keep it in full, including country code
-  var raw=(sender||'').trim();
-  if(/^\+?\d[\d\s\-()]{6,}$/.test(raw)){
-    var d=raw.replace(/[^\d+]/g,'');
-    if(d[0]!=='+') d='+'+d;
-    return d;
-  }
-  // 2. a number written inside the post; +91 is implied
-  var m=(text||'').match(/(?:\+?91[\s\-]?)?([6-9]\d{9})\b/);
-  if(m) return '+91'+m[1];
-  // 3. sender is a saved contact -> look them up in the uploaded contacts file
-  var key=cnorm(raw.replace(/^~\s*/,''));
-  if(key && CONTACTS[key]) return CONTACTS[key];
-  return null;
-}
-
-var TRANSIT_ONLY=/^(western line|aqua line|aqua line metro|red line|metro line 1|metro line 7|metro line 2a|western express highway|weh andheri|versova andheri ghatkopar|seepz metro|andheri metro)$/i;
-
-var CONTACTS={};
-
 // never sell our own people or our own brokers as leads
 var BLOCK_NUMBERS=['9538584612','9004325226','9506146000','9960395782',
  '9967085352','8082077375','8949005824','9326924131','6266495488',
  '8779721715','9136862603'];
 var BLOCK_NAME=/\b(broker|flatkhoj|admin|agent|realt|properties|estate|hommiiz|coliving)\b/i;
+
+var CONTACTS={};
 
 function cnorm(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
 
@@ -455,38 +443,55 @@ function parseContacts(txt,fname){
   var iFile=col(/^file as$/), iNick=col(/^nickname$/);
   var iName=col(/^(name|full name|display name)$/);
   var pis=[]; hdr.forEach(function(h,i){ if(/phone\s*\d*\s*-\s*value|^phone$|^mobile$|^tel/.test(h)) pis.push(i); });
-  if(!pis.length) pis=hdr.map(function(h,i){return /phone|mobile|tel/.test(h)?i:-1}).filter(function(i){return i>=0});
-  if(iName<0 && iFirst<0) return 0;
-  if(!pis.length) return 0;
-
+  if(!pis.length) hdr.forEach(function(h,i){ if(/phone|mobile|tel/.test(h)) pis.push(i); });
+  if((iName<0 && iFirst<0) || !pis.length) return 0;
   for(var r=1;r<lines.length;r++){
     var cl=cells(lines[r]);
     var ph=null;
     for(var j=0;j<pis.length;j++){
       var raw=(cl[pis[j]]||'').split(':::')[0].trim();
-      var d=raw.replace(/[^\d+]/g,'');
-      var digits=d.replace(/\D/g,'');
+      var d=raw.replace(/[^\d+]/g,''); var digits=d.replace(/\D/g,'');
       if(digits.length>=10){ ph = d[0]==='+'? d : '+91'+digits.slice(-10); break; }
     }
     if(!ph) continue;
     var names=[];
     if(iName>=0) names.push(cl[iName]);
     if(iFirst>=0){
-      var full=[cl[iFirst],iMid>=0?cl[iMid]:'',iLast>=0?cl[iLast]:'']
-                .map(function(x){return (x||'').trim()}).filter(Boolean).join(' ');
-      names.push(full); names.push(cl[iFirst]);
+      names.push([cl[iFirst], iMid>=0?cl[iMid]:'', iLast>=0?cl[iLast]:'']
+        .map(function(x){return (x||'').trim()}).filter(Boolean).join(' '));
+      names.push(cl[iFirst]);
     }
     if(iFile>=0) names.push(cl[iFile]);
     if(iNick>=0) names.push(cl[iNick]);
     var added=false;
-    names.forEach(function(nm){
-      var k=cnorm(nm);
-      if(k && k.length>1){ CONTACTS[k]=ph; added=true; }
-    });
+    names.forEach(function(nm){ var k=cnorm(nm); if(k&&k.length>1){ CONTACTS[k]=ph; added=true; } });
     if(added) n++;
   }
   return n;
 }
+
+function phonesOf(sender,text){
+  var out=[];
+  // a number written inside the post is the person we actually want
+  var re=/(?:\+?91[\s\-]?)?([6-9]\d{9})\b/g, m;
+  while((m=re.exec(text||''))!==null){
+    var v='+91'+m[1];
+    if(out.indexOf(v)<0) out.push(v);
+  }
+  if(out.length) return out;
+  // otherwise fall back to whoever posted
+  var raw=(sender||'').trim();
+  if(/^\+?\d[\d\s\-()]{6,}$/.test(raw)){
+    var d=raw.replace(/[^\d+]/g,'');
+    if(d[0]!=='+') d='+'+d;
+    return [d];
+  }
+  var key=cnorm(raw.replace(/^~\s*/,''));
+  if(key && CONTACTS[key]) return [CONTACTS[key]];
+  return [];
+}
+
+function phoneOf(sender,text){ var a=phonesOf(sender,text); return a.length?a[0]:null; }
 
 function phoneKey(p){ return (p||'').replace(/\D/g,'').slice(-10); }
 
@@ -612,23 +617,25 @@ document.getElementById('run').onclick=async function(){
       if(verdict==='provider') return;
       verdict='seeker';
       seekers++;
-      var ph=phoneOf(m.sender,m.text);
-      if(!ph){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
-      if(BLOCK_NUMBERS.indexOf(phoneKey(ph))>-1){ blocked++; return; }
-      if(BLOCK_NAME.test(m.sender||'')){ blocked++; return; }
-      var pk=phoneKey(ph);
-      if(batchSeen[pk]){ repeatPost++; return; }
-
+      var phList=phonesOf(m.sender,m.text);
+      if(!phList.length){ noPhone++; if(!/^\+?\d/.test((m.sender||'').trim().replace(/^~\s*/,''))) namedNoPhone++; return; }
       var ha=areaHit(m.text,ANDHERI), ht=areaHit(m.text,THANE);
       if(!ha&&!ht){ noArea++; return; }
-      batchSeen[pk]=1;
-      var nm=pickName(m.sender,m.text);
       var areaName=(ha||ht);
-      var row={Name:nm,'Phone Number':ph,Gender:gender(nm,m.text,group),
-               Area:areaName,Group:group,conf:verdict,keep:(verdict==='seeker'),
-               'Posted On':when.toLocaleString('en-IN'),
-               Message:m.text.replace(/\s+/g,' ').slice(0,220)};
-      if(ha) RESULT.a.push(row); else RESULT.t.push(row);
+      var nm=pickName(m.sender,m.text);
+      var gd=gender(nm,m.text,group);
+      phList.forEach(function(ph){
+        if(BLOCK_NUMBERS.indexOf(phoneKey(ph))>-1){ blocked++; return; }
+        if(BLOCK_NAME.test(m.sender||'')){ blocked++; return; }
+        var pk=phoneKey(ph);
+        if(batchSeen[pk]){ repeatPost++; return; }
+        batchSeen[pk]=1;
+        var row={Name:nm,'Phone Number':ph,Gender:gd,
+                 Area:areaName,Group:group,conf:verdict,keep:true,
+                 'Posted On':when.toLocaleString('en-IN'),
+                 Message:m.text.replace(/\s+/g,' ').slice(0,220)};
+        if(ha) RESULT.a.push(row); else RESULT.t.push(row);
+      });
     });
   }
 
