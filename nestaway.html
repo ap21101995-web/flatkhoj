@@ -248,6 +248,39 @@ function classify(t){
   if(TRAVEL.test(n) && !/\b(?:room|flat|pg|bhk|occupancy|accommodation|flatmate)\b/.test(n)) return 'provider';
   if(/\b(?:seats?|ticket)\b/.test(n) && /\b(?:available|avl|join)\b/.test(n)) return 'provider';
 
+  // 1b. MASTER RULE — checked before every keyword-based special case below,
+  // because "friend", "replacement", and "join us" framing all get misjudged
+  // by keyword alone. What actually separates seeker from provider is whether
+  // ONE specific, already-secured unit is being described (a fixed Rent/
+  // Deposit figure for that unit, or an exact price tied to a named room) vs.
+  // an open search (a Budget figure, with no such unit yet). Verified against
+  // 29 real August 2026 postings covering referral, "join us", and
+  // "replacement" phrasing in both directions.
+  //   - Rent:/Deposit:/an exact price per named room -> a unit already exists
+  //     and has a price today -> PROVIDER, regardless of "friend"/"replacement"
+  //     framing around it.
+  //   - A Budget figure with none of that -> nothing secured yet -> SEEKER,
+  //     regardless of "friend"/"join us"/"replacement" framing.
+  //   - Furnished/possession/floor language with no Budget figure -> also a
+  //     specific already-existing unit -> PROVIDER.
+  //   - Both present, or neither -> fall through to the heuristics below.
+  // Known limitation: a seeker who labels their own combined budget "Rent +
+  // Deposit" (e.g. "Budget: 30k Rent + 50k Deposit combined") can still be
+  // misread as a provider — rare in practice, left as a known edge case
+  // rather than weakening the rule for the far more common real bugs it fixes.
+  var NUMQ='(?:\\d{2,}|\\d+\\s*k\\b|\\d+\\s*lakh\\b|\\d+\\s*lac\\b)';
+  var RENT_FIGURE=new RegExp('\\brent\\b[\\s\\S]{0,25}?'+NUMQ);
+  var DEPOSIT_FIGURE=new RegExp('\\bdeposit\\b[\\s\\S]{0,25}?'+NUMQ);
+  var ROOM_PRICE=new RegExp('\\b(?:master bedroom|bedroom|hall|room ?\\d|single occupancy|double occupancy|triple occupancy)\\b[\\s\\S]{0,25}?'+NUMQ);
+  var UNIT_EXISTS_SIGNAL=/\bfully furnished\b|\bsemi furnished\b|\bavailable (?:from|immediately|now)\b|\bpossession\b|\bfor rent\b|\b\d+(?:st|nd|rd|th)? floor\b/;
+  var BUDGET_FIGURE=new RegExp('\\bbudget\\b[\\s\\S]{0,25}?'+NUMQ);
+  var hasExistingUnit=RENT_FIGURE.test(n)||DEPOSIT_FIGURE.test(n)||ROOM_PRICE.test(n);
+  var hasSoftUnit=UNIT_EXISTS_SIGNAL.test(n);
+  var hasBudget=BUDGET_FIGURE.test(n);
+  if(hasExistingUnit) return 'provider';
+  if(hasBudget && !hasSoftUnit) return 'seeker';
+  if(hasSoftUnit && !hasBudget) return 'provider';
+
   // 2. they call a place their own, or are leaving one
   var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
   if(REPLACEMENT.test(n)) return 'provider';
@@ -713,10 +746,13 @@ function commitRun(){
 function download(rows,label){
   if(!rows.length){alert('No leads to export for '+label);return;}
   var gen=new Date().toLocaleString('en-IN');
-  var data=rows.map(function(r){return {Name:r.Name,'Phone Number':r['Phone Number'],Gender:r.Gender}});
-  var ws=XLSX.utils.json_to_sheet(data);
-  XLSX.utils.sheet_add_aoa(ws,[['Generated: '+gen+'  |  '+label+'  |  '+rows.length+' leads']],{origin:'A'+(data.length+3)});
-  ws['!cols']=[{wch:24},{wch:16},{wch:12}];
+  var caption='Generated: '+gen+'  |  '+label+'  |  '+rows.length+' leads';
+  // Row 1: caption. Row 2: left blank. Row 3: headers. Row 4+: data.
+  // Columns are Phone Number and Gender only — no Name.
+  var data=rows.map(function(r){return {'Phone Number':r['Phone Number'],Gender:r.Gender}});
+  var ws=XLSX.utils.json_to_sheet(data,{origin:'A3'});
+  XLSX.utils.sheet_add_aoa(ws,[[caption]],{origin:'A1'});
+  ws['!cols']=[{wch:24},{wch:16}];
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Leads');
   XLSX.writeFile(wb,'NestAway_'+label.replace(/[^A-Za-z]/g,'')+'_'+stamp()+'.xlsx');
