@@ -167,7 +167,15 @@ var HARD_PROV=[
 
 // leaving their own place and needing someone to take over
 // requests that have nothing to do with accommodation
-var NOT_HOUSING=/\b(tiffin|dabba|cook|maid|bai|servant|driver|cleaning|laundry|internship|intern|hiring|freelanc|job opening|vacancy for|candidate for|designer|developer|artist|blender|photographer|tutor|gym|salon|dentist|loan|insurance|second hand|furniture|mattress|fridge|washing machine|almirah|cupboard|sofa|for sale|selling my)\b/;
+var NOT_HOUSING=/\b(tiffin|dabba|cook|maid|bai|servant|driver|cleaning|laundry|internship|intern|hiring|freelanc|job opening|vacancy for|candidate for|designer|developer|artist|blender|photographer|tutor|gym|salon|dentist|loan|insurance|for sale|selling my)\b/;
+// furniture/appliance words alone are NOT exclusionary -- genuine seekers
+// routinely list these as wanted amenities ("fully furnished, washing machine,
+// fridge"). They only mean "this is a furniture-for-sale post, not a housing
+// lead" when paired with actual sale language. Found via real Sept 2026 data:
+// "Requirements: Fully/Semi furnished, AC, gas connection, washing machine"
+// from a genuine seeker was being wrongly excluded by the old combined regex.
+var FURNITURE_ITEM=/\b(second hand|furniture|mattress|fridge|washing machine|almirah|cupboard|sofa)\b/;
+var SALE_CONTEXT=/\b(sale|selling|sell|price|pricing|pick ?up)\b/;
 
 // lift shares, tickets, travel plans — never accommodation leads
 var TRAVEL=/\b(?:travel+ing|travell?ing to|road trip|carpool|car pool|cab share|seats? (?:are )?available|seat avl|ticket|tickets|pnr|train name|flight|jyotirlinga|drop till|pick ?up from .* drop)\b/;
@@ -245,41 +253,60 @@ function classify(t){
 
   // 1. not about accommodation at all
   if(NOT_HOUSING.test(n)) return 'provider';
+  if(FURNITURE_ITEM.test(n) && SALE_CONTEXT.test(n)) return 'provider';
   if(TRAVEL.test(n) && !/\b(?:room|flat|pg|bhk|occupancy|accommodation|flatmate)\b/.test(n)) return 'provider';
   if(/\b(?:seats?|ticket)\b/.test(n) && /\b(?:available|avl|join)\b/.test(n)) return 'provider';
 
-  // 1b. MASTER RULE — checked before every keyword-based special case below,
-  // because "friend", "replacement", and "join us" framing all get misjudged
-  // by keyword alone. What actually separates seeker from provider is whether
-  // ONE specific, already-secured unit is being described (a fixed Rent/
-  // Deposit figure for that unit, or an exact price tied to a named room) vs.
-  // an open search (a Budget figure, with no such unit yet). Verified against
-  // 29 real August 2026 postings covering referral, "join us", and
-  // "replacement" phrasing in both directions.
-  //   - Rent:/Deposit:/an exact price per named room -> a unit already exists
-  //     and has a price today -> PROVIDER, regardless of "friend"/"replacement"
-  //     framing around it.
-  //   - A Budget figure with none of that -> nothing secured yet -> SEEKER,
-  //     regardless of "friend"/"join us"/"replacement" framing.
-  //   - Furnished/possession/floor language with no Budget figure -> also a
-  //     specific already-existing unit -> PROVIDER.
-  //   - Both present, or neither -> fall through to the heuristics below.
+  // 1b. MASTER RULE (v2) — checked before every keyword-based special case
+  // below, because "friend", "replacement", and "join us" framing all get
+  // misjudged by keyword alone.
+  //
+  // v1 of this rule shipped with two real bugs, both found by testing against
+  // a fresh 25-hour batch on 2 Sept 2026 and diffing the portal's actual
+  // output against an independent manual read — 9 genuine seekers were wrongly
+  // dropped as providers:
+  //   Bug A: "rent"/"deposit" matched a NUMBER that actually belonged to a
+  //   nearby "budget" mention (e.g. "...flat for rent... budget 20k" was
+  //   wrongly read as if "20k" were the flat's rent). Fixed by refusing to
+  //   match across a "budget" word.
+  //   Bug B: a seeker who states BOTH a budget AND a furnishing preference
+  //   (extremely normal, e.g. "Budget: 25k...fully furnished JB Nagar") was
+  //   treated as having two competing signals and punted to old logic, which
+  //   then wrongly called it a provider. Fixed by giving Budget priority over
+  //   a bare furnishing/possession mention — a stated budget always means
+  //   nothing is secured yet.
+  //   Bug C (found in the same pass): "looking for shared flat accommodation"
+  //   — no money mentioned at all — was invisible to every money-based signal.
+  //   Fixed by adding: a PLACE word (flat/room/1rk/bhk/pg/accommodation)
+  //   directly after "looking for"/"searching for" is itself a strong seeker
+  //   signal, independent of money.
+  //
+  // Priority, in order:
+  //   1. Rent:/Deposit:/an exact price tied to a named room -> a unit already
+  //      exists and has a price today -> PROVIDER, regardless of framing.
+  //   2. A Budget figure -> nothing secured yet -> SEEKER, even if furnishing
+  //      or possession language also appears (that's just normal seeker talk).
+  //   3. "Looking for a/an [flat/room/1rk/bhk/pg/accommodation]" -> SEEKER,
+  //      even with zero money mentioned.
+  //   4. Furnished/possession/floor language alone, no budget, no place-word
+  //      intent -> likely an ad -> PROVIDER.
+  //   5. None of the above -> fall through to the heuristics below.
   // Known limitation: a seeker who labels their own combined budget "Rent +
   // Deposit" (e.g. "Budget: 30k Rent + 50k Deposit combined") can still be
   // misread as a provider — rare in practice, left as a known edge case
   // rather than weakening the rule for the far more common real bugs it fixes.
   var NUMQ='(?:\\d{2,}|\\d+\\s*k\\b|\\d+\\s*lakh\\b|\\d+\\s*lac\\b)';
-  var RENT_FIGURE=new RegExp('\\brent\\b[\\s\\S]{0,25}?'+NUMQ);
-  var DEPOSIT_FIGURE=new RegExp('\\bdeposit\\b[\\s\\S]{0,25}?'+NUMQ);
+  var RENT_FIGURE=new RegExp('\\brent\\b(?:(?!budget)[\\s\\S]){0,20}?'+NUMQ);
+  var DEPOSIT_FIGURE=new RegExp('\\bdeposit\\b(?:(?!budget)[\\s\\S]){0,20}?'+NUMQ);
   var ROOM_PRICE=new RegExp('\\b(?:master bedroom|bedroom|hall|room ?\\d|single occupancy|double occupancy|triple occupancy)\\b[\\s\\S]{0,25}?'+NUMQ);
   var UNIT_EXISTS_SIGNAL=/\bfully furnished\b|\bsemi furnished\b|\bavailable (?:from|immediately|now)\b|\bpossession\b|\bfor rent\b|\b\d+(?:st|nd|rd|th)? floor\b/;
   var BUDGET_FIGURE=new RegExp('\\bbudget\\b[\\s\\S]{0,25}?'+NUMQ);
+  var PLACE_AFTER_INTENT=new RegExp('\\b(?:looking|searching)\\s+for\\s+(?:a|an|1|one)?\\s*(?:\\w+\\s+){0,2}?(?:1\\s?rk|2\\s?bhk|3\\s?bhk|1\\s?bhk|flat|room|rk|bhk|pg|accommodation|occupancy|place)\\b');
   var hasExistingUnit=RENT_FIGURE.test(n)||DEPOSIT_FIGURE.test(n)||ROOM_PRICE.test(n);
-  var hasSoftUnit=UNIT_EXISTS_SIGNAL.test(n);
-  var hasBudget=BUDGET_FIGURE.test(n);
   if(hasExistingUnit) return 'provider';
-  if(hasBudget && !hasSoftUnit) return 'seeker';
-  if(hasSoftUnit && !hasBudget) return 'provider';
+  if(BUDGET_FIGURE.test(n)) return 'seeker';
+  if(PLACE_AFTER_INTENT.test(n)) return 'seeker';
+  if(UNIT_EXISTS_SIGNAL.test(n)) return 'provider';
 
   // 2. they call a place their own, or are leaving one
   var owns=/\b(?:my|our)\s+(?:flat|room|place|pg|apartment|house|home|\d\s?bhk|society|building)\b/.test(n);
