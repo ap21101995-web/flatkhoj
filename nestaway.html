@@ -257,6 +257,21 @@ function classify(t){
   if(TRAVEL.test(n) && !/\b(?:room|flat|pg|bhk|occupancy|accommodation|flatmate)\b/.test(n)) return 'provider';
   if(/\b(?:seats?|ticket)\b/.test(n) && /\b(?:available|avl|join)\b/.test(n)) return 'provider';
 
+  // 1c. Broker/realtor circulars — a firm signing its own name ("XYZ
+  // Properties LLP", "XYZ Realty", "XYZ Realtor(s)"), or "direct inventory"
+  // talk aimed at other brokers, not at a genuine home-seeker. Found via real
+  // Sept 2026 data: "RD BROTHERS PROPERTIES LLP...IF ANY INVENTORY AVAILABLE
+  // CONTACT" listed three separate phone numbers at the bottom, all of which
+  // were being wrongly counted as three separate leads. "Genz realtor...only
+  // intrested who have direct inventory" was the same pattern under a
+  // different firm name.
+  // Deliberately narrow: does NOT match "please share genuine leads only" or
+  // similar phrases genuine seekers use constantly — only real estate jargon
+  // ("inventory") or an actual firm-name signature triggers this.
+  var FIRM_NAME=/\b(?:properties (?:llp|pvt|consultant)|realty|realtors?|relators?)\b/i;
+  var INVENTORY_TALK=/\b(?:direct inventory|available inventory|inventory available|share (?:your |the )?inventory)\b/i;
+  if(FIRM_NAME.test(n) || INVENTORY_TALK.test(n)) return 'provider';
+
   // 1b. MASTER RULE (v2) — checked before every keyword-based special case
   // below, because "friend", "replacement", and "join us" framing all get
   // misjudged by keyword alone.
