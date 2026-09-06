@@ -100,7 +100,9 @@ h2 { font-size:17px; font-weight:700; margin:28px 0 10px; }
 .search-links a:hover { border-color:var(--teal); color:var(--teal); }
 .cta-box { background:var(--teal-bg); border:1px solid var(--teal); border-radius:14px; padding:18px; margin:24px 0; text-align:center; }
 .cta-box p { font-size:13px; color:var(--ink2); margin:6px 0 14px; }
-.cta-box a { display:inline-block; background:var(--teal); color:#fff; border-radius:10px; padding:12px 24px; font-size:14px; font-weight:700; text-decoration:none; }
+.cta-buttons { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.cta-primary { display:inline-block; background:var(--teal); color:#fff; border-radius:10px; padding:12px 22px; font-size:14px; font-weight:700; text-decoration:none; }
+.cta-secondary { display:inline-block; background:var(--bg); color:var(--teal); border:1.5px solid var(--teal); border-radius:10px; padding:11px 22px; font-size:14px; font-weight:700; text-decoration:none; }
 .sub-areas { font-size:13px; line-height:2; color:var(--ink2); }
 .sub-areas b { color:var(--ink); }
 .faq-item { border-bottom:1px solid var(--border); padding:14px 0; }
@@ -116,7 +118,7 @@ footer a { color:var(--teal); text-decoration:none; }
 
 <header class="topbar">
   <a href="/" class="logo">Flat<span>Khoj</span></a>
-  <a href="/?area=Andheri%20East" class="topbar-cta">Browse Listings</a>
+  <a href="/?area=Andheri%20East&city=mumbai" class="topbar-cta">Browse Listings</a>
 </header>
 
 <main>
@@ -138,17 +140,20 @@ footer a { color:var(--teal); text-decoration:none; }
 
   <h2>Popular searches in Andheri East</h2>
   <div class="search-links">
-    <a href="/?area=Andheri%20East&type=flat_wanted">Flats for rent</a>
-    <a href="/?area=Andheri%20East&type=flatmate_wanted">Flatmate wanted</a>
-    <a href="/?area=Andheri%20East&type=pg_listing">PG in Andheri East</a>
-    <a href="/?area=Andheri%20East&brokerage=no">No brokerage flats</a>
+    <a href="/?area=Andheri%20East&type=flat_wanted&city=mumbai">Flats for rent</a>
+    <a href="/?area=Andheri%20East&type=flatmate_wanted&city=mumbai">Flatmate wanted</a>
+    <a href="/?area=Andheri%20East&type=pg_listing&city=mumbai">PG in Andheri East</a>
+    <a href="/?area=Andheri%20East&brokerage=no&city=mumbai">No brokerage flats</a>
     <a href="/broker_poster.html">Find a broker</a>
   </div>
 
   <div class="cta-box">
     <strong>Post your requirement free</strong>
     <p>Looking for a flat, flatmate, or PG in Andheri East? Post it on FlatKhoj and get direct responses — no brokerage.</p>
-    <a href="/post_form.html">Post Free →</a>
+    <div class="cta-buttons">
+      <a href="/post_form.html" class="cta-primary">Post Free →</a>
+      <a href="/?area=Andheri%20East&city=mumbai" class="cta-secondary">View Listings</a>
+    </div>
   </div>
 
   <h2>Localities covered within Andheri East</h2>
@@ -185,12 +190,12 @@ footer a { color:var(--teal); text-decoration:none; }
 
   <h2>Nearby areas</h2>
   <div class="nearby">
-    <a href="/?area=Andheri%20West">Andheri West</a>
-    <a href="/?area=Goregaon%20East">Goregaon East</a>
-    <a href="/?area=Jogeshwari">Jogeshwari</a>
-    <a href="/?area=Powai">Powai</a>
-    <a href="/?area=Vile%20Parle">Vile Parle</a>
-    <a href="/?area=Ghatkopar">Ghatkopar</a>
+    <a href="/?area=Andheri%20West&city=mumbai">Andheri West</a>
+    <a href="/?area=Goregaon%20East&city=mumbai">Goregaon East</a>
+    <a href="/?area=Jogeshwari&city=mumbai">Jogeshwari</a>
+    <a href="/?area=Powai&city=mumbai">Powai</a>
+    <a href="/?area=Vile%20Parle&city=mumbai">Vile Parle</a>
+    <a href="/?area=Ghatkopar&city=mumbai">Ghatkopar</a>
   </div>
 </main>
 

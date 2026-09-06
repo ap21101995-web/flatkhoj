@@ -6,6 +6,36 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://flatkhoj.com/andheri-east-flats-flatmates.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://flatkhoj.com/goregaon-west-flats-flatmates.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://flatkhoj.com/vile-parle-flats-flatmates.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://flatkhoj.com/santacruz-flats-flatmates.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://flatkhoj.com/powai-flats-flatmates.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://flatkhoj.com/thane-west-flats-flatmates.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://flatkhoj.com/broker_poster.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
