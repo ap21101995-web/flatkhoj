@@ -2,5 +2,9 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /support_admin.html
+Disallow: /diagnostic.html
+Disallow: /wa_test.html
+Disallow: /nestaway.html
+Disallow: /broker_return.html
 
 Sitemap: https://flatkhoj.com/sitemap.xml
