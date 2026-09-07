@@ -453,24 +453,43 @@ function pickName(sender,text){
   return 'Not Available';
 }
 
-/* WhatsApp export parser — Android + iOS */
+/* WhatsApp export parser — Android + iOS
+   IMPORTANT: dash-format (Android) exports use DD/MM/YY. Bracket-format
+   (iOS/Desktop) exports use MM/DD/YY -- confirmed by finding "6/30/26" in
+   real data, which is only valid as month=6, day=30. Getting this wrong
+   silently misdates every message from a bracket-format file. */
 function parseChat(txt){
   var out=[], lines=txt.split(/\r?\n/), cur=null;
   var reA=/^(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2})(?::\d{2})?\s*([ap]\.?m\.?)?\s*-\s*([^:]+):\s?([\s\S]*)$/i;
   var reI=/^\[(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2})(?::\d{2})?\s*([ap]\.?m\.?)?\]\s*([^:]+):\s?([\s\S]*)$/i;
+  // A dated line with NO colon-separated sender -- a system notification
+  // ("X joined using a group link.", "X left", etc.) Must close out the
+  // current message rather than being appended to it as continuation text,
+  // or it silently contaminates and can drop a genuine lead.
+  var reSysA=/^(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2})(?::\d{2})?\s*([ap]\.?m\.?)?\s*-\s*(.+)$/i;
+  var reSysI=/^\[(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2})(?::\d{2})?\s*([ap]\.?m\.?)?\]\s*(.+)$/i;
   lines.forEach(function(ln){
-    var m=reA.exec(ln)||reI.exec(ln);
-    if(m){
+    var mA=reA.exec(ln), mI=reI.exec(ln);
+    if(mA||mI){
       if(cur) out.push(cur);
-      cur={date:m[1],time:m[2],ap:(m[3]||'').toLowerCase(),sender:m[4],text:m[5]||''};
+      if(mA){
+        cur={date:mA[1],time:mA[2],ap:(mA[3]||'').toLowerCase(),sender:mA[4],text:mA[5]||'',order:'DMY'};
+      } else {
+        cur={date:mI[1],time:mI[2],ap:(mI[3]||'').toLowerCase(),sender:mI[4],text:mI[5]||'',order:'MDY'};
+      }
+    } else if(reSysA.test(ln)||reSysI.test(ln)){
+      if(cur){ out.push(cur); cur=null; }
     } else if(cur){ cur.text += '\n'+ln; }
   });
   if(cur) out.push(cur);
   return out;
 }
 
-function toDate(d,t,ap){
-  var p=d.split('/'); var dd=+p[0], mm=+p[1], yy=+p[2];
+function toDate(d,t,ap,order){
+  var p=d.split('/');
+  var dd, mm;
+  if(order==='MDY'){ mm=+p[0]; dd=+p[1]; } else { dd=+p[0]; mm=+p[1]; }
+  var yy=+p[2];
   if(yy<100) yy+=2000;
   var hp=t.split(':'); var h=+hp[0], mi=+hp[1];
   if(ap){ if(ap[0]==='p'&&h<12)h+=12; if(ap[0]==='a'&&h===12)h=0; }
@@ -686,7 +705,7 @@ document.getElementById('run').onclick=async function(){
 
     msgs.forEach(function(m){
       var when;
-      try{ when=toDate(m.date,m.time,m.ap); }catch(e){ return; }
+      try{ when=toDate(m.date,m.time,m.ap,m.order); }catch(e){ return; }
       if(cutoff && when<cutoff){ stale++; return; }
       var verdict=classify(m.text);
       if(verdict==='provider') return;
