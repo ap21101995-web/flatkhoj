@@ -69,15 +69,46 @@
     font-size:12px; color:#888; text-align:center; padding:0 24px; line-height:1.6;
   }
 
-  .cta-box {
-    margin: 28px 20px 0; background:#0f7b6c; border-radius:18px; padding:26px 20px; text-align:center; color:#fff;
+  .cta-box { margin: 28px 20px 0; }
+  .cta-box h3 { font-size:19px; font-weight:800; margin-bottom:8px; color:#141414; }
+  .cta-box p { font-size:13.5px; color:#666; margin-bottom:18px; line-height:1.5; }
+
+  .apply-box {
+    margin: 28px 20px 0; background:#0f7b6c; border-radius:18px; padding:26px 20px; color:#fff;
   }
-  .cta-box h3 { font-size:19px; font-weight:800; margin-bottom:8px; }
-  .cta-box p { font-size:13.5px; opacity:0.9; margin-bottom:18px; line-height:1.5; }
-  .cta-btn {
-    display:inline-block; background:#fff; color:#0f7b6c; border-radius:12px; padding:14px 28px;
-    font-size:15px; font-weight:800; text-decoration:none;
+  .apply-box h3 { font-size:19px; font-weight:800; margin-bottom:6px; }
+  .apply-box > p { font-size:13.5px; opacity:0.9; margin-bottom:20px; line-height:1.5; }
+
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-size:12.5px; font-weight:700; margin-bottom:6px; opacity:0.95; }
+  .form-group input, .form-group select, .form-group textarea {
+    width:100%; padding:12px 14px; border-radius:10px; border:none; font-family:'Plus Jakarta Sans',sans-serif;
+    font-size:14px; background:#fff; color:#141414;
   }
+  .form-group textarea { resize:vertical; min-height:70px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  .no-brokerage-notice {
+    background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.4); border-radius:12px;
+    padding:14px; margin:18px 0; display:flex; gap:10px; align-items:flex-start;
+  }
+  .no-brokerage-notice input[type="checkbox"] { margin-top:3px; flex-shrink:0; width:18px; height:18px; }
+  .no-brokerage-notice label { font-size:12.5px; line-height:1.6; font-weight:500; }
+  .no-brokerage-notice b { text-decoration:underline; }
+
+  .apply-submit-btn {
+    width:100%; background:#fff; color:#0f7b6c; border:none; border-radius:12px; padding:14px;
+    font-size:15px; font-weight:800; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;
+  }
+  .apply-submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
+
+  .form-error { background:#fef0ee; color:#c0392b; border-radius:8px; padding:10px 12px; font-size:12.5px; margin-bottom:12px; display:none; }
+  .form-success {
+    text-align:center; padding:20px 10px;
+  }
+  .form-success .big-check { font-size:44px; margin-bottom:10px; }
+  .form-success h4 { font-size:17px; font-weight:800; margin-bottom:8px; }
+  .form-success p { font-size:13.5px; opacity:0.9; line-height:1.6; }
 
   footer { text-align:center; padding:24px 16px; font-size:12px; color:#999; }
   footer a { color:#0f7b6c; text-decoration:none; }
@@ -175,16 +206,141 @@
   </p>
 </div>
 
-<div class="cta-box">
-  <h3>Ready to get started?</h3>
-  <p>Tell us about your property or requirement, and our team will reach out to schedule an inspection.</p>
-  <a href="https://wa.me/918169114894?text=Hi%2C%20I%27m%20interested%20in%20Flatkhoj%27s%20Guaranteed%20Tenant%20program" class="cta-btn">Apply on WhatsApp →</a>
+<div class="apply-box">
+  <h3>Apply for Guaranteed Tenant</h3>
+  <p>Tell us about your property or requirement. Our team will contact you shortly to schedule an inspection.</p>
+
+  <form id="gtForm">
+    <div class="form-error" id="gtError"></div>
+
+    <div class="form-group">
+      <label>What are you listing?</label>
+      <select id="gt-type" required>
+        <option value="" disabled selected>Select one</option>
+        <option value="flat_listing">Full Flat (I'm the owner)</option>
+        <option value="flatmate_wanted">Flatmate Wanted (shared occupancy)</option>
+        <option value="replacement">Replacement Needed (I'm vacating)</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" id="gt-name" required>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="gt-phone" pattern="[6-9][0-9]{9}" maxlength="10" placeholder="10-digit number" required>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Area / Location</label>
+      <input type="text" id="gt-area" placeholder="e.g. Andheri West" required>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Configuration</label>
+        <input type="text" id="gt-config" placeholder="e.g. 2BHK, Room in 3BHK" required>
+      </div>
+      <div class="form-group">
+        <label>Expected Rent (₹/month)</label>
+        <input type="number" id="gt-rent" placeholder="e.g. 35000" min="0">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Anything else we should know?</label>
+      <textarea id="gt-desc" placeholder="Amenities, move-in date, preferences, etc."></textarea>
+    </div>
+
+    <div class="no-brokerage-notice">
+      <input type="checkbox" id="gt-agree" required>
+      <label for="gt-agree">
+        I understand this listing must be posted <b>without brokerage from my side</b> — FlatKhoj's exclusive partner broker earns their commission directly from this property placement, not from me separately.
+      </label>
+    </div>
+
+    <button type="submit" class="apply-submit-btn" id="gt-submit-btn">Submit Application</button>
+  </form>
+
+  <div class="form-success" id="gtSuccess" style="display:none">
+    <div class="big-check">✅</div>
+    <h4>Application received!</h4>
+    <p>Thanks — our team will contact you shortly to schedule an inspection and get your Guaranteed Tenant listing started.</p>
+  </div>
 </div>
 
 <footer>
   <a href="/">Home</a> · <a href="/post_form.html">Post Normally</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
   <br>flatkhoj.com · Mumbai's Flat &amp; Flatmate Marketplace
 </footer>
+
+<script>
+const SUPA_URL = "https://hbvdboxyppsmcuqgbpwp.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4";
+
+document.getElementById("gtForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const errorBox = document.getElementById("gtError");
+  const submitBtn = document.getElementById("gt-submit-btn");
+  errorBox.style.display = "none";
+
+  const phone = document.getElementById("gt-phone").value.trim();
+  if (!/^[6-9][0-9]{9}$/.test(phone)) {
+    errorBox.textContent = "Please enter a valid 10-digit Indian phone number.";
+    errorBox.style.display = "block";
+    return;
+  }
+  if (!document.getElementById("gt-agree").checked) {
+    errorBox.textContent = "Please confirm you understand the no-brokerage condition before submitting.";
+    errorBox.style.display = "block";
+    return;
+  }
+
+  const payload = {
+    listing_type: document.getElementById("gt-type").value,
+    poster_name: document.getElementById("gt-name").value.trim(),
+    phone: phone,
+    area: document.getElementById("gt-area").value.trim(),
+    configuration: document.getElementById("gt-config").value.trim(),
+    rent_expectation: document.getElementById("gt-rent").value ? Number(document.getElementById("gt-rent").value) : null,
+    description: document.getElementById("gt-desc").value.trim() || null,
+    agreed_no_brokerage: true
+  };
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Submitting…";
+
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/guaranteed_tenant_applications`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPA_KEY,
+        "Authorization": `Bearer ${SUPA_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText);
+    }
+
+    document.getElementById("gtForm").style.display = "none";
+    document.getElementById("gtSuccess").style.display = "block";
+  } catch (err) {
+    console.error("Guaranteed Tenant submit error:", err);
+    errorBox.textContent = "Something went wrong submitting your application. Please try again in a moment.";
+    errorBox.style.display = "block";
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Application";
+  }
+});
+</script>
 
 </body>
 </html>
