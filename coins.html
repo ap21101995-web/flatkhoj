@@ -674,26 +674,12 @@ async function addCoinsToAccount(coins, amount, orderId) {
 
   } catch(err) {
     console.error('Failed to add coins:', err);
-    // Fallback: update directly
-    try {
-      const r2 = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-      });
-      const d2 = await r2.json();
-      const cur = d2[0]?.coins || user.coins || 0;
-      const newBal = cur + coins;
-      await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-        method: 'PATCH',
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coins: newBal })
-      });
-      user.coins = newBal;
-      localStorage.setItem('fmh_user', JSON.stringify(user));
-      document.getElementById('balanceAmount').textContent = newBal;
-      showSuccess(coins);
-    } catch(e2) {
-      alert('Payment received but coins not added. Please contact support with your order ID: ' + orderId);
-    }
+    // The real crediting path (server-side, verified against Cashfree) didn't
+    // confirm in time. We deliberately do NOT credit coins directly from the
+    // client here -- doing so used to trust whatever "coins" value was sitting
+    // in the page URL, which anyone could edit to grant themselves free coins.
+    // Support can manually verify and credit using the real order ID instead.
+    alert('Payment received but coins not added yet. Please contact support with your order ID: ' + orderId);
   }
 }
 
