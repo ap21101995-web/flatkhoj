@@ -598,15 +598,15 @@ async function verifyOwnerPassword() {
       userId = existing[0].id;
       coins = existing[0].coins || 0;
     } else {
-      // Create account with 999 coins
+      // Create account with 0 starting coins
       const createRes = await fetch(`${SUPA_URL}/rest/v1/users`, {
         method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-        body: JSON.stringify({ phone: loginPhone, coins: 999, created_at: new Date().toISOString() })
+        body: JSON.stringify({ phone: loginPhone, coins: 0, created_at: new Date().toISOString() })
       });
       const newUser = await createRes.json();
       userId = newUser[0]?.id;
-      coins = 999;
+      coins = 0;
     }
 
     const user = {
@@ -663,7 +663,7 @@ async function verifyOtp() {
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal,resolution=ignore-duplicates'
         },
-        body: JSON.stringify({ phone: '1111111100', coins: 999, created_at: new Date().toISOString() })
+        body: JSON.stringify({ phone: '1111111100', coins: 0, created_at: new Date().toISOString() })
       });
 
       // Now fetch the user (always exists at this point)
@@ -675,7 +675,7 @@ async function verifyOtp() {
       if (!data || data.length === 0) throw new Error('User not found after upsert');
 
       const userId = data[0].id;
-      const coins = data[0].coins ?? 999;
+      const coins = data[0].coins ?? 0;
 
       const user = {
         phone: '1111111100',
