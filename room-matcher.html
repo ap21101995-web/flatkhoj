@@ -65,8 +65,10 @@
     border-radius: 0 0 10px 10px; overflow:hidden;
   }
 
-  .room-unit { border-bottom: 2px dashed #e8e8e4; }
-  .room-unit:last-child { border-bottom:none; }
+  .room-unit { border-bottom: 6px solid #d4d4d0; margin-bottom:2px; }
+  .room-unit:last-child { border-bottom:none; margin-bottom:0; }
+  .room-unit:nth-child(odd) .room-header, .room-unit:nth-child(odd) .room-details { background:#fbfbf9; }
+  .room-unit:nth-child(even) .room-header, .room-unit:nth-child(even) .room-details { background:#fff; }
 
   .room-header {
     display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer;
@@ -98,20 +100,44 @@
   }
   .occ-btn.sel { border-color:#0f7b6c; background:#0f7b6c; color:#fff; }
 
-  .beds-row { display:flex; flex-direction:column; gap:10px; margin:10px 0; }
+  .beds-row { display:flex; flex-direction:column; gap:12px; margin:10px 0; }
   .bed-card {
-    border:1.5px solid #e8e8e4; border-radius:12px; padding:12px; background:#fff;
+    border-radius:16px; padding:14px 14px 12px; position:relative;
   }
-  .bed-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-  .bed-card-label { font-size:12px; font-weight:700; color:#555; display:flex; align-items:center; gap:6px; }
+  .bed-card.type-single { background:linear-gradient(180deg,#dbeafe 0%,#eff6ff 100%); border:1.5px solid #93c5fd; }
+  .bed-card.type-double { background:linear-gradient(180deg,#ede9fe 0%,#f5f3ff 100%); border:1.5px solid #c4b5fd; }
+  .bed-card.type-triple { background:linear-gradient(180deg,#fed7aa 0%,#fff7ed 100%); border:1.5px solid #fdba74; }
+  .bed-pillow {
+    width:64px; height:24px; background:rgba(255,255,255,0.9); border-radius:12px; margin:0 auto 10px;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .bed-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .bed-card-label { font-size:12.5px; font-weight:800; color:#333; display:flex; align-items:center; gap:6px; }
   .bed-rent-input {
-    width:100%; padding:9px 11px; border-radius:9px; border:1.5px solid #e8e8e4; font-size:13px;
-    font-family:'Plus Jakarta Sans',sans-serif;
+    width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid rgba(255,255,255,0.9); font-size:13px;
+    font-family:'Plus Jakarta Sans',sans-serif; background:rgba(255,255,255,0.85);
   }
   .or-divider {
     display:flex; align-items:center; gap:10px; margin:2px 0; color:#999; font-size:11.5px; font-weight:800;
   }
   .or-divider::before, .or-divider::after { content:""; flex:1; height:1px; background:#e8e8e4; }
+
+  .no-match-msg { font-size:12px; color:#888; text-align:center; padding:8px; background:rgba(255,255,255,0.6); border-radius:8px; }
+  .match-carousel {
+    display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.85); border-radius:12px; padding:10px 12px;
+  }
+  .match-arrow {
+    flex-shrink:0; width:30px; height:30px; border-radius:50%; border:none; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.15);
+    font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#333;
+  }
+  .match-content { flex:1; min-width:0; cursor:pointer; }
+  .match-name { font-size:13px; font-weight:800; color:#141414; }
+  .match-budget { font-size:12.5px; color:#555; margin-top:1px; }
+  .match-unlock-btn {
+    display:inline-block; margin-top:6px; background:#0f7b6c; color:#fff; border-radius:8px; padding:6px 12px;
+    font-size:11.5px; font-weight:700; text-decoration:none;
+  }
+  .match-counter { flex-shrink:0; font-size:10.5px; color:#999; font-weight:600; }
 
   .mini-row { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
   .mini-row label { font-size:11.5px; font-weight:700; color:#555; }
@@ -165,15 +191,15 @@
 
 <div class="section">
   <div class="setup-card">
-    <div class="form-row">
-      <div class="form-group">
-        <label>Area</label>
-        <div class="area-search-wrap" style="position:relative">
-          <input type="text" id="rm-area" placeholder="Search area…" autocomplete="off"
-            oninput="rmAreaSearch(this)" onfocus="rmAreaSearch(this)">
-          <div class="rm-area-dropdown" id="rmAreaDd"></div>
-        </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label>Area</label>
+      <div class="area-search-wrap" style="position:relative">
+        <input type="text" id="rm-area" placeholder="Search area…" autocomplete="off"
+          oninput="rmAreaSearch(this)" onfocus="rmAreaSearch(this)">
+        <div class="rm-area-dropdown" id="rmAreaDd"></div>
       </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>Flat Type</label>
         <select id="rm-flat-type" onchange="rebuildHouse()">
@@ -181,6 +207,14 @@
           <option value="2" selected>2 BHK</option>
           <option value="3">3 BHK</option>
           <option value="4">4 BHK</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Gender Preference</label>
+        <select id="rm-gender">
+          <option value="">Any</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
         </select>
       </div>
     </div>
@@ -345,6 +379,18 @@ function setBedRent(id, bedIdx, val) {
   room.beds[bedIdx].rent = parseInt(val) || null;
 }
 
+// Numbers beds only within their own group type -- "Double Bed 1/2", but
+// "Single bed" stays unnumbered when there's only one of it (e.g. inside
+// an "Any" room that has 1 single + 2 double beds).
+function bedLabel(beds, idx) {
+  const bed = beds[idx];
+  const typeLabel = bed.groupType === 'Single Room' ? 'Single' : bed.groupType === 'Double Sharing' ? 'Double' : 'Triple';
+  const sameTypeBeds = beds.filter(b => b.groupType === bed.groupType);
+  if (sameTypeBeds.length <= 1) return `${typeLabel} bed`;
+  const positionWithinType = beds.slice(0, idx + 1).filter(b => b.groupType === bed.groupType).length;
+  return `${typeLabel} Bed ${positionWithinType}`;
+}
+
 function renderHouse() {
   const container = document.getElementById('house-body');
   container.innerHTML = rooms.map(room => {
@@ -368,20 +414,44 @@ function renderHouse() {
       if (prevGroupType !== null && bed.groupType !== prevGroupType) {
         bedsHtml += `<div class="or-divider">Or</div>`;
       }
-      const shortLabel = bed.groupType === 'Single Room' ? 'Single bed' : bed.groupType === 'Double Sharing' ? 'Double bed' : 'Triple bed';
+      const shortLabel = bedLabel(room.beds, idx);
+      const typeClass = bed.groupType === 'Single Room' ? 'type-single' : bed.groupType === 'Double Sharing' ? 'type-double' : 'type-triple';
+      let bedBottomHtml;
+      if (bed.searched) {
+        if (!bed.matches || bed.matches.length === 0) {
+          bedBottomHtml = `<div class="no-match-msg">No matches yet for this bed. Check back soon.</div>`;
+        } else {
+          const m = bed.matches[bed.matchIndex];
+          const rentDisplay = m.rent_amount ? `₹${Number(m.rent_amount).toLocaleString('en-IN')}` : 'Budget not specified';
+          const name = m.poster_name || 'FlatKhoj Member';
+          bedBottomHtml = `
+            <div class="match-carousel">
+              <button class="match-arrow" onclick="cycleBedMatch(${room.id},${idx},1)" title="See next option">←</button>
+              <div class="match-content" onclick="viewMatchRequirement('${m.id}')">
+                <div class="match-name">${name}</div>
+                <div class="match-budget">${rentDisplay}</div>
+                <a href="/listing_detail.html?id=${m.id}" target="_blank" class="match-unlock-btn" onclick="event.stopPropagation()">Unlock Contact</a>
+              </div>
+              <div class="match-counter">${bed.matchIndex + 1} / ${bed.matches.length}</div>
+            </div>`;
+        }
+      } else {
+        bedBottomHtml = `<input type="number" class="bed-rent-input" placeholder="Enter rent for this bed (₹)" value="${bed.rent || ''}" oninput="setBedRent(${room.id},${idx},this.value)" ${bed.vacant ? '' : 'disabled'} style="${bed.vacant ? '' : 'background:#f0f0f0;color:#aaa;cursor:not-allowed'}">`;
+      }
       bedsHtml += `
-        <div class="bed-card">
+        <div class="bed-card ${typeClass}">
+          <div class="bed-pillow"></div>
           <div class="bed-card-top">
             <div class="bed-card-label">🛏️ ${shortLabel}</div>
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:11px;font-weight:500;color:#999">Available</span>
+              <span style="font-size:11px;font-weight:600;color:#666">Available</span>
               <label class="switch">
                 <input type="checkbox" ${bed.vacant ? 'checked' : ''} onchange="toggleBedVacant(${room.id},${idx},this.checked)">
                 <span class="slider"></span>
               </label>
             </div>
           </div>
-          <input type="number" class="bed-rent-input" placeholder="Enter rent for this bed (₹)" value="${bed.rent || ''}" oninput="setBedRent(${room.id},${idx},this.value)" ${bed.vacant ? '' : 'disabled'} style="${bed.vacant ? '' : 'background:#f0f0f0;color:#aaa;cursor:not-allowed'}">
+          ${bedBottomHtml}
         </div>`;
       prevGroupType = bed.groupType;
     });
@@ -425,34 +495,30 @@ function renderHouse() {
 // ---- Matching (per vacant bed, not just per room) ----
 async function findMatches() {
   const area = document.getElementById('rm-area').value.trim();
-  const vacantSlots = [];
+  const genderPref = document.getElementById('rm-gender').value;
+  const vacantBedRefs = [];
   rooms.filter(r => r.vacant).forEach(room => {
     room.beds.forEach((bed, idx) => {
-      if (bed.vacant) {
-        vacantSlots.push({ roomName: room.name, occupancy: bed.groupType, rent: bed.rent, bedNum: idx + 1 });
-      }
+      if (bed.vacant) vacantBedRefs.push({ room, bed, idx });
     });
   });
 
   if (!area) { alert('Please enter the property area.'); return; }
-  if (vacantSlots.length === 0) { alert('Please mark at least one room as Vacant with at least one bed left on.'); return; }
+  if (vacantBedRefs.length === 0) { alert('Please mark at least one room as Vacant with at least one bed left on.'); return; }
 
   const btn = document.getElementById('rm-find-btn');
   btn.disabled = true;
   btn.textContent = 'Searching…';
-  document.getElementById('rm-results').innerHTML = '<div class="no-matches">Searching live listings…</div>';
 
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/listings?listing_type=eq.flatmate_wanted&is_active=eq.true&select=id,areas,room_type,rent_amount,description,gender_preference,created_at`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/listings?listing_type=eq.flatmate_wanted&is_active=eq.true&select=id,poster_name,areas,room_type,rent_amount,description,gender_preference,created_at`, {
       headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
     });
     const allSeekers = await res.json();
     const areaKey = normKey(area);
 
-    let resultsHtml = '';
-
-    vacantSlots.forEach(slot => {
-      const keywords = occupancyKeywords(slot.occupancy);
+    vacantBedRefs.forEach(({ bed }) => {
+      const keywords = occupancyKeywords(bed.groupType);
 
       let matches = allSeekers.filter(l => {
         const listingAreas = Array.isArray(l.areas) ? l.areas : [l.areas];
@@ -465,52 +531,43 @@ async function findMatches() {
           const roomTypeLower = (l.room_type || '').toLowerCase();
           if (!keywords.some(k => roomTypeLower.includes(k))) return false;
         }
+        // Only exclude if the listing states a gender that conflicts --
+        // an unspecified listing is treated as open to anyone.
+        if (genderPref && l.gender_preference && l.gender_preference !== genderPref) return false;
         return true;
       });
 
-      if (slot.rent) {
-        matches.sort((a, b) => Math.abs((a.rent_amount || 0) - slot.rent) - Math.abs((b.rent_amount || 0) - slot.rent));
+      if (bed.rent) {
+        matches.sort((a, b) => Math.abs((a.rent_amount || 0) - bed.rent) - Math.abs((b.rent_amount || 0) - bed.rent));
       } else {
         matches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       }
-      matches = matches.slice(0, 10);
 
-      const occLabel = slot.occupancy;
-      resultsHtml += `<div class="results-room-header"><span>${slot.roomName} — ${occLabel} (Bed ${slot.bedNum})</span><span style="font-size:11.5px;color:#888;font-weight:600">${matches.length} match${matches.length !== 1 ? 'es' : ''}</span></div>`;
-
-      if (matches.length === 0) {
-        resultsHtml += `<div class="no-matches">No current listings match this yet. Check back soon, or widen the budget/area.</div>`;
-      } else {
-        matches.forEach(m => {
-          const rent = m.rent_amount ? `₹${Number(m.rent_amount).toLocaleString('en-IN')}` : 'Budget not specified';
-          let fitBadge = '';
-          if (slot.rent && m.rent_amount) {
-            const diff = Math.abs(m.rent_amount - slot.rent) / slot.rent;
-            fitBadge = diff <= 0.15 ? '<span class="fit-badge fit-great">Great fit</span>' : diff <= 0.35 ? '<span class="fit-badge fit-ok">Close fit</span>' : '';
-          }
-          const gender = m.gender_preference ? ` · ${m.gender_preference}` : '';
-          const desc = m.description ? m.description.slice(0, 100) : '';
-          resultsHtml += `
-            <div class="match-card">
-              <div class="match-info">
-                <div class="match-budget">${rent}${fitBadge}</div>
-                <div class="match-meta">${m.room_type || ''}${gender}</div>
-                ${desc ? `<div class="match-desc">${desc}</div>` : ''}
-              </div>
-              <a href="/listing_detail.html?id=${m.id}" target="_blank" class="match-btn">View & Contact</a>
-            </div>`;
-        });
-      }
+      bed.matches = matches.slice(0, 10);
+      bed.matchIndex = 0;
+      bed.searched = true;
     });
 
-    document.getElementById('rm-results').innerHTML = resultsHtml;
+    renderHouse();
   } catch (err) {
     console.error('Room matcher error:', err);
-    document.getElementById('rm-results').innerHTML = '<div class="no-matches">Something went wrong searching. Please try again.</div>';
+    alert('Something went wrong searching. Please try again.');
   } finally {
     btn.disabled = false;
     btn.textContent = '🔍 Find Potential Occupants';
   }
+}
+
+function cycleBedMatch(roomId, bedIdx, direction) {
+  const room = rooms.find(r => r.id === roomId);
+  const bed = room.beds[bedIdx];
+  if (!bed.matches || bed.matches.length === 0) return;
+  bed.matchIndex = (bed.matchIndex + direction + bed.matches.length) % bed.matches.length;
+  renderHouse();
+}
+
+function viewMatchRequirement(listingId) {
+  window.open('/listing_detail.html?id=' + listingId, '_blank');
 }
 
 // Start with 2 BHK by default
