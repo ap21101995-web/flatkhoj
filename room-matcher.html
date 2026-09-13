@@ -84,15 +84,20 @@
   }
   .occ-btn.sel { border-color:#0f7b6c; background:#0f7b6c; color:#fff; }
 
-  .beds-row { display:flex; gap:8px; margin:10px 0; flex-wrap:wrap; }
-  .bed-chip {
-    flex:1; min-width:70px; border:1.5px solid #e8e8e4; border-radius:10px; padding:10px 6px; text-align:center;
-    cursor:pointer; background:#fff;
+  .beds-row { display:flex; flex-direction:column; gap:10px; margin:10px 0; }
+  .bed-card {
+    border:1.5px solid #e8e8e4; border-radius:12px; padding:12px; background:#fff;
   }
-  .bed-chip.occupied { background:#fdeaea; border-color:#c0392b; }
-  .bed-chip .bed-emoji { font-size:18px; }
-  .bed-chip .bed-label { font-size:10px; font-weight:700; margin-top:3px; color:#555; }
-  .bed-chip.occupied .bed-label { color:#c0392b; }
+  .bed-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .bed-card-label { font-size:12px; font-weight:700; color:#555; display:flex; align-items:center; gap:6px; }
+  .bed-rent-input {
+    width:100%; padding:9px 11px; border-radius:9px; border:1.5px solid #e8e8e4; font-size:13px;
+    font-family:'Plus Jakarta Sans',sans-serif;
+  }
+  .or-divider {
+    display:flex; align-items:center; gap:10px; margin:2px 0; color:#999; font-size:11.5px; font-weight:800;
+  }
+  .or-divider::before, .or-divider::after { content:""; flex:1; height:1px; background:#e8e8e4; }
 
   .mini-row { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
   .mini-row label { font-size:11.5px; font-weight:700; color:#555; }
@@ -146,7 +151,7 @@
 
 <div class="section">
   <div class="setup-card">
-    <div class="form-row three">
+    <div class="form-row">
       <div class="form-group">
         <label>Area</label>
         <input type="text" id="rm-area" placeholder="e.g. Andheri West">
@@ -159,10 +164,6 @@
           <option value="3">3 BHK</option>
           <option value="4">4 BHK</option>
         </select>
-      </div>
-      <div class="form-group">
-        <label>Total Rent (₹)</label>
-        <input type="number" id="rm-total-rent" placeholder="60000" min="0" oninput="onTotalRentChange()">
       </div>
     </div>
   </div>
@@ -194,18 +195,26 @@ function occupancyKeywords(occupancy) {
   if (occupancy === 'Triple Sharing') return ['triple'];
   return null; // Any
 }
-function bedCount(occupancy) {
-  if (occupancy === 'Single Room') return 1;
-  if (occupancy === 'Double Sharing') return 2;
-  if (occupancy === 'Triple Sharing') return 3;
-  return 1; // Any -- one flexible slot
-}
-function perBedRent(roomRent, occupancy) {
-  if (!roomRent) return null;
-  if (occupancy === 'Single Room') return roomRent;
-  if (occupancy === 'Double Sharing') return Math.round(roomRent / 2);
-  if (occupancy === 'Triple Sharing') return Math.round(roomRent / 3);
-  return roomRent;
+
+// Each bed now carries its own occupancy "groupType", vacancy state, and
+// rent -- rent lives on the bed, not the room. For "Any", a room offers a
+// single bed OR a double-sharing pair, shown separated by "Or".
+function generateBeds(occupancy) {
+  if (occupancy === 'Single Room') return [{ groupType: 'Single Room', vacant: true, rent: null }];
+  if (occupancy === 'Double Sharing') return [
+    { groupType: 'Double Sharing', vacant: true, rent: null },
+    { groupType: 'Double Sharing', vacant: true, rent: null },
+  ];
+  if (occupancy === 'Triple Sharing') return [
+    { groupType: 'Triple Sharing', vacant: true, rent: null },
+    { groupType: 'Triple Sharing', vacant: true, rent: null },
+    { groupType: 'Triple Sharing', vacant: true, rent: null },
+  ];
+  return [
+    { groupType: 'Single Room', vacant: true, rent: null },
+    { groupType: 'Double Sharing', vacant: true, rent: null },
+    { groupType: 'Double Sharing', vacant: true, rent: null },
+  ];
 }
 
 // ---- State ----
@@ -221,9 +230,7 @@ function buildRoomUnits(bhkCount) {
     ...u,
     vacant: false,
     occupancy: 'Single Room',
-    rent: null,
-    washroom: true,
-    beds: [{ occupied: false }],
+    beds: generateBeds('Single Room'),
     open: false,
   }));
 }
@@ -231,19 +238,6 @@ function buildRoomUnits(bhkCount) {
 function rebuildHouse() {
   const bhk = parseInt(document.getElementById('rm-flat-type').value);
   rooms = buildRoomUnits(bhk);
-  applyEqualRent();
-  renderHouse();
-}
-
-function applyEqualRent() {
-  const total = parseInt(document.getElementById('rm-total-rent').value) || 0;
-  if (!total || rooms.length === 0) return;
-  const share = Math.round(total / rooms.length);
-  rooms.forEach(r => { r.rent = share; });
-}
-
-function onTotalRentChange() {
-  applyEqualRent();
   renderHouse();
 }
 
@@ -262,44 +256,50 @@ function toggleVacant(id, checked) {
 function setOccupancy(id, occ) {
   const room = rooms.find(r => r.id === id);
   room.occupancy = occ;
-  const count = bedCount(occ);
-  const beds = [];
-  for (let i = 0; i < count; i++) beds.push(room.beds[i] || { occupied: false });
-  room.beds = beds;
+  room.beds = generateBeds(occ);
   renderHouse();
 }
 
-function toggleBed(id, bedIdx) {
+function toggleBedVacant(id, bedIdx, checked) {
   const room = rooms.find(r => r.id === id);
-  room.beds[bedIdx].occupied = !room.beds[bedIdx].occupied;
-  renderHouse();
+  room.beds[bedIdx].vacant = checked;
 }
 
-function setRoomRent(id, val) {
+function setBedRent(id, bedIdx, val) {
   const room = rooms.find(r => r.id === id);
-  room.rent = parseInt(val) || null;
-}
-
-function toggleWashroom(id, checked) {
-  const room = rooms.find(r => r.id === id);
-  room.washroom = checked;
+  room.beds[bedIdx].rent = parseInt(val) || null;
 }
 
 function renderHouse() {
   const container = document.getElementById('house-body');
   container.innerHTML = rooms.map(room => {
-    const bedsHtml = room.beds.map((bed, idx) => `
-      <div class="bed-chip ${bed.occupied ? 'occupied' : ''}" onclick="toggleBed(${room.id},${idx})">
-        <div class="bed-emoji">${bed.occupied ? '🚫' : '🛏️'}</div>
-        <div class="bed-label">${bed.occupied ? 'Occupied' : 'Vacant'}</div>
-      </div>`).join('');
+    let bedsHtml = '';
+    let prevGroupType = null;
+    room.beds.forEach((bed, idx) => {
+      if (prevGroupType !== null && bed.groupType !== prevGroupType) {
+        bedsHtml += `<div class="or-divider">Or</div>`;
+      }
+      const shortLabel = bed.groupType === 'Single Room' ? 'Single bed' : bed.groupType === 'Double Sharing' ? 'Double bed' : 'Triple bed';
+      bedsHtml += `
+        <div class="bed-card">
+          <div class="bed-card-top">
+            <div class="bed-card-label">🛏️ ${shortLabel}</div>
+            <label class="switch">
+              <input type="checkbox" ${bed.vacant ? 'checked' : ''} onchange="toggleBedVacant(${room.id},${idx},this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <input type="number" class="bed-rent-input" placeholder="Enter rent for this bed (₹)" value="${bed.rent || ''}" oninput="setBedRent(${room.id},${idx},this.value)">
+        </div>`;
+      prevGroupType = bed.groupType;
+    });
 
     const occButtons = ['Single Room', 'Double Sharing', 'Triple Sharing', 'Any'].map(o => {
       const label = o === 'Single Room' ? 'Single' : o === 'Double Sharing' ? 'Double' : o === 'Triple Sharing' ? 'Triple' : 'Any';
       return `<button class="occ-btn ${room.occupancy === o ? 'sel' : ''}" onclick="setOccupancy(${room.id},'${o}')">${label}</button>`;
     }).join('');
 
-    const vacantBeds = room.beds.filter(b => !b.occupied).length;
+    const vacantBeds = room.beds.filter(b => b.vacant).length;
     const subStatus = room.vacant ? `${vacantBeds} bed${vacantBeds !== 1 ? 's' : ''} vacant · ${room.occupancy === 'Any' ? 'Any sharing' : room.occupancy.replace(' Room','').replace(' Sharing',' sharing')}` : '';
 
     return `
@@ -323,23 +323,8 @@ function renderHouse() {
         <div class="room-details ${room.open && room.vacant ? 'open' : ''}">
           <div style="font-size:11px;font-weight:700;color:#555;margin-top:8px">Sharing Type</div>
           <div class="occ-grid">${occButtons}</div>
-          <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:4px">Beds — tap to mark occupied</div>
+          <div style="font-size:11px;font-weight:700;color:#555;margin:10px 0 4px">Beds — each starts Vacant, and has its own rent</div>
           <div class="beds-row">${bedsHtml}</div>
-          <div class="mini-row">
-            <label>Rent for this room (₹)</label>
-            <div class="rent-input-wrap">
-              <input type="number" value="${room.rent || ''}" oninput="setRoomRent(${room.id}, this.value)">
-            </div>
-          </div>
-          <div class="mini-row">
-            <div class="washroom-toggle">
-              <label>🚿 Washroom Available</label>
-            </div>
-            <label class="switch">
-              <input type="checkbox" ${room.washroom ? 'checked' : ''} onchange="toggleWashroom(${room.id}, this.checked)">
-              <span class="slider"></span>
-            </label>
-          </div>
         </div>
       </div>`;
   }).join('');
@@ -350,14 +335,15 @@ async function findMatches() {
   const area = document.getElementById('rm-area').value.trim();
   const vacantSlots = [];
   rooms.filter(r => r.vacant).forEach(room => {
-    const vacantBedCount = room.beds.filter(b => !b.occupied).length;
-    if (vacantBedCount > 0) {
-      vacantSlots.push({ roomName: room.name, occupancy: room.occupancy, rent: perBedRent(room.rent, room.occupancy), vacantBedCount });
-    }
+    room.beds.forEach((bed, idx) => {
+      if (bed.vacant) {
+        vacantSlots.push({ roomName: room.name, occupancy: bed.groupType, rent: bed.rent, bedNum: idx + 1 });
+      }
+    });
   });
 
   if (!area) { alert('Please enter the property area.'); return; }
-  if (vacantSlots.length === 0) { alert('Please mark at least one room as Vacant with at least one open bed.'); return; }
+  if (vacantSlots.length === 0) { alert('Please mark at least one room as Vacant with at least one bed left on.'); return; }
 
   const btn = document.getElementById('rm-find-btn');
   btn.disabled = true;
@@ -397,8 +383,8 @@ async function findMatches() {
       }
       matches = matches.slice(0, 10);
 
-      const occLabel = slot.occupancy === 'Any' ? 'Any sharing' : slot.occupancy;
-      resultsHtml += `<div class="results-room-header"><span>${slot.roomName} — ${occLabel} (${slot.vacantBedCount} vacant)</span><span style="font-size:11.5px;color:#888;font-weight:600">${matches.length} match${matches.length !== 1 ? 'es' : ''}</span></div>`;
+      const occLabel = slot.occupancy;
+      resultsHtml += `<div class="results-room-header"><span>${slot.roomName} — ${occLabel} (Bed ${slot.bedNum})</span><span style="font-size:11.5px;color:#888;font-weight:600">${matches.length} match${matches.length !== 1 ? 'es' : ''}</span></div>`;
 
       if (matches.length === 0) {
         resultsHtml += `<div class="no-matches">No current listings match this yet. Check back soon, or widen the budget/area.</div>`;
