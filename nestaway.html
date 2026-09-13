@@ -502,6 +502,25 @@ var BLOCK_NUMBERS=['9538584612','9004325226','9506146000','9960395782',
  '8779721715','9136862603'];
 var BLOCK_NAME=/\b(broker|flatkhoj|admin|agent|realt|properties|estate|hommiiz|coliving)\b/i;
 
+// ---------------------------------------------------------------
+// Area tag classification (Andheri East / Goregaon West / Both) --
+// requested by the NestAway client specifically. Kept identical to
+// nestaway_engine.py so the local script and the portal never disagree.
+// ---------------------------------------------------------------
+var ANDHERI_EAST_TAG=["Andheri East","Andheri","Marol","Marol Naka","Marol Pipeline","Marol Military Road","MIDC Andheri","JB Nagar","Chakala","Sakinaka","Saki Naka","SEEPZ","JVLR","Airport Road","Andheri Kurla Road","Mahakali Caves Road","Sher E Punjab","Andheri East Station","Parle West","Ruia College Area","Ruia Park","SV Road Vile Parle","Vile Parle","Vile Parle West","Navpada Vile Parle","Nehru Road Vile Parle","Parle East","Railway Colony Vile Parle","Vile Parle East","Irla","Irla Market","JVPD Scheme","Navpada Santacruz","Santacruz","Santacruz Station","Santacruz West","Tilak Road Santacruz","CSIA Area","Kalina","Sahar","Sahar Market","Sahar Road","Sahar Village","Santacruz East","Vakola","Vakola Bridge","Vakola Market","Vakola Pipeline Road","Central Avenue Powai","Chandivali","Chandivali Farm Road","Chandivali Studio Road","Hiranandani Gardens","Hiranandani Powai","IIT Bombay Area","IIT Powai","NITIE Area","New Powai","Nirvana Park","Powai","Powai Galleria","Powai Lake","Powai Plaza","Raheja Vihar","Rambaug Colony Powai"];
+
+var GOREGAON_WEST_TAG=["Goregaon West","Goregaon","Bangur Nagar","Bangur Nagar East","Bangur Nagar West","Gaimukh","Jawahar Nagar Goregaon","Link Road Goregaon","MHB Colony Goregaon","Motilal Nagar","Motilal Nagar 1","Motilal Nagar 2","Motilal Nagar 3","New Link Road Goregaon","Pahadi Goregaon","Pushpak Nagar","Sadguru Nagar","Shastri Nagar Goregaon","Siddharth Nagar Goregaon","Western Express Highway Goregaon","Chincholi Bunder","Erangal","IC Colony Malad","Infinity Mall Area","Liberty Garden","Madh Island","Malad Link Road","Malad Station","Malad West","Malvani","Marve","Marve Road","Mindspace","Orlem","Chadha Colony","Chadha Market","Dahanukarwadi","Dattapada","Kurar","Kurar Village","Malad East","Nityanand Nagar","Nutan Nagar","Parekh Nagar","Poonam Garden","Rahul Nagar","Saidham Nagar","Samarth Nagar","Samata Nagar","Sarvodaya Nagar","Vijay Park","Vinayak Nagar","Charkop","Charkop Sector 1","Charkop Sector 2","Charkop Sector 3","Charkop Sector 4","Charkop Sector 5","Charkop Sector 6","Charkop Sector 7","Charkop Sector 8","Kandivali Station","Kandivali West","MHB Colony","Poisar","Poisar Depot","Poisar Kandivali","Ramabai Colony","SV Road Kandivali","Vazira Naka","Akurli Naka","Akurli Road","Ganesh Nagar Kandivali","Kandivali East","Lokhandwala Kandivali","Mahavir Nagar Kandivali","Thakur Complex","Thakur Nagar","Thakur Village","Aarey Colony","Ekta Nagar Jogeshwari","Hanuman Nagar Jogeshwari","Jogeshwari","Jogeshwari Station","Jogeshwari West","Shree Nagar Jogeshwari"];
+
+var BOTH_AREAS_TAG=["Jogeshwari East","Jogeshwari Vikhroli Link Road","Airport Road Juhu","Gulmohar Road Juhu","Juhu","Juhu Beach","Juhu Chowpatty","Juhu Scheme","Juhu Tara Road","Juhu Versova Link Road","Shastri Nagar Juhu","Amboli","Amboli Naka","Andheri Link Road","Andheri Station","Andheri Station West","Andheri West","Aram Nagar","Azad Nagar","Azad Nagar Andheri","Bharat Nagar Andheri","D N Nagar Metro","DN Nagar","Four Bungalows","Gilbert Hill","JP Nagar","JP Road","Kanchpada","Laxmi Nagar Andheri","Lokhandwala","Lokhandwala Complex","Lokhandwala Market","Lower Oshiwara","MHADA Colony Andheri","Nehru Nagar Andheri","New Link Road","Oshiwara","Oshiwara Colony","Oshiwara Depot Area","Oshiwara Market","Parsi Colony Andheri","Seven Bungalows","Shitladevi Chawl","Upper Oshiwara","Veera Desai Industrial Estate","Veera Desai Road","Versova","Versova Beach","Versova Village","Yari Road","Aarey Road","Dindoshi","Dindoshi Village","Evershine City","Evershine Nagar","Film City","Film City Area","Film City Road","Gaurav Woods","Gokul Township","Goregaon East","NESCO","Oberoi Garden City","Yashodham","Yashodham Complex"];
+
+function classifyAreaTag(text){
+  var hitAE=areaHit(text,ANDHERI_EAST_TAG), hitGW=areaHit(text,GOREGAON_WEST_TAG), hitBoth=areaHit(text,BOTH_AREAS_TAG);
+  if(hitBoth||(hitAE&&hitGW)) return 'Both';
+  if(hitAE) return 'Andheri East';
+  if(hitGW) return 'Goregaon West';
+  return '';
+}
+
 var CONTACTS={};
 
 function cnorm(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
@@ -726,6 +745,7 @@ document.getElementById('run').onclick=async function(){
         batchSeen[pk]=1;
         var row={Name:nm,'Phone Number':ph,Gender:gd,
                  Area:areaName,Group:group,conf:verdict,keep:true,
+                 AreaTag:ha?classifyAreaTag(m.text):'',
                  'Posted On':when.toLocaleString('en-IN'),
                  Message:m.text.replace(/\s+/g,' ').slice(0,220)};
         if(ha) RESULT.a.push(row); else RESULT.t.push(row);
@@ -809,11 +829,18 @@ function download(rows,label){
   var gen=new Date().toLocaleString('en-IN');
   var caption='Generated: '+gen+'  |  '+label+'  |  '+rows.length+' leads';
   // Row 1: caption. Row 2: left blank. Row 3: headers. Row 4+: data.
-  // Columns are Phone Number and Gender only — no Name.
-  var data=rows.map(function(r){return {'Phone Number':r['Phone Number'],Gender:r.Gender}});
+  // Andheri & Goregaon gets an extra "Area" column (Andheri East / Goregaon
+  // West / Both) per the client's request. Thane keeps the original
+  // Phone Number + Gender only format.
+  var includeArea=(label==='Andheri & Goregaon');
+  var data=rows.map(function(r){
+    var d={'Phone Number':r['Phone Number'],Gender:r.Gender};
+    if(includeArea) d.Area=r.AreaTag||'';
+    return d;
+  });
   var ws=XLSX.utils.json_to_sheet(data,{origin:'A3'});
   XLSX.utils.sheet_add_aoa(ws,[[caption]],{origin:'A1'});
-  ws['!cols']=[{wch:24},{wch:16}];
+  ws['!cols']=includeArea?[{wch:24},{wch:16},{wch:16}]:[{wch:24},{wch:16}];
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Leads');
   XLSX.writeFile(wb,'NestAway_'+label.replace(/[^A-Za-z]/g,'')+'_'+stamp()+'.xlsx');
