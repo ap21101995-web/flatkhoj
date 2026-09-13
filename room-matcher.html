@@ -533,7 +533,10 @@ async function findMatches() {
         }
         // Only exclude if the listing states a gender that conflicts --
         // an unspecified listing is treated as open to anyone.
-        if (genderPref && l.gender_preference && l.gender_preference !== genderPref) return false;
+        // "Undisclosed" gender listings show up for ANY gender search --
+        // they were auto-posted without a clear gender, so they should
+        // never be excluded just because someone is filtering by gender.
+        if (genderPref && l.gender_preference && l.gender_preference !== 'Undisclosed' && l.gender_preference !== genderPref) return false;
         return true;
       });
 
