@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Room Matcher — Find Occupants for Empty Rooms | FlatKhoj</title>
-<meta name="description" content="Have empty rooms in a flat? Find people already looking for single, double, or triple sharing occupancy in that area and budget — powered by FlatKhoj's live listings.">
+<meta name="description" content="Have empty rooms in a flat? Mark which rooms are empty and what kind of sharing they suit, and find real people already looking for exactly that.">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,44 +20,74 @@
   .logo { font-size:18px; font-weight:800; text-decoration:none; color:#141414; }
   .logo span { color:#0f7b6c; }
 
-  .hero { padding: 28px 20px 20px; text-align: center; background: linear-gradient(180deg, #e8f5f3 0%, #f7f7f5 100%); }
+  .hero { padding: 24px 20px 18px; text-align: center; background: linear-gradient(180deg, #e8f5f3 0%, #f7f7f5 100%); }
   .hero-badge {
     display:inline-block; background:#0f7b6c; color:#fff; font-size:11px; font-weight:700;
-    padding:5px 14px; border-radius:20px; letter-spacing:0.4px; text-transform:uppercase; margin-bottom:14px;
+    padding:5px 14px; border-radius:20px; letter-spacing:0.4px; text-transform:uppercase; margin-bottom:12px;
   }
-  .hero h1 { font-size:23px; font-weight:800; line-height:1.3; margin-bottom:8px; }
-  .hero p { font-size:14px; color:#555; line-height:1.6; max-width:480px; margin:0 auto; }
+  .hero h1 { font-size:22px; font-weight:800; line-height:1.3; margin-bottom:6px; }
+  .hero p { font-size:13.5px; color:#555; line-height:1.5; max-width:480px; margin:0 auto; }
 
-  .section { padding: 20px; }
+  .section { padding: 18px 20px; }
   .card { background:#fff; border:1.5px solid #e8e8e4; border-radius:16px; padding:18px; margin-bottom:14px; }
   .card-title { font-size:15px; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
 
-  .form-group { margin-bottom:12px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:6px; }
   .form-group label { display:block; font-size:12px; font-weight:700; color:#555; margin-bottom:5px; }
   .form-group input, .form-group select {
     width:100%; padding:11px 13px; border-radius:10px; border:1.5px solid #e8e8e4;
     font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; background:#fff; color:#141414;
   }
-  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 
-  .room-card {
-    background:#f7f7f5; border:1.5px solid #e8e8e4; border-radius:12px; padding:14px; margin-bottom:10px; position:relative;
+  /* ---- Visual flat layout ---- */
+  .flat-layout {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px;
   }
-  .room-card .room-label { font-size:12px; font-weight:800; color:#0f7b6c; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.3px; }
-  .remove-room-btn {
-    position:absolute; top:10px; right:10px; background:none; border:none; color:#c0392b;
-    font-size:13px; font-weight:700; cursor:pointer;
+  .room-box {
+    border:2px solid #e8e8e4; border-radius:14px; padding:14px; cursor:pointer;
+    transition: border-color 0.15s; background:#fafafa; min-height:100px;
+    display:flex; flex-direction:column; justify-content:space-between;
   }
-  .add-room-btn {
-    width:100%; background:#e8f5f3; color:#0f7b6c; border:1.5px dashed #0f7b6c; border-radius:10px;
-    padding:12px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;
+  .room-box.configured-empty { border-color:#0f7b6c; background:#e8f5f3; }
+  .room-box.configured-occupied { border-color:#ccc; background:#f0f0f0; opacity:0.75; }
+  .room-box .room-name { font-size:13px; font-weight:800; }
+  .room-box .room-status { font-size:11.5px; color:#888; margin-top:4px; line-height:1.4; }
+  .room-box .room-status.empty-status { color:#0f7b6c; font-weight:700; }
+  .room-box .tap-hint { font-size:10.5px; color:#aaa; margin-top:8px; }
+
+  /* ---- Room configuration panel (shown below the grid when a room is selected) ---- */
+  .room-config-panel {
+    margin-top:14px; background:#f7f7f5; border:1.5px solid #0f7b6c; border-radius:14px; padding:16px; display:none;
+  }
+  .room-config-panel.open { display:block; }
+  .room-config-title { font-size:13.5px; font-weight:800; margin-bottom:12px; color:#0f7b6c; }
+  .toggle-row { display:flex; gap:8px; margin-bottom:12px; }
+  .toggle-btn {
+    flex:1; padding:10px; border-radius:10px; border:1.5px solid #e8e8e4; background:#fff;
+    font-size:13px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; color:#666;
+  }
+  .toggle-btn.active-occupied { border-color:#888; background:#eee; color:#333; }
+  .toggle-btn.active-empty { border-color:#0f7b6c; background:#0f7b6c; color:#fff; }
+
+  .occupancy-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
+  .occ-btn {
+    padding:9px 4px; border-radius:9px; border:1.5px solid #e8e8e4; background:#fff;
+    font-size:11.5px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; color:#666; text-align:center;
+  }
+  .occ-btn.sel { border-color:#0f7b6c; background:#0f7b6c; color:#fff; }
+
+  .done-room-btn {
+    width:100%; background:#0f7b6c; color:#fff; border:none; border-radius:10px; padding:11px;
+    font-size:13px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;
   }
 
   .find-btn {
     width:100%; background:#0f7b6c; color:#fff; border:none; border-radius:12px; padding:15px;
     font-size:15px; font-weight:800; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; margin-top:6px;
   }
-  .find-btn:disabled { opacity:0.6; cursor:not-allowed; }
+  .find-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .rent-note { font-size:11px; color:#999; margin-top:8px; line-height:1.5; }
 
   .results-room-header {
     font-size:14px; font-weight:800; margin:22px 0 10px; padding-bottom:8px; border-bottom:2px solid #0f7b6c;
@@ -76,11 +106,7 @@
     font-size:12.5px; font-weight:700; text-decoration:none; white-space:nowrap;
   }
   .no-matches { font-size:13px; color:#888; padding:16px; text-align:center; background:#f7f7f5; border-radius:10px; }
-  .loading-text { font-size:13px; color:#888; padding:16px; text-align:center; }
-
-  .fit-badge {
-    display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; margin-left:6px;
-  }
+  .fit-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; margin-left:6px; }
   .fit-great { background:#e8f5f3; color:#0f7b6c; }
   .fit-ok { background:#fef6e4; color:#a06c00; }
 
@@ -97,37 +123,57 @@
 <div class="hero">
   <div class="hero-badge">New Tool</div>
   <h1>Room Matcher</h1>
-  <p>Have empty rooms in a flat? Tell us the setup, and we'll show you real people already looking for exactly this — single, double, or triple sharing, in your area and budget.</p>
+  <p>Tap on each room below to mark it empty and set what kind of sharing it suits — then find real people already looking for exactly that.</p>
 </div>
 
 <div class="section">
   <div class="card">
     <div class="card-title">🏠 The Property</div>
-    <div class="form-group">
-      <label>Area / Location</label>
-      <input type="text" id="rm-area" placeholder="e.g. Andheri West">
-    </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Flat Type</label>
-        <select id="rm-flat-type">
-          <option value="1 BHK">1 BHK</option>
-          <option value="2 BHK" selected>2 BHK</option>
-          <option value="3 BHK">3 BHK</option>
-          <option value="4 BHK">4 BHK</option>
-        </select>
+        <label>Area / Location</label>
+        <input type="text" id="rm-area" placeholder="e.g. Andheri West">
       </div>
       <div class="form-group">
-        <label>Total Rent Expected (₹)</label>
-        <input type="number" id="rm-total-rent" placeholder="e.g. 60000" min="0">
+        <label>Flat Type</label>
+        <select id="rm-flat-type" onchange="rebuildRooms()">
+          <option value="1">1 BHK</option>
+          <option value="2" selected>2 BHK</option>
+          <option value="3">3 BHK</option>
+          <option value="4">4 BHK</option>
+        </select>
       </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="card-title">🛏️ Empty Rooms</div>
-    <div id="rm-rooms-list"></div>
-    <button class="add-room-btn" onclick="addRoom()">+ Add Empty Room</button>
+    <div class="flat-layout" id="flat-layout"></div>
+
+    <div class="room-config-panel" id="room-config-panel">
+      <div class="room-config-title" id="room-config-title">Room</div>
+
+      <div class="toggle-row">
+        <button class="toggle-btn" id="btn-occupied" onclick="setRoomStatus('occupied')">Occupied</button>
+        <button class="toggle-btn" id="btn-empty" onclick="setRoomStatus('empty')">Empty</button>
+      </div>
+
+      <div id="empty-room-options" style="display:none">
+        <div class="form-group" style="margin-bottom:10px">
+          <label>Sharing Type for This Room</label>
+          <div class="occupancy-grid" id="occupancy-grid">
+            <button class="occ-btn" data-occ="Single Room" onclick="selectOccupancy(this)">Single</button>
+            <button class="occ-btn" data-occ="Double Sharing" onclick="selectOccupancy(this)">Double</button>
+            <button class="occ-btn" data-occ="Triple Sharing" onclick="selectOccupancy(this)">Triple</button>
+            <button class="occ-btn" data-occ="Any" onclick="selectOccupancy(this)">Any</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Single-Occupancy Rent for This Room (₹)</label>
+          <input type="number" id="room-rent-input" placeholder="e.g. 30000" min="0">
+          <div class="rent-note">Just enter what this room would cost for ONE person alone — we'll work out the per-person rate for double/triple sharing automatically (roughly half for double, a third for triple).</div>
+        </div>
+      </div>
+
+      <button class="done-room-btn" style="margin-top:14px" onclick="closeRoomPanel()">Done</button>
+    </div>
   </div>
 
   <button class="find-btn" id="rm-find-btn" onclick="findMatches()">🔍 Find Potential Occupants</button>
@@ -144,87 +190,127 @@
 const SUPA_URL = "https://hbvdboxyppsmcuqgbpwp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4";
 
-let roomCount = 0;
-
-function addRoom() {
-  roomCount++;
-  const id = roomCount;
-  const div = document.createElement('div');
-  div.className = 'room-card';
-  div.id = 'room-' + id;
-  div.innerHTML = `
-    <button class="remove-room-btn" onclick="document.getElementById('room-${id}').remove()">✕ Remove</button>
-    <div class="room-label">Room ${id}</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Occupancy Needed</label>
-        <select class="rm-occupancy">
-          <option value="Single Room">Single Occupancy</option>
-          <option value="Double Sharing">Double Sharing</option>
-          <option value="Triple Sharing">Triple Sharing</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Rent per Person (₹)</label>
-        <input type="number" class="rm-rent" placeholder="e.g. 15000" min="0">
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Gender Preference (optional)</label>
-      <select class="rm-gender">
-        <option value="">Any</option>
-        <option value="Male">Male only</option>
-        <option value="Female">Female only</option>
-      </select>
-    </div>
-  `;
-  document.getElementById('rm-rooms-list').appendChild(div);
-}
-// Start with one room by default
-addRoom();
-
 // Normalizes any area string to a plain lowercase alphanumeric key, so
-// "Andheri West" and "andheri-west" compare identically, while avoiding the
-// earlier bug where "Andheri West" and "Goregaon West" could falsely match
-// on the shared generic word "West" alone.
+// "Andheri West" and "andheri-west" compare identically, while avoiding
+// false matches between areas that merely share a generic word like "West".
 function normKey(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
 function occupancyKeywords(occupancy) {
   if (occupancy === 'Single Room') return ['single'];
   if (occupancy === 'Double Sharing') return ['double'];
   if (occupancy === 'Triple Sharing') return ['triple'];
-  return [];
+  return null; // "Any" -- no occupancy filter at all
 }
 
+// Tentative ratio (as instructed): single-occupancy rent is roughly double
+// a double-sharing person's rent, and roughly triple a triple-sharing
+// person's rent, for the same room.
+function perPersonRent(singleRent, occupancy) {
+  if (!singleRent) return null;
+  if (occupancy === 'Single Room') return singleRent;
+  if (occupancy === 'Double Sharing') return Math.round(singleRent / 2);
+  if (occupancy === 'Triple Sharing') return Math.round(singleRent / 3);
+  return singleRent; // "Any" -- use the room's base figure as a rough anchor
+}
+
+// ---- Room state ----
+let rooms = []; // { id, name, status: 'unset'|'occupied'|'empty', occupancy, singleRent }
+let activeRoomId = null;
+
+function rebuildRooms() {
+  const count = parseInt(document.getElementById('rm-flat-type').value);
+  rooms = [];
+  for (let i = 1; i <= count; i++) {
+    rooms.push({ id: i, name: 'Room ' + i, status: 'unset', occupancy: null, singleRent: null });
+  }
+  activeRoomId = null;
+  closeRoomPanel();
+  renderRooms();
+}
+
+function renderRooms() {
+  const layout = document.getElementById('flat-layout');
+  layout.innerHTML = rooms.map(r => {
+    let statusText = 'Tap to configure';
+    let cls = '';
+    if (r.status === 'occupied') { statusText = 'Occupied'; cls = 'configured-occupied'; }
+    else if (r.status === 'empty') {
+      cls = 'configured-empty';
+      const occLabel = r.occupancy === 'Any' ? 'Any sharing' : (r.occupancy || '').replace(' Room', '').replace(' Sharing', ' sharing');
+      statusText = `<span class="empty-status">Empty — ${occLabel}${r.singleRent ? ' · ₹' + r.singleRent.toLocaleString('en-IN') : ''}</span>`;
+    }
+    return `<div class="room-box ${cls}" onclick="openRoomPanel(${r.id})">
+      <div class="room-name">${r.name}</div>
+      <div class="room-status">${statusText}</div>
+      <div class="tap-hint">Tap to edit</div>
+    </div>`;
+  }).join('');
+}
+
+function openRoomPanel(id) {
+  activeRoomId = id;
+  const room = rooms.find(r => r.id === id);
+  document.getElementById('room-config-title').textContent = room.name;
+  document.getElementById('btn-occupied').classList.toggle('active-occupied', room.status === 'occupied');
+  document.getElementById('btn-empty').classList.toggle('active-empty', room.status === 'empty');
+  document.getElementById('empty-room-options').style.display = room.status === 'empty' ? 'block' : 'none';
+  document.querySelectorAll('#occupancy-grid .occ-btn').forEach(b => b.classList.toggle('sel', b.dataset.occ === room.occupancy));
+  document.getElementById('room-rent-input').value = room.singleRent || '';
+  document.getElementById('room-config-panel').classList.add('open');
+  document.getElementById('room-config-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeRoomPanel() {
+  document.getElementById('room-config-panel').classList.remove('open');
+  activeRoomId = null;
+  renderRooms();
+}
+
+function setRoomStatus(status) {
+  const room = rooms.find(r => r.id === activeRoomId);
+  room.status = status;
+  document.getElementById('btn-occupied').classList.toggle('active-occupied', status === 'occupied');
+  document.getElementById('btn-empty').classList.toggle('active-empty', status === 'empty');
+  document.getElementById('empty-room-options').style.display = status === 'empty' ? 'block' : 'none';
+}
+
+function selectOccupancy(btn) {
+  const room = rooms.find(r => r.id === activeRoomId);
+  room.occupancy = btn.dataset.occ;
+  document.querySelectorAll('#occupancy-grid .occ-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+document.getElementById('room-rent-input').addEventListener('input', function() {
+  const room = rooms.find(r => r.id === activeRoomId);
+  if (room) room.singleRent = parseInt(this.value) || null;
+});
+
+// ---- Matching ----
 async function findMatches() {
   const area = document.getElementById('rm-area').value.trim();
-  const rooms = [...document.querySelectorAll('.room-card')].map(card => ({
-    occupancy: card.querySelector('.rm-occupancy').value,
-    rent: parseInt(card.querySelector('.rm-rent').value) || null,
-    gender: card.querySelector('.rm-gender').value || null,
-  }));
+  const emptyRooms = rooms.filter(r => r.status === 'empty' && r.occupancy);
 
   if (!area) { alert('Please enter the property area.'); return; }
-  if (rooms.length === 0) { alert('Please add at least one empty room.'); return; }
+  if (emptyRooms.length === 0) { alert('Please mark at least one room as Empty and choose its sharing type.'); return; }
 
   const btn = document.getElementById('rm-find-btn');
   btn.disabled = true;
   btn.textContent = 'Searching…';
-  document.getElementById('rm-results').innerHTML = '<div class="loading-text">Searching live listings…</div>';
+  document.getElementById('rm-results').innerHTML = '<div class="no-matches">Searching live listings…</div>';
 
   try {
-    // Pull all active flatmate-seeker listings once, then match each room
-    // against them client-side (keeps this simple and avoids many round-trips).
     const res = await fetch(`${SUPA_URL}/rest/v1/listings?listing_type=eq.flatmate_wanted&is_active=eq.true&select=id,areas,room_type,rent_amount,description,gender_preference,created_at`, {
       headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
     });
     const allSeekers = await res.json();
-
-    let resultsHtml = '';
     const areaKey = normKey(area);
 
-    rooms.forEach((room, idx) => {
+    let resultsHtml = '';
+
+    emptyRooms.forEach((room) => {
       const keywords = occupancyKeywords(room.occupancy);
+      const expectedRent = perPersonRent(room.singleRent, room.occupancy);
 
       let matches = allSeekers.filter(l => {
         const listingAreas = Array.isArray(l.areas) ? l.areas : [l.areas];
@@ -234,24 +320,22 @@ async function findMatches() {
         });
         if (!areaMatch) return false;
 
-        const roomTypeLower = (l.room_type || '').toLowerCase();
-        const occupancyMatch = keywords.some(k => roomTypeLower.includes(k));
-        if (!occupancyMatch) return false;
-
-        if (room.gender && l.gender_preference && l.gender_preference !== room.gender) return false;
-
+        if (keywords) {
+          const roomTypeLower = (l.room_type || '').toLowerCase();
+          if (!keywords.some(k => roomTypeLower.includes(k))) return false;
+        }
         return true;
       });
 
-      // Rank by how close their stated rent is to what this room expects
-      if (room.rent) {
-        matches.sort((a, b) => Math.abs((a.rent_amount || 0) - room.rent) - Math.abs((b.rent_amount || 0) - room.rent));
+      if (expectedRent) {
+        matches.sort((a, b) => Math.abs((a.rent_amount || 0) - expectedRent) - Math.abs((b.rent_amount || 0) - expectedRent));
       } else {
         matches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       }
       matches = matches.slice(0, 10);
 
-      resultsHtml += `<div class="results-room-header"><span>Room ${idx + 1} — ${room.occupancy}</span><span style="font-size:12px;color:#888;font-weight:600">${matches.length} match${matches.length !== 1 ? 'es' : ''}</span></div>`;
+      const occLabel = room.occupancy === 'Any' ? 'Any sharing' : room.occupancy;
+      resultsHtml += `<div class="results-room-header"><span>${room.name} — ${occLabel}</span><span style="font-size:12px;color:#888;font-weight:600">${matches.length} match${matches.length !== 1 ? 'es' : ''}</span></div>`;
 
       if (matches.length === 0) {
         resultsHtml += `<div class="no-matches">No current listings match this room yet. Check back soon, or widen the budget/area.</div>`;
@@ -259,11 +343,9 @@ async function findMatches() {
         matches.forEach(m => {
           const rent = m.rent_amount ? `₹${Number(m.rent_amount).toLocaleString('en-IN')}` : 'Budget not specified';
           let fitBadge = '';
-          if (room.rent && m.rent_amount) {
-            const diff = Math.abs(m.rent_amount - room.rent) / room.rent;
-            fitBadge = diff <= 0.15
-              ? '<span class="fit-badge fit-great">Great fit</span>'
-              : diff <= 0.35 ? '<span class="fit-badge fit-ok">Close fit</span>' : '';
+          if (expectedRent && m.rent_amount) {
+            const diff = Math.abs(m.rent_amount - expectedRent) / expectedRent;
+            fitBadge = diff <= 0.15 ? '<span class="fit-badge fit-great">Great fit</span>' : diff <= 0.35 ? '<span class="fit-badge fit-ok">Close fit</span>' : '';
           }
           const gender = m.gender_preference ? ` · ${m.gender_preference}` : '';
           const desc = m.description ? m.description.slice(0, 100) : '';
@@ -289,6 +371,9 @@ async function findMatches() {
     btn.textContent = '🔍 Find Potential Occupants';
   }
 }
+
+// Start with 2 BHK by default
+rebuildRooms();
 </script>
 
 </body>
