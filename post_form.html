@@ -2330,10 +2330,10 @@ async function submitListing() {
       }
 
       const cleanData = sanitizeForDB(merged);
-      const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${window._editListingId}`, {
-        method: 'PATCH',
+      const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+        method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData)
+        body: JSON.stringify({ sessionToken: user.sessionToken, listingId: window._editListingId, action: 'edit', updates: cleanData })
       });
       if (!res.ok) {
         const errText = await res.text();
@@ -2357,43 +2357,54 @@ async function submitListing() {
       if (alreadyFree) {
         // Already paid — just keep it free, no deduction
         formData.is_free_contact = true;
-      } else {
-        // New free contact — deduct 500 coins
-        const coinRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
-          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-        });
-        const coinData = await coinRes.json();
-        const currentCoins = coinData[0]?.coins || 0;
-        if (currentCoins < 500) {
-          btn.textContent = window._editListingId ? '💾 Save Changes' : '🚀 Post Listing — It\'s Free!';
-          btn.disabled = false;
-          window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
-          return;
-        }
-        const newCoins = currentCoins - 500;
-        const deductOk = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-          method: 'PATCH',
-          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ coins: newCoins })
-        });
-        if (!deductOk.ok) {
-          btn.textContent = window._editListingId ? '💾 Save Changes' : '🚀 Post Listing — It\'s Free!';
-          btn.disabled = false;
-          alert('Failed to deduct coins. Please try again.');
-          return;
-        }
-        // Log the deduction in coin_transactions for balance tracking
-        await fetch(`${SUPA_URL}/rest/v1/coin_transactions`, {
+      } else if (window._editListingId) {
+        // Editing an EXISTING listing — use the action that ties the coin
+        // deduction and the listing's free-contact flag together atomically,
+        // since the generic 'edit' action deliberately won't set this flag
+        // (that's what stops someone bypassing payment via a normal edit).
+        const activateRes = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
           method: 'POST',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: user.userId, type: 'free_contact_paid', amount: -500,
-            balance_after: newCoins,
-            description: 'Free contact activation — anyone can view contact without coins',
-            created_at: new Date().toISOString()
-          })
+          body: JSON.stringify({ sessionToken: user.sessionToken, listingId: window._editListingId, action: 'activate_free_contact' })
         });
-        user.coins = newCoins;
+        const activateResult = await activateRes.json();
+        if (!activateRes.ok) {
+          btn.textContent = '💾 Save Changes';
+          btn.disabled = false;
+          if (activateRes.status === 402) {
+            window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
+          } else {
+            alert('Failed to deduct coins. Please try again.');
+          }
+          return;
+        }
+        user.coins = activateResult.newCoins;
+        localStorage.setItem('fmh_user', JSON.stringify(user));
+        // Don't include is_free_contact in formData -- it's already set on
+        // the listing directly above, and the edit action would strip it
+        // from a generic update payload anyway.
+      } else {
+        // Creating a brand NEW listing — the row doesn't exist yet, so there's
+        // no listing to tie the flag to server-side. Deduct coins safely,
+        // then fold the flag into the INSERT payload below (safe, since
+        // it's their own new row being created, not an existing one).
+        const deductRes = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+          method: 'POST',
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionToken: user.sessionToken, action: 'deduct_coins_for_new_listing' })
+        });
+        const deductResult = await deductRes.json();
+        if (!deductRes.ok) {
+          btn.textContent = '🚀 Post Listing — It\'s Free!';
+          btn.disabled = false;
+          if (deductRes.status === 402) {
+            window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
+          } else {
+            alert('Failed to deduct coins. Please try again.');
+          }
+          return;
+        }
+        user.coins = deductResult.newCoins;
         localStorage.setItem('fmh_user', JSON.stringify(user));
         formData.is_free_contact = true;
       }

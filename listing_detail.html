@@ -1198,11 +1198,12 @@ async function reportAsSold() {
   if (!user) { showToast('Please log in first.'); return; }
   if (!listing) return;
   try {
-    await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
-      method: 'PATCH',
+    const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+      method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_sold: true, sold_reported_by: user.userId, sold_at: new Date().toISOString() })
+      body: JSON.stringify({ sessionToken: user.sessionToken, listingId: listing.id, action: 'mark_sold' })
     });
+    if (!res.ok) throw new Error('Failed');
     showToast('✅ Marked as sold. Admin will review and process refund if applicable.');
     closeSheet('unlock');
     // Show red banner immediately
@@ -1406,10 +1407,10 @@ async function saveEdit() {
       brokerage_preference: document.getElementById('edit_brokerage_pref')?.value || null,
       updated_at: new Date().toISOString()
     };
-    const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
-      method: 'PATCH',
+    const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+      method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: JSON.stringify({ sessionToken: user.sessionToken, listingId: listing.id, action: 'edit', updates })
     });
     if (!res.ok) throw new Error('Failed');
     Object.assign(listing, updates);
@@ -1440,37 +1441,26 @@ async function activateFreeContact() {
   if (!user) return;
   const btn = document.getElementById('boostActivateBtn');
 
-  // Check balance
-  const res = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`, {
-    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-  });
-  const data = await res.json();
-  const coins = data[0]?.coins || 0;
-
-  if (coins < 500) {
-    nav('coins.html?return_to=') + encodeURIComponent(window.location.href);
-    return;
-  }
-
   btn.textContent = 'Activating…'; btn.disabled = true;
 
   try {
-    // Deduct 500 coins
-    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-      method: 'PATCH',
+    const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+      method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ coins: coins - 500 })
+      body: JSON.stringify({ sessionToken: user.sessionToken, listingId: listing.id, action: 'activate_free_contact' })
     });
-    // Mark listing as free contact
-    await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_free_contact: true })
-    });
+    const result = await res.json();
+    if (!res.ok) {
+      if (res.status === 402) {
+        nav('coins.html?return_to=') + encodeURIComponent(window.location.href);
+        return;
+      }
+      throw new Error(result.error || 'Failed');
+    }
     listing.is_free_contact = true;
-    user.coins = coins - 500;
+    user.coins = result.newCoins;
     localStorage.setItem('fmh_user', JSON.stringify(user));
-    updateCoinDisplays(coins - 500);
+    updateCoinDisplays(result.newCoins);
     // Update UI
     document.getElementById('boostLabel').textContent = '✅ Anyone can contact you for free';
     document.getElementById('boostSub').textContent = 'Your contact is visible to everyone — no coins needed on their end.';
@@ -1496,11 +1486,12 @@ async function deleteListing() {
   if (deleteBtn) { deleteBtn.textContent = 'Deleting…'; deleteBtn.disabled = true; }
 
   try {
-    await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listing.id}`, {
-      method: 'PATCH',
+    const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+      method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_active: false })
+      body: JSON.stringify({ sessionToken: user.sessionToken, listingId: listing.id, action: 'deactivate' })
     });
+    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || 'Failed'); }
     window.location.replace('index.html');
   } catch(err) {
     if (deleteBtn) { deleteBtn.textContent = '🗑️ Delete'; deleteBtn.disabled = false; }
