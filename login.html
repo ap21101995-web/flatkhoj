@@ -564,6 +564,19 @@ function clearOtp() {
 }
 
 // ── OWNER BYPASS LOGIN ─────────────────────────────────────
+// Matches the exact same hashing the server-side "otp" and "listing-actions"
+// functions use -- so a token registered here will actually be found by them.
+async function hashTokenClient(token) {
+  const d = new TextEncoder().encode(token);
+  const h = await crypto.subtle.digest('SHA-256', d);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function generateRandomSessionToken(userId) {
+  const a = new Uint8Array(32);
+  crypto.getRandomValues(a);
+  return `${userId}_${Array.from(a).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+}
+
 async function verifyOwnerPassword() {
   const pwd = document.getElementById('ownerPasswordInput').value;
   const OWNER_PASSWORD = 'Owner_Aditya_2026';
@@ -609,12 +622,31 @@ async function verifyOwnerPassword() {
       coins = 0;
     }
 
+    // Generate a real random session token (not a predictable timestamp) and
+    // register it in user_sessions -- the same way the real OTP login flow
+    // already does. Without this, any server-side function that verifies a
+    // session (like listing-actions) would never find this login registered
+    // anywhere, and every action would fail with "session invalid".
+    const sessionToken = await generateRandomSessionToken(userId);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_sessions`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          token_hash: await hashTokenClient(sessionToken),
+          created_at: new Date().toISOString(),
+          last_active: new Date().toISOString()
+        })
+      });
+    } catch (e) { console.error('Failed to register owner session:', e); }
+
     const user = {
       phone: loginPhone,
       name: loginName,
       coins: coins,
       userId: userId,
-      sessionToken: 'owner-session-' + Date.now(),
+      sessionToken: sessionToken,
       joinedAt: Date.now(),
       isOwner: true
     };
@@ -677,12 +709,26 @@ async function verifyOtp() {
       const userId = data[0].id;
       const coins = data[0].coins ?? 0;
 
+      const sessionToken = await generateRandomSessionToken(userId);
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/user_sessions`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            token_hash: await hashTokenClient(sessionToken),
+            created_at: new Date().toISOString(),
+            last_active: new Date().toISOString()
+          })
+        });
+      } catch (e) { console.error('Failed to register test session:', e); }
+
       const user = {
         phone: '1111111100',
         name: 'Test User',
         coins: coins,
         userId: userId,
-        sessionToken: 'test-session-' + Date.now(),
+        sessionToken: sessionToken,
         joinedAt: Date.now()
       };
       saveLoginState(user);
