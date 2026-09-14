@@ -916,15 +916,18 @@ function closeOrigTextOverlay(){
   overlay&&(overlay.style.display="none");
 }
 async function approvePendingListing(id,btn){
+  const user=getUser();
+  if(!user||!user.sessionToken){alert("Please log in again.");return;}
   btn.disabled=!0;btn.textContent="Approving…";
   try{
-    const res=await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${id}`,{method:"PATCH",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({is_active:!0,pending_approval:!1})});
-    if(res.ok){
+    const res=await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({sessionToken:user.sessionToken,listingId:id,action:"approve_pending"})});
+    const data=await res.json();
+    if(res.ok&&data.success){
       const card=document.querySelector(`[data-listing-id="${id}"]`);
       card&&card.remove();
     }else{
       btn.disabled=!1;btn.textContent="✓ Approve";
-      alert("Failed to approve. Please try again.");
+      alert(data.error||"Failed to approve. Please try again.");
     }
   }catch(e){
     btn.disabled=!1;btn.textContent="✓ Approve";
@@ -933,15 +936,18 @@ async function approvePendingListing(id,btn){
 }
 async function rejectPendingListing(id,btn){
   if(!confirm("Reject this listing? It will no longer show for review."))return;
+  const user=getUser();
+  if(!user||!user.sessionToken){alert("Please log in again.");return;}
   btn.disabled=!0;btn.textContent="Rejecting…";
   try{
-    const res=await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${id}`,{method:"PATCH",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({pending_approval:!1,rejected:!0})});
-    if(res.ok){
+    const res=await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({sessionToken:user.sessionToken,listingId:id,action:"reject_pending"})});
+    const data=await res.json();
+    if(res.ok&&data.success){
       const card=document.querySelector(`[data-listing-id="${id}"]`);
       card&&card.remove();
     }else{
       btn.disabled=!1;btn.textContent="✗ Reject";
-      alert("Failed to reject. Please try again.");
+      alert(data.error||"Failed to reject. Please try again.");
     }
   }catch(e){
     btn.disabled=!1;btn.textContent="✗ Reject";
