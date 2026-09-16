@@ -656,8 +656,24 @@ function renderPhotos() {
     document.getElementById('photoNudge').style.display = 'flex';
   }
 
-  // Hide upload area if max reached
-  uploadArea.style.display = photos.length >= MAX_PHOTOS ? 'none' : 'block';
+  // Hide upload area if max reached -- but explain why, rather than
+  // silently vanishing, which otherwise looks identical to a broken
+  // upload button.
+  const atMax = photos.length >= MAX_PHOTOS;
+  uploadArea.style.display = atMax ? 'none' : 'block';
+  let maxMsg = document.getElementById('maxPhotosMsg');
+  if (atMax) {
+    if (!maxMsg) {
+      maxMsg = document.createElement('div');
+      maxMsg.id = 'maxPhotosMsg';
+      maxMsg.style.cssText = 'text-align:center;font-size:13px;color:var(--ink3);padding:12px;';
+      uploadArea.parentElement.insertBefore(maxMsg, uploadArea.nextSibling);
+    }
+    maxMsg.textContent = `Maximum ${MAX_PHOTOS} photos reached. Remove one above to add a different photo.`;
+    maxMsg.style.display = 'block';
+  } else if (maxMsg) {
+    maxMsg.style.display = 'none';
+  }
 }
 
 function removePhoto(index) {
@@ -732,11 +748,25 @@ async function handleContinue() {
     btn.textContent = 'Saving…';
 
     if (listingId) {
-      await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${listingId}`, {
-        method: 'PATCH',
+      const user = getUser();
+      if (!user || !user.sessionToken) {
+        btn.disabled = false;
+        btn.textContent = 'Save photos →';
+        showUploadError('Please log in again to save photos.');
+        return;
+      }
+      const saveRes = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+        method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photos: uploadedUrls })
+        body: JSON.stringify({ sessionToken: user.sessionToken, listingId, action: 'update_photos', photos: uploadedUrls })
       });
+      const saveData = await saveRes.json();
+      if (!saveRes.ok || !saveData.success) {
+        btn.disabled = false;
+        btn.textContent = 'Save photos →';
+        showUploadError(saveData.error || 'Could not save photos. Please try again.');
+        return;
+      }
     }
 
     window.location.replace(returnUrl);
