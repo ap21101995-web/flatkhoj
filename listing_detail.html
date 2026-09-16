@@ -374,6 +374,9 @@ function nav(url, e) {
   <button class="back-btn" onclick="goBack()">←</button>
   <div class="topbar-title">Listing Details</div>
   <div class="topbar-actions">
+    <button class="icon-btn" onclick="shareListing()" title="Share listing">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    </button>
     <button class="icon-btn" id="saveBtn" onclick="toggleSave()" title="Save listing">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
     </button>
@@ -1502,6 +1505,27 @@ async function deleteListing() {
 function openSheet(name){document.getElementById(name+'Backdrop').classList.add('show');setTimeout(()=>document.getElementById(name+'Sheet').classList.add('show'),10);}
 function closeSheet(name){document.getElementById(name+'Sheet').classList.remove('show');setTimeout(()=>document.getElementById(name+'Backdrop').classList.remove('show'),300);}
 function showToast(msg){const t=document.createElement('div');t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#141414;color:white;padding:10px 20px;border-radius:100px;font-family:var(--font);font-size:13px;font-weight:600;z-index:500;';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+
+async function shareListing(){
+  const url = window.location.href;
+  const typeLabels = {flat_listing:'Flat available', flat_wanted:'Flat wanted', flatmate_wanted:'Flatmate wanted'};
+  const areaText = Array.isArray(listing?.areas) ? listing.areas.join(', ') : (listing?.areas || '');
+  const title = `${typeLabels[listing?.listing_type] || 'Listing'}${areaText ? ' in ' + areaText : ''} on FlatKhoj`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text: title, url });
+    } catch (e) {
+      // User cancelled the share sheet -- not an error, do nothing.
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Link copied to clipboard');
+    } catch (e) {
+      showToast('Could not copy link');
+    }
+  }
+}
 function goBack() {
   // If arrived from edit form, history.back() would loop — always go home
   const ref = document.referrer;

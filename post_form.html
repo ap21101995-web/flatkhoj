@@ -1911,8 +1911,26 @@ function areaSearch(input, id) {
   }
 
   // Always search local list first — instant results
+  // Rank relative to THIS query specifically -- exact match, then East/West
+  // of the query, then a whole-word match, then any other substring match
+  // last. This avoids an unrelated area (e.g. "Kharghar") outranking the
+  // actual area someone typed (e.g. "Khar") just because of where it sits
+  // in the master list's own alphabetical ordering. (Same algorithm as
+  // room-matcher.html's area search.)
+  function areaRank(a) {
+    const al = a.toLowerCase();
+    const ql = q.toLowerCase();
+    if (al === ql) return 0;
+    if (al === ql + ' east' || al === ql + ' west') return 1;
+    const esc = ql.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp('\\b' + esc + '\\b').test(al)) return 2;
+    return 3;
+  }
   const localMatches = getCurrentAreaList()
     .filter(a => a.toLowerCase().includes(q.toLowerCase()) && !already.includes(a))
+    .map(a => ({ a, r: areaRank(a) }))
+    .sort((x, y) => x.r - y.r || x.a.length - y.a.length)
+    .map(x => x.a)
     .slice(0, 8);
 
   if (localMatches.length > 0) {
@@ -2721,6 +2739,9 @@ window.addEventListener('load', async function() {
       // Store listing data globally for pre-fill when user hits Next
       window._editListingId = editId;
       window._editListingData = listing;
+      // Auto-posted listings have many legitimately "Undisclosed" fields
+      // that need relaxed validation -- see getRequiredChecks().
+      window._editingAutoPosted = !!listing.raw_whatsapp_text;
 
       // Auto-check all confirmation boxes in edit mode — user already agreed when first posting
       document.querySelectorAll('.post-confirm-cb').forEach(cb => cb.checked = true);
@@ -3421,6 +3442,20 @@ function pillSel(selector) {
 
 // Returns ordered array of {test, el} for each required field
 function getRequiredChecks(t) {
+  const checks = _getRequiredChecksBase(t);
+  if (window._editingAutoPosted) {
+    // Auto-posted listings legitimately have many fields as
+    // "Undisclosed" -- prefillEditForm has no matching pill/option to
+    // select for that value, which would otherwise block Next even
+    // though the user never touched those fields. Area (always the
+    // first check for every type) stays required regardless, since no
+    // listing should ever have zero areas.
+    return checks.map((c, i) => i === 0 ? c : { test: () => true, el: c.el });
+  }
+  return checks;
+}
+
+function _getRequiredChecksBase(t) {
   if (t === 'fl') return [
     { test: () => (areaVals['fl-area']||[]).length > 0,
       el: () => document.querySelector('#f-fl .area-wrap') },
