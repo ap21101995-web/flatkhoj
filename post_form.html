@@ -282,6 +282,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 
   <!-- FLAT WANTED -->
   <div id="f-fw" style="display:none">
+    <div id="autoPostedNotice-fw" style="display:none;background:#fff8e6;border:1.5px solid #e6c460;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#7a5c00;margin-bottom:12px;line-height:1.5">📋 Fields left blank here will be posted as <b>Undisclosed</b> — that's expected for auto-posted listings. Fill in anything you've confirmed, leave the rest as is.</div>
     <div style="padding:4px 0 16px"><div class="step-heading">What Are You Looking For?</div><div class="step-sub">Owners and brokers will see these details</div></div>
     <div class="form-card">
       <div class="card-title">📍 Location & Budget</div>
@@ -344,6 +345,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 
   <!-- FLAT LISTING -->
   <div id="f-fl" style="display:none">
+    <div id="autoPostedNotice-fl" style="display:none;background:#fff8e6;border:1.5px solid #e6c460;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#7a5c00;margin-bottom:12px;line-height:1.5">📋 Fields left blank here will be posted as <b>Undisclosed</b> — that's expected for auto-posted listings. Fill in anything you've confirmed, leave the rest as is.</div>
     <div style="padding:4px 0 16px"><div class="step-heading">Tell Us About Your Flat</div><div class="step-sub">Seekers will see these details before contacting you</div></div>
     <div class="form-card">
       <div class="card-title">📍 Location & Property</div>
@@ -383,6 +385,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 
   <!-- FLATMATE WANTED -->
   <div id="f-fm" style="display:none">
+    <div id="autoPostedNotice-fm" style="display:none;background:#fff8e6;border:1.5px solid #e6c460;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#7a5c00;margin-bottom:12px;line-height:1.5">📋 Fields left blank here will be posted as <b>Undisclosed</b> — that's expected for auto-posted listings. Fill in anything you've confirmed, leave the rest as is.</div>
     <div style="padding:4px 0 16px"><div class="step-heading">Flatmate Wanted</div><div class="step-sub">Tell potential flatmates about your place</div></div>
     <div class="form-card">
       <div class="card-title">📍 Flat Details</div>
@@ -2742,6 +2745,11 @@ window.addEventListener('load', async function() {
       // Auto-posted listings have many legitimately "Undisclosed" fields
       // that need relaxed validation -- see getRequiredChecks().
       window._editingAutoPosted = !!listing.raw_whatsapp_text;
+      if (window._editingAutoPosted) {
+        const typeCode = {flat_wanted:'fw', flat_listing:'fl', flatmate_wanted:'fm'}[listing.listing_type];
+        const notice = typeCode ? document.getElementById('autoPostedNotice-' + typeCode) : null;
+        if (notice) notice.style.display = 'block';
+      }
 
       // Auto-check all confirmation boxes in edit mode — user already agreed when first posting
       document.querySelectorAll('.post-confirm-cb').forEach(cb => cb.checked = true);
@@ -3271,7 +3279,16 @@ function prefillEditForm(listing, t) {
   const el = (id) => document.getElementById(id);
   const qs = (sel) => document.querySelector(sel);
 
-  if (el(t+'-poster-name') && listing.poster_name) el(t+'-poster-name').value = listing.poster_name;
+  if (el(t+'-poster-name')) {
+    if (listing.poster_name) {
+      el(t+'-poster-name').value = listing.poster_name;
+    } else if (window._editingAutoPosted && listing.custom_contact_phone) {
+      // No real name available for this auto-posted listing -- show the
+      // same masked number used everywhere else on the site, rather
+      // than leaving this required field blank.
+      el(t+'-poster-name').value = maskPhoneForDisplay(listing.custom_contact_phone);
+    }
+  }
   if (listing.rent_amount) { const r = qs('#f-'+t+' input[type="number"]'); if(r) r.value = listing.rent_amount; }
 
   // ── DATE ───────────────────────────────────────
@@ -3441,6 +3458,12 @@ function pillSel(selector) {
 }
 
 // Returns ordered array of {test, el} for each required field
+function maskPhoneForDisplay(phone) {
+  const digits = (phone || "").replace(/\D/g, "").slice(-10);
+  if (digits.length < 3) return digits;
+  return digits[0] + "x".repeat(digits.length - 3) + digits.slice(-2);
+}
+
 function getRequiredChecks(t) {
   const checks = _getRequiredChecksBase(t);
   if (window._editingAutoPosted) {
