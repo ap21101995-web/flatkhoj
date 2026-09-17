@@ -517,6 +517,13 @@ async function moderatePhoto(base64Data, mediaType) {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64: base64Data, mediaType })
     });
+    // A server-side failure in the moderation service itself (500,
+    // timeout, etc.) is not the same as "this photo was rejected" --
+    // fetch() doesn't throw for non-2xx responses, so without this
+    // check a genuine infrastructure error would silently reject a
+    // perfectly valid photo instead of failing open like the network-
+    // exception case below already does.
+    if (!res.ok) return { allowed: true, issues: [] };
     return await res.json();
   } catch(e) { return { allowed: true, issues: [] }; }
 }
