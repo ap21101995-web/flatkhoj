@@ -3362,7 +3362,18 @@ function prefillEditForm(listing, t) {
         if (el('fm-other-type')) el('fm-other-type').style.display = 'block';
       }
     }
-    fillPill('#f-fm', 'fm-rm', listing.room_type);
+    // fm's room-type pills use different wording ("Single Room",
+    // "Double Sharing", "Triple Sharing") than the stored value
+    // ("Single occupancy", etc, which correctly matches fw's own
+    // field of the same name) -- translate just for this match
+    // attempt, without changing the stored value or its display
+    // elsewhere on the site.
+    const fmRoomTypeMap = {
+      "Single occupancy": "Single Room",
+      "Double occupancy": "Double Sharing",
+      "Triple occupancy": "Triple Sharing",
+    };
+    fillPill('#f-fm', 'fm-rm', fmRoomTypeMap[listing.room_type] || listing.room_type);
     fillPill('#f-fm', 'fm-furn', listing.furnishing);
     fillPillFuzzy('#f-fm', 'fm-food', listing.food_preference);
     fillPill('#f-fm', 'fm-gen', listing.gender_preference);
