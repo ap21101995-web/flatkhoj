@@ -2842,6 +2842,9 @@ window.addEventListener('load', async function() {
       // Auto-posted listings have many legitimately "Undisclosed" fields
       // that need relaxed validation -- see getRequiredChecks().
       window._editingAutoPosted = !!listing.raw_whatsapp_text;
+      window._promptedFields = new Set();
+      window._fieldDecisions = {};
+      window._fieldChangeQueue = [];
       if (window._editingAutoPosted) {
         const typeCode = {flat_wanted:'fw', flat_listing:'fl', flatmate_wanted:'fm'}[listing.listing_type];
         const notice = typeCode ? document.getElementById('autoPostedNotice-' + typeCode) : null;
@@ -3640,6 +3643,11 @@ function selectEditKind(kind) {
     document.getElementById('mistakeComment').focus();
   }
 }
+function backToMistakeChoice() {
+  document.getElementById('mistakeComment').value = '';
+  document.getElementById('mistakeModalStep2').style.display = 'none';
+  document.getElementById('mistakeModalStep1').style.display = 'block';
+}
 function confirmMistakeComment() {
   const text = document.getElementById('mistakeComment').value.trim();
   if (!text) return;
@@ -3817,6 +3825,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
     <div id="mistakeModalStep2" style="display:none">
+      <button onclick="backToMistakeChoice()" style="border:none;background:none;color:#666;font-size:13px;font-weight:700;cursor:pointer;padding:0 0 10px 0">← Back</button>
       <div style="font-size:17px;font-weight:800;margin-bottom:8px">What went wrong?</div>
       <div style="font-size:13.5px;color:#555;margin-bottom:12px;line-height:1.5">Briefly describe what the script got wrong and what the correct value should be. This helps us fix the script itself.</div>
       <textarea id="mistakeComment" rows="4" placeholder="e.g. Classified as flatmate_wanted but this is actually flat_wanted -- the person is seeking, not offering." style="width:100%;border:1.5px solid #ccc;border-radius:8px;padding:10px;font-size:13.5px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
