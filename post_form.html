@@ -2273,7 +2273,7 @@ function _setupFieldChangeTracking(t) {
   if (!formEl || formEl._changeTrackingAttached) return;
   formEl._changeTrackingAttached = true;
 
-  window._fieldSnapshot = collectFormData();
+  window._fieldSnapshot = JSON.parse(JSON.stringify(collectFormData()));
   window._promptedFields = window._promptedFields || new Set();
   window._fieldDecisions = window._fieldDecisions || {};
   window._fieldChangeQueue = window._fieldChangeQueue || [];
