@@ -2791,9 +2791,18 @@ window.addEventListener('load', async function() {
       const t = typeMap[listing.listing_type];
       if (!t) return;
 
-      // Go directly to step 2 with form pre-filled
+      // Go directly to step 2 with form pre-filled -- except for
+      // auto-posted listings, where the script can sometimes get the
+      // type itself wrong (e.g. flat_wanted misclassified as
+      // flatmate_wanted). Starting at step 1 there lets the user see
+      // and correct the type before proceeding, rather than being
+      // locked into whatever the script decided.
       selectType(t);
-      step = 2;
+      if (window._editingAutoPosted) {
+        step = 1;
+      } else {
+        step = 2;
+      }
       updateUI(); // This makes the form section visible
 
       // Set up free contact card based on existing listing state
@@ -3095,24 +3104,26 @@ function nextStep(){
     return;
   }
 
-  // Edit mode: when moving from step 1 to 2, pre-fill the form
+  // Edit mode: when moving from step 1 to 2, pre-fill the form. This
+  // runs regardless of whether the type was changed from the original
+  // (e.g. correcting a flatmate_wanted/flat_wanted misclassification)
+  // -- prefillEditForm only fills fields that exist for the given
+  // type, so a changed type still correctly gets whatever fields
+  // genuinely overlap (areas, rent, gender, food, etc) rather than
+  // showing a blank form.
   if(step===1 && window._editListingId && window._editListingData){
     const listing = window._editListingData;
-    const typeMap = { flat_listing:'fl', flat_wanted:'fw', flatmate_wanted:'fm', pg_listing:'pg' };
-    const originalType = typeMap[listing.listing_type];
-    if(type === originalType){
-      let _att2 = 0;
-      const _tryPrefill2 = () => {
-        const formEl = document.getElementById('f-' + type);
-        if (formEl && formEl.style.display !== 'none') {
-          prefillEditForm(listing, type);
-          updateNextBtn();
-        } else if (_att2++ < 10) {
-          setTimeout(_tryPrefill2, 50);
-        }
-      };
-      setTimeout(_tryPrefill2, 50);
-    }
+    let _att2 = 0;
+    const _tryPrefill2 = () => {
+      const formEl = document.getElementById('f-' + type);
+      if (formEl && formEl.style.display !== 'none') {
+        prefillEditForm(listing, type);
+        updateNextBtn();
+      } else if (_att2++ < 10) {
+        setTimeout(_tryPrefill2, 50);
+      }
+    };
+    setTimeout(_tryPrefill2, 50);
   }
 
   if(step===2){
