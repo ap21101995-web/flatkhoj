@@ -2405,15 +2405,17 @@ async function submitListing() {
       }
 
       const cleanData = sanitizeForDB(merged);
+      alert('DEBUG: about to save this data:\n\n' + JSON.stringify(cleanData, null, 2));
       const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
         method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionToken: user.sessionToken, listingId: window._editListingId, action: 'edit', updates: cleanData })
       });
+      const resText = await res.text();
+      alert('DEBUG: server responded with status ' + res.status + ':\n\n' + resText);
       if (!res.ok) {
-        const errText = await res.text();
-        console.error('PATCH error:', res.status, errText);
-        throw new Error(errText);
+        console.error('PATCH error:', res.status, resText);
+        throw new Error(resText);
       }
       if (window._fieldDecisions) {
         const mistakeEntries = Object.entries(window._fieldDecisions).filter(([, d]) => d.isMistake);
@@ -2579,8 +2581,16 @@ async function submitListing() {
     btn.textContent = window._editListingId ? '💾 Save Changes' : "🚀 Post Listing — It's Free!";
     btn.disabled = false;
     showToast('⚠️ Failed to post. Please check your details and try again.');
+    alert('DEBUG INFO — please copy this text and send it back:\n\n' + msg);
   }
 }
+
+window.addEventListener('error', function(e) {
+  alert('DEBUG INFO (uncaught error) — please copy this text and send it back:\n\n' + e.message + '\nat line ' + e.lineno);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  alert('DEBUG INFO (unhandled promise rejection) — please copy this text and send it back:\n\n' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+});
 
 let step=1, type=null;
 
