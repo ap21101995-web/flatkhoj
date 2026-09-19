@@ -2311,6 +2311,9 @@ async function submitListing() {
 
     // Edit mode — PATCH existing listing
     if (window._editListingId) {
+      if (window._editingAutoPosted) {
+        await showMistakeModal();
+      }
       // Start with ORIGINAL data so nothing vanishes if prefill didn't work perfectly
       const original = window._editListingData || {};
       // Merge: original fields first, then override with whatever DOM has
@@ -2774,7 +2777,6 @@ window.addEventListener('load', async function() {
         const typeCode = {flat_wanted:'fw', flat_listing:'fl', flatmate_wanted:'fm'}[listing.listing_type];
         const notice = typeCode ? document.getElementById('autoPostedNotice-' + typeCode) : null;
         if (notice) notice.style.display = 'block';
-        showMistakeModal();
       }
 
       // Auto-check all confirmation boxes in edit mode — user already agreed when first posting
@@ -3507,17 +3509,20 @@ function maskPhoneForDisplay(phone) {
   return digits[0] + "x".repeat(digits.length - 3) + digits.slice(-2);
 }
 
+let _mistakeModalResolve = null;
 function showMistakeModal() {
   window._editIsMistake = null;
   window._editMistakeComment = null;
   document.getElementById('mistakeModalStep1').style.display = 'block';
   document.getElementById('mistakeModalStep2').style.display = 'none';
   document.getElementById('mistakeModalOverlay').style.display = 'flex';
+  return new Promise(resolve => { _mistakeModalResolve = resolve; });
 }
 function selectEditKind(kind) {
   if (kind === 'missing') {
     window._editIsMistake = false;
     document.getElementById('mistakeModalOverlay').style.display = 'none';
+    if (_mistakeModalResolve) { _mistakeModalResolve(); _mistakeModalResolve = null; }
   } else {
     document.getElementById('mistakeModalStep1').style.display = 'none';
     document.getElementById('mistakeModalStep2').style.display = 'block';
@@ -3530,6 +3535,7 @@ function confirmMistakeComment() {
   window._editIsMistake = true;
   window._editMistakeComment = text;
   document.getElementById('mistakeModalOverlay').style.display = 'none';
+  if (_mistakeModalResolve) { _mistakeModalResolve(); _mistakeModalResolve = null; }
 }
 document.addEventListener('DOMContentLoaded', () => {
   const ta = document.getElementById('mistakeComment');
@@ -3693,22 +3699,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <div id="mistakeModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
   <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.3)">
     <div id="mistakeModalStep1">
-      <div style="font-size:17px;font-weight:800;margin-bottom:8px">Before you edit…</div>
-      <div style="font-size:13.5px;color:#555;margin-bottom:18px;line-height:1.5">Is this edit fixing something the script got <b>wrong</b>, or just adding info that was simply <b>missing</b>?</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <button onclick="selectEditKind('missing')" style="background:#f0f0f0;border:1.5px solid #ccc;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;text-align:left">
-          📝 Missing — I'm just adding info the script left blank
-        </button>
-        <button onclick="selectEditKind('mistake')" style="background:#fff3e0;border:1.5px solid #e6a23c;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;text-align:left;color:#7a4a00">
-          ⚠️ Mistake — the script got something wrong
-        </button>
+      <div style="font-size:17px;font-weight:800;margin-bottom:8px">Was this a mistake or missing info?</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="selectEditKind('missing')" style="flex:1;background:#f0f0f0;border:1.5px solid #ccc;border-radius:10px;padding:16px;font-size:15px;font-weight:800;cursor:pointer">Missing</button>
+        <button onclick="selectEditKind('mistake')" style="flex:1;background:#fff3e0;border:1.5px solid #e6a23c;border-radius:10px;padding:16px;font-size:15px;font-weight:800;cursor:pointer;color:#7a4a00">Mistake</button>
       </div>
     </div>
     <div id="mistakeModalStep2" style="display:none">
       <div style="font-size:17px;font-weight:800;margin-bottom:8px">What went wrong?</div>
       <div style="font-size:13.5px;color:#555;margin-bottom:12px;line-height:1.5">Briefly describe what the script got wrong and what the correct value should be. This helps us fix the script itself.</div>
       <textarea id="mistakeComment" rows="4" placeholder="e.g. Classified as flatmate_wanted but this is actually flat_wanted -- the person is seeking, not offering." style="width:100%;border:1.5px solid #ccc;border-radius:8px;padding:10px;font-size:13.5px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
-      <button id="mistakeContinueBtn" onclick="confirmMistakeComment()" disabled style="margin-top:14px;width:100%;background:#ccc;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:not-allowed">Continue to Edit</button>
+      <button id="mistakeContinueBtn" onclick="confirmMistakeComment()" disabled style="margin-top:14px;width:100%;background:#ccc;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:not-allowed">Continue</button>
     </div>
   </div>
 </div>
