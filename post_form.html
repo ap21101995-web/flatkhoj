@@ -2405,23 +2405,22 @@ async function submitListing() {
       }
 
       const cleanData = sanitizeForDB(merged);
-      alert('DEBUG: about to save this data:\n\n' + JSON.stringify(cleanData, null, 2));
       const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
         method: 'POST',
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionToken: user.sessionToken, listingId: window._editListingId, action: 'edit', updates: cleanData })
       });
       const resText = await res.text();
-      alert('DEBUG: server responded with status ' + res.status + ':\n\n' + resText);
       if (!res.ok) {
         console.error('PATCH error:', res.status, resText);
         throw new Error(resText);
       }
       if (window._fieldDecisions) {
         const mistakeEntries = Object.entries(window._fieldDecisions).filter(([, d]) => d.isMistake);
+        alert('DEBUG: found ' + mistakeEntries.length + ' mistake-marked field(s) to log: ' + JSON.stringify(mistakeEntries.map(([f]) => f)));
         for (const [field, decision] of mistakeEntries) {
           try {
-            await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
+            const corrRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
               method: 'POST',
               headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
               body: JSON.stringify({
@@ -2431,7 +2430,15 @@ async function submitListing() {
                 comment: decision.comment || null,
               })
             });
-          } catch (e) { console.error('Failed to log correction for', field, e); }
+            if (!corrRes.ok) {
+              const corrErrText = await corrRes.text();
+              alert('DEBUG: correction insert for "' + field + '" FAILED with status ' + corrRes.status + ':\n\n' + corrErrText);
+            } else {
+              alert('DEBUG: correction insert for "' + field + '" succeeded (status ' + corrRes.status + ')');
+            }
+          } catch (e) {
+            alert('DEBUG: correction insert for "' + field + '" threw an exception:\n\n' + e.message);
+          }
         }
       }
       window.location.href = 'index.html';
