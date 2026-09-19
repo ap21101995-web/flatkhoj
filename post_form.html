@@ -2401,7 +2401,7 @@ async function submitListing() {
 
       // Add custom contact if owner
       const editUserPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
-      if (editUserPhone==='9538584612' || editUserPhone==='8001517396' || editUserPhone==='9225248222'||ph==='9960395782' || editUserPhone==='9004325226' || user.isOwner===true || user.isOwner==='true') {
+      if (editUserPhone==='9538584612' || editUserPhone==='8001517396' || editUserPhone==='9225248222'||editUserPhone==='9960395782' || editUserPhone==='9004325226' || user.isOwner===true || user.isOwner==='true') {
         const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
         if (customPhone && customPhone.length === 10) merged.custom_contact_phone = customPhone;
       }
@@ -2569,7 +2569,7 @@ async function submitListing() {
 
   } catch(err) {
     console.error('Post error:', err);
-    btn.textContent = "🚀 Post Listing — It's Free!";
+    btn.textContent = window._editListingId ? '💾 Save Changes' : "🚀 Post Listing — It's Free!";
     btn.disabled = false;
     showToast('⚠️ Failed to post. Please check your details and try again.');
   }
