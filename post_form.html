@@ -3592,6 +3592,14 @@ let _mistakeModalResolve = null;
 function showMistakeModal() {
   window._editIsMistake = null;
   window._editMistakeComment = null;
+  const commentBox = document.getElementById('mistakeComment');
+  const continueBtn = document.getElementById('mistakeContinueBtn');
+  if (commentBox) commentBox.value = '';
+  if (continueBtn) {
+    continueBtn.disabled = true;
+    continueBtn.style.background = '#ccc';
+    continueBtn.style.cursor = 'not-allowed';
+  }
   document.getElementById('mistakeModalStep1').style.display = 'block';
   document.getElementById('mistakeModalStep2').style.display = 'none';
   document.getElementById('mistakeModalOverlay').style.display = 'flex';
