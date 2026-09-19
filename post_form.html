@@ -2311,9 +2311,6 @@ async function submitListing() {
 
     // Edit mode — PATCH existing listing
     if (window._editListingId) {
-      if (window._editingAutoPosted) {
-        await showMistakeModal();
-      }
       // Start with ORIGINAL data so nothing vanishes if prefill didn't work perfectly
       const original = window._editListingData || {};
       // Merge: original fields first, then override with whatever DOM has
@@ -3098,7 +3095,7 @@ function scrollToRequired(el) {
   }, 50);
 }
 
-function nextStep(){
+async function nextStep(){
   if(step===1&&!type){
     document.getElementById('typeGridWrap').scrollIntoView({behavior:'smooth'});
     return;
@@ -3217,6 +3214,10 @@ function nextStep(){
     }
     submitListing();
     return;
+  }
+
+  if (step === 2 && window._editingAutoPosted) {
+    await showMistakeModal();
   }
 
   step++; updateUI();
