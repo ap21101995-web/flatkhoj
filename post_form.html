@@ -2278,10 +2278,8 @@ function _setupFieldChangeTracking(t) {
   window._fieldDecisions = window._fieldDecisions || {};
   window._fieldChangeQueue = window._fieldChangeQueue || [];
 
-  let debounceTimer = null;
   const checkForChanges = () => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
+    setTimeout(() => {
       const current = collectFormData();
       const snapshot = window._fieldSnapshot;
       for (const key in current) {
@@ -2294,7 +2292,7 @@ function _setupFieldChangeTracking(t) {
         }
       }
       _processFieldChangeQueue();
-    }, 400);
+    }, 0);
   };
 
   formEl.addEventListener('click', checkForChanges);
@@ -2509,7 +2507,7 @@ async function submitListing() {
 
     // If owner posting on behalf — save custom contact number and mark as owner-posted
     const userPhone = String(user.phone||'').replace(/\D/g,'').slice(-10);
-    const isAppOwner = userPhone==='9538584612' || userPhone==='8001517396' || userPhone==='9225248222'||ph==='9960395782' || userPhone==='9004325226' || user.isOwner===true || user.isOwner==='true';
+    const isAppOwner = userPhone==='9538584612' || userPhone==='8001517396' || userPhone==='9225248222'||userPhone==='9960395782' || userPhone==='9004325226' || user.isOwner===true || user.isOwner==='true';
     if (isAppOwner) {
       const customPhone = document.getElementById('ownerContactNumber')?.value?.trim();
       if (!customPhone || customPhone.length !== 10 || !/^[6-9]\d{9}$/.test(customPhone)) {
