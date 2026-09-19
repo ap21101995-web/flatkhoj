@@ -2845,6 +2845,7 @@ window.addEventListener('load', async function() {
       // flatmate_wanted). Starting at step 1 there lets the user see
       // and correct the type before proceeding, rather than being
       // locked into whatever the script decided.
+      window._editOriginalType = t;
       selectType(t);
       if (window._editingAutoPosted) {
         step = 1;
@@ -3515,8 +3516,28 @@ function selectType(t){
   });
   document.getElementById('tc-'+t).classList.add('sel');
   document.getElementById('ck-'+t).textContent='✓';
+  const previousType = type;
   type=t;
   if(typeof updateNextBtn==='function') updateNextBtn();
+
+  // A genuine user-initiated change away from the original type
+  // (correcting a misclassification) is just as trackable as any
+  // other field edit -- queue the same Mistake/Missing prompt for it.
+  if (window._editingAutoPosted && window._editOriginalType && t !== window._editOriginalType) {
+    window._promptedFields = window._promptedFields || new Set();
+    window._fieldDecisions = window._fieldDecisions || {};
+    window._fieldChangeQueue = window._fieldChangeQueue || [];
+    if (!window._promptedFields.has('listing_type')) {
+      window._promptedFields.add('listing_type');
+      const readableType = { fw: 'flat_wanted', fl: 'flat_listing', fm: 'flatmate_wanted', pg: 'pg_listing' };
+      window._fieldChangeQueue.push({
+        field: 'listing_type',
+        oldValue: readableType[window._editOriginalType] || window._editOriginalType,
+        newValue: readableType[t] || t,
+      });
+      if (typeof _processFieldChangeQueue === 'function') _processFieldChangeQueue();
+    }
+  }
 }
 
 function sp(el,group){
