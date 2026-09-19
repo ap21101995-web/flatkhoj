@@ -2375,18 +2375,16 @@ async function submitListing() {
             const newVal = JSON.stringify(merged[f] ?? null);
             if (oldVal !== newVal) changes.push({ field: f, old: original[f] ?? null, new: merged[f] ?? null });
           });
-          if (changes.length > 0) {
-            await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
-              method: 'POST',
-              headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-              body: JSON.stringify({
-                listing_id: window._editListingId,
-                raw_whatsapp_text: original.raw_whatsapp_text || null,
-                field_changes: changes,
-                comment: window._editMistakeComment || null,
-              })
-            });
-          }
+          await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
+            method: 'POST',
+            headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+              listing_id: window._editListingId,
+              raw_whatsapp_text: original.raw_whatsapp_text || null,
+              field_changes: changes,
+              comment: window._editMistakeComment || null,
+            })
+          });
         } catch (e) { console.error('Failed to log correction:', e); }
       }
       window.location.href = 'index.html';
