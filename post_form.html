@@ -2262,6 +2262,63 @@ function collectFormData() {
   return data;
 }
 
+// ── PER-FIELD CHANGE DETECTION (auto-posted edits only) ──────
+// The moment any field's value differs from what was originally
+// pre-filled, queue a Mistake/Missing prompt for that specific field.
+// Each field only ever prompts once per edit session, even if it's
+// tweaked multiple times before saving.
+function _setupFieldChangeTracking(t) {
+  if (!window._editingAutoPosted) return;
+  const formEl = document.getElementById('f-' + t);
+  if (!formEl || formEl._changeTrackingAttached) return;
+  formEl._changeTrackingAttached = true;
+
+  window._fieldSnapshot = collectFormData();
+  window._promptedFields = window._promptedFields || new Set();
+  window._fieldDecisions = window._fieldDecisions || {};
+  window._fieldChangeQueue = window._fieldChangeQueue || [];
+
+  let debounceTimer = null;
+  const checkForChanges = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const current = collectFormData();
+      const snapshot = window._fieldSnapshot;
+      for (const key in current) {
+        if (key === 'listing_type' || key === 'city') continue; // not user-facing "fields" in this sense
+        const oldVal = JSON.stringify(snapshot[key] ?? null);
+        const newVal = JSON.stringify(current[key] ?? null);
+        if (oldVal !== newVal && !window._promptedFields.has(key)) {
+          window._promptedFields.add(key); // mark immediately, before the prompt resolves, so a second rapid change to the same field doesn't queue twice
+          window._fieldChangeQueue.push({ field: key, oldValue: snapshot[key], newValue: current[key] });
+        }
+      }
+      _processFieldChangeQueue();
+    }, 400);
+  };
+
+  formEl.addEventListener('click', checkForChanges);
+  formEl.addEventListener('input', checkForChanges);
+  formEl.addEventListener('change', checkForChanges);
+}
+
+let _fieldChangeProcessing = false;
+async function _processFieldChangeQueue() {
+  if (_fieldChangeProcessing) return;
+  _fieldChangeProcessing = true;
+  while (window._fieldChangeQueue && window._fieldChangeQueue.length > 0) {
+    const item = window._fieldChangeQueue.shift();
+    await showMistakeModal();
+    window._fieldDecisions[item.field] = {
+      isMistake: window._editIsMistake === true,
+      comment: window._editIsMistake === true ? window._editMistakeComment : null,
+      oldValue: item.oldValue,
+      newValue: item.newValue,
+    };
+  }
+  _fieldChangeProcessing = false;
+}
+
 // ── SUBMIT LISTING ─────────────────────────────────────────
 async function submitListing() {
   const user = getUser();
@@ -2361,28 +2418,22 @@ async function submitListing() {
         console.error('PATCH error:', res.status, errText);
         throw new Error(errText);
       }
-      if (window._editIsMistake) {
-        try {
-          const fieldsToTrack = ['listing_type','areas','rent_amount','flat_type','furnishing',
-            'food_preference','gender_preference','room_type','occupation','brokerage_preference',
-            'has_brokerage','available_from','poster_name'];
-          const changes = [];
-          fieldsToTrack.forEach(f => {
-            const oldVal = JSON.stringify(original[f] ?? null);
-            const newVal = JSON.stringify(merged[f] ?? null);
-            if (oldVal !== newVal) changes.push({ field: f, old: original[f] ?? null, new: merged[f] ?? null });
-          });
-          await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
-            method: 'POST',
-            headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify({
-              listing_id: window._editListingId,
-              raw_whatsapp_text: original.raw_whatsapp_text || null,
-              field_changes: changes,
-              comment: window._editMistakeComment || null,
-            })
-          });
-        } catch (e) { console.error('Failed to log correction:', e); }
+      if (window._fieldDecisions) {
+        const mistakeEntries = Object.entries(window._fieldDecisions).filter(([, d]) => d.isMistake);
+        for (const [field, decision] of mistakeEntries) {
+          try {
+            await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
+              method: 'POST',
+              headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+              body: JSON.stringify({
+                listing_id: window._editListingId,
+                raw_whatsapp_text: original.raw_whatsapp_text || null,
+                field_changes: [{ field, old: decision.oldValue ?? null, new: decision.newValue ?? null }],
+                comment: decision.comment || null,
+              })
+            });
+          } catch (e) { console.error('Failed to log correction for', field, e); }
+        }
       }
       window.location.href = 'index.html';
       return;
@@ -2828,6 +2879,7 @@ window.addEventListener('load', async function() {
         if (formEl && formEl.style.display !== 'none') {
           prefillEditForm(listing, t);
           updateNextBtn();
+          _setupFieldChangeTracking(t);
         } else if (_attempts++ < 10) {
           setTimeout(_tryPrefill, 50);
         }
@@ -3095,7 +3147,7 @@ function scrollToRequired(el) {
   }, 50);
 }
 
-async function nextStep(){
+function nextStep(){
   if(step===1&&!type){
     document.getElementById('typeGridWrap').scrollIntoView({behavior:'smooth'});
     return;
@@ -3116,6 +3168,7 @@ async function nextStep(){
       if (formEl && formEl.style.display !== 'none') {
         prefillEditForm(listing, type);
         updateNextBtn();
+        _setupFieldChangeTracking(type);
       } else if (_att2++ < 10) {
         setTimeout(_tryPrefill2, 50);
       }
@@ -3214,10 +3267,6 @@ async function nextStep(){
     }
     submitListing();
     return;
-  }
-
-  if (step === 2 && window._editingAutoPosted) {
-    await showMistakeModal();
   }
 
   step++; updateUI();
