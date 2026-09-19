@@ -2372,7 +2372,7 @@ async function submitListing() {
       const merged = Object.assign({}, original);
 
       // Only override with DOM values that are actually set (not null/empty)
-      const domKeys = ['poster_name','rent_amount','flat_type','furnishing','food_preference',
+      const domKeys = ['listing_type','poster_name','rent_amount','flat_type','furnishing','food_preference',
         'gender_preference','description','has_brokerage','available_from','areas','room_type',
         'tenant_type','situation','occupation','stay_duration','brokerage_preference',
         'meals_included','curfew','visitors_allowed','amenities'];
