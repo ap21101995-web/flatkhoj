@@ -899,17 +899,37 @@ async function viewOriginalWhatsappText(id){
   </div>`;
   overlay.style.display="flex";
   try{
-    const res=await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${id}&select=raw_whatsapp_text,whatsapp_group_name`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}});
+    const res=await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${id}&select=raw_whatsapp_text,whatsapp_group_name,custom_contact_phone`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}});
     const [row]=await res.json();
     const body=overlay.querySelector("div > div:last-child");
     if(row){
-      body.innerHTML=`<div style="font-size:12px;color:var(--teal);font-weight:700;margin-bottom:10px">From: ${escHtml(row.whatsapp_group_name||"Unknown group")}</div><div style="font-size:13.5px;line-height:1.6;white-space:pre-wrap;background:#f7f7f5;border-radius:10px;padding:12px">${escHtml(row.raw_whatsapp_text||"No original text saved.")}</div>`;
+      const phone=(row.custom_contact_phone||"").replace(/\D/g,"");
+      const phoneRow=phone?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#f0faf8;border:1px solid #cdeee8;border-radius:10px;padding:10px 12px">
+        <div style="flex:1;font-size:14px;font-weight:700;color:#0d7a68">+91 ${phone}</div>
+        <button onclick="copyOrigOverlayText(this,'+91${phone}')" style="border:1px solid #0d9488;background:#fff;color:#0d9488;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">📋 Copy</button>
+        <a href="https://wa.me/91${phone}" target="_blank" style="border:none;background:#25D366;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;text-decoration:none">💬 Message</a>
+      </div>`:"";
+      const msgText=row.raw_whatsapp_text||"No original text saved.";
+      body.innerHTML=`<div style="font-size:12px;color:var(--teal);font-weight:700;margin-bottom:10px">From: ${escHtml(row.whatsapp_group_name||"Unknown group")}</div>
+      ${phoneRow}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:12px;color:#888;font-weight:700">Message</div>
+        ${row.raw_whatsapp_text?`<button onclick="copyOrigOverlayText(this,${JSON.stringify(msgText)})" style="border:1px solid #999;background:#fff;color:#555;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;cursor:pointer">📋 Copy message</button>`:""}
+      </div>
+      <div style="font-size:13.5px;line-height:1.6;white-space:pre-wrap;background:#f7f7f5;border-radius:10px;padding:12px">${escHtml(msgText)}</div>`;
     }else{
       body.textContent="Could not load the original text.";
     }
   }catch(e){
     console.error("viewOriginalWhatsappText error:",e);
   }
+}
+function copyOrigOverlayText(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig=btn.innerHTML;
+    btn.innerHTML="✓ Copied";
+    setTimeout(()=>{btn.innerHTML=orig},1500);
+  }).catch(()=>{});
 }
 function closeOrigTextOverlay(){
   const overlay=document.getElementById("origTextOverlay");
@@ -1020,7 +1040,7 @@ const DEFAULT_AREAS=[{name:"Bandra",key:"Bandra"},{name:"Andheri",key:"Andheri"}
 </div>
 
 <script>
-let _lastRefreshTime=(new Date).toISOString();setInterval(async()=>{try{const e=_lastRefreshTime,t=(new Date).toISOString(),a=await fetch(`${SUPA_URL}/rest/v1/listings?select=id&is_active=eq.true&created_at=gt.${e}&limit=1`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}),i=await a.json();if(_lastRefreshTime=t,i&&i.length>0){let e=document.getElementById("refreshBanner");e||(e=document.createElement("div"),e.id="refreshBanner",e.style.cssText="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--teal);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)",e.onclick=()=>{e.remove(),window.scrollTo({top:0,behavior:"smooth"}),loadListings()},document.body.appendChild(e)),e.textContent="↑ New listings available — tap to refresh"}}catch(e){}},3e4);
+let _lastRefreshTime=(new Date).toISOString();setInterval(async()=>{try{const e=_lastRefreshTime,t=(new Date).toISOString(),a=await fetch(`${SUPA_URL}/rest/v1/listings?select=id&is_active=eq.true&created_at=gt.${e}&limit=1`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}),i=await a.json();if(_lastRefreshTime=t,i&&i.length>0){let e=document.getElementById("refreshBanner");e||(e=document.createElement("div"),e.id="refreshBanner",e.style.cssText="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--teal);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)",e.onclick=()=>{e.remove(),window.scrollTo({top:0,behavior:"smooth"}),loadListings()},document.body.appendChild(e)),e.textContent="↑ New listings available — tap to refresh"}}catch(e){}},15e3);
 </script>
 
 <div id="brokerWidget" style="position:fixed;bottom:100px;right:20px;z-index:888;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;" onclick="handleBrokerClick(event)">
