@@ -2305,13 +2305,87 @@ async function _processFieldChangeQueue() {
   _fieldChangeProcessing = true;
   while (window._fieldChangeQueue && window._fieldChangeQueue.length > 0) {
     const item = window._fieldChangeQueue.shift();
+    window._currentFieldChangeItem = item;
     await showMistakeModal();
+    if (window._editIsMistake === null) {
+      // Cancelled -- the user wants to go fix the field's actual value
+      // first. Don't record any decision at all; cancelMistakeModal()
+      // already removed this field from _promptedFields, so changing
+      // it again will correctly re-trigger this whole flow.
+      continue;
+    }
+    const isMistake = window._editIsMistake === true;
     window._fieldDecisions[item.field] = {
-      isMistake: window._editIsMistake === true,
-      comment: window._editIsMistake === true ? window._editMistakeComment : null,
+      isMistake,
+      comment: isMistake ? window._editMistakeComment : null,
       oldValue: item.oldValue,
       newValue: item.newValue,
     };
+    // Log the correction immediately, right when the comment is
+    // confirmed -- not later at final save time. This way, the
+    // correction is captured the moment it's given, regardless of
+    // whether the user goes on to actually complete and save the
+    // edit, or abandons it, or the save fails for an unrelated reason.
+    if (isMistake && window._editListingId) {
+      try {
+        const corrRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
+          method: 'POST',
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            listing_id: window._editListingId,
+            raw_whatsapp_text: (window._editListingData && window._editListingData.raw_whatsapp_text) || null,
+            field_changes: [{ field: item.field, old: item.oldValue ?? null, new: item.newValue ?? null }],
+            comment: window._editMistakeComment || null,
+          })
+        });
+        if (!corrRes.ok) {
+          const corrErrText = await corrRes.text();
+          console.error(`Correction insert for "${item.field}" failed (${corrRes.status}):`, corrErrText);
+        } else {
+          // Check the running total, and if 5+ are waiting, trigger the
+          // digest email directly -- no manual script needs to be run
+          // for this anymore.
+          try {
+            const countRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections?emailed=eq.false&select=id`, {
+              headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Prefer': 'count=exact' }
+            });
+            const unsentRows = await countRes.json();
+            const unsentCount = Array.isArray(unsentRows) ? unsentRows.length : 0;
+            if (unsentCount > 0 && unsentCount % 5 === 0) {
+              try {
+                const digestRes = await fetch(`${SUPA_URL}/functions/v1/send-correction-digest`, {
+                  method: 'POST',
+                  headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` },
+                });
+                const digestResult = await digestRes.json();
+                if (digestRes.ok && digestResult.success) {
+                  alert(
+                    `📧 ${digestResult.sentCount || unsentCount} corrections have been emailed to you automatically.\n\n` +
+                    `Check your inbox — and your Junk/Spam folder too, in case it lands there.`
+                  );
+                } else {
+                  alert(
+                    `⚠️ ${unsentCount} corrections have piled up, but the automatic email failed to send.\n\n` +
+                    `Error: ${digestResult.error || 'unknown'}\n\n` +
+                    `You can still run send_correction_digest.py manually as a backup.`
+                  );
+                }
+              } catch (digestErr) {
+                console.error('Digest email trigger failed:', digestErr);
+                alert(
+                  `⚠️ ${unsentCount} corrections have piled up, but the automatic email failed to send.\n\n` +
+                  `You can still run send_correction_digest.py manually as a backup.`
+                );
+              }
+            }
+          } catch (e) {
+            console.error('Could not check unsent correction count:', e);
+          }
+        }
+      } catch (e) {
+        console.error(`Correction insert for "${item.field}" threw an exception:`, e);
+      }
+    }
   }
   _fieldChangeProcessing = false;
 }
@@ -2414,55 +2488,6 @@ async function submitListing() {
       if (!res.ok) {
         console.error('PATCH error:', res.status, resText);
         throw new Error(resText);
-      }
-      if (window._fieldDecisions) {
-        const mistakeEntries = Object.entries(window._fieldDecisions).filter(([, d]) => d.isMistake);
-        let anyLoggedSuccessfully = false;
-        for (const [field, decision] of mistakeEntries) {
-          try {
-            const corrRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
-              method: 'POST',
-              headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-              body: JSON.stringify({
-                listing_id: window._editListingId,
-                raw_whatsapp_text: original.raw_whatsapp_text || null,
-                field_changes: [{ field, old: decision.oldValue ?? null, new: decision.newValue ?? null }],
-                comment: decision.comment || null,
-              })
-            });
-            if (!corrRes.ok) {
-              const corrErrText = await corrRes.text();
-              console.error(`Correction insert for "${field}" failed (${corrRes.status}):`, corrErrText);
-            } else {
-              anyLoggedSuccessfully = true;
-            }
-          } catch (e) {
-            console.error(`Correction insert for "${field}" threw an exception:`, e);
-          }
-        }
-        // The actual digest email only goes out when send_correction_digest.py
-        // is manually run as part of the daily pipeline -- it's NOT triggered
-        // automatically the instant a correction is logged here. This check
-        // just tells the user clearly when enough have piled up that it's
-        // worth going to run that script, so nothing gets missed silently.
-        if (anyLoggedSuccessfully) {
-          try {
-            const countRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections?emailed=eq.false&select=id`, {
-              headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Prefer': 'count=exact' }
-            });
-            const unsentRows = await countRes.json();
-            const unsentCount = Array.isArray(unsentRows) ? unsentRows.length : 0;
-            if (unsentCount > 0 && unsentCount % 5 === 0) {
-              alert(
-                `🔔 ${unsentCount} corrections have been logged and are waiting to be emailed.\n\n` +
-                `Go run your daily auto-posting script (or send_correction_digest.py on its own) now to send yourself the summary document.\n\n` +
-                `Once it arrives, remember to check your Junk/Spam folder too, in case it lands there.`
-              );
-            }
-          } catch (e) {
-            console.error('Could not check unsent correction count:', e);
-          }
-        }
       }
       window.location.href = 'index.html';
       return;
@@ -3663,6 +3688,14 @@ function backToMistakeChoice() {
   document.getElementById('mistakeModalStep2').style.display = 'none';
   document.getElementById('mistakeModalStep1').style.display = 'block';
 }
+function cancelMistakeModal() {
+  const item = window._currentFieldChangeItem;
+  if (item && window._promptedFields) {
+    window._promptedFields.delete(item.field);
+  }
+  document.getElementById('mistakeModalOverlay').style.display = 'none';
+  if (_mistakeModalResolve) { _mistakeModalResolve(); _mistakeModalResolve = null; }
+}
 function confirmMistakeComment() {
   const text = document.getElementById('mistakeComment').value.trim();
   if (!text) return;
@@ -3838,6 +3871,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <button onclick="selectEditKind('missing')" style="flex:1;background:#f0f0f0;border:1.5px solid #ccc;border-radius:10px;padding:16px;font-size:15px;font-weight:800;cursor:pointer">Missing</button>
         <button onclick="selectEditKind('mistake')" style="flex:1;background:#fff3e0;border:1.5px solid #e6a23c;border-radius:10px;padding:16px;font-size:15px;font-weight:800;cursor:pointer;color:#7a4a00">Mistake</button>
       </div>
+      <button onclick="cancelMistakeModal()" style="border:none;background:none;color:#888;font-size:12.5px;font-weight:700;cursor:pointer;margin-top:14px;width:100%;text-align:center">Wait, let me fix my edit first</button>
     </div>
     <div id="mistakeModalStep2" style="display:none">
       <button onclick="backToMistakeChoice()" style="border:none;background:none;color:#666;font-size:13px;font-weight:700;cursor:pointer;padding:0 0 10px 0">← Back</button>
