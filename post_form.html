@@ -2417,7 +2417,7 @@ async function submitListing() {
       }
       if (window._fieldDecisions) {
         const mistakeEntries = Object.entries(window._fieldDecisions).filter(([, d]) => d.isMistake);
-        alert('DEBUG: found ' + mistakeEntries.length + ' mistake-marked field(s) to log: ' + JSON.stringify(mistakeEntries.map(([f]) => f)));
+        let anyLoggedSuccessfully = false;
         for (const [field, decision] of mistakeEntries) {
           try {
             const corrRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
@@ -2432,12 +2432,35 @@ async function submitListing() {
             });
             if (!corrRes.ok) {
               const corrErrText = await corrRes.text();
-              alert('DEBUG: correction insert for "' + field + '" FAILED with status ' + corrRes.status + ':\n\n' + corrErrText);
+              console.error(`Correction insert for "${field}" failed (${corrRes.status}):`, corrErrText);
             } else {
-              alert('DEBUG: correction insert for "' + field + '" succeeded (status ' + corrRes.status + ')');
+              anyLoggedSuccessfully = true;
             }
           } catch (e) {
-            alert('DEBUG: correction insert for "' + field + '" threw an exception:\n\n' + e.message);
+            console.error(`Correction insert for "${field}" threw an exception:`, e);
+          }
+        }
+        // The actual digest email only goes out when send_correction_digest.py
+        // is manually run as part of the daily pipeline -- it's NOT triggered
+        // automatically the instant a correction is logged here. This check
+        // just tells the user clearly when enough have piled up that it's
+        // worth going to run that script, so nothing gets missed silently.
+        if (anyLoggedSuccessfully) {
+          try {
+            const countRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections?emailed=eq.false&select=id`, {
+              headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Prefer': 'count=exact' }
+            });
+            const unsentRows = await countRes.json();
+            const unsentCount = Array.isArray(unsentRows) ? unsentRows.length : 0;
+            if (unsentCount > 0 && unsentCount % 5 === 0) {
+              alert(
+                `🔔 ${unsentCount} corrections have been logged and are waiting to be emailed.\n\n` +
+                `Go run your daily auto-posting script (or send_correction_digest.py on its own) now to send yourself the summary document.\n\n` +
+                `Once it arrives, remember to check your Junk/Spam folder too, in case it lands there.`
+              );
+            }
+          } catch (e) {
+            console.error('Could not check unsent correction count:', e);
           }
         }
       }
@@ -2588,16 +2611,8 @@ async function submitListing() {
     btn.textContent = window._editListingId ? '💾 Save Changes' : "🚀 Post Listing — It's Free!";
     btn.disabled = false;
     showToast('⚠️ Failed to post. Please check your details and try again.');
-    alert('DEBUG INFO — please copy this text and send it back:\n\n' + msg);
   }
 }
-
-window.addEventListener('error', function(e) {
-  alert('DEBUG INFO (uncaught error) — please copy this text and send it back:\n\n' + e.message + '\nat line ' + e.lineno);
-});
-window.addEventListener('unhandledrejection', function(e) {
-  alert('DEBUG INFO (unhandled promise rejection) — please copy this text and send it back:\n\n' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
-});
 
 let step=1, type=null;
 
