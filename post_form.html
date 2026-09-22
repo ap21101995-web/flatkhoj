@@ -2892,6 +2892,19 @@ window.addEventListener('load', async function() {
         const typeCode = {flat_wanted:'fw', flat_listing:'fl', flatmate_wanted:'fm'}[listing.listing_type];
         const notice = typeCode ? document.getElementById('autoPostedNotice-' + typeCode) : null;
         if (notice) notice.style.display = 'block';
+
+        // Guard against the browser's own back button taking the user to
+        // whatever random page happened to be in history before they
+        // clicked Edit (e.g. a different listing's detail page). Right
+        // when the edit page loads, before any in-form navigation has
+        // happened, back should always land on index.html.
+        history.pushState({ fkEditGuard: true }, '', window.location.href);
+        window.addEventListener('popstate', function() {
+          if (window._editListingId) {
+            history.pushState({ fkEditGuard: true }, '', window.location.href);
+            prevStep();
+          }
+        });
       }
 
       // Auto-check all confirmation boxes in edit mode — user already agreed when first posting
@@ -3343,8 +3356,9 @@ function nextStep(){
 }
 function prevStep(){
   if(window._editListingId){
-    // Edit mode: step 3 → step 2, step 2 → homepage (not back to listing detail)
+    // Edit mode: step 3 → step 2, step 2 → step 1, step 1 → homepage
     if(step === 3){ step = 2; updateUI(); return; }
+    if(step === 2){ step = 1; updateUI(); return; }
     window.location.href = 'index.html';
     return;
   }
