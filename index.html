@@ -945,8 +945,10 @@ async function approvePendingListing(id,btn){
     const res=await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({sessionToken:user.sessionToken,listingId:id,action:"approve_pending"})});
     const data=await res.json();
     if(res.ok&&data.success){
-      const card=document.querySelector(`[data-listing-id="${id}"]`);
-      card&&card.remove();
+      // Reload the full feed rather than just removing the pending card --
+      // the listing needs to actually appear as a live post immediately,
+      // not just vanish from pending until the next manual refresh.
+      loadListings();
     }else if(data.error&&(data.error.includes("Session expired")||data.error.includes("log in again"))){
       alert("Your session has expired — taking you to log in again.");
       window.location.href=`login.html?trigger=post&return=${encodeURIComponent(window.location.href)}`;
