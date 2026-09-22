@@ -908,13 +908,31 @@ async function applyOwnerPhoneFilter() {
   document.getElementById('loadMoreWrap').style.display = 'none';
   [...document.getElementById('feed').children].forEach(c => c.id || c.remove());
   try {
+    const user = getUser();
+    if (!user || !user.sessionToken) { alert('Please log in again.'); return; }
     // No is_active/pending_approval filter at all here -- deliberately
     // showing everything tied to this number, live or still pending.
-    const res = await fetch(`${SUPA_URL}/rest/v1/listings?custom_contact_phone=eq.${phone}&order=created_at.desc&select=*`, {
-      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+    // Verified server-side against the real owner list, not just
+    // hidden behind this owner-only UI, since this can return
+    // pending/unapproved listing data.
+    const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+      method: 'POST',
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionToken: user.sessionToken, action: 'search_by_phone', phone })
     });
-    if (!res.ok) throw new Error('Fetch failed: ' + res.status);
-    let results = await res.json();
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      document.getElementById('feedLoading').style.display = 'none';
+      if (data.error && (data.error.includes('Session expired') || data.error.includes('log in again'))) {
+        alert('Your session has expired — taking you to log in again.');
+        window.location.href = `login.html?trigger=post&return=${encodeURIComponent(window.location.href)}`;
+        return;
+      }
+      document.getElementById('feedEmpty').style.display = 'block';
+      document.getElementById('feedEmpty').innerHTML = `<div style="font-size:13px;color:#888">Error: ${data.error || 'Failed to search'}</div>`;
+      return;
+    }
+    let results = data.listings;
     if (!Array.isArray(results)) throw new Error('Bad response');
     // Mark pending ones the same way the normal pending section does,
     // so renderListings() shows the same Approve/Reject/Hold buttons.
