@@ -1106,33 +1106,39 @@ function renderListing(){
 
 async function confirmUnlock(){
   const user=getUser();
-  if(!user){nav('login.html?trigger=unlock&listing_id=')+listing.id;return;}
+  if(!user){nav('login.html?trigger=unlock&listing_id='+listing.id);return;}
   const btn=document.querySelector('.confirm-unlock-btn');
   btn.textContent='Unlocking…';btn.disabled=true;
   try{
     if(!listing.is_free_contact){
-      // Always fetch FRESH balance from Supabase
-      const freshRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=coins`,{
-        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
+      // Server verifies the session, computes the real cost, and
+      // deducts coins atomically -- no client-side balance math or
+      // direct writes to the users table, which could previously be
+      // forged since that PATCH only used the public anon key.
+      const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+        body:JSON.stringify({sessionToken:user.sessionToken,listingId:listing.id,action:'unlock_contact'})
       });
-      const freshData = await freshRes.json();
-      const currentCoins = freshData[0]?.coins || 0;
+      const data = await res.json();
 
-      if(currentCoins < UNLOCK_COST){
-        btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;
-        closeSheet('unlock');
-        nav('coins.html?return_to=') + encodeURIComponent(window.location.href);
-        return;
-      }
-
-      const newCoins = currentCoins - UNLOCK_COST;
-      const deductRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({coins:newCoins})});
-      if (!deductRes.ok) {
+      if(!res.ok || !data.success){
         btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →'; btn.disabled=false;
-        alert('Failed to deduct coins. Please try again.');
+        if(data.error && (data.error.includes('Session expired') || data.error.includes('log in again'))){
+          alert('Your session has expired — taking you to log in again.');
+          nav(`login.html?trigger=unlock&listing_id=${listing.id}&return=${encodeURIComponent(window.location.href)}`);
+          return;
+        }
+        if(data.error === 'Not enough coins.'){
+          closeSheet('unlock');
+          nav('coins.html?return_to='+encodeURIComponent(window.location.href));
+          return;
+        }
+        alert(data.error || 'Failed to unlock. Please try again.');
         return;
       }
-      
+
+      const newCoins = data.newCoins;
       // Sync to localStorage
       user.coins = newCoins;
       localStorage.setItem('fmh_user', JSON.stringify(user));
@@ -1142,9 +1148,6 @@ async function confirmUnlock(){
       document.querySelectorAll('.coin-balance strong, #unlockCoinBalance').forEach(el => {
         el.textContent = '🪙 ' + newCoins + ' coins';
       });
-
-      await supaPost('coin_transactions',{user_id:user.userId,type:'unlock_contact',amount:-UNLOCK_COST,balance_after:newCoins,related_listing_id:listing.id,description:'Contact unlock',created_at:new Date().toISOString()});
-      await supaPost('contact_unlocks',{unlocker_user_id:user.userId,listing_id:listing.id,listing_user_id:listing.user_id,coins_spent:UNLOCK_COST,created_at:new Date().toISOString()});
     }
     revealContact();
   }catch(err){btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;alert('Failed to unlock. Please try again.');}
