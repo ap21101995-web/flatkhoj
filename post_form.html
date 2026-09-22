@@ -2213,7 +2213,9 @@ function collectFormData() {
     data.tenant_type = null;
     data.amenities = null;
     data.description = document.querySelector('#f-fl textarea')?.value || null;
-    data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') || false;
+    data.has_brokerage = document.getElementById('fl-byes')?.classList.contains('sel-yes') ? true
+      : document.getElementById('fl-bno')?.classList.contains('sel-no') ? false : undefined;
+    if (data.has_brokerage !== undefined) data.brokerage_confirmed = true;
     data.available_from = document.getElementById('fl-available')?.value || null;
   } else if (type === 'fw') {
     data.listing_type = 'flat_wanted';
@@ -2240,7 +2242,9 @@ function collectFormData() {
     data.furnishing = document.querySelector('#f-fm .sel[onclick*="fm-furn"]')?.textContent?.trim() || null;
     data.amenities = null;
     data.description = document.querySelector('#f-fm textarea')?.value || null;
-    data.has_brokerage = document.getElementById('fm-byes')?.classList.contains('sel-yes') || false;
+    data.has_brokerage = document.getElementById('fm-byes')?.classList.contains('sel-yes') ? true
+      : document.getElementById('fm-bno')?.classList.contains('sel-no') ? false : undefined;
+    if (data.has_brokerage !== undefined) data.brokerage_confirmed = true;
     data.available_from = document.getElementById('fm-available')?.value || null;
   } else if (type === 'pg') {
     data.listing_type = 'pg_listing';
@@ -2255,7 +2259,9 @@ function collectFormData() {
     data.amenities = [...(document.querySelectorAll('#pg-amenities .pill.sel') || [])].map(p => p.textContent.trim()).filter(Boolean);
     if (data.amenities.length === 0) data.amenities = null;
     data.description = document.querySelector('#f-pg textarea')?.value || null;
-    data.has_brokerage = document.getElementById('pg-byes')?.classList.contains('sel-yes') || false;
+    data.has_brokerage = document.getElementById('pg-byes')?.classList.contains('sel-yes') ? true
+      : document.getElementById('pg-bno')?.classList.contains('sel-no') ? false : undefined;
+    if (data.has_brokerage !== undefined) data.brokerage_confirmed = true;
     data.available_from = document.getElementById('pg-available')?.value || null;
   }
 
@@ -2456,7 +2462,7 @@ async function submitListing() {
 
       // Only override with DOM values that are actually set (not null/empty)
       const domKeys = ['listing_type','poster_name','rent_amount','flat_type','furnishing','food_preference',
-        'gender_preference','description','has_brokerage','available_from','areas','room_type',
+        'gender_preference','description','has_brokerage','brokerage_confirmed','available_from','areas','room_type',
         'tenant_type','situation','occupation','stay_duration','brokerage_preference',
         'meals_included','curfew','visitors_allowed','amenities'];
       domKeys.forEach(k => {
@@ -2467,7 +2473,31 @@ async function submitListing() {
         }
       });
 
-      // pets_allowed: DOM value takes priority if user touched it, else keep original
+      // Force-reset fields that don't apply to the FINAL, currently
+      // selected type -- mirrors the same rules the auto-posting
+      // pipeline itself uses. Without this, a value from before a type
+      // switch (e.g. furnishing carried over from when this was a
+      // flatmate_wanted post) would silently persist, since a field
+      // the new type's form never sends can never get overwritten by
+      // the merge above -- it just keeps whatever was already there.
+      const finalType = merged.listing_type;
+      const isOfferingType = finalType === 'flatmate_wanted' || finalType === 'flat_listing';
+      if (!isOfferingType) {
+        // flat_wanted (seeker): furnishing/flat_type are offering-only
+        // concepts and never apply to what someone is looking for.
+        merged.furnishing = 'Undisclosed';
+        merged.flat_type = 'Undisclosed';
+        merged.has_brokerage = false;
+        merged.brokerage_confirmed = true;
+      } else {
+        // Offering types: occupation and brokerage_preference are
+        // seeker-only fields (has_brokerage is the offering-side
+        // equivalent instead).
+        merged.occupation = 'Undisclosed';
+        merged.brokerage_preference = null;
+      }
+
+
       if (domData.pets_allowed !== null && domData.pets_allowed !== undefined) {
         merged.pets_allowed = domData.pets_allowed;
       }
@@ -3505,7 +3535,7 @@ function prefillEditForm(listing, t) {
       });
     }
     // Brokerage
-    if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('fl','yes') : sb('fl','no');
+    if (listing.brokerage_confirmed === true) listing.has_brokerage ? sb('fl','yes') : sb('fl','no');
   }
 
   // ───────── FLAT WANTED (fw) ────────────────────
@@ -3566,7 +3596,7 @@ function prefillEditForm(listing, t) {
         if (listing.amenities.includes(p.textContent.trim())) p.classList.add('sel');
       });
     }
-    if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('fm','yes') : sb('fm','no');
+    if (listing.brokerage_confirmed === true) listing.has_brokerage ? sb('fm','yes') : sb('fm','no');
   }
 
   // ───────── PG LISTING (pg) ────────────────────
@@ -3590,7 +3620,7 @@ function prefillEditForm(listing, t) {
         if (listing.amenities.includes(p.textContent.trim())) p.classList.add('sel');
       });
     }
-    if (listing.has_brokerage !== undefined) listing.has_brokerage ? sb('pg','yes') : sb('pg','no');
+    if (listing.brokerage_confirmed === true) listing.has_brokerage ? sb('pg','yes') : sb('pg','no');
   }
 
   // ── OWNER CONTACT ──────────────────────────────
@@ -3630,7 +3660,7 @@ function selectType(t){
 }
 
 function sp(el,group){
-  document.querySelectorAll(`[onclick="sp(this,'${group}')"]`).forEach(p=>p.classList.remove('sel'));
+  document.querySelectorAll(`[onclick*="'${group}'"]`).forEach(p=>p.classList.remove('sel'));
   el.classList.add('sel');
 }
 function mp(el){el.classList.toggle('sel');}
