@@ -2324,12 +2324,17 @@ async function _processFieldChangeQueue() {
       oldValue: item.oldValue,
       newValue: item.newValue,
     };
-    // Log the correction immediately, right when the comment is
-    // confirmed -- not later at final save time. This way, the
-    // correction is captured the moment it's given, regardless of
-    // whether the user goes on to actually complete and save the
-    // edit, or abandons it, or the save fails for an unrelated reason.
-    if (isMistake && window._editListingId) {
+    // Log every field decision immediately, right when it's made --
+    // not later at final save time. This way it's captured the moment
+    // it's given, regardless of whether the user goes on to actually
+    // complete and save the edit, or abandons it, or the save fails
+    // for an unrelated reason. Both "Mistake" and "Missing" get logged
+    // here (is_mistake distinguishes them) -- a "Missing" fill-in is
+    // still a deliberate manual edit that must be protected from being
+    // silently overwritten if this same listing gets reposted and
+    // refreshed within the duplicate window, even though it's not
+    // itself a script bug worth emailing about.
+    if (window._editListingId) {
       try {
         const corrRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
           method: 'POST',
@@ -2338,18 +2343,19 @@ async function _processFieldChangeQueue() {
             listing_id: window._editListingId,
             raw_whatsapp_text: (window._editListingData && window._editListingData.raw_whatsapp_text) || null,
             field_changes: [{ field: item.field, old: item.oldValue ?? null, new: item.newValue ?? null }],
-            comment: window._editMistakeComment || null,
+            comment: isMistake ? (window._editMistakeComment || null) : null,
+            is_mistake: isMistake,
           })
         });
         if (!corrRes.ok) {
           const corrErrText = await corrRes.text();
           console.error(`Correction insert for "${item.field}" failed (${corrRes.status}):`, corrErrText);
-        } else {
-          // Check the running total, and if 5+ are waiting, trigger the
-          // digest email directly -- no manual script needs to be run
-          // for this anymore.
+        } else if (isMistake) {
+          // The "5 corrections piled up, email me" reminder is scoped
+          // specifically to real mistakes -- a "Missing" fill-in isn't
+          // a script bug, so it shouldn't count toward or trigger that.
           try {
-            const countRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections?emailed=eq.false&select=id`, {
+            const countRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections?emailed=eq.false&is_mistake=eq.true&select=id`, {
               headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Prefer': 'count=exact' }
             });
             const unsentRows = await countRes.json();
