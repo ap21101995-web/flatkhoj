@@ -2288,11 +2288,16 @@ function _setupFieldChangeTracking(t) {
     if (evt && evt.target && evt.target.closest && evt.target.closest('.area-clear')) {
       return; // clearing an area is just step 1 of picking a new one, not a complete change yet
     }
+    if (evt && evt.target && evt.target.closest && evt.target.closest('#fw-lf-options')) {
+      return; // selecting/deselecting within the "Looking For" dropdown is one continuous
+              // action -- closeLFDropdown() below triggers the check once it's actually done,
+              // not on every individual checkbox toggle mid-selection
+    }
     setTimeout(() => {
       const current = collectFormData();
       const snapshot = window._fieldSnapshot;
       for (const key in current) {
-        if (key === 'listing_type' || key === 'city') continue; // not user-facing "fields" in this sense
+        if (key === 'listing_type' || key === 'city' || key === 'brokerage_confirmed') continue; // not user-facing "fields" in this sense
         const oldVal = JSON.stringify(snapshot[key] ?? null);
         const newVal = JSON.stringify(current[key] ?? null);
         if (oldVal !== newVal && !window._promptedFields.has(key)) {
@@ -2303,6 +2308,7 @@ function _setupFieldChangeTracking(t) {
       _processFieldChangeQueue();
     }, 0);
   };
+  window._checkForChangesFn = checkForChanges;
 
   formEl.addEventListener('click', checkForChanges);
   formEl.addEventListener('change', checkForChanges);
@@ -3059,7 +3065,12 @@ function toggleLFDropdown(e) {
 }
 
 function closeLFDropdown() {
-  document.getElementById('fw-lf-options').style.display = 'none';
+  const opts = document.getElementById('fw-lf-options');
+  const wasOpen = opts.style.display !== 'none';
+  opts.style.display = 'none';
+  if (wasOpen && window._checkForChangesFn) {
+    window._checkForChangesFn();
+  }
 }
 
 function updateLFLabel() {
