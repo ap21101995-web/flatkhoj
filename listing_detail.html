@@ -1515,19 +1515,46 @@ async function shareListing(){
   const areaText = Array.isArray(listing?.areas) ? listing.areas.join(', ') : (listing?.areas || '');
   const title = `${typeLabels[listing?.listing_type] || 'Listing'}${areaText ? ' in ' + areaText : ''} on FlatKhoj`;
   if (navigator.share) {
+    // Native OS share sheet -- includes WhatsApp, Instagram, email,
+    // and anything else installed, without needing a direct
+    // integration with each one individually.
     try {
       await navigator.share({ title, text: title, url });
     } catch (e) {
       // User cancelled the share sheet -- not an error, do nothing.
     }
-  } else {
+    return;
+  }
+  // Fallback for browsers without native share support (mainly
+  // desktop) -- Instagram has no web-based way to receive a
+  // pre-filled shared link at all, so it's deliberately not offered
+  // here; WhatsApp and email both have simple, direct link formats.
+  const shareText = `${title}\n${url}`;
+  const menu = document.createElement('div');
+  menu.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:16px;box-shadow:0 -4px 20px rgba(0,0,0,0.15);z-index:9999;font-family:var(--font)';
+  menu.innerHTML = `
+    <div style="font-weight:700;font-size:15px;margin-bottom:12px">Share this listing</div>
+    <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" style="display:block;padding:12px;text-decoration:none;color:#1a1a18;font-size:14px;border-bottom:1px solid #eee">💬 WhatsApp</a>
+    <a href="mailto:?subject=${encodeURIComponent('Check out this listing on FlatKhoj')}&body=${encodeURIComponent(shareText)}" style="display:block;padding:12px;text-decoration:none;color:#1a1a18;font-size:14px;border-bottom:1px solid #eee">✉️ Email</a>
+    <div id="shareCopyLinkBtn" style="padding:12px;cursor:pointer;color:#1a1a18;font-size:14px;border-bottom:1px solid #eee">🔗 Copy link</div>
+    <div id="shareCancelBtn" style="padding:12px;text-align:center;color:#888;font-size:14px;cursor:pointer">Cancel</div>
+  `;
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:9998';
+  const closeMenu = () => { menu.remove(); backdrop.remove(); };
+  backdrop.onclick = closeMenu;
+  document.body.appendChild(backdrop);
+  document.body.appendChild(menu);
+  menu.querySelector('#shareCancelBtn').onclick = closeMenu;
+  menu.querySelector('#shareCopyLinkBtn').onclick = async () => {
     try {
       await navigator.clipboard.writeText(url);
       showToast('Link copied to clipboard');
     } catch (e) {
       showToast('Could not copy link');
     }
-  }
+    closeMenu();
+  };
 }
 function goBack() {
   // If arrived from edit form, history.back() would loop — always go home
