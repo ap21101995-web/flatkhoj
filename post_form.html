@@ -2047,16 +2047,16 @@ function clearArea(id) {
 }
 
 document.addEventListener('click', function(e) {
-  // The selected-area "chips" (each with its own '×' delete button, from
-  // removeArea/clearArea) render into '.area-selected-tag', which sits as
-  // a SIBLING of '.area-wrap' in the markup, not nested inside it -- so a
-  // click there doesn't match .closest('.area-wrap') and was being treated
-  // as "clicked outside the area editor", firing the change-check right
-  // after deleting a tag instead of waiting for the user to actually
-  // finish editing areas and click elsewhere.
-  if (!e.target.closest('.area-wrap') && !e.target.closest('.area-selected-tag')) {
+  if (!e.target.closest('.area-wrap')) {
     document.querySelectorAll('.area-dropdown').forEach(d => d.classList.remove('open'));
-    if (window._checkForChangesFn) {
+    // Don't treat a click on the area tag's own "×" (removing an
+    // already-picked area) as "done editing" -- that tag display sits
+    // outside .area-wrap as a sibling div, so it would otherwise count
+    // as a click "outside" and fire the change-check (and the Missing/
+    // Mistake prompt) the instant the area is removed, before there's
+    // any chance to type the corrected one in. The real "done" signal
+    // is a click somewhere else entirely, once the swap is complete.
+    if (!e.target.closest('.area-selected-tag') && window._checkForChangesFn) {
       window._checkForChangesFn();
     }
   }
@@ -2304,16 +2304,18 @@ function _setupFieldChangeTracking(t) {
     if (evt && evt.target && evt.target.closest && evt.target.closest('.area-clear')) {
       return; // clearing an area is just step 1 of picking a new one, not a complete change yet
     }
+    if (evt && evt.target && evt.target.closest && evt.target.closest('.area-selected-tag')) {
+      return; // removing an already-picked area tag ("×" on the tag itself) is step 1 of
+              // replacing it with the corrected one, not a complete change yet -- this tag
+              // display sits OUTSIDE .area-wrap as a sibling div, so without this check the
+              // click-outside-area-wrap listener below treats the remove click as "outside"
+              // and fires the Missing/Mistake prompt immediately, before there's any chance
+              // to type the corrected area
+    }
     if (evt && evt.target && evt.target.closest && evt.target.closest('.area-wrap')) {
       return; // adding/removing areas (tag '×' buttons, dropdown selections) is one
               // continuous action -- the click-outside-area-wrap listener below
               // triggers the check once it's actually done, not on every click
-    }
-    if (evt && evt.target && evt.target.closest && evt.target.closest('.area-selected-tag')) {
-      return; // the selected-area chips (each with their own '×' delete button) render
-              // as a SIBLING of .area-wrap, not nested inside it -- so deleting a tag
-              // needs its own exclusion here too, same reasoning as .area-wrap above:
-              // wait for the click-outside listener, not this same click.
     }
     if (evt && evt.target && evt.target.closest && evt.target.closest('#fw-lf-options')) {
       return; // selecting/deselecting within the "Looking For" dropdown is one continuous
