@@ -2288,6 +2288,12 @@ function _setupFieldChangeTracking(t) {
   window._fieldChangeQueue = window._fieldChangeQueue || [];
 
   const checkForChanges = (evt) => {
+    if (evt && evt.target && evt.target.closest && evt.target.closest('#mistakeModalOverlay')) {
+      return; // clicking the Missing/Mistake modal's own buttons (Missing, Mistake, Continue,
+               // Back, Wait-let-me-fix-my-edit-first) is not a form field change -- without this,
+               // the document-level "click outside" listener below re-scans the whole form the
+               // moment you answer the prompt, which can immediately reopen it and feel like a loop.
+    }
     if (evt && evt.target && evt.target.closest && evt.target.closest('.area-clear')) {
       return; // clearing an area is just step 1 of picking a new one, not a complete change yet
     }
