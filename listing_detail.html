@@ -937,11 +937,16 @@ function renderListing(){
   // Fallback title when there's no description -- a seeker's post
   // (flat_wanted) reads as "Listing in <areas>" otherwise, which is
   // backwards: they aren't listing anything, they're looking for
-  // something. Use what they chose in "Looking for" (flat_type) instead,
-  // falling back to a generic "a flat" if even that's blank.
+  // something. Use what they chose in the "Looking For" selector, which
+  // is stored in room_type for flat_wanted posts -- flat_type is a
+  // DIFFERENT, offering-only concept (what kind of flat is being
+  // offered) that post_form.html deliberately always sets to
+  // "Undisclosed" for seekers, so using it here showed "Looking for
+  // Undisclosed" even when the poster had picked something real.
   let fallbackTitle = 'Listing in '+areas;
   if (listing.listing_type === 'flat_wanted') {
-    fallbackTitle = 'Looking for '+(listing.flat_type || 'a flat')+' in '+areas;
+    const wantedType = (listing.room_type && listing.room_type !== 'Undisclosed') ? listing.room_type : 'a flat';
+    fallbackTitle = 'Looking for '+wantedType+' in '+areas;
   }
   document.getElementById('listingTitle').textContent=listing.description?.slice(0,80)||fallbackTitle;
   document.getElementById('listingLocation').textContent=areas+', Mumbai';
@@ -978,12 +983,17 @@ function renderListing(){
   const fields=[];
 
   if(listing.listing_type==='flat_wanted'){
-    if(listing.flat_type) fields.push(['Looking for',listing.flat_type]);
+    // NOTE: flat_type is a DIFFERENT, offering-only concept (what kind of
+    // flat is being offered) that post_form.html deliberately always sets
+    // to "Undisclosed" for flat_wanted (seeker) posts -- it's never shown
+    // here. What a seeker actually picked in "Looking For" (e.g. "Double
+    // occupancy", "Entire 1 BHK") is stored in room_type instead; showing
+    // both under the same "Looking for" label was the duplicate-row bug.
+    if(listing.room_type) fields.push(['Looking for', listing.room_type]);
     if(listing.furnishing) fields.push(['Furnishing needed',listing.furnishing]);
     if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'||listing.food_preference==='🍽️ No Veg/Non-Veg Preference'?'🍽️ No Preference':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
     if(listing.available_from) fields.push(['Move-in date', formatDate(listing.available_from)]);
-    if(listing.room_type) fields.push(['Looking for', listing.room_type]);
     if(listing.stay_duration) fields.push(['Stay duration', listing.stay_duration]);
     const brokerPref = listing.brokerage_preference;
     if(brokerPref === 'yes') fields.push(['Brokerage','✅ Okay With Brokerage']);
