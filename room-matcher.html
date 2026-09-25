@@ -179,12 +179,24 @@
 </head>
 <body>
 
+<!-- Internal-only for now: this tool isn't finished, so it's gated to the
+     owner accounts (same check used across the rest of the site) until
+     it's ready to open up to everyone. See isOwnerUser() in the script
+     below. -->
+<div id="rm-access-denied" style="display:none; max-width:480px; margin:80px auto; padding:32px 24px; text-align:center; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:40px; margin-bottom:12px">🔒</div>
+  <div style="font-size:16px; font-weight:800; margin-bottom:8px; color:#141414">Room Matcher isn't available yet</div>
+  <div style="font-size:13.5px; color:#666; line-height:1.5">This tool is still being tested internally. Check back soon.</div>
+  <a href="/" style="display:inline-block;margin-top:18px;color:#0f7b6c;font-weight:700;text-decoration:none">← Back to FlatKhoj</a>
+</div>
+
+<div id="rm-app">
 <header class="topbar">
   <a href="/" class="logo">Flat<span>Khoj</span></a>
 </header>
 
 <div class="hero">
-  <div class="hero-badge">New Tool</div>
+  <div class="hero-badge">Internal Tool</div>
   <h1>Room Matcher</h1>
   <p>Tap open a room, mark it vacant, and tell us how it's shared — we'll find real people already looking for exactly that.</p>
 </div>
@@ -234,12 +246,57 @@
   <a href="/">Home</a> · <a href="/post_form.html">Post Free</a> · <a href="/broker_poster.html">For Brokers</a> · <a href="/privacy.html">Privacy</a>
   <br>flatkhoj.com · Mumbai's Flat &amp; Flatmate Marketplace
 </footer>
+</div><!-- /#rm-app -->
 
 <script>
 const SUPA_URL = "https://hbvdboxyppsmcuqgbpwp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4";
 
+// Owner-only gate -- same check used across the rest of the site
+// (index.html's unlockPuneIfAdmin/pending-listings visibility etc): the
+// two owner phone numbers, or an explicit isOwner flag on the stored
+// user. Checked against BOTH localStorage keys the rest of the site
+// reads from, since which one holds the current session varies by login
+// path.
+function isOwnerUser() {
+  try {
+    const raw = localStorage.getItem('fmh_user') || localStorage.getItem('fk_login_v2');
+    if (!raw) return false;
+    const u = JSON.parse(raw);
+    const phone = String(u.phone || '').replace(/\D/g, '').slice(-10);
+    return phone === '9538584612' || phone === '9004325226' || u.isOwner === true || u.isOwner === 'true';
+  } catch (e) { return false; }
+}
+if (!isOwnerUser()) {
+  document.getElementById('rm-app').style.display = 'none';
+  document.getElementById('rm-access-denied').style.display = 'block';
+  // Nothing below this point should run for a non-owner -- throwing here
+  // stops the rest of this script block (area list, matching logic, the
+  // rebuildHouse() call at the bottom) from ever executing.
+  throw new Error('Room Matcher: owner-only, access denied');
+}
+
 function normKey(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
+// Shows exactly when a matched seeker's post went live, so whoever is
+// looking at the match can judge for themselves whether it's worth a
+// call -- a post from just now reads very differently from one that's
+// almost a week old, even though both pass the 7-day window in the
+// query itself. "stale" (2+ days) is flagged so it stands out visually.
+function formatPostedAgo(iso) {
+  if (!iso) return { label: 'Posting date unknown', stale: true };
+  const posted = new Date(iso);
+  const now = new Date();
+  const diffMs = now - posted;
+  const diffHours = diffMs / (1000 * 60 * 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const dateStr = posted.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: posted.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+  let relative;
+  if (diffHours < 1) relative = 'Posted just now';
+  else if (diffHours < 24) relative = `Posted ${Math.floor(diffHours)} hour${Math.floor(diffHours) !== 1 ? 's' : ''} ago`;
+  else relative = `Posted ${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  return { label: `${relative} · ${dateStr}`, stale: diffDays >= 2 };
+}
 
 // The exact same master area list used on the homepage (window._PA), sorted
 // so each area's bare name comes first, its East/West siblings right after,
@@ -424,12 +481,14 @@ function renderHouse() {
           const m = bed.matches[bed.matchIndex];
           const rentDisplay = m.rent_amount ? `₹${Number(m.rent_amount).toLocaleString('en-IN')}` : 'Budget not specified';
           const name = m.poster_name || 'FlatKhoj Member';
+          const postedInfo = formatPostedAgo(m.created_at);
           bedBottomHtml = `
             <div class="match-carousel">
               <button class="match-arrow" onclick="cycleBedMatch(${room.id},${idx},1)" title="See next option">←</button>
               <div class="match-content" onclick="viewMatchRequirement('${m.id}')">
                 <div class="match-name">${name}</div>
                 <div class="match-budget">${rentDisplay}</div>
+                <div class="match-meta" style="color:${postedInfo.stale ? '#c0392b' : '#888'};font-weight:${postedInfo.stale ? '700' : '400'}">${postedInfo.label}</div>
                 <a href="/listing_detail.html?id=${m.id}" target="_blank" class="match-unlock-btn" onclick="event.stopPropagation()">Unlock Contact</a>
               </div>
               <div class="match-counter">${bed.matchIndex + 1} / ${bed.matches.length}</div>
@@ -511,7 +570,11 @@ async function findMatches() {
   btn.textContent = 'Searching…';
 
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/listings?listing_type=eq.flatmate_wanted&is_active=eq.true&select=id,poster_name,areas,room_type,rent_amount,description,gender_preference,created_at`, {
+    // Live postings only (is_active=eq.true), and only from the last 7
+    // days -- an older seeker post has likely already found a place, so
+    // surfacing it would just waste a call.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const res = await fetch(`${SUPA_URL}/rest/v1/listings?listing_type=eq.flatmate_wanted&is_active=eq.true&created_at=gte.${sevenDaysAgo}&select=id,poster_name,areas,room_type,rent_amount,description,gender_preference,created_at`, {
       headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
     });
     const allSeekers = await res.json();
