@@ -934,7 +934,16 @@ function renderListing(){
 
   // Type, title, location
   document.getElementById('listingTypePill').textContent=typeLabels[listing.listing_type]||listing.listing_type;
-  document.getElementById('listingTitle').textContent=listing.description?.slice(0,80)||'Listing in '+areas;
+  // Fallback title when there's no description -- a seeker's post
+  // (flat_wanted) reads as "Listing in <areas>" otherwise, which is
+  // backwards: they aren't listing anything, they're looking for
+  // something. Use what they chose in "Looking for" (flat_type) instead,
+  // falling back to a generic "a flat" if even that's blank.
+  let fallbackTitle = 'Listing in '+areas;
+  if (listing.listing_type === 'flat_wanted') {
+    fallbackTitle = 'Looking for '+(listing.flat_type || 'a flat')+' in '+areas;
+  }
+  document.getElementById('listingTitle').textContent=listing.description?.slice(0,80)||fallbackTitle;
   document.getElementById('listingLocation').textContent=areas+', Mumbai';
 
   // Price — label depends on type
