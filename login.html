@@ -413,11 +413,18 @@ const contextMessages = {
 };
 
 window.onload = function() {
-  const saved = getLoginState();
-  if (saved) { showLoggedIn(saved); return; }
-
   const params = new URLSearchParams(window.location.search);
   triggerContext = params.get('trigger');
+
+  const saved = getLoginState();
+  // Only take the "already logged in" shortcut on a direct, untriggered
+  // visit -- if a trigger is present, the user was specifically sent
+  // here for a reason (including a session that just expired elsewhere
+  // on the site), and showing stale account info instead of letting
+  // them actually re-authenticate would defeat the whole point of the
+  // redirect, leaving them stuck.
+  if (saved && !triggerContext) { showLoggedIn(saved); return; }
+  if (saved && triggerContext) { clearLoginState(); }
   // triggerContext stored for post-login redirect, but no banner shown
   // Users land directly on phone input — no intermediate screen
 };
