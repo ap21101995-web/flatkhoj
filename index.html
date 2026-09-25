@@ -1128,8 +1128,13 @@ async function rejectPendingListing(id,btn){
     const res=await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({sessionToken:user.sessionToken,listingId:id,action:"reject_pending"})});
     const data=await res.json();
     if(res.ok&&data.success){
-      const card=document.querySelector(`[data-listing-id="${id}"]`);
-      card&&card.remove();
+      // Reload the full feed rather than just removing this one card --
+      // a direct DOM removal can race with the next poll/render cycle
+      // (or simply fail to match the card) and leave the rejected
+      // listing looking like it's still pending until a manual refresh.
+      // Reloading from the server guarantees the pending queue always
+      // reflects the true state after one click.
+      loadListings();
     }else if(data.error&&(data.error.includes("Session expired")||data.error.includes("log in again"))){
       alert("Your session has expired — taking you to log in again.");
       window.location.href=`login.html?trigger=post&return=${encodeURIComponent(window.location.href)}`;
@@ -1273,23 +1278,21 @@ function toggleFPill(a,e){if("farea"!==e)document.querySelectorAll(`[onclick*="t
 </div>
 
 <script>
-let _lastRefreshTime=(new Date).toISOString();let _lastPendingIds=null;function _showRefreshBanner(msg){let e=document.getElementById("refreshBanner");e||(e=document.createElement("div"),e.id="refreshBanner",e.style.cssText="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--teal);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)",e.onclick=()=>{e.remove(),window.scrollTo({top:0,behavior:"smooth"}),loadListings()},document.body.appendChild(e)),e.textContent=msg}setInterval(async()=>{try{const e=_lastRefreshTime,t=(new Date).toISOString(),a=await fetch(`${SUPA_URL}/rest/v1/listings?select=id&is_active=eq.true&created_at=gt.${e}&limit=1`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}),i=await a.json();if(_lastRefreshTime=t,i&&i.length>0)return void _showRefreshBanner("↑ New listings available — tap to refresh");
-  // Also watch the pending-approval queue for owner accounts -- an
-  // approve/reject/hold done on another device (e.g. rejecting on
-  // mobile) otherwise never shows up here until a manual refresh.
+let _lastRefreshTime=(new Date).toISOString();let _lastPendingIds=null;function _showRefreshBanner(msg){let e=document.getElementById("refreshBanner");e||(e=document.createElement("div"),e.id="refreshBanner",e.style.cssText="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--teal);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)",e.onclick=()=>{e.remove(),window.scrollTo({top:0,behavior:"smooth"}),loadListings()},document.body.appendChild(e)),e.textContent=msg}setInterval(async()=>{try{
+  // Owner accounts: refresh automatically and unconditionally every
+  // 15s, rather than waiting for a detected change or a manual banner
+  // click -- keeps the pending queue reliably in sync even if an
+  // approve/reject/hold's own immediate UI update didn't fully reflect
+  // what actually happened server-side. Runs first and returns, since
+  // loadListings() already covers everything the checks below would
+  // have found anyway.
   const _ownerCheck=getUser();
-  if(_ownerCheck&&_ownerCheck.isOwner){
-    try{
-      const pr=await fetch(`${SUPA_URL}/rest/v1/listings?select=id&pending_approval=eq.true&rejected=eq.false`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}),pd=await pr.json();
-      if(Array.isArray(pd)){
-        const currentIds=pd.map(x=>x.id).sort().join(",");
-        if(_lastPendingIds!==null&&_lastPendingIds!==currentIds){
-          _showRefreshBanner("↻ Pending listings updated elsewhere — tap to refresh");
-        }
-        _lastPendingIds=currentIds;
-      }
-    }catch(e){}
+  const _phoneFilterActive=document.getElementById('ownerPhoneFilterActive');
+  if(_ownerCheck&&_ownerCheck.isOwner&&!(_phoneFilterActive&&_phoneFilterActive.style.display!=='none')){
+    loadListings();
+    return;
   }
+  const e=_lastRefreshTime,t=(new Date).toISOString(),a=await fetch(`${SUPA_URL}/rest/v1/listings?select=id&is_active=eq.true&created_at=gt.${e}&limit=1`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}),i=await a.json();if(_lastRefreshTime=t,i&&i.length>0)return void _showRefreshBanner("↑ New listings available — tap to refresh");
 }catch(e){}},15e3);
 </script>
 

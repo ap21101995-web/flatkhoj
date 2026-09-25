@@ -2929,6 +2929,27 @@ window.addEventListener('load', async function() {
       const [listing] = await res.json();
       if (!listing) { alert('Listing not found.'); window.history.back(); return; }
 
+      // A REAL, registered user's own posting almost never has
+      // custom_contact_phone set -- that column is only for an explicit
+      // override (auto-posted listings, or an owner manually attaching a
+      // different number). The poster's actual number instead lives on
+      // their own account (users.phone, joined via listing.user_id) --
+      // exactly how listing_detail.html's own contact-reveal already
+      // falls back for a real user's listing. The owner's edit screen
+      // was missing this same fallback, so the "Owner contact number"
+      // field was silently left blank for every real-user posting
+      // instead of showing the poster's actual number. Fetch it the
+      // same way here, purely for display/edit purposes.
+      if (!listing.custom_contact_phone && listing.user_id) {
+        try {
+          const uRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${listing.user_id}&select=phone`, {
+            headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+          });
+          const [posterUser] = await uRes.json();
+          if (posterUser && posterUser.phone) listing.custom_contact_phone = posterUser.phone;
+        } catch (e) { /* non-fatal -- edit still works without this */ }
+      }
+
       // Store listing data globally for pre-fill when user hits Next
       window._editListingId = editId;
       window._editListingData = listing;

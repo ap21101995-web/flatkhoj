@@ -1556,14 +1556,52 @@ async function shareListing(){
     closeMenu();
   };
 }
+// True only when this tab has a real FlatKhoj page to go back to --
+// i.e. the user actually navigated here from within the site (index.html,
+// post_form.html, etc.), which leaves both a same-origin document.referrer
+// AND a browser history entry behind this one. A listing opened from a
+// WhatsApp/SMS/email share link (or any other external link) arrives with
+// an empty or off-site referrer and nothing behind it in history -- for
+// those, "going back" must mean "go to the FlatKhoj home feed", since
+// there is nothing else in this tab to return to and history.back() would
+// either do nothing or exit the app entirely, leaving the user stuck.
+function cameFromWithinSite() {
+  try {
+    const ref = document.referrer;
+    if (!ref) return false;
+    const refHost = new URL(ref).host;
+    return refHost === window.location.host;
+  } catch (e) {
+    return false;
+  }
+}
 function goBack() {
   // If arrived from edit form, history.back() would loop — always go home
   const ref = document.referrer;
   if (ref && ref.includes('post_form')) {
     nav('index.html');
-  } else {
+  } else if (cameFromWithinSite() && window.history.length > 1) {
     window.history.back();
+  } else {
+    // Opened directly (shared link, new tab, deep link) -- there is no
+    // real FlatKhoj page behind this one to go back to.
+    nav('index.html');
   }
+}
+
+// Also catch the device/browser's own back button (swipe-back gesture,
+// hardware back key, browser back arrow) -- not just the in-app back
+// arrow above. When this listing was opened directly from a shared link,
+// push one extra history entry on load so the FIRST back press is
+// intercepted here and sent to the home feed, instead of leaving the
+// user stuck on a blank tab or exiting the app.
+if (!cameFromWithinSite()) {
+  try {
+    history.pushState({ flatkhojGuard: true }, '', window.location.href);
+  } catch (e) {}
+  window.addEventListener('popstate', function(e) {
+    window.location.href = 'index.html';
+  });
 }
 
 // When leaving this page, ensure unlock state is saved to localStorage
