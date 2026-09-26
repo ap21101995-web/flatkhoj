@@ -3009,6 +3009,19 @@ window.addEventListener('load', async function() {
       // Store listing data globally for pre-fill when user hits Next
       window._editListingId = editId;
       window._editListingData = listing;
+      // getPostCity() (used by collectFormData() to set data.city on
+      // every save) reads the SITE'S OWN global city toggle
+      // (localStorage fk_city) -- not anything tied to this specific
+      // listing. If the owner's browser happens to have the other city
+      // selected (e.g. they were just looking at Pune listings, then
+      // opened a Mumbai listing to edit it), saving this edit would
+      // silently overwrite the listing's correct city with the wrong
+      // one, and the area picker shown here would also list the wrong
+      // city's areas the whole time. Sync the toggle to match the
+      // listing being edited so both are correct for this edit session.
+      if (listing.city && listing.city !== getPostCity()) {
+        localStorage.setItem('fk_city', listing.city);
+      }
       // Auto-posted listings have many legitimately "Undisclosed" fields
       // that need relaxed validation -- see getRequiredChecks().
       window._editingAutoPosted = !!listing.raw_whatsapp_text;
