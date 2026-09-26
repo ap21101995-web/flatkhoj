@@ -2350,21 +2350,38 @@ async function _processFieldChangeQueue() {
   while (window._fieldChangeQueue && window._fieldChangeQueue.length > 0) {
     const item = window._fieldChangeQueue.shift();
     window._currentFieldChangeItem = item;
-    await showMistakeModal();
-    if (window._editIsMistake === null) {
-      // Cancelled -- the user wants to go fix the field's actual value
-      // first. Don't record any decision at all; cancelMistakeModal()
-      // already removed this field from _promptedFields, so changing
-      // it again will correctly re-trigger this whole flow.
-      continue;
+    let isMistake;
+    if (window._editIsPendingApproval) {
+      await showMistakeModal();
+      if (window._editIsMistake === null) {
+        // Cancelled -- the user wants to go fix the field's actual value
+        // first. Don't record any decision at all; cancelMistakeModal()
+        // already removed this field from _promptedFields, so changing
+        // it again will correctly re-trigger this whole flow.
+        continue;
+      }
+      isMistake = window._editIsMistake === true;
+      window._fieldDecisions[item.field] = {
+        isMistake,
+        comment: isMistake ? window._editMistakeComment : null,
+        oldValue: item.oldValue,
+        newValue: item.newValue,
+      };
+    } else {
+      // Already-live listing -- log the correction silently, with no
+      // popup and not flagged as a "mistake" (so it never counts toward
+      // the mistake-digest email either). This still protects the field
+      // from a future auto-post refresh; it just doesn't interrupt an
+      // edit to an already-approved listing with the review-time prompt.
+      isMistake = false;
+      window._editMistakeComment = null;
+      window._fieldDecisions[item.field] = {
+        isMistake: false,
+        comment: null,
+        oldValue: item.oldValue,
+        newValue: item.newValue,
+      };
     }
-    const isMistake = window._editIsMistake === true;
-    window._fieldDecisions[item.field] = {
-      isMistake,
-      comment: isMistake ? window._editMistakeComment : null,
-      oldValue: item.oldValue,
-      newValue: item.newValue,
-    };
     // Log every field decision immediately, right when it's made --
     // not later at final save time. This way it's captured the moment
     // it's given, regardless of whether the user goes on to actually
@@ -2995,6 +3012,18 @@ window.addEventListener('load', async function() {
       // Auto-posted listings have many legitimately "Undisclosed" fields
       // that need relaxed validation -- see getRequiredChecks().
       window._editingAutoPosted = !!listing.raw_whatsapp_text;
+      // The Missing/Mistake prompt is for the owner's initial
+      // pending-review pass -- catching a real extraction bug worth
+      // flagging/emailing about before the listing ever goes live.
+      // Once a listing is already approved and live, editing it is
+      // just a normal edit, not a pipeline mistake to review, so the
+      // popup shouldn't interrupt that. _processFieldChangeQueue below
+      // uses this flag to decide whether to show the modal at all --
+      // it still silently records the correction either way (see
+      // there), since that's what protects the field from being
+      // reverted by a future auto-post refresh regardless of whether
+      // the listing is still pending or already live.
+      window._editIsPendingApproval = window._editingAutoPosted && listing.pending_approval === true && !listing.rejected;
       window._promptedFields = new Set();
       window._fieldDecisions = {};
       window._fieldChangeQueue = [];
