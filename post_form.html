@@ -2377,13 +2377,31 @@ async function _processFieldChangeQueue() {
     // itself a script bug worth emailing about.
     if (window._editListingId) {
       try {
+        // Editing has_brokerage/brokerage_preference is really a
+        // confirmation of the brokerage info itself -- brokerage_confirmed
+        // is deliberately excluded from the change-detection diff above
+        // (it's a derived flag, not a real form field, so it shouldn't
+        // get its own separate Missing/Mistake prompt) but that means it
+        // was never being logged as "manually corrected" on its own.
+        // The auto-post pipeline's repost-refresh guard
+        // (get_manually_corrected_fields/refresh_existing_listing) only
+        // protects fields that appear by name in field_changes, so
+        // without this, a later repost silently reset brokerage_confirmed
+        // back to false even though has_brokerage itself stayed correctly
+        // protected -- exactly the "shows No Brokerage info as of yet
+        // again" bug. Log a companion brokerage_confirmed entry alongside
+        // so it's protected too.
+        const fieldChanges = [{ field: item.field, old: item.oldValue ?? null, new: item.newValue ?? null }];
+        if (item.field === 'has_brokerage' || item.field === 'brokerage_preference') {
+          fieldChanges.push({ field: 'brokerage_confirmed', old: null, new: true });
+        }
         const corrRes = await fetch(`${SUPA_URL}/rest/v1/auto_post_corrections`, {
           method: 'POST',
           headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify({
             listing_id: window._editListingId,
             raw_whatsapp_text: (window._editListingData && window._editListingData.raw_whatsapp_text) || null,
-            field_changes: [{ field: item.field, old: item.oldValue ?? null, new: item.newValue ?? null }],
+            field_changes: fieldChanges,
             comment: isMistake ? (window._editMistakeComment || null) : null,
             is_mistake: isMistake,
           })
