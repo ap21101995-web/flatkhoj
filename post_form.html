@@ -2079,7 +2079,22 @@ document.addEventListener('click', function(e) {
     // breaks closest()'s ability to find its ancestor. _suppressAreaChangeCheck
     // (set by removeArea()) is the DOM-independent fallback for that case.
     if (!window._suppressAreaChangeCheck && !e.target.closest('.area-selected-tag') && window._checkForChangesFn) {
-      window._checkForChangesFn();
+      // Pass `e` through -- NOT a bare call. checkForChanges()'s very own
+      // guards (in particular the #mistakeModalOverlay exclusion) only
+      // look at evt.target, so calling it with no argument at all makes
+      // every one of those guards silently no-op. That was the actual
+      // cause of the Missing/Mistake popup reopening itself in a loop:
+      // this listener fires on literally any click outside .area-wrap,
+      // including every click on the modal's OWN buttons (it lives
+      // outside .area-wrap too) -- clicking "Wait, let me fix my edit
+      // first" (cancelMistakeModal(), which deliberately un-marks the
+      // field so editing it again can re-trigger the prompt) was
+      // immediately re-triggering an unguarded rescan on that SAME
+      // click, before the user had touched anything -- the field still
+      // differed from the snapshot, so it queued right back up and the
+      // modal reopened instantly. Random popups while mid-decision on an
+      // unrelated field came from the same unguarded path.
+      window._checkForChangesFn(e);
     }
   }
 });
@@ -3201,12 +3216,18 @@ function toggleLFDropdown(e) {
   opts.style.display = opts.style.display === 'none' ? 'block' : 'none';
 }
 
-function closeLFDropdown() {
+function closeLFDropdown(evt) {
   const opts = document.getElementById('fw-lf-options');
   const wasOpen = opts.style.display !== 'none';
   opts.style.display = 'none';
   if (wasOpen && window._checkForChangesFn) {
-    window._checkForChangesFn();
+    // Pass the triggering event through (when there is one) -- same
+    // reasoning as the .area-wrap outside-click listener above: calling
+    // checkForChangesFn with no argument disables every one of its own
+    // guards (including the #mistakeModalOverlay exclusion), so a click
+    // on the modal's own buttons while this dropdown happened to still
+    // be open could re-trigger an unguarded rescan and reopen the prompt.
+    window._checkForChangesFn(evt);
   }
 }
 
@@ -3271,7 +3292,7 @@ function getLookingForValue() {
 document.addEventListener('click', function(e) {
   const wrap = document.getElementById('fw-lf-wrap');
   if(wrap && !wrap.contains(e.target)) {
-    closeLFDropdown();
+    closeLFDropdown(e);
   }
 });
 
