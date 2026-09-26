@@ -2021,6 +2021,22 @@ function renderTags(id) {
 }
 
 function removeArea(area, id) {
+  // The click that calls this function is still mid-dispatch: this inline
+  // onclick runs before the event bubbles up to the form's and document's
+  // click listeners below. renderTags(id) (a few lines down) replaces
+  // tag-{id}'s innerHTML, which DESTROYS the very <button> that was
+  // clicked -- it becomes a detached node with no parentElement. When the
+  // bubble-phase listeners then call e.target.closest('.area-selected-tag')
+  // to check "was this click on the tag's own remove button", closest()
+  // can no longer walk up to find that ancestor (the chain is severed), so
+  // the check silently fails and the click reads as "clicked outside" --
+  // firing the Missing/Mistake prompt immediately, before there's any
+  // chance to type the corrected area in. This flag is a DOM-independent
+  // substitute for that ancestry check, set for the remainder of this
+  // click's dispatch only.
+  window._suppressAreaChangeCheck = true;
+  setTimeout(() => { window._suppressAreaChangeCheck = false; }, 0);
+
   areaVals[id] = areaVals[id].filter(a => a !== area);
   const wrap = document.getElementById('wrap-' + id);
   const input = wrap.querySelector('.area-input');
@@ -2056,7 +2072,13 @@ document.addEventListener('click', function(e) {
     // Mistake prompt) the instant the area is removed, before there's
     // any chance to type the corrected one in. The real "done" signal
     // is a click somewhere else entirely, once the swap is complete.
-    if (!e.target.closest('.area-selected-tag') && window._checkForChangesFn) {
+    //
+    // e.target.closest('.area-selected-tag') alone is NOT reliable here:
+    // removeArea() rebuilds that tag's innerHTML synchronously, before this
+    // listener runs, which detaches the clicked button from the DOM and
+    // breaks closest()'s ability to find its ancestor. _suppressAreaChangeCheck
+    // (set by removeArea()) is the DOM-independent fallback for that case.
+    if (!window._suppressAreaChangeCheck && !e.target.closest('.area-selected-tag') && window._checkForChangesFn) {
       window._checkForChangesFn();
     }
   }
@@ -2295,6 +2317,11 @@ function _setupFieldChangeTracking(t) {
   window._fieldChangeQueue = window._fieldChangeQueue || [];
 
   const checkForChanges = (evt) => {
+    if (window._suppressAreaChangeCheck) {
+      return; // an area tag's own "×" was just clicked -- see the comment in
+              // removeArea() for why the .closest('.area-selected-tag') check
+              // below can't be trusted for this specific click.
+    }
     if (evt && evt.target && evt.target.closest && evt.target.closest('#mistakeModalOverlay')) {
       return; // clicking the Missing/Mistake modal's own buttons (Missing, Mistake, Continue,
                // Back, Wait-let-me-fix-my-edit-first) is not a form field change -- without this,
