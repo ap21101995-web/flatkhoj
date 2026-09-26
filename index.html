@@ -1037,122 +1037,7 @@ function clearOwnerPhoneFilter() {
   localStorage.removeItem('fk_owner_phone_filter');
   loadListings();
 }
-let allListings=[],_fetchedListings=[],currentOffset=0;const PAGE_SIZE=20;let activeFilter="all",activeGenderFilter="Any",activeBrokerFilter="All Listings",activeFoodFilter="Any",activeOccFilter="Any",activeBudgetMin=null,activeBudgetMax=null,activeAreaFilter=[],activeAreas=new Set,activeAreaCoords=null;async function loadListings(reset=!0){
-  if(reset){currentOffset=0,allListings=[],_fetchedListings=[],[...document.getElementById("feed").children].forEach(el=>{el.id||el.remove()})}
-  document.getElementById("feedLoading").style.display="block",document.getElementById("feedEmpty").style.display="none",document.getElementById("loadMoreWrap").style.display="none";
-  try{
-    const nowIso=(new Date).toISOString();
-
-    // Query fragments built ONCE and applied identically to BOTH the live
-    // and pending fetches below. Previously the type/city/no-brokerage
-    // filters were only ever added to the live-listings query -- pending
-    // (auto-posted, awaiting-approval) listings were fetched completely
-    // unfiltered further down, so switching e.g. the "Flatmates" type
-    // filter or an area filter left every pending listing visible
-    // regardless of type/city/brokerage.
-    let typeQS="";
-    "flatmate_wanted"===activeFilter?typeQS="&listing_type=in.(flatmate_wanted,flat_listing)":"all"!==activeFilter&&"nobroker"!==activeFilter&&(typeQS=`&listing_type=eq.${activeFilter}`);
-    let cityQS="";
-    "pune"===getSelectedCity()?cityQS="&city=eq.pune":"bengaluru"===getSelectedCity()&&(cityQS="&city=eq.bengaluru");
-    let brokerQS="";
-    "nobroker"===activeFilter&&(brokerQS="&has_brokerage=not.is.true");
-
-    const liveUrl=`${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&expires_at=gte.${nowIso}${cityQS}${typeQS}${brokerQS}`;
-    const liveRes=await fetch(liveUrl,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}});
-    if(!liveRes.ok)throw new Error("Fetch failed: "+liveRes.status);
-    let liveListings=await liveRes.json();
-    if(!Array.isArray(liveListings))throw new Error("Bad response");
-
-    // Pending (auto-posted, awaiting owner approval) listings -- only the
-    // owner ever sees these, and only when they're not restricted to
-    // "live" only. Fetched with the SAME type/city/broker query fragments
-    // as the live listings above, so a filter change affects both sets
-    // the same way instead of only the live one.
-    const _ownerUser=getUser();
-    let pendingListings=[];
-    if(_ownerUser&&_ownerUser.isOwner&&"live"!==ownerViewMode){
-      try{
-        const pendingUrl=`${SUPA_URL}/rest/v1/listings?select=*&pending_approval=eq.true&rejected=eq.false&order=on_hold.asc.nullsfirst,created_at.desc${cityQS}${typeQS}${brokerQS}`;
-        const pendingRes=await fetch(pendingUrl,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}});
-        const fetchedPending=await pendingRes.json();
-        if(Array.isArray(fetchedPending)){
-          fetchedPending.forEach(p=>p._pending=!0);
-          pendingListings=fetchedPending;
-        }
-      }catch(e){console.error("Pending listings fetch error:",e)}
-    }
-
-    // Gender / family / no-brokerage filters -- applied to BOTH live and
-    // pending arrays through the same function, so a pending listing that
-    // doesn't match the currently-applied filters is excluded exactly
-    // like a live one would be, instead of always showing regardless of
-    // the filters on screen.
-    const applyCommonFilters=arr=>{
-      let out=arr;
-      if(activeGenderFilter&&"Any"!==activeGenderFilter){
-        const gf=activeGenderFilter.toLowerCase();
-        out=out.filter(x=>{
-          const g=(x.gender_preference||x.preferred_gender||"").toLowerCase().trim();
-          return!g||"any"===g||"any gender"===g||!!g.includes("family")||g.startsWith(gf)
-        })
-      }
-      if(subFamilyFilter&&"Any"!==subFamilyFilter){
-        out=out.filter(x=>{
-          const g=(x.gender_preference||x.preferred_gender||"").toLowerCase().trim();
-          return!g||"any"===g||"any gender"===g||("Family"===subFamilyFilter?g.includes("family")||"flat_listing"===x.listing_type:"Bachelor"!==subFamilyFilter||!g.includes("family"))
-        })
-      }
-      "✓ No Brokerage"===activeBrokerFilter&&(out=out.filter(x=>!0!==x.has_brokerage));
-      return out
-    };
-    liveListings=applyCommonFilters(liveListings);
-    pendingListings=applyCommonFilters(pendingListings);
-
-    // "All / Pending / Live" (ownerViewMode) is just another filter that
-    // decides WHICH of the two already-filtered sets to show -- applied
-    // here, after the shared filters above, not as a special unfiltered
-    // bolt-on at the very end like before.
-    let l;
-    "pending"===ownerViewMode?l=pendingListings:"live"===ownerViewMode?l=liveListings:l=[...pendingListings,...liveListings];
-
-    // Area proximity filter/sort -- runs over whichever combination of
-    // live/pending listings ownerViewMode selected above, so a pending
-    // listing in a filtered-for area now shows up (and sorts by distance)
-    // exactly like a live one would.
-    const d=[...activeAreas];
-    if(activeAreas.size>0){
-      const c=new Set;
-      function e(a){if(!a)return null;if(AREA_COORDS[a])return AREA_COORDS[a];const e=Object.keys(AREA_COORDS).find(e=>e.toLowerCase()===a.toLowerCase());return e?AREA_COORDS[e]:null}
-      function r(a,e){const r=(e[0]-a[0])*Math.PI/180,i=(e[1]-a[1])*Math.PI/180,t=Math.pow(Math.sin(r/2),2)+Math.cos(a[0]*Math.PI/180)*Math.cos(e[0]*Math.PI/180)*Math.pow(Math.sin(i/2),2);return 12742*Math.asin(Math.sqrt(t))}
-      d.forEach(a=>function(a){const e=new Set([a.toLowerCase()]);return(AREA_GROUPS[a]||[]).forEach(a=>e.add(a.toLowerCase())),(CHILD_TO_PARENTS[a]||[]).forEach(a=>{e.add(a.toLowerCase()),(AREA_GROUPS[a]||[]).forEach(a=>e.add(a.toLowerCase()))}),e}(a).forEach(a=>c.add(a)));
-      const g=d.map(a=>e(a)).filter(Boolean);
-      function i(a){const i=Array.isArray(a.areas)?a.areas:[a.areas||""],t=i.map(a=>a.toLowerCase());if(t.some(a=>c.has(a)))return{band:0,dist:0};let o=999;for(const a of i){const i=e(a);if(i)for(const a of g){const e=r(a,i);e<o&&(o=e)}}return 999===o?t.some(a=>(a.charAt(0).toUpperCase(),a.slice(1),c.has(a)))?{band:0,dist:0}:{band:5,dist:999}:o>15?{band:5,dist:o}:{band:o<=3?1:o<=6?2:o<=10?3:4,dist:o}}
-      const S=l.map(a=>({l:a,...i(a)})).filter(a=>a.band<5||0===g.length);
-      S.sort((a,e)=>a.band!==e.band?a.band-e.band:a.band>0&&Math.abs(a.dist-e.dist)>.5?a.dist-e.dist:new Date(e.l.created_at)-new Date(a.l.created_at));
-      l=S.map(a=>a.l);
-      S.forEach(a=>{a.l._band=a.band,a.l._dist=a.dist})
-    }else{
-      l=l.sort((a,e)=>new Date(e.created_at)-new Date(a.created_at))
-    }
-
-    if(_fetchedListings=l,localStorage.setItem("fk_last_visit",(new Date).toISOString()),document.getElementById("feedLoading").style.display="none",0===l.length){
-      document.getElementById("feedEmpty").style.display="block";
-      const k=document.querySelector(".stats-text");
-      return void(k&&(k.innerHTML="No listings found"))
-    }
-    const s=l.slice(0,20);
-    allListings=[...s],currentOffset=20,renderListings(s);
-    const h=document.querySelector(".stats-text");
-    h&&(h.innerHTML=`Recent listings (${l.length})`),l.length>20&&(document.getElementById("loadMoreWrap").style.display="block")
-  }catch(p){
-    console.error("Load error:",p),localStorage.setItem("fk_last_visit",(new Date).toISOString()),document.getElementById("feedLoading").style.display="none",document.getElementById("feedEmpty").style.display="block",document.getElementById("feedEmpty").innerHTML=`
-      <div style="font-size:36px;margin-bottom:12px">😕</div>
-      <div style="font-size:15px;font-weight:700;margin-bottom:8px">Could not load listings</div>
-      <div style="font-size:13px;color:#888;margin-bottom:16px">${p.message}</div>
-      <button onclick="loadListings()" style="background:#0f7b6c;color:white;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Retry →</button>
-    `
-  }
-}function loadMoreListings(){if(currentOffset>=_fetchedListings.length)return;const a=_fetchedListings.slice(currentOffset,currentOffset+20);allListings=[...allListings,...a],currentOffset+=20,renderListings(a);const e=document.querySelector(".stats-text");e&&(e.innerHTML=`Showing <strong>${allListings.length}</strong> of <strong>${_fetchedListings.length}</strong> listing${1!==_fetchedListings.length?"s":""}`),currentOffset>=_fetchedListings.length&&(document.getElementById("loadMoreWrap").style.display="none")}function renderListings(a){const e=document.getElementById("feed"),r={flat_listing:"🏠 Full Flat Listing",flat_wanted:"🔍 Flat wanted",flatmate_wanted:"👥 Flatmate wanted",pg_listing:"🏨 PG listing"};let i=!1,t=!1;a.forEach(a=>{try{if(activeAreas.size>0&&(0===a._band&&(t=!0),a._band>0&&t&&!i)){i=!0;const r=a._dist<999?`within ${Math.round(a._dist)}km`:"nearby areas",t=document.createElement("div");t.style.cssText="padding:10px 16px;font-size:12px;font-weight:700;color:#888;letter-spacing:0.5px;background:#f5f5f0;border-radius:10px;margin:8px 0;text-align:center",t.textContent=`📍 Nearby — ${r}`,e.appendChild(t)}const o=Array.isArray(a.areas)?a.areas.join(" / "):a.areas||"",n=a.rent_amount?`₹${a.rent_amount.toLocaleString("en-IN")}`:"flat_wanted"===a.listing_type?"Budget can be discussed":"Price on request",l="flat_wanted"===a.listing_type?"budget":"/mo",d=r[a.listing_type]||a.listing_type;let s,h;if("flat_wanted"===a.listing_type){const e=a.brokerage_preference;"no"===e?(s="no-broker",h="🚫 No Brokerage"):"prefno"===e?(s="pref-broker",h="🤝 Prefer No Brokerage"):"yes"===e?(s="ok-broker",h="✅ Okay With Brokerage"):(s="no-broker",h="Looking For Flat")}else s=a.has_brokerage?"has-broker":"no-broker",h=a.has_brokerage?"Brokerage Applicable":!1===a.brokerage_confirmed?"No Brokerage info as of yet":"No Brokerage";const u=getTimeAgo(a.created_at),c=a.poster_name||"",g=c?c.split(" ").map(a=>a[0]).join("").toUpperCase().slice(0,2):(a.raw_whatsapp_text&&a.custom_contact_phone?a.custom_contact_phone.replace(/\D/g,"").slice(-10)[0]:getInitials(a.user_id)),S=getColor(a.user_id),k=[];if("flatmate_wanted"===a.listing_type&&a.gender_preference&&"Undisclosed"!==a.gender_preference&&"any"!==a.gender_preference.toLowerCase()){const e=a.gender_preference.toLowerCase().includes("female")?"👩 Female only":a.gender_preference.toLowerCase().includes("male")?"👨 Male only":a.gender_preference.toLowerCase().includes("family")?"👨‍👩‍👧 Family":a.gender_preference;k.push(e)}a.flat_type&&"Undisclosed"!==a.flat_type&&k.push(a.flat_type),a.room_type&&"Undisclosed"!==a.room_type&&"Any"!==a.room_type&&"flat_listing"!==a.listing_type&&k.push(a.room_type),a.furnishing&&"Undisclosed"!==a.furnishing&&k.push(a.furnishing),a.food_preference&&"Undisclosed"!==a.food_preference&&k.push(a.food_preference),"flatmate_wanted"!==a.listing_type&&a.gender_preference&&"Undisclosed"!==a.gender_preference&&"any"!==a.gender_preference.toLowerCase()&&k.push(a.gender_preference);const p=k.slice(0,4).map(a=>`<span class="card-tag">${escHtml(a)}</span>`).join("");let m;m=a.title?a.title:"flat_wanted"===a.listing_type?"Looking for "+(a.room_type&&"Undisclosed"!==a.room_type?a.room_type:"a flat")+" in "+o:"flatmate_wanted"===a.listing_type?"Flatmate wanted in "+o:a.description?a.description.slice(0,80):"flat_listing"===a.listing_type?"Full "+(a.flat_type&&"Undisclosed"!==a.flat_type?a.flat_type:"Flat")+" available in "+o:"Listing in "+o;const y=document.createElement("div");y.className="listing-card",y.dataset.listingId=a.id,y.style.cursor="pointer",a.is_sold&&(y.style.borderColor="#e05252",y.style.background="rgba(224,82,82,0.04)"),a._pending&&(y.style.background="#f0f0ee",y.style.borderColor="#ccc",y.style.opacity="0.85");const v=localStorage.getItem("fk_last_visit"),R=v&&new Date(a.created_at)>new Date(v);y.onclick=function(e){if(!e.target.closest(".unlock-btn")&&!e.target.closest(".save-btn")&&!e.target.closest(".pending-review-btn")){const r="listing_detail.html?id="+a.id;e.ctrlKey||e.metaKey||e.shiftKey||isDesktopDevice()?window.open(r,"_blank"):window.location.href=r}},y.onauxclick=function(e){1===e.button&&window.open("listing_detail.html?id="+a.id,"_blank")},y.innerHTML=`\n        <div class="type-label">${d}</div>\n        ${R?'<span style="background:#dcfce7;color:#16a34a;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px;display:inline-block">✨ New</span>':""}\n        ${a.is_sold?'<div style="display:inline-block;background:#fde8e8;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px">🔴 Sold/Taken</div>':""}\n        ${a._pending?'<div style="display:inline-block;background:#e5e5e0;color:#555;border:1px solid #aaa;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px">⏳ PENDING REVIEW — only you and Pratika see this</div>':""}
+let allListings=[],_fetchedListings=[],currentOffset=0;const PAGE_SIZE=20;let activeFilter="all",activeGenderFilter="Any",activeBrokerFilter="All Listings",activeFoodFilter="Any",activeOccFilter="Any",activeBudgetMin=null,activeBudgetMax=null,activeAreaFilter=[],activeAreas=new Set,activeAreaCoords=null;async function loadListings(a=!0){a&&(currentOffset=0,allListings=[],_fetchedListings=[],[...document.getElementById("feed").children].forEach(a=>{a.id||a.remove()})),document.getElementById("feedLoading").style.display="block",document.getElementById("feedEmpty").style.display="none",document.getElementById("loadMoreWrap").style.display="none";try{const t=(new Date).toISOString();let o=`${SUPA_URL}/rest/v1/listings?select=*&is_active=eq.true&order=created_at.desc&expires_at=gte.${t}`;"pune"===getSelectedCity()&&(o+="&city=eq.pune"),"bengaluru"===getSelectedCity()&&(o+="&city=eq.bengaluru"),"flatmate_wanted"===activeFilter?o+="&listing_type=in.(flatmate_wanted,flat_listing)":"all"!==activeFilter&&"nobroker"!==activeFilter&&(o+=`&listing_type=eq.${activeFilter}`),"nobroker"===activeFilter&&(o+="&has_brokerage=not.is.true");const n=await fetch(o,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}});if(!n.ok)throw new Error("Fetch failed: "+n.status);let l=await n.json();if(!Array.isArray(l))throw new Error("Bad response");if(activeGenderFilter&&"Any"!==activeGenderFilter){const u=activeGenderFilter.toLowerCase();l=l.filter(a=>{const e=(a.gender_preference||a.preferred_gender||"").toLowerCase().trim();return!e||"any"===e||"any gender"===e||!!e.includes("family")||e.startsWith(u)})}subFamilyFilter&&"Any"!==subFamilyFilter&&(l=l.filter(a=>{const e=(a.gender_preference||a.preferred_gender||"").toLowerCase().trim();return!e||"any"===e||"any gender"===e||("Family"===subFamilyFilter?e.includes("family")||"flat_listing"===a.listing_type:"Bachelor"!==subFamilyFilter||!e.includes("family"))})),"✓ No Brokerage"===activeBrokerFilter&&(l=l.filter(a=>!0!==a.has_brokerage));const d=[...activeAreas];if(activeAreas.size>0){const c=new Set;function e(a){if(!a)return null;if(AREA_COORDS[a])return AREA_COORDS[a];const e=Object.keys(AREA_COORDS).find(e=>e.toLowerCase()===a.toLowerCase());return e?AREA_COORDS[e]:null}function r(a,e){const r=(e[0]-a[0])*Math.PI/180,i=(e[1]-a[1])*Math.PI/180,t=Math.pow(Math.sin(r/2),2)+Math.cos(a[0]*Math.PI/180)*Math.cos(e[0]*Math.PI/180)*Math.pow(Math.sin(i/2),2);return 12742*Math.asin(Math.sqrt(t))}d.forEach(a=>function(a){const e=new Set([a.toLowerCase()]);return(AREA_GROUPS[a]||[]).forEach(a=>e.add(a.toLowerCase())),(CHILD_TO_PARENTS[a]||[]).forEach(a=>{e.add(a.toLowerCase()),(AREA_GROUPS[a]||[]).forEach(a=>e.add(a.toLowerCase()))}),e}(a).forEach(a=>c.add(a)));const g=d.map(a=>e(a)).filter(Boolean);function i(a){const i=Array.isArray(a.areas)?a.areas:[a.areas||""],t=i.map(a=>a.toLowerCase());if(t.some(a=>c.has(a)))return{band:0,dist:0};let o=999;for(const a of i){const i=e(a);if(i)for(const a of g){const e=r(a,i);e<o&&(o=e)}}return 999===o?t.some(a=>(a.charAt(0).toUpperCase(),a.slice(1),c.has(a)))?{band:0,dist:0}:{band:5,dist:999}:o>15?{band:5,dist:o}:{band:o<=3?1:o<=6?2:o<=10?3:4,dist:o}}const S=l.map(a=>({l:a,...i(a)})).filter(a=>a.band<5||0===g.length);S.sort((a,e)=>a.band!==e.band?a.band-e.band:a.band>0&&Math.abs(a.dist-e.dist)>.5?a.dist-e.dist:new Date(e.l.created_at)-new Date(a.l.created_at)),l=S.map(a=>a.l),S.forEach(a=>{a.l._band=a.band,a.l._dist=a.dist})}else l=l.sort((a,e)=>new Date(e.created_at)-new Date(a.created_at));const _ownerUser=getUser();if(_ownerUser&&_ownerUser.isOwner&&"live"!==ownerViewMode){try{const _pendingRes=await fetch(`${SUPA_URL}/rest/v1/listings?select=*&pending_approval=eq.true&rejected=eq.false&order=on_hold.asc.nullsfirst,created_at.desc`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}),_pendingListings=await _pendingRes.json();Array.isArray(_pendingListings)&&_pendingListings.length>0&&(_pendingListings.forEach(p=>p._pending=true),_pendingListings.sort((a,b)=>(a.on_hold===true?1:0)-(b.on_hold===true?1:0)),l="pending"===ownerViewMode?_pendingListings:[..._pendingListings,...l])}catch(e){console.error("Pending listings fetch error:",e)}}if(_fetchedListings=l,localStorage.setItem("fk_last_visit",(new Date).toISOString()),document.getElementById("feedLoading").style.display="none",0===l.length){document.getElementById("feedEmpty").style.display="block";const k=document.querySelector(".stats-text");return void(k&&(k.innerHTML="No listings found"))}const s=l.slice(0,20);allListings=[...s],currentOffset=20,renderListings(s);const h=document.querySelector(".stats-text");h&&(h.innerHTML=`Recent listings (${l.length})`),l.length>20&&(document.getElementById("loadMoreWrap").style.display="block")}catch(p){console.error("Load error:",p),localStorage.setItem("fk_last_visit",(new Date).toISOString()),document.getElementById("feedLoading").style.display="none",document.getElementById("feedEmpty").style.display="block",document.getElementById("feedEmpty").innerHTML=`\n      <div style="font-size:36px;margin-bottom:12px">😕</div>\n      <div style="font-size:15px;font-weight:700;margin-bottom:8px">Could not load listings</div>\n      <div style="font-size:13px;color:#888;margin-bottom:16px">${p.message}</div>\n      <button onclick="loadListings()" style="background:#0f7b6c;color:white;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Retry →</button>\n    `}}function loadMoreListings(){if(currentOffset>=_fetchedListings.length)return;const a=_fetchedListings.slice(currentOffset,currentOffset+20);allListings=[...allListings,...a],currentOffset+=20,renderListings(a);const e=document.querySelector(".stats-text");e&&(e.innerHTML=`Showing <strong>${allListings.length}</strong> of <strong>${_fetchedListings.length}</strong> listing${1!==_fetchedListings.length?"s":""}`),currentOffset>=_fetchedListings.length&&(document.getElementById("loadMoreWrap").style.display="none")}function renderListings(a){const e=document.getElementById("feed"),r={flat_listing:"🏠 Full Flat Listing",flat_wanted:"🔍 Flat wanted",flatmate_wanted:"👥 Flatmate wanted",pg_listing:"🏨 PG listing"};let i=!1,t=!1;a.forEach(a=>{try{if(activeAreas.size>0&&(0===a._band&&(t=!0),a._band>0&&t&&!i)){i=!0;const r=a._dist<999?`within ${Math.round(a._dist)}km`:"nearby areas",t=document.createElement("div");t.style.cssText="padding:10px 16px;font-size:12px;font-weight:700;color:#888;letter-spacing:0.5px;background:#f5f5f0;border-radius:10px;margin:8px 0;text-align:center",t.textContent=`📍 Nearby — ${r}`,e.appendChild(t)}const o=Array.isArray(a.areas)?a.areas.join(" / "):a.areas||"",n=a.rent_amount?`₹${a.rent_amount.toLocaleString("en-IN")}`:"flat_wanted"===a.listing_type?"Budget can be discussed":"Price on request",l="flat_wanted"===a.listing_type?"budget":"/mo",d=r[a.listing_type]||a.listing_type;let s,h;if("flat_wanted"===a.listing_type){const e=a.brokerage_preference;"no"===e?(s="no-broker",h="🚫 No Brokerage"):"prefno"===e?(s="pref-broker",h="🤝 Prefer No Brokerage"):"yes"===e?(s="ok-broker",h="✅ Okay With Brokerage"):(s="no-broker",h="Looking For Flat")}else s=a.has_brokerage?"has-broker":"no-broker",h=a.has_brokerage?"Brokerage Applicable":!1===a.brokerage_confirmed?"No Brokerage info as of yet":"No Brokerage";const u=getTimeAgo(a.created_at),c=a.poster_name||"",g=c?c.split(" ").map(a=>a[0]).join("").toUpperCase().slice(0,2):(a.raw_whatsapp_text&&a.custom_contact_phone?a.custom_contact_phone.replace(/\D/g,"").slice(-10)[0]:getInitials(a.user_id)),S=getColor(a.user_id),k=[];if("flatmate_wanted"===a.listing_type&&a.gender_preference&&"Undisclosed"!==a.gender_preference&&"any"!==a.gender_preference.toLowerCase()){const e=a.gender_preference.toLowerCase().includes("female")?"👩 Female only":a.gender_preference.toLowerCase().includes("male")?"👨 Male only":a.gender_preference.toLowerCase().includes("family")?"👨‍👩‍👧 Family":a.gender_preference;k.push(e)}a.flat_type&&"Undisclosed"!==a.flat_type&&k.push(a.flat_type),a.room_type&&"Undisclosed"!==a.room_type&&"Any"!==a.room_type&&"flat_listing"!==a.listing_type&&k.push(a.room_type),a.furnishing&&"Undisclosed"!==a.furnishing&&k.push(a.furnishing),a.food_preference&&"Undisclosed"!==a.food_preference&&k.push(a.food_preference),"flatmate_wanted"!==a.listing_type&&a.gender_preference&&"Undisclosed"!==a.gender_preference&&"any"!==a.gender_preference.toLowerCase()&&k.push(a.gender_preference);const p=k.slice(0,4).map(a=>`<span class="card-tag">${escHtml(a)}</span>`).join("");let m;m=a.title?a.title:"flat_wanted"===a.listing_type?"Looking for "+(a.room_type&&"Undisclosed"!==a.room_type?a.room_type:"a flat")+" in "+o:"flatmate_wanted"===a.listing_type?"Flatmate wanted in "+o:a.description?a.description.slice(0,80):"flat_listing"===a.listing_type?"Full "+(a.flat_type&&"Undisclosed"!==a.flat_type?a.flat_type:"Flat")+" available in "+o:"Listing in "+o;const y=document.createElement("div");y.className="listing-card",y.dataset.listingId=a.id,y.style.cursor="pointer",a.is_sold&&(y.style.borderColor="#e05252",y.style.background="rgba(224,82,82,0.04)"),a._pending&&(y.style.background="#f0f0ee",y.style.borderColor="#ccc",y.style.opacity="0.85");const v=localStorage.getItem("fk_last_visit"),R=v&&new Date(a.created_at)>new Date(v);y.onclick=function(e){if(!e.target.closest(".unlock-btn")&&!e.target.closest(".save-btn")&&!e.target.closest(".pending-review-btn")){const r="listing_detail.html?id="+a.id;e.ctrlKey||e.metaKey||e.shiftKey||isDesktopDevice()?window.open(r,"_blank"):window.location.href=r}},y.onauxclick=function(e){1===e.button&&window.open("listing_detail.html?id="+a.id,"_blank")},y.innerHTML=`\n        <div class="type-label">${d}</div>\n        ${R?'<span style="background:#dcfce7;color:#16a34a;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px;display:inline-block">✨ New</span>':""}\n        ${a.is_sold?'<div style="display:inline-block;background:#fde8e8;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px">🔴 Sold/Taken</div>':""}\n        ${a._pending?'<div style="display:inline-block;background:#e5e5e0;color:#555;border:1px solid #aaa;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px">⏳ PENDING REVIEW — only you and Pratika see this</div>':""}
         ${a._pending&&a.on_hold?'<div style="display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #d97706;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:4px;margin-left:6px">🔸 ON HOLD</div>':""}\n        <div class="broker-tag ${s} dot">${h}</div>\n        <div class="card-header">\n          <div class="card-title">${escHtml(m)}</div>\n          <div class="card-price">${n}<div class="per">${l}</div></div>\n        </div>\n        ${p?`<div class="card-tags">${p}</div>`:""}\n        ${a.photos&&a.photos.length>0&&("flat_listing"===a.listing_type||"flatmate_wanted"===a.listing_type)?`<div style="font-size:11px;color:var(--teal);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> ${a.photos.length} photo${a.photos.length>1?"s":""} available</div>`:""}\n        <div class="card-footer">\n          <div class="poster-row">\n            <div class="avatar" style="background:${S}">${g}</div>\n            <div>\n              <div class="poster-name">${escHtml(a.poster_name||(a.raw_whatsapp_text&&a.custom_contact_phone?maskPhoneForDisplay(a.custom_contact_phone):"FlatKhoj Member"))}</div>\n              <div class="poster-role">${"flat_wanted"===a.listing_type?"Looking For Flat":"flatmate_wanted"===a.listing_type?"Looking for Flatmate":"pg_listing"===a.listing_type?"PG Owner":""}</div>\n            </div>\n          </div>\n          <div class="time-ago">${u}</div>\n        </div>\n        ${a._pending?`<div class="unlock-row" style="gap:6px">\n          <button class="pending-review-btn" onclick="event.stopPropagation();viewOriginalWhatsappText('${a.id}')" style="flex:1;background:#fff;color:#333;border:1.5px solid #999;border-radius:10px;padding:9px 10px;font-size:12.5px;font-weight:700;cursor:pointer">📄 View Original</button>\n          <button class="pending-review-btn" onclick="event.stopPropagation();window.open('post_form.html?edit='+'${a.id}','_blank')" style="flex:1;background:#fff;color:#333;border:1.5px solid #999;border-radius:10px;padding:9px 10px;font-size:12.5px;font-weight:700;cursor:pointer">✏️ Edit</button>\n        </div>\n        <div class="unlock-row" style="gap:6px;margin-top:6px">\n          <button class="pending-review-btn" onclick="event.stopPropagation();approvePendingListing('${a.id}',this)" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:10px;padding:9px 10px;font-size:12.5px;font-weight:700;cursor:pointer">✓ Approve</button>\n          <button class="pending-review-btn" onclick="event.stopPropagation();rejectPendingListing('${a.id}',this)" style="flex:1;background:#fff;color:var(--red);border:1.5px solid var(--red);border-radius:10px;padding:9px 10px;font-size:12.5px;font-weight:700;cursor:pointer">✗ Reject</button>\n        </div>\n        <div class="unlock-row" style="gap:6px;margin-top:6px">\n          <button class="pending-review-btn" onclick="event.stopPropagation();toggleHoldPendingListing('${a.id}',this,${a.on_hold?'true':'false'})" style="flex:1;background:${a.on_hold?'#fef3c7':'#fff'};color:#92400e;border:1.5px solid #d97706;border-radius:10px;padding:9px 10px;font-size:12.5px;font-weight:700;cursor:pointer">${a.on_hold?'▶ Unhold':'🔸 Hold'}</button>\n        </div>`:`<div class="unlock-row">\n          ${buildUnlockBtn(a,o)}\n          <button class="save-btn" onclick="shareListing('${a.id}',event)" title="Share" style="flex:0 0 auto">\n            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>\n          </button>\n          <button class="save-btn" onclick="toggleSave(this,'${a.id}')" title="Save" style="${savedListingIds.has(a.id)?"background:var(--gold-bg);border-color:var(--gold)":""}">\n            <svg width="16" height="16" viewBox="0 0 24 24" fill="${savedListingIds.has(a.id)?"#e6a817":"none"}" stroke="${savedListingIds.has(a.id)?"#e6a817":"currentColor"}" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>\n          </button>\n        </div>`}\n      `,e.appendChild(y)}catch(e){console.error("Card error for listing",a?.id,e)}}),markOwnListings()}let currentUnlockListingId=null,currentUnlockCost=50;
 function maskPhoneForDisplay(phone){const digits=(phone||"").replace(/\D/g,"").slice(-10);if(digits.length<3)return digits;return digits[0]+"x".repeat(digits.length-3)+digits.slice(-2)}
 async function viewOriginalWhatsappText(id){
@@ -1395,8 +1280,11 @@ function toggleFPill(a,e){if("farea"!==e)document.querySelectorAll(`[onclick*="t
 <script>
 let _lastRefreshTime=(new Date).toISOString();let _lastPendingIds=null;function _showRefreshBanner(msg){let e=document.getElementById("refreshBanner");e||(e=document.createElement("div"),e.id="refreshBanner",e.style.cssText="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--teal);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)",e.onclick=()=>{e.remove(),window.scrollTo({top:0,behavior:"smooth"}),loadListings()},document.body.appendChild(e)),e.textContent=msg}setInterval(async()=>{try{
   // Owner accounts: refresh automatically and unconditionally every
-  // 15s, rather than waiting for a detected change or a manual banner
-  // click -- keeps the pending queue reliably in sync even if an
+  // 60s (reduced from 15s -- 15s reloaded the whole feed/pending queue
+  // too aggressively, e.g. interrupting scrolling or an in-progress
+  // review), rather than waiting for a detected change or a manual
+  // banner click -- still keeps the pending queue reliably in sync
+  // even if an
   // approve/reject/hold's own immediate UI update didn't fully reflect
   // what actually happened server-side. Runs first and returns, since
   // loadListings() already covers everything the checks below would
@@ -1408,7 +1296,7 @@ let _lastRefreshTime=(new Date).toISOString();let _lastPendingIds=null;function 
     return;
   }
   const e=_lastRefreshTime,t=(new Date).toISOString(),a=await fetch(`${SUPA_URL}/rest/v1/listings?select=id&is_active=eq.true&created_at=gt.${e}&limit=1`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}),i=await a.json();if(_lastRefreshTime=t,i&&i.length>0)return void _showRefreshBanner("↑ New listings available — tap to refresh");
-}catch(e){}},15e3);
+}catch(e){}},6e4);
 </script>
 
 <div id="brokerWidget" style="position:fixed;bottom:100px;right:20px;z-index:888;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;" onclick="handleBrokerClick(event)">
@@ -1447,12 +1335,7 @@ let _lastRefreshTime=(new Date).toISOString();let _lastPendingIds=null;function 
   </div>
 </div>
 
-<!-- Room Matcher: re-added 2026-09-26, but hidden (display:none) by default --
-     the tool works now but is still owner-only while it's tested. Shown via
-     unlockRoomMatcherIfOwner() below, same isOwner check already used for
-     the pending-listings view toggle. Widen visibility by removing that
-     gate once it's ready for everyone. -->
-<div id="roomMatcherWidget" style="display:none;position:fixed;bottom:260px;right:20px;z-index:888;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;" onclick="handleRoomMatcherClick(event)">
+<div id="roomMatcherWidget" style="position:fixed;bottom:260px;right:20px;z-index:888;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;" onclick="handleRoomMatcherClick(event)">
   <div style="position:relative;width:64px;height:64px;">
     <svg width="64" height="64" viewBox="0 0 64 64" style="display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.25))">
       <circle cx="32" cy="32" r="22" fill="#7c4dba"/>
@@ -1487,19 +1370,6 @@ let _lastRefreshTime=(new Date).toISOString();let _lastPendingIds=null;function 
 function handleBrokerClick(t){window._brokerDidDrag?window._brokerDidDrag=!1:nav("broker.html")}
 function handleGuaranteedClick(t){window._guaranteedDidDrag?window._guaranteedDidDrag=!1:nav("guaranteed-tenant.html")}
 function handleRoomMatcherClick(t){window._roomMatcherDidDrag?window._roomMatcherDidDrag=!1:nav("room-matcher.html")}
-// Room Matcher stays owner-only (same isOwner check as the pending-listings
-// view toggle elsewhere on this page) while it's still being tested --
-// remove this gate once it's ready for everyone to see.
-function unlockRoomMatcherIfOwner(){
-  try{
-    if(getUser()?.isOwner){
-      const w=document.getElementById('roomMatcherWidget');
-      if(w) w.style.display='block';
-    }
-  }catch(e){}
-}
-unlockRoomMatcherIfOwner();
-document.addEventListener('DOMContentLoaded',unlockRoomMatcherIfOwner);
 
 // Same drag-to-reposition behaviour as the original broker widget, now
 // generalized so all three floating badges can be dragged independently.
