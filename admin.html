@@ -617,7 +617,18 @@ async function loadBrokerListingsTab(){
       // broker looks identical to a fresh send to a currently active one -- which is
       // exactly what reads as "still sending to inactive brokers" even though
       // notify-brokers.ts already refuses to send to inactive brokers going forward.
-      (await supaGet("brokers?id=in.("+chunk.join(",")+")&select=id,name,is_active")).forEach(b=>brokersMap[b.id]={name:b.name||"Unknown",active:b.is_active!==false})
+      //
+      // Also pull subscription_status -- confirmed against the live notify-brokers.ts
+      // source that it gates sends on BOTH is_active=true AND
+      // subscription_status in (active, bank_approval_pending, authorized,
+      // initialized, pending). A broker whose subscription has lapsed
+      // (e.g. status = "cancelled" or "expired") would NOT receive new leads
+      // even though is_active is still true, so is_active alone is not
+      // enough to say "this broker is currently eligible."
+      (await supaGet("brokers?id=in.("+chunk.join(",")+")&select=id,name,is_active,subscription_status")).forEach(b=>{
+        const okStatus=["active","bank_approval_pending","authorized","initialized","pending"].includes(b.subscription_status);
+        brokersMap[b.id]={name:b.name||"Unknown",active:b.is_active!==false && okStatus};
+      })
     }
     const grouped={};
     leads.forEach(l=>{
@@ -652,7 +663,7 @@ async function loadBrokerListingsTab(){
       const areas=Array.isArray(l.areas)?l.areas.join(", "):(l.areas||"—");
       const typeLabel=typeLabels[l.listing_type]||l.listing_type||"—";
       const g=grouped[lid];
-      const brokersHtml=g.brokers.map(b=>b.active?b.name:`<span style="color:#c0392b" title="This broker is currently inactive -- this lead was sent while they were still active">${b.name} (inactive)</span>`).join(", ");
+      const brokersHtml=g.brokers.map(b=>b.active?b.name:`<span style="color:#c0392b" title="This broker is currently inactive or has no active subscription -- this lead was sent while they were still eligible to receive leads">${b.name} (inactive)</span>`).join(", ");
       // The Paid/Free badge reflects what was TRUE AT SEND TIME, stored
       // permanently on the broker_leads row -- it is never rewritten
       // retroactively, on purpose (a broker who already received and used
