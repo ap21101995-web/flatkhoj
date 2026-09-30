@@ -3717,13 +3717,47 @@ function prefillEditForm(listing, t) {
     if (el('fw-duration') && listing.stay_duration) el('fw-duration').value = listing.stay_duration;
     // Food
     fillPillFuzzy('#f-fw', 'fw-food', listing.food_preference);
-    // Looking for (checkboxes) — room_type is comma-separated e.g. "1 BHK,2 BHK"
+    // Looking for (checkboxes) — room_type is comma-separated e.g.
+    // "Single occupancy, Entire 2 BHK". Real correction (2026-09-29):
+    // this used to only ever match a checkbox by an EXACT string
+    // (case- and whitespace-sensitive) against its fixed label, with
+    // no fallback at all when nothing matched -- so a value the
+    // auto-post script had correctly extracted (and which displayed
+    // fine on the live card) could silently pre-select nothing here,
+    // looking exactly like the data had been lost. Root cause of the
+    // specific reported case ("Entire 2BHK" vs. this list's fixed
+    // "Entire 2 BHK" label) is fixed at the source in
+    // auto_post_engine.py's detect_room_type(), but this comparison is
+    // hardened here too, two ways: (a) case/whitespace-insensitive
+    // matching, as a safety net against any other incidental spacing/
+    // casing difference; (b) anything that still doesn't match one of
+    // the fixed options (e.g. a BHK size outside this list's 1 RK/1
+    // BHK/2 BHK) now falls back to the pre-existing "Other" checkbox +
+    // text field instead of vanishing, mirroring the same fallback
+    // already used for the fl-ft and fm-flat-type fields below.
     if (listing.room_type) {
-      const types = listing.room_type.split(',').map(s => s.trim());
-      document.querySelectorAll('#fw-lf-options input[type="checkbox"]').forEach(cb => {
-        const label = cb.closest('label')?.textContent?.trim() || cb.value;
-        if (types.includes(label) || types.includes(cb.value)) cb.checked = true;
+      const normLabel = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const types = listing.room_type.split(',').map(s => s.trim()).filter(Boolean);
+      const fixedBoxes = [...document.querySelectorAll('#fw-lf-options input[type="checkbox"]')].filter(cb => cb.value !== 'Other');
+      const leftover = [];
+      types.forEach(type => {
+        const match = fixedBoxes.find(cb => {
+          const label = cb.closest('label')?.textContent?.trim() || cb.value;
+          return normLabel(label) === normLabel(type) || normLabel(cb.value) === normLabel(type);
+        });
+        if (match) match.checked = true;
+        else leftover.push(type);
       });
+      if (leftover.length) {
+        const otherCb = document.querySelector('#fw-lf-options input[value="Other"]');
+        if (otherCb) {
+          otherCb.checked = true;
+          const otherWrap = document.getElementById('fw-lf-other-wrap');
+          if (otherWrap) otherWrap.style.display = 'block';
+          const otherInput = document.getElementById('fw-lf-other');
+          if (otherInput) otherInput.value = leftover.join(', ');
+        }
+      }
       updateLFLabel();
     }
     // Brokerage
