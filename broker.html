@@ -505,10 +505,26 @@ async function doPayment(){
         }catch(cancelErr){console.error('Failed to cancel previous subscription '+old.subscription_id+':',cancelErr);}
       }
       userId=old.id;
-      await fetch(SUPA_URL+'/rest/v1/brokers?id=eq.'+userId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({name:name,whatsapp_number:phone,areas:Array.from(sel),plan:selPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,city:city})});
+      var patchResp=await fetch(SUPA_URL+'/rest/v1/brokers?id=eq.'+userId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({name:name,whatsapp_number:phone,areas:Array.from(sel),plan:selPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,city:city})});
+      if(!patchResp.ok){
+        var patchErrBody=await patchResp.text().catch(function(){return '';});
+        console.error('Failed to update broker record ('+patchResp.status+'):',patchErrBody);
+        // This must stop here, not fall through to generating a payment link —
+        // a link generated after a failed write would point at a row whose
+        // plan was silently left unchanged (this is exactly how a broker was
+        // once sent an "Elite" link that actually still charged their old
+        // Starter price: the plan update failed silently and nobody knew).
+        throw new Error('Could not update the broker\'s plan (server said: '+(patchResp.status===400||patchResp.status===409||patchResp.status===422?patchErrBody:patchResp.status)+'). No payment link was generated — please fix this and try again rather than sending a link that would be wrong.');
+      }
     }else{
-      var ins=await fetch(SUPA_URL+'/rest/v1/brokers',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({name:name,phone:phone,whatsapp_number:phone,areas:Array.from(sel),plan:selPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,billing_cycle_start:new Date().toISOString().split('T')[0],city:city})}).then(function(r){return r.json();});
-      userId=ins[0]&&ins[0].id;
+      var ins=await fetch(SUPA_URL+'/rest/v1/brokers',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({name:name,phone:phone,whatsapp_number:phone,areas:Array.from(sel),plan:selPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,billing_cycle_start:new Date().toISOString().split('T')[0],city:city})});
+      if(!ins.ok){
+        var insErrBody=await ins.text().catch(function(){return '';});
+        console.error('Failed to create broker record ('+ins.status+'):',insErrBody);
+        throw new Error('Could not create the broker profile (server said: '+insErrBody+'). No payment link was generated.');
+      }
+      var insJson=await ins.json();
+      userId=insJson[0]&&insJson[0].id;
     }
     if(!userId)throw new Error('Could not create broker profile. Please try again.');
     payBtn.textContent='Generating link...';
