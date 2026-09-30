@@ -497,7 +497,13 @@ async function doPayment(){
     var userId=null;
     if(existing.length>0){
       var old=existing[0];
-      if(old.subscription_id){await fetch(SUPA_URL+'/functions/v1/create-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},body:JSON.stringify({cancelSubscription:old.subscription_id})});}
+      if(old.subscription_id){
+        try{
+          var cancelResp=await fetch(SUPA_URL+'/functions/v1/create-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},body:JSON.stringify({cancelSubscription:old.subscription_id})});
+          var cancelJson=await cancelResp.json().catch(function(){return null;});
+          if(!cancelResp.ok){console.error('Failed to cancel previous subscription '+old.subscription_id+':',cancelJson);}
+        }catch(cancelErr){console.error('Failed to cancel previous subscription '+old.subscription_id+':',cancelErr);}
+      }
       userId=old.id;
       await fetch(SUPA_URL+'/rest/v1/brokers?id=eq.'+userId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({name:name,whatsapp_number:phone,areas:Array.from(sel),plan:selPlan,contacts_per_month:plan.contacts,billing_cycle:billing,subscription_status:'pending',is_active:false,city:city})});
     }else{
