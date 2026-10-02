@@ -111,7 +111,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div class="table-card">
       <table>
-        <thead><tr><th>Name</th><th>Phone</th><th>Pending Leads</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Phone</th><th>Pending Leads</th><th>Shared</th><th></th></tr></thead>
         <tbody id="brokerListBody"></tbody>
       </table>
     </div>
@@ -122,12 +122,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="page-head">
       <div>
         <div class="ptitle" id="pdBrokerName">Potential Data</div>
-        <div class="psub">Seeker leads waiting to be shared. Click a row to read the original message.</div>
+        <div class="psub">Seeker leads waiting to be shared. Rows shared in the last 15 days stay listed in green. Click a row to read the original message.</div>
       </div>
       <button class="btn btn-ghost" onclick="backToBrokerList()">&larr; Back to brokers</button>
     </div>
     <div class="search-row">
       <input class="filter-input" id="leadSearchInput" placeholder="Search by number, requirement, or area..." oninput="renderLeadsTable()">
+    </div>
+    <div class="search-row" style="margin-top:-6px">
+      <span style="font-size:12px;color:var(--ink3);align-self:center;margin-right:2px">Sort by:</span>
+      <button class="btn btn-ghost" id="sortReqBtn" onclick="setSort('requirement')">Requirement</button>
+      <button class="btn btn-ghost" id="sortAreaBtn" onclick="setSort('area')">Area</button>
+      <button class="btn btn-ghost" id="sortGenderBtn" onclick="setSort('gender')">Gender</button>
+      <button class="btn btn-ghost" id="sortClearBtn" onclick="clearSort()" style="display:none">Clear sort</button>
     </div>
     <div class="table-card">
       <table>
@@ -284,7 +291,7 @@ let allPortalBrokers=[];
 let pendingCounts={};
 
 async function loadBrokerList(){
-  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone&order=name.asc");
+  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,portal_leads_shared_count&order=name.asc");
   allPortalBrokers=brokers;
   const counts=await supaGet("broker_portal_leads?status=eq.pending&select=broker_id");
   pendingCounts={};
@@ -300,15 +307,17 @@ function renderBrokerList(){
     return (b.name||"").toLowerCase().includes(q) || (b.phone||"").includes(q.replace(/\D/g,"")||q);
   });
   if(!filtered.length){
-    body.innerHTML=`<tr><td colspan="4" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="5" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
     return;
   }
   body.innerHTML=filtered.map(b=>{
     const count=pendingCounts[b.id]||0;
+    const sharedCount=b.portal_leads_shared_count||0;
     return `<tr>
       <td style="font-weight:600">${escHtml(b.name||"Unnamed")}</td>
       <td style="color:var(--ink2)">+91 ${escHtml(b.phone||"")}</td>
       <td>${count>0?`<span class="badge b-count">${count} pending</span>`:`<span style="color:var(--ink3);font-size:12px">None yet</span>`}</td>
+      <td><span class="badge b-ok">${sharedCount} shared</span></td>
       <td><button class="btn btn-teal" onclick="openPotentialData('${b.id}','${escHtml(b.name||"").replace(/'/g,"\\'")}')">Potential Data</button></td>
     </tr>`;
   }).join("");
@@ -353,15 +362,20 @@ async function addBrokerToPortal(brokerId){
 let currentBrokerId=null, currentBrokerName=null;
 let currentLeads=[];
 let selectedLeadIds=new Set();
+const REACTIVATION_DAYS=15; // keep in sync with vanita_lead_report.py's REACTIVATION_DAYS
+let sortField=null;   // 'requirement' | 'area' | 'gender' | null
+let sortDir=1;         // 1 = ascending (as defined by the rank functions below), -1 = reversed
 
 async function openPotentialData(brokerId, brokerName){
   currentBrokerId=brokerId;
   currentBrokerName=brokerName;
   selectedLeadIds=new Set();
+  sortField=null; sortDir=1;
   document.getElementById("pg-brokerList").style.display="none";
   document.getElementById("pg-potentialData").style.display="block";
   document.getElementById("pdBrokerName").textContent="Potential Data — "+brokerName;
   document.getElementById("leadSearchInput").value="";
+  updateSortButtons();
   await loadLeads();
 }
 
@@ -372,30 +386,101 @@ function backToBrokerList(){
 }
 
 async function loadLeads(){
-  currentLeads=await supaGet(`broker_portal_leads?broker_id=eq.${currentBrokerId}&status=eq.pending&select=id,phone,gender,requirement,areas,raw_whatsapp_text&order=created_at.desc`);
+  // Shows every still-pending lead PLUS any 'sent' lead whose sent_at
+  // falls within the last REACTIVATION_DAYS -- so a just-shared contact
+  // stays visible (highlighted green, see renderLeadsTable) rather than
+  // vanishing the instant it's downloaded. Once older than that window
+  // it drops out of this view entirely (matches the Python script's own
+  // reactivation-cooldown logic, so what's visible here always matches
+  // what the script would currently treat as "still on cooldown").
+  const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*24*60*60*1000).toISOString();
+  currentLeads=await supaGet(`broker_portal_leads?broker_id=eq.${currentBrokerId}&or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,phone,gender,requirement,areas,raw_whatsapp_text,status,sent_at&order=created_at.desc`);
   renderLeadsTable();
+}
+
+// ---------- Sorting ----------
+// Requirement order per explicit instruction: Undisclosed - Double -
+// Single - 1 RK - 1 BHK - 2 BHK - 3 BHK (bigger requirement at one end,
+// smaller/undisclosed at the other). Any "N BHK" generalizes cleanly
+// past 3 (4 BHK sorts above 3 BHK, etc.) since it's just 3+N.
+function requirementRank(req){
+  const r=(req||"").toLowerCase();
+  const bhk=r.match(/(\d+)\s*bhk/);
+  if(bhk) return 3+parseInt(bhk[1],10);     // 1 BHK=4, 2 BHK=5, 3 BHK=6, 4 BHK=7...
+  if(/\brk\b/.test(r)) return 3;             // 1 RK
+  if(/\bsingle\b/.test(r)) return 2;
+  if(/\bdouble\b/.test(r)) return 1;
+  return 0;                                   // Undisclosed / anything unrecognized
+}
+// Gender order per explicit instruction: Male - Female - Undisclosed.
+function genderRank(g){
+  const x=(g||"").toLowerCase();
+  if(x==="male") return 0;
+  if(x==="female") return 1;
+  return 2;
+}
+
+function setSort(field){
+  if(sortField===field){ sortDir*=-1; } else { sortField=field; sortDir=1; }
+  updateSortButtons();
+  renderLeadsTable();
+}
+function clearSort(){
+  sortField=null; sortDir=1;
+  updateSortButtons();
+  renderLeadsTable();
+}
+function updateSortButtons(){
+  const labels={requirement:["sortReqBtn","Requirement"], area:["sortAreaBtn","Area"], gender:["sortGenderBtn","Gender"]};
+  Object.entries(labels).forEach(([field,[id,label]])=>{
+    const btn=document.getElementById(id);
+    if(field===sortField){
+      btn.classList.add("btn-teal");
+      btn.textContent=label+(sortDir===1?" ↑":" ↓");
+    }else{
+      btn.classList.remove("btn-teal");
+      btn.textContent=label;
+    }
+  });
+  document.getElementById("sortClearBtn").style.display=sortField?"inline-block":"none";
 }
 
 function renderLeadsTable(){
   const q=(document.getElementById("leadSearchInput").value||"").toLowerCase().trim();
   const body=document.getElementById("leadsTableBody");
-  const filtered=currentLeads.filter(l=>{
+  let filtered=currentLeads.filter(l=>{
     if(!q) return true;
     return (l.phone||"").includes(q) || (l.requirement||"").toLowerCase().includes(q) || (l.areas||"").toLowerCase().includes(q) || (l.gender||"").toLowerCase().includes(q);
   });
+  if(sortField){
+    filtered=filtered.slice().sort((a,b)=>{
+      let cmp=0;
+      if(sortField==="requirement") cmp=requirementRank(a.requirement)-requirementRank(b.requirement);
+      else if(sortField==="gender") cmp=genderRank(a.gender)-genderRank(b.gender);
+      else if(sortField==="area") cmp=(a.areas||"").localeCompare(b.areas||"");
+      return cmp*sortDir;
+    });
+  }
   if(!filtered.length){
     body.innerHTML=`<tr><td colspan="5" class="empty-state">${currentLeads.length?"No leads match that search.":"Nothing pending right now — run the script locally to pull in fresh leads."}</td></tr>`;
     updateSelectedCount();
     return;
   }
-  body.innerHTML=filtered.map(l=>`
-    <tr>
-      <td class="row-select"><input type="checkbox" class="chk" ${selectedLeadIds.has(l.id)?"checked":""} onclick="event.stopPropagation();toggleSelect('${l.id}')"></td>
+  body.innerHTML=filtered.map(l=>{
+    const isSent=l.status==="sent";
+    const rowAttr=isSent?` style="background:var(--green-bg)"`:"";
+    const checkboxCell=isSent
+      ? `<td class="row-select" title="Shared ${l.sent_at?new Date(l.sent_at).toLocaleDateString():""}" style="color:var(--green);font-weight:700">✓</td>`
+      : `<td class="row-select"><input type="checkbox" class="chk" ${selectedLeadIds.has(l.id)?"checked":""} onclick="event.stopPropagation();toggleSelect('${l.id}')"></td>`;
+    const sentTag=isSent?` <span style="color:var(--green);font-size:11px;font-weight:700">· Shared</span>`:"";
+    return `<tr${rowAttr}>
+      ${checkboxCell}
       <td class="clickable-row" onclick="openMsgModal('${l.id}')" style="font-weight:600">+91 ${escHtml(l.phone)}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.gender||"—")}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.requirement||"—")}</td>
-      <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.areas||"—")}</td>
-    </tr>`).join("");
+      <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.areas||"—")}${sentTag}</td>
+    </tr>`;
+  }).join("");
   updateSelectedCount();
 }
 
@@ -443,12 +528,22 @@ async function downloadSelected(){
     const fname=`Flatkhoj_${currentBrokerName.replace(/[^a-zA-Z0-9]/g,"")}_${dd}${mon}${now.getFullYear()}.xlsx`;
     XLSX.writeFile(wb, fname);
 
-    // Mark each selected row as sent so it drops out of Potential Data
-    // and never gets re-selected tomorrow.
+    // Mark each selected row as sent (sent_at drives both the 15-day
+    // "stay visible in green" window in loadLeads() and the 15-day
+    // reactivation cooldown the Python script checks before re-pushing
+    // the same phone+gender+requirement+areas combination).
     const nowIso=now.toISOString();
     for(const lead of selected){
       await supaPatch("broker_portal_leads", `id=eq.${lead.id}`, {status:"sent", sent_at:nowIso});
     }
+
+    // Bump this broker's lifetime "shared" counter by however many were
+    // just sent -- fetch-then-write rather than a blind increment,
+    // since this is a plain REST PATCH with no server-side atomic
+    // increment available here.
+    const brokerRow=await supaGet(`brokers?id=eq.${currentBrokerId}&select=portal_leads_shared_count`);
+    const prevCount=(brokerRow[0]&&brokerRow[0].portal_leads_shared_count)||0;
+    await supaPatch("brokers", `id=eq.${currentBrokerId}`, {portal_leads_shared_count: prevCount+selected.length});
 
     selectedLeadIds=new Set();
     await loadLeads();
