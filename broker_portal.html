@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<!-- FlatKhoj Broker Data Portal — v1 (2026-10-02) -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlatKhoj — Broker Data Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0f1117; --bg2:#1a1d27; --bg3:#222536;
+  --border:#2a2d3e; --border2:#353849;
+  --ink:#f0f0f0; --ink2:#a0a4b8; --ink3:#6b6f85;
+  --teal:#0f7b6c; --teal-light:#13a090; --teal-bg:rgba(15,123,108,0.15);
+  --red:#e05252; --red-bg:rgba(224,82,82,0.12);
+  --gold:#e6a817; --gold-bg:rgba(230,168,23,0.12);
+  --green:#2ecc71; --green-bg:rgba(46,204,113,0.12);
+  --font:'Plus Jakarta Sans',sans-serif; --radius:10px;
+}
+body { font-family:var(--font); background:var(--bg); color:var(--ink); min-height:100vh; }
+#loginScreen { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:9999; }
+.login-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; text-align:center; }
+.login-logo { font-size:28px; font-weight:800; margin-bottom:4px; }
+.login-logo span { color:var(--teal-light); }
+.login-sub { font-size:13px; color:var(--ink3); margin-bottom:32px; }
+.lbl { font-size:12px; color:var(--ink2); text-align:left; margin-bottom:6px; font-weight:600; display:block; }
+.linput { width:100%; background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; font-family:var(--font); font-size:14px; color:var(--ink); outline:none; margin-bottom:16px; }
+.linput:focus { border-color:var(--teal-light); }
+.lbtn { width:100%; padding:13px; background:var(--teal); color:white; border:none; border-radius:8px; font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer; }
+.lerr { font-size:13px; color:var(--red); margin-top:10px; display:none; }
+
+.topbar { background:var(--bg2); border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:5; }
+.topbar-title { font-size:16px; font-weight:700; }
+.topbar-title span { color:var(--teal-light); }
+.btn { padding:8px 16px; border-radius:6px; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; }
+.btn-ghost { background:var(--bg3); color:var(--ink2); border:1px solid var(--border2); }
+.btn-ghost:hover { color:var(--ink); }
+.btn-red { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); }
+.btn-teal { background:var(--teal-bg); color:var(--teal-light); border:1px solid rgba(19,160,144,0.3); }
+.btn-solid { background:var(--teal); color:#fff; }
+.btn-solid:disabled { background:var(--bg3); color:var(--ink3); cursor:not-allowed; }
+
+.page { max-width:1100px; margin:0 auto; padding:24px; }
+.page-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+.ptitle { font-size:20px; font-weight:800; }
+.psub { font-size:13px; color:var(--ink3); margin-top:2px; }
+.search-row { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.filter-input { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:9px 14px; font-family:var(--font); font-size:13px; color:var(--ink); outline:none; flex:1; min-width:220px; }
+.filter-input:focus { border-color:var(--teal-light); }
+
+.table-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:20px; }
+table { width:100%; border-collapse:collapse; }
+th { padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; background:var(--bg3); border-bottom:1px solid var(--border); }
+td { padding:12px 16px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(255,255,255,0.02); }
+.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.b-ok { background:var(--green-bg); color:var(--green); }
+.b-count { background:var(--gold-bg); color:var(--gold); }
+
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
+.modal-box { background:var(--bg2); border:1px solid var(--border); border-radius:16px; width:100%; max-width:780px; max-height:88vh; overflow-y:auto; display:flex; flex-direction:column; }
+.modal-head { padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; position:sticky; top:0; background:var(--bg2); }
+.modal-title { font-size:16px; font-weight:700; }
+.modal-sub { font-size:12px; color:var(--ink3); margin-top:3px; }
+.modal-close { background:none; border:none; color:var(--ink3); font-size:22px; cursor:pointer; line-height:1; }
+.modal-body { padding:0; }
+.modal-foot { padding:16px 20px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; background:var(--bg2); }
+
+.msg-text { padding:20px; font-size:13px; line-height:1.6; white-space:pre-wrap; color:var(--ink2); }
+.row-select { width:34px; text-align:center; }
+.chk { width:18px; height:18px; cursor:pointer; accent-color:var(--teal-light); }
+.clickable-row { cursor:pointer; }
+.empty-state { text-align:center; padding:40px 20px; color:var(--ink3); font-size:13px; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Flat<span>Khoj</span></div>
+    <div class="login-sub">Broker Data Portal</div>
+    <label class="lbl">Email</label>
+    <input class="linput" type="email" id="emailInput" placeholder="Your owner email" onkeydown="if(event.key==='Enter')doLogin()">
+    <label class="lbl">Password</label>
+    <input class="linput" type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="lbtn" onclick="doLogin()">Sign in</button>
+    <div class="lerr" id="lerr">Invalid login, or this portal is restricted to owner accounts only.</div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal</div>
+    <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+  </div>
+
+  <!-- ============== BROKER LIST PAGE ============== -->
+  <div class="page" id="pg-brokerList">
+    <div class="page-head">
+      <div>
+        <div class="ptitle">Brokers on the Data Portal</div>
+        <div class="psub">Only brokers added here get their leads shared via Excel — everyone else is unaffected.</div>
+      </div>
+      <button class="btn btn-solid" onclick="openAddBrokerModal()">+ Add Broker</button>
+    </div>
+    <div class="search-row">
+      <input class="filter-input" id="brokerSearchInput" placeholder="Search by name or phone number..." oninput="renderBrokerList()">
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Pending Leads</th><th></th></tr></thead>
+        <tbody id="brokerListBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============== POTENTIAL DATA PAGE ============== -->
+  <div class="page" id="pg-potentialData" style="display:none">
+    <div class="page-head">
+      <div>
+        <div class="ptitle" id="pdBrokerName">Potential Data</div>
+        <div class="psub">Seeker leads waiting to be shared. Click a row to read the original message.</div>
+      </div>
+      <button class="btn btn-ghost" onclick="backToBrokerList()">&larr; Back to brokers</button>
+    </div>
+    <div class="search-row">
+      <input class="filter-input" id="leadSearchInput" placeholder="Search by number, requirement, or area..." oninput="renderLeadsTable()">
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th class="row-select"></th><th>Number</th><th>Gender</th><th>Requirement</th><th>Areas</th></tr></thead>
+        <tbody id="leadsTableBody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
+      <div style="font-size:13px; color:var(--ink3)"><span id="selectedCount">0</span> selected</div>
+      <button class="btn btn-solid" id="downloadBtn" onclick="downloadSelected()" disabled>Download Excel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Broker modal -->
+<div class="modal-backdrop" id="addBrokerModal" style="display:none">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-head">
+      <div><div class="modal-title">Add a broker to the portal</div><div class="modal-sub">Search your existing brokers list</div></div>
+      <button class="modal-close" onclick="closeAddBrokerModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="padding:16px 20px 0">
+        <input class="filter-input" id="addBrokerSearchInput" placeholder="Search by name or phone..." oninput="renderAddBrokerResults()" style="width:100%">
+      </div>
+      <div id="addBrokerResults" style="padding:12px 0 20px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Original message modal -->
+<div class="modal-backdrop" id="msgModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><div class="modal-title">Original WhatsApp message</div><div class="modal-sub" id="msgModalSub"></div></div>
+      <button class="modal-close" onclick="closeMsgModal()">&times;</button>
+    </div>
+    <div class="msg-text" id="msgModalText"></div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL="https://hbvdboxyppsmcuqgbpwp.supabase.co";
+const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4";
+let ADMIN_SESSION_TOKEN=null, ADMIN_REFRESH_TOKEN=null, currentRole=null;
+
+// ---------- Auth (same Supabase-Auth flow as admin.html, restricted to role==='owner') ----------
+function authToken(){ return ADMIN_SESSION_TOKEN || SUPA_KEY; }
+
+async function refreshSession(){
+  if(!ADMIN_REFRESH_TOKEN) return false;
+  try{
+    const res=await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`,{method:"POST",headers:{apikey:SUPA_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:ADMIN_REFRESH_TOKEN})});
+    if(!res.ok) return false;
+    const data=await res.json();
+    if(!data.access_token) return false;
+    ADMIN_SESSION_TOKEN=data.access_token;
+    ADMIN_REFRESH_TOKEN=data.refresh_token||ADMIN_REFRESH_TOKEN;
+    sessionStorage.setItem("fk_portal_session",ADMIN_SESSION_TOKEN);
+    sessionStorage.setItem("fk_portal_refresh",ADMIN_REFRESH_TOKEN);
+    return true;
+  }catch(e){ return false; }
+}
+
+async function doLogin(){
+  const email=document.getElementById("emailInput").value.trim();
+  const pw=document.getElementById("pwInput").value;
+  document.getElementById("lerr").style.display="none";
+  try{
+    const res=await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`,{
+      method:"POST",
+      headers:{apikey:SUPA_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({email:email,password:pw})
+    });
+    if(!res.ok){ document.getElementById("lerr").style.display="block"; return; }
+    const data=await res.json();
+    const role=(data.user&&data.user.user_metadata&&data.user.user_metadata.role)||"";
+    // Restricted to owner accounts only -- same check admin.html uses to
+    // gate helper access away from sensitive pages, just inverted: here
+    // a HELPER role (or anything that isn't 'owner') is refused entirely,
+    // not just hidden from some nav items, per explicit instruction that
+    // this portal is for the two owner logins only.
+    if(role!=="owner"){
+      document.getElementById("lerr").textContent="This portal is restricted to owner accounts only.";
+      document.getElementById("lerr").style.display="block";
+      return;
+    }
+    ADMIN_SESSION_TOKEN=data.access_token;
+    ADMIN_REFRESH_TOKEN=data.refresh_token;
+    sessionStorage.setItem("fk_portal_session",data.access_token);
+    sessionStorage.setItem("fk_portal_refresh",data.refresh_token);
+    currentRole=role;
+    enterApp();
+  }catch(e){
+    console.error("Login error:",e);
+    document.getElementById("lerr").style.display="block";
+  }
+}
+
+async function tryRestoreSession(){
+  const saved=sessionStorage.getItem("fk_portal_session");
+  if(!saved) return;
+  ADMIN_SESSION_TOKEN=saved;
+  ADMIN_REFRESH_TOKEN=sessionStorage.getItem("fk_portal_refresh");
+  let res=await fetch(`${SUPA_URL}/auth/v1/user`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${saved}`}});
+  if(!res.ok && await refreshSession()){
+    res=await fetch(`${SUPA_URL}/auth/v1/user`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`}});
+  }
+  if(!res.ok){ logout(); return; }
+  const user=await res.json();
+  const role=(user.user_metadata&&user.user_metadata.role)||"";
+  if(role!=="owner"){ logout(); return; }
+  currentRole=role;
+  enterApp();
+}
+
+function enterApp(){
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("app").style.display="block";
+  loadBrokerList();
+}
+
+function logout(){
+  ADMIN_SESSION_TOKEN=null; ADMIN_REFRESH_TOKEN=null;
+  sessionStorage.removeItem("fk_portal_session");
+  sessionStorage.removeItem("fk_portal_refresh");
+  document.getElementById("app").style.display="none";
+  document.getElementById("loginScreen").style.display="flex";
+  document.getElementById("pwInput").value="";
+  document.getElementById("emailInput").value="";
+}
+tryRestoreSession();
+
+// ---------- Supabase REST helpers ----------
+async function supaGet(path){
+  let res=await fetch(`${SUPA_URL}/rest/v1/${path}`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"count=none"}});
+  if(res.status===401 && await refreshSession()){
+    res=await fetch(`${SUPA_URL}/rest/v1/${path}`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"count=none"}});
+  }
+  if(!res.ok){ console.error("supaGet failed:",path,res.status); return []; }
+  return res.json();
+}
+async function supaPatch(path, query, body){
+  let res=await fetch(`${SUPA_URL}/rest/v1/${path}?${query}`,{method:"PATCH",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(body)});
+  if(res.status===401 && await refreshSession()){
+    res=await fetch(`${SUPA_URL}/rest/v1/${path}?${query}`,{method:"PATCH",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(body)});
+  }
+  if(!res.ok) console.error("supaPatch failed:",path,res.status, await res.text());
+  return res.ok;
+}
+
+// ---------- Broker list ----------
+let allPortalBrokers=[];
+let pendingCounts={};
+
+async function loadBrokerList(){
+  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone&order=name.asc");
+  allPortalBrokers=brokers;
+  const counts=await supaGet("broker_portal_leads?status=eq.pending&select=broker_id");
+  pendingCounts={};
+  counts.forEach(r=>{ pendingCounts[r.broker_id]=(pendingCounts[r.broker_id]||0)+1; });
+  renderBrokerList();
+}
+
+function renderBrokerList(){
+  const q=(document.getElementById("brokerSearchInput").value||"").toLowerCase().trim();
+  const body=document.getElementById("brokerListBody");
+  const filtered=allPortalBrokers.filter(b=>{
+    if(!q) return true;
+    return (b.name||"").toLowerCase().includes(q) || (b.phone||"").includes(q.replace(/\D/g,"")||q);
+  });
+  if(!filtered.length){
+    body.innerHTML=`<tr><td colspan="4" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
+    return;
+  }
+  body.innerHTML=filtered.map(b=>{
+    const count=pendingCounts[b.id]||0;
+    return `<tr>
+      <td style="font-weight:600">${escHtml(b.name||"Unnamed")}</td>
+      <td style="color:var(--ink2)">+91 ${escHtml(b.phone||"")}</td>
+      <td>${count>0?`<span class="badge b-count">${count} pending</span>`:`<span style="color:var(--ink3);font-size:12px">None yet</span>`}</td>
+      <td><button class="btn btn-teal" onclick="openPotentialData('${b.id}','${escHtml(b.name||"").replace(/'/g,"\\'")}')">Potential Data</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function escHtml(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+// ---------- Add Broker modal ----------
+let allBrokersForAdd=[];
+async function openAddBrokerModal(){
+  document.getElementById("addBrokerModal").style.display="flex";
+  document.getElementById("addBrokerSearchInput").value="";
+  allBrokersForAdd=await supaGet("brokers?select=id,name,phone,portal_enabled&order=name.asc");
+  renderAddBrokerResults();
+}
+function closeAddBrokerModal(){ document.getElementById("addBrokerModal").style.display="none"; }
+
+function renderAddBrokerResults(){
+  const q=(document.getElementById("addBrokerSearchInput").value||"").toLowerCase().trim();
+  const wrap=document.getElementById("addBrokerResults");
+  if(!q){ wrap.innerHTML=`<div class="empty-state">Type a name or phone number to search.</div>`; return; }
+  const matches=allBrokersForAdd.filter(b=>(b.name||"").toLowerCase().includes(q) || (b.phone||"").includes(q.replace(/\D/g,"")||q)).slice(0,20);
+  if(!matches.length){ wrap.innerHTML=`<div class="empty-state">No brokers match that search.</div>`; return; }
+  wrap.innerHTML=matches.map(b=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--border)">
+      <div><div style="font-weight:600;font-size:13px">${escHtml(b.name||"Unnamed")}</div><div style="font-size:12px;color:var(--ink3)">+91 ${escHtml(b.phone||"")}</div></div>
+      ${b.portal_enabled
+        ? `<span class="badge b-ok">Already added</span>`
+        : `<button class="btn btn-teal" onclick="addBrokerToPortal('${b.id}')">Add</button>`}
+    </div>`).join("");
+}
+
+async function addBrokerToPortal(brokerId){
+  const ok=await supaPatch("brokers", `id=eq.${brokerId}`, {portal_enabled:true});
+  if(ok){
+    closeAddBrokerModal();
+    await loadBrokerList();
+  }
+}
+
+// ---------- Potential Data ----------
+let currentBrokerId=null, currentBrokerName=null;
+let currentLeads=[];
+let selectedLeadIds=new Set();
+
+async function openPotentialData(brokerId, brokerName){
+  currentBrokerId=brokerId;
+  currentBrokerName=brokerName;
+  selectedLeadIds=new Set();
+  document.getElementById("pg-brokerList").style.display="none";
+  document.getElementById("pg-potentialData").style.display="block";
+  document.getElementById("pdBrokerName").textContent="Potential Data — "+brokerName;
+  document.getElementById("leadSearchInput").value="";
+  await loadLeads();
+}
+
+function backToBrokerList(){
+  document.getElementById("pg-potentialData").style.display="none";
+  document.getElementById("pg-brokerList").style.display="block";
+  loadBrokerList();
+}
+
+async function loadLeads(){
+  currentLeads=await supaGet(`broker_portal_leads?broker_id=eq.${currentBrokerId}&status=eq.pending&select=id,phone,gender,requirement,areas,raw_whatsapp_text&order=created_at.desc`);
+  renderLeadsTable();
+}
+
+function renderLeadsTable(){
+  const q=(document.getElementById("leadSearchInput").value||"").toLowerCase().trim();
+  const body=document.getElementById("leadsTableBody");
+  const filtered=currentLeads.filter(l=>{
+    if(!q) return true;
+    return (l.phone||"").includes(q) || (l.requirement||"").toLowerCase().includes(q) || (l.areas||"").toLowerCase().includes(q) || (l.gender||"").toLowerCase().includes(q);
+  });
+  if(!filtered.length){
+    body.innerHTML=`<tr><td colspan="5" class="empty-state">${currentLeads.length?"No leads match that search.":"Nothing pending right now — run the script locally to pull in fresh leads."}</td></tr>`;
+    updateSelectedCount();
+    return;
+  }
+  body.innerHTML=filtered.map(l=>`
+    <tr>
+      <td class="row-select"><input type="checkbox" class="chk" ${selectedLeadIds.has(l.id)?"checked":""} onclick="event.stopPropagation();toggleSelect('${l.id}')"></td>
+      <td class="clickable-row" onclick="openMsgModal('${l.id}')" style="font-weight:600">+91 ${escHtml(l.phone)}</td>
+      <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.gender||"—")}</td>
+      <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.requirement||"—")}</td>
+      <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.areas||"—")}</td>
+    </tr>`).join("");
+  updateSelectedCount();
+}
+
+function toggleSelect(id){
+  if(selectedLeadIds.has(id)) selectedLeadIds.delete(id); else selectedLeadIds.add(id);
+  updateSelectedCount();
+}
+
+function updateSelectedCount(){
+  document.getElementById("selectedCount").textContent=selectedLeadIds.size;
+  document.getElementById("downloadBtn").disabled=selectedLeadIds.size===0;
+}
+
+function openMsgModal(id){
+  const lead=currentLeads.find(l=>l.id===id);
+  if(!lead) return;
+  document.getElementById("msgModalSub").textContent=`+91 ${lead.phone} · ${lead.requirement||"—"} · ${lead.areas||"—"}`;
+  document.getElementById("msgModalText").textContent=lead.raw_whatsapp_text||"(no message text saved)";
+  document.getElementById("msgModal").style.display="flex";
+}
+function closeMsgModal(){ document.getElementById("msgModal").style.display="none"; }
+
+// ---------- Download selected -> xlsx, then mark as sent ----------
+async function downloadSelected(){
+  const btn=document.getElementById("downloadBtn");
+  const selected=currentLeads.filter(l=>selectedLeadIds.has(l.id));
+  if(!selected.length) return;
+  btn.disabled=true; btn.textContent="Preparing...";
+
+  try{
+    // 4 columns only, exactly as asked -- no phone-formatting/prefix
+    // beyond what's already stored, no original-message column (the
+    // client never sees that this came from WhatsApp groups).
+    const rows=[["Number","Gender","Requirement","Areas"]];
+    selected.forEach(l=>rows.push([l.phone, l.gender||"", l.requirement||"", l.areas||""]));
+
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"]=[{wch:16},{wch:12},{wch:30},{wch:34}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Leads");
+
+    const now=new Date();
+    const dd=String(now.getDate()).padStart(2,"0");
+    const mon=now.toLocaleString("en-US",{month:"short"});
+    const fname=`Flatkhoj_${currentBrokerName.replace(/[^a-zA-Z0-9]/g,"")}_${dd}${mon}${now.getFullYear()}.xlsx`;
+    XLSX.writeFile(wb, fname);
+
+    // Mark each selected row as sent so it drops out of Potential Data
+    // and never gets re-selected tomorrow.
+    const nowIso=now.toISOString();
+    for(const lead of selected){
+      await supaPatch("broker_portal_leads", `id=eq.${lead.id}`, {status:"sent", sent_at:nowIso});
+    }
+
+    selectedLeadIds=new Set();
+    await loadLeads();
+    await loadBrokerList();
+  }catch(e){
+    console.error("Download failed:",e);
+    alert("Something went wrong generating the file. Nothing was marked as sent — try again.");
+  }finally{
+    btn.disabled=false; btn.textContent="Download Excel";
+  }
+}
+</script>
+</body>
+</html>
