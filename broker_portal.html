@@ -69,11 +69,15 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .modal-body { padding:0; }
 .modal-foot { padding:16px 20px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; background:var(--bg2); }
 
-.msg-text { padding:20px; font-size:13px; line-height:1.6; white-space:pre-wrap; color:var(--ink2); }
+.msg-meta { padding:14px 20px 0; font-size:12px; color:var(--ink3); font-weight:600; }
+.msg-text { padding:12px 20px 20px; font-size:13px; line-height:1.6; white-space:pre-wrap; color:var(--ink2); }
 .row-select { width:34px; text-align:center; }
 .chk { width:18px; height:18px; cursor:pointer; accent-color:var(--teal-light); }
+.chk:disabled { cursor:not-allowed; opacity:0.35; }
 .clickable-row { cursor:pointer; }
 .empty-state { text-align:center; padding:40px 20px; color:var(--ink3); font-size:13px; }
+.quota-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.quota-banner { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; margin-bottom:14px; }
 </style>
 </head>
 <body>
@@ -111,7 +115,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div class="table-card">
       <table>
-        <thead><tr><th>Name</th><th>Phone</th><th>Pending Leads</th><th>Shared</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Phone</th><th>Pending Leads</th><th>Shared / Quota</th><th></th><th></th></tr></thead>
         <tbody id="brokerListBody"></tbody>
       </table>
     </div>
@@ -125,6 +129,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <div class="psub">Seeker leads waiting to be shared. Rows shared in the last 15 days stay listed in green. Click a row to read the original message.</div>
       </div>
       <button class="btn btn-ghost" onclick="backToBrokerList()">&larr; Back to brokers</button>
+    </div>
+    <div id="quotaBanner" class="quota-banner" style="display:none"></div>
+    <div class="quota-row">
+      <span id="quotaStatusText" style="font-size:13px;color:var(--ink2);font-weight:600"></span>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost" onclick="chooseSaveFolder()">📁 Set save folder</button>
+      <span id="folderStatus" style="font-size:12px;color:var(--ink3)"></span>
     </div>
     <div class="search-row">
       <input class="filter-input" id="leadSearchInput" placeholder="Search by number, requirement, or area..." oninput="renderLeadsTable()">
@@ -172,7 +183,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div><div class="modal-title">Original WhatsApp message</div><div class="modal-sub" id="msgModalSub"></div></div>
       <button class="modal-close" onclick="closeMsgModal()">&times;</button>
     </div>
-    <div class="msg-text" id="msgModalText"></div>
+    <div class="modal-body">
+      <div class="msg-meta" id="msgModalMeta"></div>
+      <div class="msg-text" id="msgModalText"></div>
+    </div>
   </div>
 </div>
 
@@ -291,7 +305,7 @@ let allPortalBrokers=[];
 let pendingCounts={};
 
 async function loadBrokerList(){
-  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,portal_leads_shared_count&order=name.asc");
+  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,portal_leads_shared_count,portal_lead_quota&order=name.asc");
   allPortalBrokers=brokers;
   const counts=await supaGet("broker_portal_leads?status=eq.pending&select=broker_id");
   pendingCounts={};
@@ -307,20 +321,40 @@ function renderBrokerList(){
     return (b.name||"").toLowerCase().includes(q) || (b.phone||"").includes(q.replace(/\D/g,"")||q);
   });
   if(!filtered.length){
-    body.innerHTML=`<tr><td colspan="5" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="6" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
     return;
   }
   body.innerHTML=filtered.map(b=>{
     const count=pendingCounts[b.id]||0;
     const sharedCount=b.portal_leads_shared_count||0;
+    const quota=(b.portal_lead_quota===null||b.portal_lead_quota===undefined)?null:b.portal_lead_quota;
+    const quotaReached=quota!==null && sharedCount>=quota;
     return `<tr>
       <td style="font-weight:600">${escHtml(b.name||"Unnamed")}</td>
       <td style="color:var(--ink2)">+91 ${escHtml(b.phone||"")}</td>
       <td>${count>0?`<span class="badge b-count">${count} pending</span>`:`<span style="color:var(--ink3);font-size:12px">None yet</span>`}</td>
-      <td><span class="badge b-ok">${sharedCount} shared</span></td>
+      <td><span class="badge ${quotaReached?"b-count":"b-ok"}">${sharedCount} / ${quota===null?"∞":quota} shared</span></td>
+      <td><button class="btn btn-ghost" onclick="editQuota('${b.id}', ${quota===null?"null":quota})">Edit quota</button></td>
       <td><button class="btn btn-teal" onclick="openPotentialData('${b.id}','${escHtml(b.name||"").replace(/'/g,"\\'")}')">Potential Data</button></td>
     </tr>`;
   }).join("");
+}
+
+async function editQuota(brokerId, currentQuota){
+  const input=prompt("Set this broker's lead quota (how many contacts they can receive). Leave blank for no limit:", currentQuota===null?"":String(currentQuota));
+  if(input===null) return; // cancelled
+  const trimmed=input.trim();
+  let newQuota=null;
+  if(trimmed!==""){
+    const n=parseInt(trimmed,10);
+    if(isNaN(n) || n<0 || String(n)!==trimmed){
+      alert("Please enter a whole number (0 or more), or leave it blank for no limit.");
+      return;
+    }
+    newQuota=n;
+  }
+  const ok=await supaPatch("brokers", `id=eq.${brokerId}`, {portal_lead_quota:newQuota});
+  if(ok) await loadBrokerList();
 }
 
 function escHtml(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -362,6 +396,7 @@ async function addBrokerToPortal(brokerId){
 let currentBrokerId=null, currentBrokerName=null;
 let currentLeads=[];
 let selectedLeadIds=new Set();
+let currentBrokerShared=0, currentBrokerQuota=null; // null quota = no limit
 const REACTIVATION_DAYS=15; // keep in sync with vanita_lead_report.py's REACTIVATION_DAYS
 let sortField=null;   // 'requirement' | 'area' | 'gender' | null
 let sortDir=1;         // 1 = ascending (as defined by the rank functions below), -1 = reversed
@@ -376,7 +411,44 @@ async function openPotentialData(brokerId, brokerName){
   document.getElementById("pdBrokerName").textContent="Potential Data — "+brokerName;
   document.getElementById("leadSearchInput").value="";
   updateSortButtons();
+  await refreshBrokerQuotaState();
+  await updateFolderStatus();
   await loadLeads();
+}
+
+// Re-fetches this broker's shared-count + quota from Supabase (fresh,
+// not from the possibly-stale allPortalBrokers list) and refreshes the
+// quota banner/status line + re-renders the table so checkbox disabled
+// states stay correct.
+async function refreshBrokerQuotaState(){
+  const rows=await supaGet(`brokers?id=eq.${currentBrokerId}&select=portal_leads_shared_count,portal_lead_quota`);
+  const row=rows[0]||{};
+  currentBrokerShared=row.portal_leads_shared_count||0;
+  currentBrokerQuota=(row.portal_lead_quota===null||row.portal_lead_quota===undefined)?null:row.portal_lead_quota;
+  updateQuotaDisplay();
+}
+
+function getRemainingQuota(){
+  if(currentBrokerQuota===null) return null; // unlimited
+  return currentBrokerQuota - currentBrokerShared;
+}
+
+function updateQuotaDisplay(){
+  const statusEl=document.getElementById("quotaStatusText");
+  const bannerEl=document.getElementById("quotaBanner");
+  if(currentBrokerQuota===null){
+    statusEl.textContent=`${currentBrokerShared} shared so far · no quota set`;
+    bannerEl.style.display="none";
+    return;
+  }
+  const remaining=getRemainingQuota();
+  statusEl.textContent=`${currentBrokerShared} of ${currentBrokerQuota} shared (${Math.max(remaining,0)} remaining)`;
+  if(remaining<=0){
+    bannerEl.textContent=`Quota reached (${currentBrokerShared}/${currentBrokerQuota}) — raise the quota on the brokers list to select more leads for this broker.`;
+    bannerEl.style.display="block";
+  }else{
+    bannerEl.style.display="none";
+  }
 }
 
 function backToBrokerList(){
@@ -394,7 +466,7 @@ async function loadLeads(){
   // reactivation-cooldown logic, so what's visible here always matches
   // what the script would currently treat as "still on cooldown").
   const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*24*60*60*1000).toISOString();
-  currentLeads=await supaGet(`broker_portal_leads?broker_id=eq.${currentBrokerId}&or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,phone,gender,requirement,areas,raw_whatsapp_text,status,sent_at&order=created_at.desc`);
+  currentLeads=await supaGet(`broker_portal_leads?broker_id=eq.${currentBrokerId}&or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,phone,gender,requirement,areas,raw_whatsapp_text,whatsapp_group_name,posted_at,status,sent_at&order=created_at.desc`);
   renderLeadsTable();
 }
 
@@ -466,12 +538,17 @@ function renderLeadsTable(){
     updateSelectedCount();
     return;
   }
+  const remainingQuota=getRemainingQuota(); // null = unlimited
   body.innerHTML=filtered.map(l=>{
     const isSent=l.status==="sent";
     const rowAttr=isSent?` style="background:var(--green-bg)"`:"";
+    // A pending row can't be checked once the quota is already used up
+    // AND it isn't itself one of the currently-selected rows (so
+    // unchecking something you already selected always still works).
+    const quotaBlocksThis=!isSent && remainingQuota!==null && remainingQuota<=0 && !selectedLeadIds.has(l.id);
     const checkboxCell=isSent
       ? `<td class="row-select" title="Shared ${l.sent_at?new Date(l.sent_at).toLocaleDateString():""}" style="color:var(--green);font-weight:700">✓</td>`
-      : `<td class="row-select"><input type="checkbox" class="chk" ${selectedLeadIds.has(l.id)?"checked":""} onclick="event.stopPropagation();toggleSelect('${l.id}')"></td>`;
+      : `<td class="row-select"><input type="checkbox" class="chk" ${selectedLeadIds.has(l.id)?"checked":""} ${quotaBlocksThis?"disabled":""} onclick="handleCheckboxClick(event,'${l.id}')"></td>`;
     const sentTag=isSent?` <span style="color:var(--green);font-size:11px;font-weight:700">· Shared</span>`:"";
     return `<tr${rowAttr}>
       ${checkboxCell}
@@ -484,6 +561,26 @@ function renderLeadsTable(){
   updateSelectedCount();
 }
 
+// Checkbox click handler (not toggleSelect directly) so a click that
+// would push the SELECTED count past the remaining quota can be
+// cancelled -- e.preventDefault() on a checkbox's own 'click' event
+// stops the browser's default check/uncheck from happening at all.
+function handleCheckboxClick(e, id){
+  e.stopPropagation();
+  const willSelect=!selectedLeadIds.has(id);
+  if(willSelect){
+    const remaining=getRemainingQuota();
+    if(remaining!==null && selectedLeadIds.size>=remaining){
+      e.preventDefault();
+      alert(remaining<=0
+        ? `Quota reached (${currentBrokerShared}/${currentBrokerQuota}) — raise the quota first if you need to send more to this broker.`
+        : `You can select at most ${remaining} more right now (quota ${currentBrokerQuota}, already ${currentBrokerShared} shared).`);
+      return;
+    }
+  }
+  toggleSelect(id);
+}
+
 function toggleSelect(id){
   if(selectedLeadIds.has(id)) selectedLeadIds.delete(id); else selectedLeadIds.add(id);
   updateSelectedCount();
@@ -491,17 +588,88 @@ function toggleSelect(id){
 
 function updateSelectedCount(){
   document.getElementById("selectedCount").textContent=selectedLeadIds.size;
-  document.getElementById("downloadBtn").disabled=selectedLeadIds.size===0;
+  const remaining=getRemainingQuota();
+  document.getElementById("downloadBtn").disabled=selectedLeadIds.size===0 || (remaining!==null && remaining<=0 && selectedLeadIds.size===0);
 }
 
 function openMsgModal(id){
   const lead=currentLeads.find(l=>l.id===id);
   if(!lead) return;
+  const postedStr=lead.posted_at ? new Date(lead.posted_at).toLocaleString() : "Unknown date/time";
+  const groupStr=lead.whatsapp_group_name || "Unknown group";
   document.getElementById("msgModalSub").textContent=`+91 ${lead.phone} · ${lead.requirement||"—"} · ${lead.areas||"—"}`;
+  document.getElementById("msgModalMeta").textContent=`From: ${groupStr}  ·  Posted: ${postedStr}`;
   document.getElementById("msgModalText").textContent=lead.raw_whatsapp_text||"(no message text saved)";
   document.getElementById("msgModal").style.display="flex";
 }
 function closeMsgModal(){ document.getElementById("msgModal").style.display="none"; }
+
+// ---------- Save-folder picker (File System Access API) ----------
+// Lets each broker remember a specific local folder (e.g. the
+// "Vanita Sharma\Data" folder already prepared for her) so the Excel
+// file is written straight there instead of landing in the browser's
+// generic Downloads folder. Only Chrome/Edge support this API (not
+// Firefox/Safari) -- downloadSelected() below falls back to a normal
+// browser download whenever it isn't available, isn't set, or
+// permission is denied, so the feature degrades gracefully either way.
+// Folder HANDLES are stored in IndexedDB (not sessionStorage/
+// localStorage, which can't hold a FileSystemDirectoryHandle), keyed
+// by broker id, so each broker can have its own folder and it's
+// remembered across logins on the same browser/device.
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open("fk_portal_handles",1);
+    req.onupgradeneeded=()=>{ req.result.createObjectStore("dirHandles"); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbSetHandle(brokerId, handle){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction("dirHandles","readwrite");
+    tx.objectStore("dirHandles").put(handle, brokerId);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function idbGetHandle(brokerId){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction("dirHandles","readonly");
+    const req=tx.objectStore("dirHandles").get(brokerId);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function chooseSaveFolder(){
+  if(!window.showDirectoryPicker){
+    alert("Your browser doesn't support picking a folder directly (Chrome or Edge is needed for this). Files will download to your browser's regular Downloads folder instead -- you'll need to move them into the right folder by hand.");
+    return;
+  }
+  try{
+    const handle=await window.showDirectoryPicker();
+    await idbSetHandle(currentBrokerId, handle);
+    await updateFolderStatus();
+  }catch(e){
+    if(e.name!=="AbortError") console.error("Folder picker failed:",e);
+  }
+}
+
+async function updateFolderStatus(){
+  const el=document.getElementById("folderStatus");
+  if(!window.showDirectoryPicker){
+    el.textContent="(folder picking needs Chrome or Edge)";
+    return;
+  }
+  try{
+    const handle=await idbGetHandle(currentBrokerId);
+    el.textContent=handle ? `Saving straight to: "${handle.name}"` : "No folder set — files will go to Downloads";
+  }catch(e){
+    el.textContent="No folder set — files will go to Downloads";
+  }
+}
 
 // ---------- Download selected -> xlsx, then mark as sent ----------
 async function downloadSelected(){
@@ -525,8 +693,40 @@ async function downloadSelected(){
     const now=new Date();
     const dd=String(now.getDate()).padStart(2,"0");
     const mon=now.toLocaleString("en-US",{month:"short"});
-    const fname=`Flatkhoj_${currentBrokerName.replace(/[^a-zA-Z0-9]/g,"")}_${dd}${mon}${now.getFullYear()}.xlsx`;
-    XLSX.writeFile(wb, fname);
+    const hh=String(now.getHours()).padStart(2,"0");
+    const mi=String(now.getMinutes()).padStart(2,"0");
+    // Timestamp included (not just the date) so sending two batches to
+    // the same broker on the same day never silently overwrites the
+    // first file -- each download is its own file.
+    const fname=`Flatkhoj_${currentBrokerName.replace(/[^a-zA-Z0-9]/g,"")}_${dd}${mon}${now.getFullYear()}_${hh}${mi}.xlsx`;
+
+    // Try writing straight into the broker's saved folder first (File
+    // System Access API); fall back to a normal browser download if no
+    // folder is set, the browser doesn't support it, or permission is
+    // declined -- the download itself must never be blocked by this.
+    let savedDirectly=false;
+    if(window.showDirectoryPicker){
+      try{
+        const dirHandle=await idbGetHandle(currentBrokerId);
+        if(dirHandle){
+          let perm=await dirHandle.queryPermission({mode:"readwrite"});
+          if(perm!=="granted") perm=await dirHandle.requestPermission({mode:"readwrite"});
+          if(perm==="granted"){
+            const wbArray=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+            const fileHandle=await dirHandle.getFileHandle(fname,{create:true});
+            const writable=await fileHandle.createWritable();
+            await writable.write(new Blob([wbArray],{type:"application/octet-stream"}));
+            await writable.close();
+            savedDirectly=true;
+          }
+        }
+      }catch(e){
+        console.error("Direct folder save failed, falling back to browser download:",e);
+      }
+    }
+    if(!savedDirectly){
+      XLSX.writeFile(wb, fname);
+    }
 
     // Mark each selected row as sent (sent_at drives both the 15-day
     // "stay visible in green" window in loadLeads() and the 15-day
@@ -546,8 +746,16 @@ async function downloadSelected(){
     await supaPatch("brokers", `id=eq.${currentBrokerId}`, {portal_leads_shared_count: prevCount+selected.length});
 
     selectedLeadIds=new Set();
+    await refreshBrokerQuotaState();
     await loadLeads();
     await loadBrokerList();
+
+    if(!savedDirectly && window.showDirectoryPicker){
+      // Only worth mentioning on browsers that COULD have saved
+      // directly but didn't (no folder chosen yet / permission
+      // declined) -- on Firefox/Safari this is just how it always works.
+      console.log(`Saved to Downloads as "${fname}" -- use "Set save folder" to save straight into a chosen folder next time.`);
+    }
   }catch(e){
     console.error("Download failed:",e);
     alert("Something went wrong generating the file. Nothing was marked as sent — try again.");
