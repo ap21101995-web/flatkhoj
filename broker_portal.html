@@ -314,6 +314,26 @@ async function supaPatch(path, query, body){
   return res.ok;
 }
 
+// Emails the just-generated workbook to the owner's own inbox via the
+// send-portal-download Edge Function (which actually sends it, through
+// Resend -- this page itself has no safe place to hold an email API
+// key). Deliberately swallows any failure -- the download the person
+// can already see/use must never be held up or appear to fail just
+// because the email copy didn't go out.
+async function emailDownloadToSelf(filename, brokerName, wb){
+  try{
+    const xlsxBase64=XLSX.write(wb,{bookType:"xlsx",type:"base64"});
+    const res=await fetch(`${SUPA_URL}/functions/v1/send-portal-download`,{
+      method:"POST",
+      headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},
+      body:JSON.stringify({brokerName, filename, xlsxBase64}),
+    });
+    if(!res.ok) console.error("Email copy failed to send:",res.status, await res.text());
+  }catch(e){
+    console.error("Email copy failed to send:",e);
+  }
+}
+
 // ---------- Broker list ----------
 let allPortalBrokers=[];
 let pendingCounts={};
@@ -744,6 +764,12 @@ async function downloadSelected(){
     if(!savedDirectly){
       XLSX.writeFile(wb, fname);
     }
+
+    // Also email the same file to the owner's own inbox, so it can be
+    // opened/forwarded straight from a phone -- fire-and-forget, never
+    // blocks or fails the download/sent-marking that follows. Reuses
+    // the exact same workbook already built above (base64, not array).
+    emailDownloadToSelf(fname, currentBrokerName, wb);
 
     // Mark each selected row as sent (sent_at drives both the 15-day
     // "stay visible in green" window in loadLeads() and the 15-day
