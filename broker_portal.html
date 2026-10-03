@@ -130,7 +130,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div class="table-card">
       <table>
-        <thead><tr><th>Name</th><th>Phone</th><th>Pending Leads</th><th>Shared / Quota</th><th></th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Phone</th><th>Shared / Quota</th><th></th><th></th></tr></thead>
         <tbody id="brokerListBody"></tbody>
       </table>
     </div>
@@ -336,14 +336,9 @@ async function emailDownloadToSelf(filename, brokerName, wb){
 
 // ---------- Broker list ----------
 let allPortalBrokers=[];
-let pendingCounts={};
-
 async function loadBrokerList(){
   const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,portal_leads_shared_count,portal_lead_quota&order=name.asc");
   allPortalBrokers=brokers;
-  const counts=await supaGet("broker_portal_leads?status=eq.pending&select=broker_id");
-  pendingCounts={};
-  counts.forEach(r=>{ pendingCounts[r.broker_id]=(pendingCounts[r.broker_id]||0)+1; });
   renderBrokerList();
 }
 
@@ -355,18 +350,16 @@ function renderBrokerList(){
     return (b.name||"").toLowerCase().includes(q) || (b.phone||"").includes(q.replace(/\D/g,"")||q);
   });
   if(!filtered.length){
-    body.innerHTML=`<tr><td colspan="6" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="5" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
     return;
   }
   body.innerHTML=filtered.map(b=>{
-    const count=pendingCounts[b.id]||0;
     const sharedCount=b.portal_leads_shared_count||0;
     const quota=(b.portal_lead_quota===null||b.portal_lead_quota===undefined)?null:b.portal_lead_quota;
     const quotaReached=quota!==null && sharedCount>=quota;
     return `<tr>
       <td style="font-weight:600">${escHtml(b.name||"Unnamed")}</td>
       <td style="color:var(--ink2)">+91 ${escHtml(b.phone||"")}</td>
-      <td>${count>0?`<span class="badge b-count">${count} pending</span>`:`<span style="color:var(--ink3);font-size:12px">None yet</span>`}</td>
       <td><span class="badge ${quotaReached?"b-count":"b-ok"}">${sharedCount} / ${quota===null?"∞":quota} shared</span></td>
       <td><button class="btn btn-ghost" onclick="editQuota('${b.id}', ${quota===null?"null":quota})">Edit quota</button></td>
       <td><button class="btn btn-teal" onclick="openPotentialData('${b.id}','${escHtml(b.name||"").replace(/'/g,"\\'")}')">Potential Data</button></td>
