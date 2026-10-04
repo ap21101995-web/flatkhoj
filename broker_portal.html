@@ -164,6 +164,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <th class="sortable-th" id="thGender" onclick="setSort('gender')">Gender</th>
           <th class="sortable-th" id="thRequirement" onclick="setSort('requirement')">Requirement</th>
           <th class="sortable-th" id="thArea" onclick="setSort('area')">Areas</th>
+          <th class="sortable-th" id="thDate" onclick="setSort('date')">Date</th>
         </tr></thead>
         <tbody id="leadsTableBody"></tbody>
       </table>
@@ -467,7 +468,7 @@ let currentLeads=[];
 let selectedLeadIds=new Set();
 let currentBrokerShared=0, currentBrokerQuota=null; // null quota = no limit
 const REACTIVATION_DAYS=15; // keep in sync with vanita_lead_report.py's REACTIVATION_DAYS
-let sortField=null;   // 'requirement' | 'area' | 'gender' | null
+let sortField=null;   // 'requirement' | 'area' | 'gender' | 'date' | null
 let sortDir=1;         // 1 = ascending (as defined by the rank functions below), -1 = reversed
 
 async function openPotentialData(brokerId, brokerName){
@@ -576,7 +577,7 @@ function setSort(field){
   renderLeadsTable();
 }
 function updateSortButtons(){
-  const labels={requirement:["thRequirement","Requirement"], area:["thArea","Areas"], gender:["thGender","Gender"]};
+  const labels={requirement:["thRequirement","Requirement"], area:["thArea","Areas"], gender:["thGender","Gender"], date:["thDate","Date"]};
   Object.entries(labels).forEach(([field,[id,label]])=>{
     const th=document.getElementById(id);
     if(field===sortField){
@@ -602,11 +603,15 @@ function renderLeadsTable(){
       if(sortField==="requirement") cmp=requirementRank(a.requirement)-requirementRank(b.requirement);
       else if(sortField==="gender") cmp=genderRank(a.gender)-genderRank(b.gender);
       else if(sortField==="area") cmp=(a.areas||"").localeCompare(b.areas||"");
+      // Date the message was actually posted in the WhatsApp group
+      // (posted_at) -- not when it was pulled into the portal. A lead
+      // with no readable timestamp sorts as the oldest/earliest.
+      else if(sortField==="date") cmp=new Date(a.posted_at||0)-new Date(b.posted_at||0);
       return cmp*sortDir;
     });
   }
   if(!filtered.length){
-    body.innerHTML=`<tr><td colspan="5" class="empty-state">${currentLeads.length?"No leads match that search.":"Nothing pending right now — run the script locally to pull in fresh leads."}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="6" class="empty-state">${currentLeads.length?"No leads match that search.":"Nothing pending right now — run the script locally to pull in fresh leads."}</td></tr>`;
     updateSelectedCount();
     return;
   }
@@ -622,12 +627,14 @@ function renderLeadsTable(){
       ? `<td class="row-select" title="Shared ${l.sent_at?new Date(l.sent_at).toLocaleDateString():""}" style="color:var(--green);font-weight:700">✓</td>`
       : `<td class="row-select"><input type="checkbox" class="chk" ${selectedLeadIds.has(l.id)?"checked":""} ${quotaBlocksThis?"disabled":""} onclick="handleCheckboxClick(event,'${l.id}')"></td>`;
     const sentTag=isSent?` <span style="color:var(--green);font-size:11px;font-weight:700">· Shared</span>`:"";
+    const postedDateStr=l.posted_at ? new Date(l.posted_at).toLocaleDateString() : "—";
     return `<tr${rowAttr}>
       ${checkboxCell}
       <td class="clickable-row" onclick="openMsgModal('${l.id}')" style="font-weight:600">+91 ${escHtml(l.phone)}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.gender||"—")}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.requirement||"—")}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.areas||"—")}${sentTag}</td>
+      <td class="clickable-row" onclick="openMsgModal('${l.id}')">${postedDateStr}</td>
     </tr>`;
   }).join("");
   updateSelectedCount();
