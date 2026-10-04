@@ -156,6 +156,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="search-row">
       <input class="filter-input" id="leadSearchInput" placeholder="Search by number, requirement, or area..." oninput="renderLeadsTable()">
     </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+      <div style="font-size:13px; color:var(--ink3)"><span class="selected-count-text">0</span> selected</div>
+      <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button>
+    </div>
     <div class="table-card">
       <table>
         <thead><tr>
@@ -170,8 +174,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       </table>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
-      <div style="font-size:13px; color:var(--ink3)"><span id="selectedCount">0</span> selected</div>
-      <button class="btn btn-solid" id="downloadBtn" onclick="downloadSelected()" disabled>Download Excel</button>
+      <div style="font-size:13px; color:var(--ink3)"><span class="selected-count-text">0</span> selected</div>
+      <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button>
     </div>
   </div>
 </div>
@@ -322,13 +326,13 @@ async function supaPatch(path, query, body){
 // key). Deliberately swallows any failure -- the download the person
 // can already see/use must never be held up or appear to fail just
 // because the email copy didn't go out.
-async function emailDownloadToSelf(filename, brokerName, wb){
+async function emailDownloadToSelf(filename, brokerName, dateLabel, wb){
   try{
     const xlsxBase64=XLSX.write(wb,{bookType:"xlsx",type:"base64"});
     const res=await fetch(`${SUPA_URL}/functions/v1/send-portal-download`,{
       method:"POST",
       headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},
-      body:JSON.stringify({brokerName, filename, xlsxBase64}),
+      body:JSON.stringify({brokerName, filename, dateLabel, xlsxBase64}),
     });
     if(!res.ok) console.error("Email copy failed to send:",res.status, await res.text());
   }catch(e){
@@ -665,10 +669,14 @@ function toggleSelect(id){
   updateSelectedCount();
 }
 
+// Updates BOTH copies of the selected-count text and Download Excel
+// button -- one above the table, one below, so it's reachable without
+// scrolling either way once the lead list gets long.
 function updateSelectedCount(){
-  document.getElementById("selectedCount").textContent=selectedLeadIds.size;
+  document.querySelectorAll(".selected-count-text").forEach(el=>el.textContent=selectedLeadIds.size);
   const remaining=getRemainingQuota();
-  document.getElementById("downloadBtn").disabled=selectedLeadIds.size===0 || (remaining!==null && remaining<=0 && selectedLeadIds.size===0);
+  const shouldDisable=selectedLeadIds.size===0 || (remaining!==null && remaining<=0 && selectedLeadIds.size===0);
+  document.querySelectorAll(".download-excel-btn").forEach(btn=>btn.disabled=shouldDisable);
 }
 
 function openMsgModal(id){
@@ -752,10 +760,10 @@ async function updateFolderStatus(){
 
 // ---------- Download selected -> xlsx, then mark as sent ----------
 async function downloadSelected(){
-  const btn=document.getElementById("downloadBtn");
+  const btns=document.querySelectorAll(".download-excel-btn");
   const selected=currentLeads.filter(l=>selectedLeadIds.has(l.id));
   if(!selected.length) return;
-  btn.disabled=true; btn.textContent="Preparing...";
+  btns.forEach(b=>{b.disabled=true; b.textContent="Preparing...";});
 
   try{
     // 4 columns only, exactly as asked -- no phone-formatting/prefix
@@ -778,6 +786,10 @@ async function downloadSelected(){
     // the same broker on the same day never silently overwrites the
     // first file -- each download is its own file.
     const fname=`Flatkhoj_${currentBrokerName.replace(/[^a-zA-Z0-9]/g,"")}_${dd}${mon}${now.getFullYear()}_${hh}${mi}.xlsx`;
+    // Same dd/mon/year already computed above, just spaced out -- so
+    // the emailed subject's date can never drift from the saved file's
+    // own date.
+    const emailDateLabel=`${dd} ${mon} ${now.getFullYear()}`;
 
     // Try writing straight into the broker's saved folder first (File
     // System Access API); fall back to a normal browser download if no
@@ -811,7 +823,7 @@ async function downloadSelected(){
     // opened/forwarded straight from a phone -- fire-and-forget, never
     // blocks or fails the download/sent-marking that follows. Reuses
     // the exact same workbook already built above (base64, not array).
-    emailDownloadToSelf(fname, currentBrokerName, wb);
+    emailDownloadToSelf(fname, currentBrokerName, emailDateLabel, wb);
 
     // Mark each selected row as sent (sent_at drives both the 15-day
     // "stay visible in green" window in loadLeads() and the 15-day
@@ -845,7 +857,7 @@ async function downloadSelected(){
     console.error("Download failed:",e);
     alert("Something went wrong generating the file. Nothing was marked as sent — try again.");
   }finally{
-    btn.disabled=false; btn.textContent="Download Excel";
+    btns.forEach(b=>{b.disabled=false; b.textContent="Download Excel";});
   }
 }
 </script>
