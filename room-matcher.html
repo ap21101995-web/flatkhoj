@@ -198,6 +198,7 @@
 <div class="hero">
   <div class="hero-badge" id="rm-hero-badge">Internal Tool</div>
   <h1>Room Matcher</h1>
+  <div id="rm-quota-chip" style="display:none;margin-bottom:10px;background:#e8f5f1;color:#0f7b6c;font-weight:700;font-size:12.5px;padding:6px 14px;border-radius:20px"></div>
   <p>Tap open a room, mark it vacant, and tell us how it's shared — we'll find real people already looking for exactly that.</p>
 </div>
 
@@ -281,13 +282,50 @@ function isDemoUser() {
   } catch (e) { return false; }
 }
 const IS_DEMO = isDemoUser() && !isOwnerUser();
-if (!isOwnerUser() && !isDemoUser()) {
+// CLIENT (broker) mode: switched on per client from the admin panel. Their
+// unlocks are counted against their monthly contacts by the server.
+let IS_CLIENT = false;
+let RM_USED = 0, RM_QUOTA = 0;
+function rmSessionToken() {
+  try {
+    const raw = localStorage.getItem('fmh_user') || localStorage.getItem('fk_login_v2');
+    const u = raw ? JSON.parse(raw) : null;
+    return u && u.sessionToken ? u.sessionToken : '';
+  } catch (e) { return ''; }
+}
+async function rmCall(body) {
+  const res = await fetch(`${SUPA_URL}/functions/v1/room-matcher-actions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify(Object.assign({ sessionToken: rmSessionToken() }, body))
+  });
+  return res.json();
+}
+function rmDeny() {
   document.getElementById('rm-app').style.display = 'none';
   document.getElementById('rm-access-denied').style.display = 'block';
-  // Nothing below this point should run for a non-owner -- throwing here
-  // stops the rest of this script block (area list, matching logic, the
-  // rebuildHouse() call at the bottom) from ever executing.
-  throw new Error('Room Matcher: owner-only, access denied');
+}
+function rmRenderQuota() {
+  const el = document.getElementById('rm-quota-chip');
+  if (!el) return;
+  if (!IS_CLIENT) { el.style.display = 'none'; return; }
+  const used = Number(RM_USED) || 0;
+  el.textContent = RM_QUOTA > 0 ? `Contacts used this month: ${used} / ${RM_QUOTA}` : `Contacts used this month: ${used}`;
+  el.style.display = 'inline-block';
+}
+
+// Decide who gets in: owners and demo logins immediately; everyone else only
+// if their client record has Room Matcher switched on (checked server-side).
+if (!isOwnerUser() && !isDemoUser()) {
+  document.getElementById('rm-app').style.visibility = 'hidden';
+  rmCall({ action: 'status' }).then(r => {
+    if (r && r.success && r.enabled) {
+      IS_CLIENT = true; RM_USED = r.used; RM_QUOTA = r.quota;
+      document.getElementById('rm-app').style.visibility = 'visible';
+      const b = document.getElementById('rm-hero-badge'); if (b) b.textContent = 'Room Matcher';
+      rmRenderQuota();
+    } else { rmDeny(); }
+  }).catch(rmDeny);
 }
 
 function normKey(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
@@ -505,7 +543,11 @@ function renderHouse() {
                 <div class="match-meta" style="color:${postedInfo.stale ? '#c0392b' : '#888'};font-weight:${postedInfo.stale ? '700' : '400'}">${postedInfo.label}</div>
                 ${m.demo
                   ? `<a href="#" class="match-unlock-btn" onclick="event.stopPropagation();event.preventDefault();showDemoSeeker(${room.id},${idx})">Unlock Contact</a>`
-                  : `<a href="/listing_detail.html?id=${m.id}" target="_blank" class="match-unlock-btn" onclick="event.stopPropagation()">Unlock Contact</a>`}
+                  : (IS_CLIENT
+                      ? (m.phone
+                          ? `<div class="match-phone" onclick="event.stopPropagation()" style="margin-top:8px;font-weight:800;color:#141414">📞 <a href="tel:${m.phone}" style="color:#0f7b6c;text-decoration:none">${m.phone}</a> · <a href="https://wa.me/91${String(m.phone).replace(/\D/g,'').slice(-10)}" target="_blank" style="color:#0f7b6c;text-decoration:none">WhatsApp</a></div>`
+                          : `<a href="#" class="match-unlock-btn" onclick="event.stopPropagation();event.preventDefault();unlockClientMatch(${room.id},${idx})">Unlock Contact</a>`)
+                      : `<a href="/listing_detail.html?id=${m.id}" target="_blank" class="match-unlock-btn" onclick="event.stopPropagation()">Unlock Contact</a>`)}
               </div>
               <div class="match-counter">${bed.matchIndex + 1} / ${bed.matches.length}</div>
             </div>`;
@@ -744,6 +786,22 @@ async function findMatches() {
     btn.disabled = false;
     btn.textContent = '🔍 Find Potential Occupants';
   }
+}
+
+async function unlockClientMatch(roomId, bedIdx) {
+  const room = rooms.find(r => r.id === roomId);
+  const bed = room.beds[bedIdx];
+  const m = bed.matches[bed.matchIndex];
+  if (!m.phone && !confirm('Unlock this contact? It will count as 1 contact from your monthly quota.')) return;
+  try {
+    const r = await rmCall({ action: 'unlock', listingId: m.id });
+    if (!r || !r.success) { alert((r && r.error) || 'Could not unlock. Please try again.'); return; }
+    // Same seeker may appear under several beds -- show the number on all of them.
+    rooms.forEach(rm => rm.beds.forEach(b => (b.matches || []).forEach(x => { if (x.id === m.id) x.phone = r.phone; })));
+    RM_USED = r.used; RM_QUOTA = r.quota;
+    rmRenderQuota();
+    renderHouse();
+  } catch (e) { alert('Something went wrong. Please try again.'); }
 }
 
 function cycleBedMatch(roomId, bedIdx, direction) {
