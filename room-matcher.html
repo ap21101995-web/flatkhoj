@@ -196,7 +196,7 @@
 </header>
 
 <div class="hero">
-  <div class="hero-badge">Internal Tool</div>
+  <div class="hero-badge" id="rm-hero-badge">Internal Tool</div>
   <h1>Room Matcher</h1>
   <p>Tap open a room, mark it vacant, and tell us how it's shared — we'll find real people already looking for exactly that.</p>
 </div>
@@ -267,7 +267,21 @@ function isOwnerUser() {
     return phone === '9538584612' || phone === '9004325226' || u.isOwner === true || u.isOwner === 'true';
   } catch (e) { return false; }
 }
-if (!isOwnerUser()) {
+// DEMO ACCOUNTS: these logins get Room Matcher too, but they are shown
+// SAMPLE seekers only (generated in the browser, never real people's
+// posts) until there are enough real flatmate-wanted listings.
+const DEMO_PHONES = ['6266495488'];
+function isDemoUser() {
+  try {
+    const raw = localStorage.getItem('fmh_user') || localStorage.getItem('fk_login_v2');
+    if (!raw) return false;
+    const u = JSON.parse(raw);
+    const phone = String(u.phone || '').replace(/\D/g, '').slice(-10);
+    return DEMO_PHONES.indexOf(phone) !== -1;
+  } catch (e) { return false; }
+}
+const IS_DEMO = isDemoUser() && !isOwnerUser();
+if (!isOwnerUser() && !isDemoUser()) {
   document.getElementById('rm-app').style.display = 'none';
   document.getElementById('rm-access-denied').style.display = 'block';
   // Nothing below this point should run for a non-owner -- throwing here
@@ -485,11 +499,13 @@ function renderHouse() {
           bedBottomHtml = `
             <div class="match-carousel">
               <button class="match-arrow" onclick="cycleBedMatch(${room.id},${idx},1)" title="See next option">←</button>
-              <div class="match-content" onclick="viewMatchRequirement('${m.id}')">
+              <div class="match-content" onclick="${m.demo ? `showDemoSeeker(${room.id},${idx})` : `viewMatchRequirement('${m.id}')`}">
                 <div class="match-name">${name}</div>
                 <div class="match-budget">${rentDisplay}</div>
                 <div class="match-meta" style="color:${postedInfo.stale ? '#c0392b' : '#888'};font-weight:${postedInfo.stale ? '700' : '400'}">${postedInfo.label}</div>
-                <a href="/listing_detail.html?id=${m.id}" target="_blank" class="match-unlock-btn" onclick="event.stopPropagation()">Unlock Contact</a>
+                ${m.demo
+                  ? `<a href="#" class="match-unlock-btn" onclick="event.stopPropagation();event.preventDefault();showDemoSeeker(${room.id},${idx})">Unlock Contact</a>`
+                  : `<a href="/listing_detail.html?id=${m.id}" target="_blank" class="match-unlock-btn" onclick="event.stopPropagation()">Unlock Contact</a>`}
               </div>
               <div class="match-counter">${bed.matchIndex + 1} / ${bed.matches.length}</div>
             </div>`;
@@ -551,6 +567,101 @@ function renderHouse() {
   }).join('');
 }
 
+// ---- Sample seekers (demo accounts only) ----
+const DEMO_MALE = ['Rohan','Aarav','Vihaan','Kunal','Siddharth','Aditya','Nikhil','Rahul','Varun','Karan','Harsh','Yash','Pranav','Mohit','Ankit','Tanmay','Abhishek','Saurabh','Devansh','Neeraj','Ishaan','Manav','Rishabh','Gaurav','Chirag','Sameer','Akshay','Vivek','Shubham','Omkar'];
+const DEMO_FEMALE = ['Priya','Ananya','Riya','Sneha','Kavya','Pooja','Neha','Isha','Aditi','Shruti','Meera','Tanvi','Sanya','Divya','Naina','Ritika','Simran','Pallavi','Aishwarya','Komal','Mansi','Trisha','Radhika','Vaidehi','Janhavi','Ishita','Nidhi','Sakshi','Payal','Bhavna'];
+const DEMO_SURNAME = ['Sharma','Mehta','Patil','Iyer','Desai','Kulkarni','Nair','Joshi','Gupta','Shah','Reddy','Menon','Verma','Kapoor','Bhatt','Naik','Pillai','Chavan','Singh','Jain','Rao','Deshmukh','Agarwal','Malhotra','Shetty','Bose','Khanna','Pawar','Thakur','Saxena'];
+const DEMO_NOTES = [
+  'Working professional, non-smoker, looking to move in soon.',
+  'Joining a new job nearby, needs a clean and well-kept place.',
+  'Student doing a PG course, wants a calm, friendly flatmate setup.',
+  'Relocating to Mumbai next week, can move in immediately.',
+  'Prefers a furnished room with good connectivity.',
+  'IT professional, works from office 4 days a week.',
+  'Looking for a long-term stay, no pets, no parties.',
+  'Early riser, vegetarian, wants a peaceful home.'
+];
+
+// Deterministic-ish random so the same search looks stable on re-render.
+function demoRand(seed) {
+  let s = seed % 2147483647; if (s <= 0) s += 2147483646;
+  return function () { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; };
+}
+function demoHash(str) { let h = 7; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h || 1; }
+
+// Typical rent when the owner hasn't typed a bed rent yet.
+function demoTypicalRent(groupType) {
+  if (groupType === 'Single Room') return 24000;
+  if (groupType === 'Double Sharing') return 14000;
+  return 9500; // Triple
+}
+
+// Builds `count` sample seekers for one bed. `usedNames` is shared across
+// the whole search so no two seekers on the page ever share a name.
+let demoSeq = 1;
+function generateDemoSeekers(bed, area, genderPref, usedNames, count) {
+  const rnd = demoRand(demoHash(area + '|' + bed.groupType + '|' + (bed.rent || 0) + '|' + genderPref + '|' + usedNames.size));
+  const base = bed.rent ? Number(bed.rent) : demoTypicalRent(bed.groupType);
+  const roomWord = bed.groupType === 'Single Room' ? 'Single' : bed.groupType === 'Double Sharing' ? 'Double' : 'Triple';
+  const out = [];
+  let guard = 0;
+  while (out.length < count && guard++ < 500) {
+    const gender = genderPref ? genderPref : (rnd() < 0.5 ? 'Male' : 'Female');
+    const pool = gender === 'Female' ? DEMO_FEMALE : DEMO_MALE;
+    const first = pool[Math.floor(rnd() * pool.length)];
+    const name = first + ' ' + DEMO_SURNAME[Math.floor(rnd() * DEMO_SURNAME.length)];
+    // Prefer a first name not used yet on the page (relax after many tries).
+    if (usedNames.has(name) || (guard < 300 && usedNames.has('f:' + first))) continue;
+    usedNames.add(name); usedNames.add('f:' + first);
+    // Budget within roughly +/-12% of the bed's rent, rounded to Rs 500.
+    // First card is the closest; later ones drift a little further out.
+    const spread = 0.02 + 0.10 * (out.length / Math.max(1, count - 1));
+    const sign = rnd() < 0.5 ? -1 : 1;
+    let rent = Math.round(base * (1 + sign * spread * (0.6 + 0.4 * rnd())) / 500) * 500;
+    if (rent < 3000) rent = 3000;
+    const hoursAgo = 1 + Math.floor(rnd() * 40);
+    out.push({
+      id: 'demo-' + (demoSeq++),
+      demo: true,
+      poster_name: name,
+      areas: [area],
+      room_type: roomWord,
+      rent_amount: rent,
+      description: DEMO_NOTES[Math.floor(rnd() * DEMO_NOTES.length)],
+      gender_preference: gender,
+      created_at: new Date(Date.now() - hoursAgo * 3600 * 1000).toISOString(),
+      phone_mask: '9' + Math.floor(rnd() * 9 + 1) + '•••••' + String(Math.floor(rnd() * 900 + 100))
+    });
+  }
+  // closest budget first
+  out.sort((a, b) => Math.abs(a.rent_amount - base) - Math.abs(b.rent_amount - base));
+  return out;
+}
+
+function showDemoSeeker(roomId, bedIdx) {
+  const room = rooms.find(r => r.id === roomId);
+  const m = room.beds[bedIdx].matches[room.beds[bedIdx].matchIndex];
+  const posted = formatPostedAgo(m.created_at).label;
+  const old = document.getElementById('rm-demo-modal'); if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'rm-demo-modal';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  el.onclick = () => el.remove();
+  el.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:22px;font-family:'Plus Jakarta Sans',sans-serif">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">${m.poster_name}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">${posted}</div>
+    <div style="font-size:13px;line-height:1.7;color:#333">
+      <b>Looking for:</b> ${m.room_type} room in ${m.areas[0]}<br>
+      <b>Budget:</b> ₹${Number(m.rent_amount).toLocaleString('en-IN')}/month<br>
+      <b>Gender:</b> ${m.gender_preference}<br>
+      <b>About:</b> ${m.description}<br>
+      <b>Contact:</b> ${m.phone_mask} <span style="color:#888">(unlocks on the live plan)</span>
+    </div>
+    <button onclick="document.getElementById('rm-demo-modal').remove()" style="margin-top:16px;width:100%;padding:11px;border:0;border-radius:10px;background:#1a1a1a;color:#fff;font-weight:700;cursor:pointer">Close</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
 // ---- Matching (per vacant bed, not just per room) ----
 async function findMatches() {
   const area = document.getElementById('rm-area').value.trim();
@@ -570,6 +681,17 @@ async function findMatches() {
   btn.textContent = 'Searching…';
 
   try {
+    if (IS_DEMO) {
+      // Demo account: sample seekers only, no database call.
+      const usedNames = new Set();
+      vacantBedRefs.forEach(({ bed }) => {
+        bed.matches = generateDemoSeekers(bed, area, genderPref, usedNames, 6);
+        bed.matchIndex = 0;
+        bed.searched = true;
+      });
+      renderHouse();
+      return;
+    }
     // Live postings only (is_active=eq.true), and only from the last 7
     // days -- an older seeker post has likely already found a place, so
     // surfacing it would just waste a call.
@@ -635,6 +757,8 @@ function cycleBedMatch(roomId, bedIdx, direction) {
 function viewMatchRequirement(listingId) {
   window.open('/listing_detail.html?id=' + listingId, '_blank');
 }
+
+if (IS_DEMO) { const b = document.getElementById('rm-hero-badge'); if (b) b.textContent = 'Room Matcher'; }
 
 // Start with 2 BHK by default
 rebuildHouse();
