@@ -343,7 +343,7 @@ async function emailDownloadToSelf(filename, brokerName, dateLabel, wb){
 // ---------- Broker list ----------
 let allPortalBrokers=[];
 async function loadBrokerList(){
-  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,portal_leads_shared_count,portal_lead_quota,billing_cycle_start,billing_cycle,is_active,subscription_status&order=name.asc");
+  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,contacts_sent_this_month,contacts_per_month,billing_cycle_start,billing_cycle,is_active,subscription_status&order=name.asc");
   allPortalBrokers=brokers;
   renderBrokerList();
 }
@@ -374,8 +374,10 @@ function renderBrokerList(){
     return;
   }
   body.innerHTML=filtered.map(b=>{
-    const sharedCount=b.portal_leads_shared_count||0;
-    const quota=(b.portal_lead_quota===null||b.portal_lead_quota===undefined)?null:b.portal_lead_quota;
+    // Same numbers the admin Brokers page uses: contacts_sent_this_month / contacts_per_month.
+    // A quota of 0 or blank means "no limit set".
+    const sharedCount=Number(b.contacts_sent_this_month)||0;
+    const quota=(!b.contacts_per_month||Number(b.contacts_per_month)<=0)?null:Number(b.contacts_per_month);
     const quotaReached=quota!==null && sharedCount>=quota;
     const end=cycleEndDate(b);
     const endLabel=end?end.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"—";
@@ -415,7 +417,7 @@ async function togglePortalBrokerActive(brokerId){
 }
 
 async function editQuota(brokerId, currentQuota){
-  const input=prompt("Set this broker's lead quota (how many contacts they can receive). Leave blank for no limit:", currentQuota===null?"":String(currentQuota));
+  const input=prompt("Set this broker's monthly contact quota (same number shown in Admin → Brokers). Leave blank for no limit:", currentQuota===null?"":String(currentQuota));
   if(input===null) return; // cancelled
   const trimmed=input.trim();
   let newQuota=null;
@@ -427,7 +429,7 @@ async function editQuota(brokerId, currentQuota){
     }
     newQuota=n;
   }
-  const ok=await supaPatch("brokers", `id=eq.${brokerId}`, {portal_lead_quota:newQuota});
+  const ok=await supaPatch("brokers", `id=eq.${brokerId}`, {contacts_per_month:(newQuota===null?0:newQuota)});
   if(ok) await loadBrokerList();
 }
 
@@ -495,10 +497,10 @@ async function openPotentialData(brokerId, brokerName){
 // quota banner/status line + re-renders the table so checkbox disabled
 // states stay correct.
 async function refreshBrokerQuotaState(){
-  const rows=await supaGet(`brokers?id=eq.${currentBrokerId}&select=portal_leads_shared_count,portal_lead_quota`);
+  const rows=await supaGet(`brokers?id=eq.${currentBrokerId}&select=contacts_sent_this_month,contacts_per_month`);
   const row=rows[0]||{};
-  currentBrokerShared=row.portal_leads_shared_count||0;
-  currentBrokerQuota=(row.portal_lead_quota===null||row.portal_lead_quota===undefined)?null:row.portal_lead_quota;
+  currentBrokerShared=Number(row.contacts_sent_this_month)||0;
+  currentBrokerQuota=(!row.contacts_per_month||Number(row.contacts_per_month)<=0)?null:Number(row.contacts_per_month);
   updateQuotaDisplay();
 }
 
@@ -838,9 +840,9 @@ async function downloadSelected(){
     // just sent -- fetch-then-write rather than a blind increment,
     // since this is a plain REST PATCH with no server-side atomic
     // increment available here.
-    const brokerRow=await supaGet(`brokers?id=eq.${currentBrokerId}&select=portal_leads_shared_count`);
-    const prevCount=(brokerRow[0]&&brokerRow[0].portal_leads_shared_count)||0;
-    await supaPatch("brokers", `id=eq.${currentBrokerId}`, {portal_leads_shared_count: prevCount+selected.length});
+    const brokerRow=await supaGet(`brokers?id=eq.${currentBrokerId}&select=contacts_sent_this_month`);
+    const prevCount=Number(brokerRow[0]&&brokerRow[0].contacts_sent_this_month)||0;
+    await supaPatch("brokers", `id=eq.${currentBrokerId}`, {contacts_sent_this_month: prevCount+selected.length});
 
     selectedLeadIds=new Set();
     await refreshBrokerQuotaState();
