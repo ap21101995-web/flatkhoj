@@ -176,6 +176,7 @@
   footer { text-align:center; padding:24px 16px; font-size:12px; color:#999; }
   footer a { color:#0f7b6c; text-decoration:none; }
 </style>
+<meta name="robots" content="noindex,nofollow">
 </head>
 <body>
 
@@ -265,7 +266,7 @@ function isOwnerUser() {
     if (!raw) return false;
     const u = JSON.parse(raw);
     const phone = String(u.phone || '').replace(/\D/g, '').slice(-10);
-    return phone === '9538584612' || phone === '9004325226' || u.isOwner === true || u.isOwner === 'true';
+    return phone === '9538584612' || phone === '9004325226';
   } catch (e) { return false; }
 }
 // DEMO ACCOUNTS: these logins get Room Matcher too, but they are shown
