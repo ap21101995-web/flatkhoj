@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FlatKhoj Broker Data Portal — v1 (2026-10-02) -->
+<!-- FlatKhoj Broker Data Portal — v2 (2026-10-08: All Brokers view) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -94,6 +94,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .empty-state { text-align:center; padding:40px 20px; color:var(--ink3); font-size:13px; }
 .quota-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
 .quota-banner { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; margin-bottom:14px; }
+/* ---- All Brokers (combined view) ---- */
+.ab-row td { background:rgba(230,168,23,0.16) !important; border-bottom:1px solid rgba(230,168,23,0.35); }
+.ab-row td:first-child { border-left:4px solid var(--gold); font-weight:800; color:var(--gold); }
+.b-gold { background:var(--gold-bg); color:var(--gold); }
+.btn-gold { background:var(--gold); color:#1a1300; }
+.btn-gold:hover { filter:brightness(1.08); }
+.ab-chip { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 20px; border-bottom:1px solid var(--border); }
+.ab-chip.off .ab-name { text-decoration:line-through; color:var(--ink3); }
+.ab-x { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); width:26px; height:26px; border-radius:50%; cursor:pointer; font-weight:800; line-height:1; font-family:var(--font); }
+.ab-plus { background:var(--green-bg); color:var(--green); border:1px solid rgba(46,204,113,0.3); width:26px; height:26px; border-radius:50%; cursor:pointer; font-weight:800; line-height:1; font-family:var(--font); }
+.ab-sub { font-size:11px; color:var(--ink3); margin-top:2px; }
+.ab-sec { padding:12px 20px 6px; font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; }
 </style>
 </head>
 <body>
@@ -176,6 +188,53 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="selected-count-text">0</span> selected</div>
       <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button>
+    </div>
+  </div>
+
+  <!-- ============== ALL BROKERS PAGE ============== -->
+  <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
+    <div class="page-head">
+      <div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers</div>
+        <div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
+      </div>
+      <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
+    </div>
+    <div class="search-row">
+      <input class="filter-input" id="abSearchInput" placeholder="Search by number, requirement, or area..." oninput="abRender()">
+      <button class="btn btn-ghost" onclick="abLoad()">&#8635; Refresh</button>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+      <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
+      <button class="btn btn-gold ab-download-btn" onclick="abDownloadSelected()" disabled>Download Excel (per broker)</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr>
+          <th class="row-select"><input type="checkbox" class="chk" id="abSelectAll" onclick="abToggleAll(this.checked)"></th>
+          <th>Number</th><th>Gender</th><th>Requirement</th><th>Areas</th><th>Date</th><th>Brokers</th><th>Approve</th>
+        </tr></thead>
+        <tbody id="abBody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
+      <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
+      <button class="btn btn-gold ab-download-btn" onclick="abDownloadSelected()" disabled>Download Excel (per broker)</button>
+    </div>
+  </div>
+</div>
+
+<!-- All Brokers: who can receive this lead -->
+<div class="modal-backdrop" id="abBrokersModal" style="display:none">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-head">
+      <div><div class="modal-title">Brokers who can receive this lead</div><div class="modal-sub" id="abModalSub"></div></div>
+      <button class="modal-close" onclick="abCloseModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="abModalBody"></div>
+    <div class="modal-foot">
+      <div style="font-size:13px;color:var(--ink2)" id="abModalCount"></div>
+      <button class="btn btn-ghost" onclick="abCloseModal()">Done</button>
     </div>
   </div>
 </div>
@@ -365,15 +424,23 @@ function cycleEndDate(b){
 function renderBrokerList(){
   const q=(document.getElementById("brokerSearchInput").value||"").toLowerCase().trim();
   const body=document.getElementById("brokerListBody");
+  const allRow=`<tr class="ab-row">
+      <td>All Brokers</td>
+      <td style="color:var(--ink2)">—</td>
+      <td><span class="badge b-gold">Combined view</span></td>
+      <td style="color:var(--ink2)">—</td>
+      <td><span class="badge b-gold">Pending seekers</span></td>
+      <td colspan="3"><button class="btn btn-gold" onclick="openAllBrokers()">Open All Brokers</button></td>
+    </tr>`;
   const filtered=allPortalBrokers.filter(b=>{
     if(!q) return true;
     return (b.name||"").toLowerCase().includes(q) || (b.phone||"").includes(q.replace(/\D/g,"")||q);
   });
   if(!filtered.length){
-    body.innerHTML=`<tr><td colspan="8" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
+    body.innerHTML=allRow+`<tr><td colspan="8" class="empty-state">No brokers ${q?"match that search":"added to the portal yet"}.</td></tr>`;
     return;
   }
-  body.innerHTML=filtered.map(b=>{
+  body.innerHTML=allRow+filtered.map(b=>{
     // Same numbers the admin Brokers page uses: contacts_sent_this_month / contacts_per_month.
     // A quota of 0 or blank means "no limit set".
     const sharedCount=Number(b.contacts_sent_this_month)||0;
@@ -861,6 +928,367 @@ async function downloadSelected(){
   }finally{
     btns.forEach(b=>{b.disabled=false; b.textContent="Download Excel";});
   }
+}
+
+// =====================================================================
+// ALL BROKERS  (combined view, pinned at the top of the broker list)
+// ---------------------------------------------------------------------
+// Rows are the seeker listings that are still PENDING approval on the
+// main site (listings: pending_approval=true, listing_type=flat_wanted).
+// A broker can receive a row when
+//     (a) the listing's area is tagged on the broker row (brokers.areas), OR
+//     (b) the poster's number is already in that broker's Potential Data
+//         (broker_portal_leads) -- that is how the Excel-only clients are
+//         matched, since their areas live in the Python CLIENTS list,
+// AND the number has NOT already been shared with that broker in the last
+// REACTIVATION_DAYS (a 'sent' row in their Potential Data).
+// =====================================================================
+const AB_WA_STATUS=["active","bank_approval_pending","authorized","initialized","pending"];
+let abListings=[], abBrokers=[], abLeadIdx={}, abExcluded={}, abSelected=new Set(), abModalListingId=null, abBusy=false;
+
+function abDigits(p){ return String(p||"").replace(/\D/g,"").slice(-10); }
+function abNorm(s){ return String(s==null?"":s).trim().replace(/\s+/g," ").toLowerCase(); }
+function abBase(z){ return abNorm(z).replace(/ (east|west)$/,""); }
+function abArr(v){
+  if(Array.isArray(v)) return v.filter(Boolean).map(String);
+  if(typeof v==="string" && v.trim()){
+    const t=v.trim();
+    if(t.startsWith("{")||t.startsWith("[")){
+      try{ const j=JSON.parse(t.startsWith("{")?"["+t.slice(1,-1)+"]":t); if(Array.isArray(j)) return j.map(String); }catch(e){}
+      return t.replace(/^[\[{]|[\]}]$/g,"").split(",").map(x=>x.replace(/^"|"$/g,"").trim()).filter(Boolean);
+    }
+    return t.split(",").map(x=>x.trim()).filter(Boolean);
+  }
+  return [];
+}
+// broker area tag vs listing area: exact match, or a bare broker tag
+// ("Andheri") covering both zones of that name ("Andheri West").
+function abAreaMatch(brokerAreas, listingAreas){
+  const ba=abArr(brokerAreas).map(abNorm), la=abArr(listingAreas).map(abNorm);
+  return la.some(l=>ba.some(b=>b===l || (!/ (east|west)$/.test(b) && abBase(l)===b)));
+}
+function abReq(l){ return l.room_type && l.room_type!=="Undisclosed" ? l.room_type : (l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "Undisclosed"); }
+function abAreasText(l){ return abArr(l.areas).join(", "); }
+
+async function supaGetAll(path){
+  let out=[], off=0;
+  while(true){
+    const chunk=await supaGet(`${path}&limit=1000&offset=${off}`);
+    out=out.concat(chunk);
+    if(chunk.length<1000) break;
+    off+=1000;
+  }
+  return out;
+}
+
+function openAllBrokers(){
+  document.getElementById("pg-brokerList").style.display="none";
+  document.getElementById("pg-potentialData").style.display="none";
+  document.getElementById("pg-allBrokers").style.display="block";
+  abSelected=new Set();
+  abLoad();
+}
+function abBack(){
+  document.getElementById("pg-allBrokers").style.display="none";
+  document.getElementById("pg-brokerList").style.display="block";
+  loadBrokerList();
+}
+
+async function abLoad(){
+  document.getElementById("abBody").innerHTML=`<tr><td colspan="8" class="empty-state">Loading…</td></tr>`;
+  const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*24*60*60*1000).toISOString();
+  const [listings, brokers, leads]=await Promise.all([
+    supaGetAll("listings?select=id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold&pending_approval=eq.true&rejected=eq.false&listing_type=eq.flat_wanted&order=created_at.desc"),
+    supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month&is_active=eq.true&order=name.asc"),
+    supaGetAll(`broker_portal_leads?or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,broker_id,phone,status,sent_at&order=created_at.desc`),
+  ]);
+  abListings=listings.filter(l=>abDigits(l.custom_contact_phone).length===10);
+  abBrokers=brokers;
+  abLeadIdx={};
+  leads.forEach(r=>{
+    const ph=abDigits(r.phone);
+    const byPhone=(abLeadIdx[r.broker_id]=abLeadIdx[r.broker_id]||{});
+    const rec=(byPhone[ph]=byPhone[ph]||{pending:[],sent:[]});
+    (r.status==="sent"?rec.sent:rec.pending).push(r);
+  });
+  const ids=new Set(abListings.map(l=>String(l.id)));
+  abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
+  abRender();
+}
+
+// Who can get this listing: {eligible:[{b,tagged,inPot,wa}], received:[{b}]}
+function abCompute(l){
+  const ph=abDigits(l.custom_contact_phone), city=abNorm(l.city||"mumbai");
+  const eligible=[], received=[];
+  abBrokers.forEach(b=>{
+    if(abNorm(b.city||"mumbai")!==city) return;
+    const rec=(abLeadIdx[b.id]||{})[ph]||{pending:[],sent:[]};
+    if(rec.sent.length){ received.push({b}); return; }
+    const tagged=abAreaMatch(b.areas,l.areas), inPot=rec.pending.length>0;
+    if(tagged||inPot){
+      const wa=tagged && AB_WA_STATUS.includes(abNorm(b.subscription_status));
+      eligible.push({b,tagged,inPot,wa});
+    }
+  });
+  return {eligible,received};
+}
+function abIncluded(l){
+  const ex=abExcluded[String(l.id)]||new Set();
+  return abCompute(l).eligible.filter(e=>!ex.has(String(e.b.id)));
+}
+
+function abRender(){
+  const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
+  const body=document.getElementById("abBody");
+  const rows=abListings.filter(l=>{
+    if(!q) return true;
+    return abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q);
+  });
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="8" class="empty-state">${abListings.length?"No pending seekers match that search.":"No seeker listings are waiting for approval right now."}</td></tr>`;
+    abUpdateCount(); return;
+  }
+  body.innerHTML=rows.map(l=>{
+    const id=String(l.id), n=abIncluded(l).length;
+    const hold=l.on_hold?` <span class="badge b-count">On hold</span>`:"";
+    return `<tr>
+      <td class="row-select"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
+      <td class="clickable-row" onclick="abOpenText('${escHtml(id)}')" style="font-weight:600">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
+      <td>${escHtml(l.gender_preference||"—")}</td>
+      <td>${escHtml(abReq(l))}</td>
+      <td>${escHtml(abAreasText(l)||"—")}</td>
+      <td>${l.created_at?new Date(l.created_at).toLocaleDateString():"—"}</td>
+      <td><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
+      <td><button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button></td>
+    </tr>`;
+  }).join("");
+  abUpdateCount();
+}
+function abToggle(e,id){
+  e.stopPropagation();
+  if(abSelected.has(id)) abSelected.delete(id); else abSelected.add(id);
+  abUpdateCount();
+}
+function abToggleAll(on){
+  abSelected=on?new Set(abListings.map(l=>String(l.id))):new Set();
+  abRender();
+}
+function abUpdateCount(){
+  document.querySelectorAll(".ab-selected-count").forEach(el=>el.textContent=abSelected.size);
+  document.querySelectorAll(".ab-download-btn").forEach(b=>b.disabled=abBusy||abSelected.size===0);
+}
+function abOpenText(id){
+  const l=abListings.find(x=>String(x.id)===id); if(!l) return;
+  document.getElementById("msgModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
+  document.getElementById("msgModalMeta").textContent=`From: ${l.whatsapp_group_name||"Unknown group"}  ·  Posted: ${l.created_at?new Date(l.created_at).toLocaleString():"Unknown"}`;
+  document.getElementById("msgModalText").textContent=l.raw_whatsapp_text||"(no message text saved)";
+  document.getElementById("msgModal").style.display="flex";
+}
+
+// ---------- Brokers dialog ----------
+function abOpenBrokers(id){ abModalListingId=id; abRenderModal(); document.getElementById("abBrokersModal").style.display="flex"; }
+function abCloseModal(){ document.getElementById("abBrokersModal").style.display="none"; abModalListingId=null; abRender(); }
+function abToggleBroker(listingId, brokerId){
+  const s=(abExcluded[listingId]=abExcluded[listingId]||new Set());
+  if(s.has(brokerId)) s.delete(brokerId); else s.add(brokerId);
+  abRenderModal();
+}
+function abQuotaLabel(b){
+  const shared=Number(b.contacts_sent_this_month)||0, quota=(!b.contacts_per_month||Number(b.contacts_per_month)<=0)?null:Number(b.contacts_per_month);
+  return `${shared} / ${quota===null?"∞":quota} shared`;
+}
+function abRenderModal(){
+  const l=abListings.find(x=>String(x.id)===abModalListingId); if(!l) return;
+  const {eligible,received}=abCompute(l);
+  const ex=abExcluded[abModalListingId]||new Set();
+  document.getElementById("abModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
+  let html="";
+  if(!eligible.length) html+=`<div class="empty-state">No broker has this area tagged or has this number in their Potential Data (or all of them already received it).</div>`;
+  else{
+    html+=`<div class="ab-sec">Will receive (click &times; to leave one out)</div>`;
+    html+=eligible.map(e=>{
+      const off=ex.has(String(e.b.id));
+      const why=[e.tagged?"area tagged":"", e.inPot?"in Potential Data":""].filter(Boolean).join(" · ");
+      const ch=e.wa?`<span class="badge b-ok">WhatsApp</span>`:`<span class="badge b-count">Excel only</span>`;
+      return `<div class="ab-chip ${off?"off":""}">
+        <div><div class="ab-name" style="font-weight:600;font-size:13px">${escHtml(e.b.name||"Unnamed")} ${ch}</div>
+        <div class="ab-sub">${escHtml(why)} · ${escHtml(abQuotaLabel(e.b))}</div></div>
+        <button class="${off?"ab-plus":"ab-x"}" title="${off?"Add back":"Leave out"}" onclick="abToggleBroker('${escHtml(abModalListingId)}','${escHtml(String(e.b.id))}')">${off?"+":"&times;"}</button>
+      </div>`;
+    }).join("");
+  }
+  if(received.length){
+    html+=`<div class="ab-sec">Already received this number in the last ${REACTIVATION_DAYS} days (not included)</div>`;
+    html+=received.map(r=>`<div class="ab-chip" style="opacity:0.55"><div><div style="font-weight:600;font-size:13px">${escHtml(r.b.name||"Unnamed")}</div><div class="ab-sub">✓ already shared</div></div></div>`).join("");
+  }
+  document.getElementById("abModalBody").innerHTML=html;
+  const inc=eligible.filter(e=>!ex.has(String(e.b.id))).length;
+  document.getElementById("abModalCount").textContent=`${inc} of ${eligible.length} included`;
+}
+
+// ---------- Marking a lead as shared in a broker's Potential Data ----------
+function abDedupeKey(brokerId, phone, gender, requirement, areas){
+  return [String(brokerId), abDigits(phone), abNorm(gender), abNorm(requirement), abNorm(areas)].join(":");
+}
+async function abInsert(path, body){
+  const send=()=>fetch(`${SUPA_URL}/rest/v1/${path}`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(body)});
+  let res=await send();
+  if(res.status===401 && await refreshSession()) res=await send();
+  if(!res.ok) console.error("insert failed:",path,res.status,await res.text());
+  return res.ok;
+}
+// Ticks the lead (turns it green) in this broker's Potential Data:
+// every pending row for the number is flipped to 'sent'; if the broker has
+// no row for it yet, a 'sent' row is created.
+async function abMarkShared(brokerId, l, nowIso){
+  const ph=abDigits(l.custom_contact_phone);
+  const rec=((abLeadIdx[brokerId]||{})[ph])||{pending:[],sent:[]};
+  let ok=true;
+  if(rec.pending.length){
+    for(const r of rec.pending){
+      ok=(await supaPatch("broker_portal_leads",`id=eq.${r.id}`,{status:"sent",sent_at:nowIso}))&&ok;
+    }
+  }else{
+    const areas=abAreasText(l), gender=l.gender_preference||"Undisclosed", req=abReq(l);
+    ok=await abInsert("broker_portal_leads",{
+      broker_id:brokerId, phone:ph, gender, requirement:req, areas,
+      raw_whatsapp_text:l.raw_whatsapp_text||null, whatsapp_group_name:l.whatsapp_group_name||null,
+      posted_at:l.created_at||null, status:"sent", sent_at:nowIso,
+      dedupe_key:abDedupeKey(brokerId,ph,gender,req,areas),
+    });
+  }
+  return ok;
+}
+async function abBumpCount(brokerId, n){
+  const row=await supaGet(`brokers?id=eq.${brokerId}&select=contacts_sent_this_month`);
+  const prev=Number(row[0]&&row[0].contacts_sent_this_month)||0;
+  return supaPatch("brokers",`id=eq.${brokerId}`,{contacts_sent_this_month:prev+n});
+}
+
+// ---------- Download Excel: one file per broker ----------
+async function abSaveWorkbook(brokerId, fname, wb){
+  if(window.showDirectoryPicker){
+    try{
+      const dirHandle=await idbGetHandle(brokerId);
+      if(dirHandle){
+        let perm=await dirHandle.queryPermission({mode:"readwrite"});
+        if(perm!=="granted") perm=await dirHandle.requestPermission({mode:"readwrite"});
+        if(perm==="granted"){
+          const arr=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+          const fh=await dirHandle.getFileHandle(fname,{create:true});
+          const w=await fh.createWritable();
+          await w.write(new Blob([arr],{type:"application/octet-stream"}));
+          await w.close();
+          return true;
+        }
+      }
+    }catch(e){ console.error("Direct folder save failed, falling back to download:",e); }
+  }
+  XLSX.writeFile(wb,fname);
+  return false;
+}
+
+async function abDownloadSelected(){
+  if(abBusy||!abSelected.size) return;
+  const plan={};   // brokerId -> {b, leads:[listing]}
+  abListings.filter(l=>abSelected.has(String(l.id))).forEach(l=>{
+    abIncluded(l).forEach(e=>{
+      const p=(plan[e.b.id]=plan[e.b.id]||{b:e.b,leads:[]});
+      p.leads.push(l);
+    });
+  });
+  const ids=Object.keys(plan);
+  if(!ids.length){ alert("None of the selected leads has any broker included. Use the Brokers button to check who can receive them."); return; }
+
+  abBusy=true; abUpdateCount();
+  try{
+    // fresh quota numbers, never the possibly stale list
+    const fresh=await supaGet(`brokers?id=in.(${ids.join(",")})&select=id,contacts_sent_this_month,contacts_per_month`);
+    const problems=[];
+    fresh.forEach(f=>{
+      const quota=(!f.contacts_per_month||Number(f.contacts_per_month)<=0)?null:Number(f.contacts_per_month);
+      const left=quota===null?null:quota-(Number(f.contacts_sent_this_month)||0);
+      const n=plan[f.id].leads.length;
+      if(left!==null && n>left) problems.push(`${plan[f.id].b.name}: ${n} lead(s) but only ${Math.max(left,0)} left in the quota`);
+    });
+    if(problems.length){
+      alert("Over quota:\n\n"+problems.join("\n")+"\n\nLeave that broker out of those leads (× in the Brokers dialog), select fewer leads, or raise the quota first. Nothing was downloaded or marked.");
+      return;
+    }
+    const summary=ids.map(i=>`• ${plan[i].b.name}: ${plan[i].leads.length} lead(s)`).join("\n");
+    if(!confirm(`Create ${ids.length} Excel file(s) and mark these leads as shared?\n\n${summary}`)) return;
+
+    const now=new Date();
+    const dd=String(now.getDate()).padStart(2,"0"), mon=now.toLocaleString("en-US",{month:"short"});
+    const hh=String(now.getHours()).padStart(2,"0"), mi=String(now.getMinutes()).padStart(2,"0");
+    const dateLabel=`${dd} ${mon} ${now.getFullYear()}`, nowIso=now.toISOString();
+    const done=[], failed=[];
+    for(const bid of ids){
+      const {b,leads}=plan[bid];
+      try{
+        const rows=[["Number","Gender","Requirement","Areas"]];
+        leads.forEach(l=>rows.push([abDigits(l.custom_contact_phone), l.gender_preference||"", abReq(l), abAreasText(l)]));
+        const ws=XLSX.utils.aoa_to_sheet(rows);
+        ws["!cols"]=[{wch:16},{wch:12},{wch:30},{wch:34}];
+        const wb=XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb,ws,"Leads");
+        const fname=`Flatkhoj_${String(b.name||"Broker").replace(/[^a-zA-Z0-9]/g,"")}_${dd}${mon}${now.getFullYear()}_${hh}${mi}.xlsx`;
+        await abSaveWorkbook(bid,fname,wb);
+        emailDownloadToSelf(fname,b.name||"",dateLabel,wb);
+        let marked=0;
+        for(const l of leads){ if(await abMarkShared(bid,l,nowIso)) marked++; }
+        await abBumpCount(bid,marked);
+        done.push(`${b.name} (${leads.length})`);
+        await new Promise(r=>setTimeout(r,400));   // let the browser accept several downloads in a row
+      }catch(e){ console.error("Excel for broker failed:",b.name,e); failed.push(b.name); }
+    }
+    abSelected=new Set();
+    await abLoad();
+    if(failed.length) alert(`Done for: ${done.join(", ")||"none"}.\n\nFAILED for: ${failed.join(", ")} — those leads were not marked as shared; try again for them.`);
+  }catch(e){
+    console.error("All Brokers download failed:",e);
+    alert("Something went wrong. Check which files were created before trying again.");
+  }finally{
+    abBusy=false; abUpdateCount();
+  }
+}
+
+// ---------- Approve from here: ONLY the included brokers receive it ----------
+async function abApprove(id, btn){
+  const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
+  const inc=abIncluded(l);
+  const wa=inc.filter(e=>e.wa), excel=inc.filter(e=>!e.wa);
+  let msg=`Approve +91 ${abDigits(l.custom_contact_phone)} (${abReq(l)} · ${abAreasText(l)||"no area"}) and send it ONLY to:\n\n`;
+  msg+=wa.length?wa.map(e=>`• ${e.b.name}`).join("\n"):"• nobody (no WhatsApp-capable broker is included)";
+  if(excel.length) msg+=`\n\nIncluded but Excel-only (no area tag / WhatsApp not active, so they will NOT get a WhatsApp — use Download Excel for them):\n`+excel.map(e=>`• ${e.b.name}`).join("\n");
+  msg+=`\n\nMake sure you have already edited this listing on the main site. Continue?`;
+  if(!confirm(msg)) return;
+
+  abBusy=true; btn.disabled=true; const orig=btn.textContent; btn.textContent="Approving…";
+  try{
+    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id))})});
+    let res=await call();
+    if(res.status===401 && await refreshSession()) res=await call();
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success){ alert(data.error||`Approval failed (${res.status}). Nothing was changed.`); btn.disabled=false; btn.textContent=orig; return; }
+
+    // tick the lead in each recipient's Potential Data -- only for brokers
+    // the WhatsApp sender actually logged (broker_leads), not just chosen.
+    let got=new Set();
+    for(let i=0;i<8 && !got.size;i++){
+      await new Promise(r=>setTimeout(r,2000));
+      const logged=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(id)}&select=broker_id`);
+      logged.forEach(r=>got.add(String(r.broker_id)));
+    }
+    const nowIso=new Date().toISOString();
+    for(const e of wa){ if(got.has(String(e.b.id))) await abMarkShared(e.b.id,l,nowIso); }
+    alert(got.size?`Approved. Sent to ${got.size} broker(s) and ticked in their Potential Data.`:"Approved. No WhatsApp send has been logged yet — if brokers were expected to receive it, check Admin → Listings Sent to Brokers shortly.");
+    await abLoad();
+  }catch(e){
+    console.error("Approve failed:",e);
+    alert("Approval failed — please check whether the listing is still pending before retrying.");
+    btn.disabled=false; btn.textContent=orig;
+  }finally{ abBusy=false; abUpdateCount(); }
 }
 </script>
 </body>
