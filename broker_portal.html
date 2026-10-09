@@ -212,7 +212,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <table>
         <thead><tr>
           <th class="row-select"><input type="checkbox" class="chk" id="abSelectAll" onclick="abToggleAll(this.checked)"></th>
-          <th>Number</th><th>Gender</th><th>Requirement</th><th>Areas</th><th>Date</th><th>Brokers</th><th>Approve</th>
+          <th>Number</th><th class="sortable-th" id="abThGender" onclick="abSetSort('gender')">Gender</th><th class="sortable-th" id="abThRequirement" onclick="abSetSort('requirement')">Requirement</th><th class="sortable-th" id="abThArea" onclick="abSetSort('area')">Areas</th><th class="sortable-th" id="abThDate" onclick="abSetSort('date')">Date</th><th>Brokers</th><th>Approve</th>
         </tr></thead>
         <tbody id="abBody"></tbody>
       </table>
@@ -944,7 +944,9 @@ async function downloadSelected(){
 // REACTIVATION_DAYS (a 'sent' row in their Potential Data).
 // =====================================================================
 const AB_WA_STATUS=["active","bank_approval_pending","authorized","initialized","pending"];
+const AB_LIST_COLS="id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold,brokerage_preference,pending_approval,rejected";
 let abListings=[], abBrokers=[], abLeadIdx={}, abExcluded={}, abSelected=new Set(), abModalListingId=null, abBusy=false;
+let abLoggedBy={}, abTargets={}, abReconciling=false, abSortField=null, abSortDir=1;
 
 function abDigits(p){ return String(p||"").replace(/\D/g,"").slice(-10); }
 function abNorm(s){ return String(s==null?"":s).trim().replace(/\s+/g," ").toLowerCase(); }
@@ -972,11 +974,18 @@ function abExpand(area, out, depth){
   if(depth>=3) return;
   (AB_AREA_GROUPS[key]||[]).forEach(k=>abExpand(k,out,depth+1));
 }
+// A bare tag ("Santacruz") also matches "Santacruz East"/"Santacruz West" and vice versa
+// (same rule as notify-brokers' expandWithSides).
+function abExpandSides(area,out){
+  abExpand(area,out);
+  const k=String(area||"").trim();
+  if(k && !/\s(east|west)$/i.test(k)){ abExpand(k+" East",out); abExpand(k+" West",out); }
+}
 function abAreaMatch(brokerAreas, listingAreas){
-  const la=new Set(); abArr(listingAreas).forEach(a=>abExpand(a,la));
+  const la=new Set(); abArr(listingAreas).forEach(a=>abExpandSides(a,la));
   if(!la.size) return false;
   return abArr(brokerAreas).some(b=>{
-    const bs=new Set(); abExpand(b,bs);
+    const bs=new Set(); abExpandSides(b,bs);
     for(const x of la) if(bs.has(x)) return true;
     return false;
   });
@@ -1008,26 +1017,79 @@ function abBack(){
   loadBrokerList();
 }
 
-async function abLoad(){
-  document.getElementById("abBody").innerHTML=`<tr><td colspan="8" class="empty-state">Loading…</td></tr>`;
-  const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*24*60*60*1000).toISOString();
-  const [listings, brokers, leads]=await Promise.all([
-    supaGetAll("listings?select=id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold&pending_approval=eq.true&rejected=eq.false&listing_type=eq.flat_wanted&order=created_at.desc"),
-    supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month&is_active=eq.true&order=name.asc"),
-    supaGetAll(`broker_portal_leads?or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,broker_id,phone,status,sent_at&order=created_at.desc`),
-  ]);
-  abListings=listings.filter(l=>abDigits(l.custom_contact_phone).length===10);
-  abBrokers=brokers;
-  abLeadIdx={};
+function abIsPaid(l){ return String(l.brokerage_preference||"").toLowerCase()==="yes"; }
+function abIndexLeads(leads){
+  const idx={};
   leads.forEach(r=>{
     const ph=abDigits(r.phone);
-    const byPhone=(abLeadIdx[r.broker_id]=abLeadIdx[r.broker_id]||{});
+    const byPhone=(idx[r.broker_id]=idx[r.broker_id]||{});
     const rec=(byPhone[ph]=byPhone[ph]||{pending:[],sent:[]});
     (r.status==="sent"?rec.sent:rec.pending).push(r);
   });
+  return idx;
+}
+function abFetchPortalLeads(cutoffIso){
+  return supaGetAll(`broker_portal_leads?or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,broker_id,phone,status,sent_at&order=created_at.desc`);
+}
+async function abLoad(){
+  document.getElementById("abBody").innerHTML=`<tr><td colspan="8" class="empty-state">Loading…</td></tr>`;
+  const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*24*60*60*1000).toISOString();
+  const [pending, brokers, leads, targets]=await Promise.all([
+    supaGetAll(`listings?select=${AB_LIST_COLS}&pending_approval=eq.true&rejected=eq.false&listing_type=eq.flat_wanted&order=created_at.desc`),
+    supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"),
+    abFetchPortalLeads(cutoffIso),
+    supaGetAll(`listing_broker_targets?select=listing_id,broker_ids,created_at&created_at=gte.${cutoffIso}`).catch(e=>{ console.error("targets read failed",e); return []; }),
+  ]);
+  abTargets={}; targets.forEach(t=>{ abTargets[String(t.listing_id)]=t; });
+  const pendIds=new Set(pending.map(l=>String(l.id)));
+  const apprIds=targets.map(t=>String(t.listing_id)).filter(i=>!pendIds.has(i));
+  let approved=[];
+  if(apprIds.length){
+    approved=await supaGetAll(`listings?select=${AB_LIST_COLS}&id=in.(${apprIds.map(encodeURIComponent).join(",")})&pending_approval=eq.false&rejected=eq.false`).catch(e=>{ console.error(e); return []; });
+    approved.forEach(l=>{ l._approved=true; });
+  }
+  abBrokers=brokers;
+  abLeadIdx=abIndexLeads(leads);
+  // brokers the WhatsApp sender actually logged for these listings
+  abLoggedBy={};
+  const allIds=[...pendIds,...approved.map(l=>String(l.id))];
+  if(allIds.length){
+    const logged=await supaGetAll(`broker_leads?select=listing_id,broker_id&listing_id=in.(${allIds.map(encodeURIComponent).join(",")})`).catch(e=>{ console.error("broker_leads read failed",e); return []; });
+    logged.forEach(r=>{ (abLoggedBy[String(r.listing_id)]=abLoggedBy[String(r.listing_id)]||new Set()).add(String(r.broker_id)); });
+  }
+  abListings=pending.concat(approved).filter(l=>abDigits(l.custom_contact_phone).length===10);
   const ids=new Set(abListings.map(l=>String(l.id)));
-  abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
+  abSelected=new Set([...abSelected].filter(i=>ids.has(i)&&!abIsApproved(abListings.find(l=>String(l.id)===i))));
+  await abReconcile(cutoffIso);
   abRender();
+}
+function abIsApproved(l){ return !!(l&&l._approved); }
+
+// Anything the WhatsApp sender logged for a portal-approved listing is made visible in the
+// broker's Potential Data (ticked) and, for FREE leads only, counted. Paid leads are already
+// counted by notify-brokers itself, so counting them here would double up.
+async function abReconcile(cutoffIso){
+  if(abReconciling) return; abReconciling=true;
+  try{
+    const nowIso=new Date().toISOString(); let changed=false;
+    for(const l of abListings){
+      if(!abIsApproved(l)) continue;
+      const ph=abDigits(l.custom_contact_phone);
+      for(const bid of (abLoggedBy[String(l.id)]||[])){
+        const rec=((abLeadIdx[bid]||{})[ph])||{pending:[],sent:[]};
+        if(rec.sent.length) continue;
+        if(await abMarkShared(bid,l,nowIso)){
+          changed=true;
+          if(!abIsPaid(l)) await abBumpCount(bid,l.gender_preference==="Undisclosed"?0.5:1);
+        }
+      }
+    }
+    if(changed){
+      abLeadIdx=abIndexLeads(await abFetchPortalLeads(cutoffIso));
+      abBrokers=await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc");
+    }
+  }catch(e){ console.error("reconcile failed",e); }
+  finally{ abReconciling=false; }
 }
 
 // Who can get this listing: {eligible:[{b,tagged,inPot,wa}], received:[{b}]}
@@ -1037,7 +1099,9 @@ function abCompute(l){
   abBrokers.forEach(b=>{
     if(abNorm(b.city||"mumbai")!==city) return;
     const rec=(abLeadIdx[b.id]||{})[ph]||{pending:[],sent:[]};
-    if(rec.sent.length){ received.push({b}); return; }
+    const logged=(abLoggedBy[String(l.id)]||new Set()).has(String(b.id));
+    if(rec.sent.length||logged){ received.push({b}); return; }
+    if(abIsApproved(l)) return;
     const tagged=abAreaMatch(b.areas,l.areas), inPot=rec.pending.length>0;
     if(tagged||inPot){
       const wa=tagged && AB_WA_STATUS.includes(abNorm(b.subscription_status));
@@ -1051,29 +1115,54 @@ function abIncluded(l){
   return abCompute(l).eligible.filter(e=>!ex.has(String(e.b.id)));
 }
 
+function abSetSort(field){
+  if(abSortField===field){ abSortDir=(abSortDir===1)?-1:null; if(abSortDir===null){ abSortField=null; abSortDir=1; } }
+  else{ abSortField=field; abSortDir=1; }
+  abRender();
+}
+function abUpdateSortHeads(){
+  const labels={gender:["abThGender","Gender"],requirement:["abThRequirement","Requirement"],area:["abThArea","Areas"],date:["abThDate","Date"]};
+  Object.entries(labels).forEach(([f,[id,label]])=>{
+    const th=document.getElementById(id); if(!th) return;
+    if(f===abSortField){ th.classList.add("active"); th.textContent=label+(abSortDir===1?" ↑":" ↓"); }
+    else{ th.classList.remove("active"); th.textContent=label; }
+  });
+}
 function abRender(){
   const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
   const body=document.getElementById("abBody");
-  const rows=abListings.filter(l=>{
+  let rows=abListings.filter(l=>{
     if(!q) return true;
     return abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q);
   });
+  if(abSortField){
+    rows=rows.slice().sort((a,b)=>{
+      let c=0;
+      if(abSortField==="requirement") c=requirementRank(abReq(a))-requirementRank(abReq(b));
+      else if(abSortField==="gender") c=genderRank(a.gender_preference)-genderRank(b.gender_preference);
+      else if(abSortField==="area") c=abAreasText(a).localeCompare(abAreasText(b));
+      else if(abSortField==="date") c=new Date(a.created_at||0)-new Date(b.created_at||0);
+      return c*abSortDir;
+    });
+  }
+  abUpdateSortHeads();
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="8" class="empty-state">${abListings.length?"No pending seekers match that search.":"No seeker listings are waiting for approval right now."}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="8" class="empty-state">${abListings.length?"No seekers match that search.":"No seeker listings are waiting for approval right now."}</td></tr>`;
     abUpdateCount(); return;
   }
   body.innerHTML=rows.map(l=>{
-    const id=String(l.id), n=abIncluded(l).length;
+    const id=String(l.id), ap=abIsApproved(l), n=ap?0:abIncluded(l).length;
     const hold=l.on_hold?` <span class="badge b-count">On hold</span>`:"";
-    return `<tr>
-      <td class="row-select"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
+    const rowAttr=ap?` style="background:var(--green-bg)"`:"";
+    return `<tr${rowAttr}>
+      <td class="row-select">${ap?`<span style="color:var(--green);font-weight:700">✓</span>`:`<input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')">`}</td>
       <td class="clickable-row" onclick="abOpenText('${escHtml(id)}')" style="font-weight:600">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
       <td>${escHtml(l.gender_preference||"—")}</td>
       <td>${escHtml(abReq(l))}</td>
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td>${l.created_at?new Date(l.created_at).toLocaleDateString():"—"}</td>
       <td><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
-      <td><button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button></td>
+      <td>${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`}</td>
     </tr>`;
   }).join("");
   abUpdateCount();
@@ -1084,7 +1173,8 @@ function abToggle(e,id){
   abUpdateCount();
 }
 function abToggleAll(on){
-  abSelected=on?new Set(abListings.map(l=>String(l.id))):new Set();
+  const q=(document.getElementById("abSearchInput").value||"").trim();
+  abSelected=on?new Set(abListings.filter(l=>!abIsApproved(l)).map(l=>String(l.id))):new Set();
   abRender();
 }
 function abUpdateCount(){
@@ -1113,11 +1203,11 @@ function abQuotaLabel(b){
 }
 function abRenderModal(){
   const l=abListings.find(x=>String(x.id)===abModalListingId); if(!l) return;
-  const {eligible}=abCompute(l);
+  const {eligible,received}=abCompute(l);
   const ex=abExcluded[abModalListingId]||new Set();
   document.getElementById("abModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
   let html="";
-  if(!eligible.length) html+=`<div class="empty-state">No broker is left for this lead: none has the area tagged or this number in their Potential Data, or it was already shared with them.</div>`;
+  if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data."}</div>`;
   else{
     html+=`<div class="ab-sec">Will receive (click &times; to leave one out)</div>`;
     html+=eligible.map(e=>{
@@ -1130,6 +1220,9 @@ function abRenderModal(){
         <button class="${off?"ab-plus":"ab-x"}" title="${off?"Add back":"Leave out"}" onclick="abToggleBroker('${escHtml(abModalListingId)}','${escHtml(String(e.b.id))}')">${off?"+":"&times;"}</button>
       </div>`;
     }).join("");
+  }
+  if(received.length){
+    html+=`<div class="ab-sec">Already shared with</div><div style="padding:4px 20px 12px;font-size:13px;color:var(--ink2)">${received.map(r=>escHtml(r.b.name||"Unnamed")).join(", ")}</div>`;
   }
   document.getElementById("abModalBody").innerHTML=html;
   const inc=eligible.filter(e=>!ex.has(String(e.b.id))).length;
@@ -1282,18 +1375,19 @@ async function abApprove(id, btn){
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.success){ alert(data.error||`Approval failed (${res.status}). Nothing was changed.`); btn.disabled=false; btn.textContent=orig; return; }
 
-    // tick the lead in each recipient's Potential Data -- only for brokers
-    // the WhatsApp sender actually logged (broker_leads), not just chosen.
-    let got=new Set();
-    for(let i=0;i<8 && !got.size;i++){
-      await new Promise(r=>setTimeout(r,2000));
-      const logged=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(id)}&select=broker_id`);
-      logged.forEach(r=>got.add(String(r.broker_id)));
+    // The WhatsApp sender runs in the background and logs each successful send in broker_leads.
+    // Wait until that log stops growing (max ~30s), then abLoad() ticks + counts via abReconcile.
+    let seen=-1, stable=0;
+    for(let k=0;k<10 && stable<2;k++){
+      await new Promise(r=>setTimeout(r,3000));
+      const logged=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(id)}&select=broker_id`).catch(()=>[]);
+      if(logged.length>0 && logged.length===seen) stable++; else stable=0;
+      seen=logged.length;
     }
-    const nowIso=new Date().toISOString();
-    for(const e of wa){ if(got.has(String(e.b.id))) await abMarkShared(e.b.id,l,nowIso); }
-    alert(got.size?`Approved. Sent to ${got.size} broker(s) and ticked in their Potential Data.`:"Approved. No WhatsApp send has been logged yet — if brokers were expected to receive it, check Admin → Listings Sent to Brokers shortly.");
+    abBusy=false;
     await abLoad();
+    const got=(abLoggedBy[id]||new Set()).size;
+    alert(got?`Approved. Sent to ${got} broker(s); it is now ticked in their Potential Data and their counts are updated.`:"Approved. No WhatsApp send has been logged yet — it can take a minute. Press Refresh shortly; ticks and counts are added automatically when the sends show up.");
   }catch(e){
     console.error("Approve failed:",e);
     alert("Approval failed — please check whether the listing is still pending before retrying.");
