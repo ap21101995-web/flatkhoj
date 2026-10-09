@@ -195,7 +195,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-C · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-D · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -946,7 +946,7 @@ async function downloadSelected(){
 const AB_WA_STATUS=["active","bank_approval_pending","authorized","initialized","pending"];
 const AB_LIST_COLS="id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold,brokerage_preference,pending_approval,rejected";
 let abListings=[], abBrokers=[], abLeadIdx={}, abExcluded={}, abSelected=new Set(), abModalListingId=null, abBusy=false;
-let abLoggedBy={}, abTargets={}, abReconciling=false, abSortField=null, abSortDir=1, abExtra={}, abTargetsErr=false;
+let abPostedMap={}, abLoggedBy={}, abTargets={}, abReconciling=false, abSortField=null, abSortDir=1, abExtra={}, abTargetsErr=false;
 const AB_LS_KEY="fk_ab_approved";
 function abLocalApproved(){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); const cut=Date.now()-REACTIVATION_DAYS*864e5; return Object.keys(o).filter(k=>o[k]>cut); }catch(e){ return []; } }
 function abRememberApproved(id){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); o[String(id)]=Date.now(); localStorage.setItem(AB_LS_KEY,JSON.stringify(o)); }catch(e){} }
@@ -1020,6 +1020,24 @@ function abBack(){
   loadBrokerList();
 }
 
+// The real WhatsApp message time lives in broker_portal_leads.posted_at (listings.created_at is
+// the time the listing was created/approved, not when the person wrote the message).
+function abPostedIso(l){ return abPostedMap[abDigits(l.custom_contact_phone)]||null; }
+function abPostedFmt(l){
+  const iso=abPostedIso(l), d=new Date(iso||l.created_at||0);
+  if(!l.created_at && !iso) return "—";
+  const t=d.toLocaleDateString()+" "+d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  return iso?t:`<span title="No WhatsApp timestamp found for this number; showing when the listing was created">${t} ~</span>`;
+}
+async function abLoadPosted(listings){
+  abPostedMap={};
+  const phones=[...new Set(listings.map(l=>abDigits(l.custom_contact_phone)))];
+  for(let i=0;i<phones.length;i+=40){
+    const chunk=phones.slice(i,i+40);
+    const rows=await supaGetAll(`broker_portal_leads?phone=in.(${chunk.join(",")})&posted_at=not.is.null&select=phone,posted_at&order=posted_at.desc`).catch(e=>{ console.error("posted_at read failed",e); return []; });
+    rows.forEach(r=>{ const k=abDigits(r.phone); if(!abPostedMap[k]) abPostedMap[k]=r.posted_at; });
+  }
+}
 function abIsPaid(l){ return String(l.brokerage_preference||"").toLowerCase()==="yes"; }
 function abIndexLeads(leads){
   const idx={};
@@ -1062,6 +1080,7 @@ async function abLoad(){
     logged.forEach(r=>{ (abLoggedBy[String(r.listing_id)]=abLoggedBy[String(r.listing_id)]||new Set()).add(String(r.broker_id)); });
   }
   abListings=pending.concat(approved).filter(l=>abDigits(l.custom_contact_phone).length===10);
+  await abLoadPosted(abListings);
   const ids=new Set(abListings.map(l=>String(l.id)));
   abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
   await abReconcile(cutoffIso);
@@ -1161,7 +1180,7 @@ function abRender(){
       if(abSortField==="requirement") c=requirementRank(abReq(a))-requirementRank(abReq(b));
       else if(abSortField==="gender") c=genderRank(a.gender_preference)-genderRank(b.gender_preference);
       else if(abSortField==="area") c=abAreasText(a).localeCompare(abAreasText(b));
-      else if(abSortField==="date") c=new Date(a.created_at||0)-new Date(b.created_at||0);
+      else if(abSortField==="date") c=new Date(abPostedIso(a)||a.created_at||0)-new Date(abPostedIso(b)||b.created_at||0);
       return c*abSortDir;
     });
   }
@@ -1180,7 +1199,7 @@ function abRender(){
       <td>${escHtml(l.gender_preference||"—")}</td>
       <td>${escHtml(abReq(l))}</td>
       <td>${escHtml(abAreasText(l)||"—")}</td>
-      <td>${l.created_at?new Date(l.created_at).toLocaleDateString():"—"}</td>
+      <td style="white-space:nowrap">${abPostedFmt(l)}</td>
       <td><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
       <td>${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`}</td>
     </tr>`;
@@ -1204,7 +1223,7 @@ function abUpdateCount(){
 function abOpenText(id){
   const l=abListings.find(x=>String(x.id)===id); if(!l) return;
   document.getElementById("msgModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
-  document.getElementById("msgModalMeta").textContent=`From: ${l.whatsapp_group_name||"Unknown group"}  ·  Posted: ${l.created_at?new Date(l.created_at).toLocaleString():"Unknown"}`;
+  document.getElementById("msgModalMeta").textContent=`From: ${l.whatsapp_group_name||"Unknown group"}  ·  Posted: ${(abPostedIso(l)||l.created_at)?new Date(abPostedIso(l)||l.created_at).toLocaleString():"Unknown"}`;
   document.getElementById("msgModalText").textContent=l.raw_whatsapp_text||"(no message text saved)";
   document.getElementById("msgModal").style.display="flex";
 }
@@ -1285,7 +1304,7 @@ async function abMarkShared(brokerId, l, nowIso){
     ok=await abInsert("broker_portal_leads",{
       broker_id:brokerId, phone:ph, gender, requirement:req, areas,
       raw_whatsapp_text:l.raw_whatsapp_text||null, whatsapp_group_name:l.whatsapp_group_name||null,
-      posted_at:l.created_at||null, status:"sent", sent_at:nowIso,
+      posted_at:abPostedIso(l)||l.created_at||null, status:"sent", sent_at:nowIso,
       dedupe_key:abDedupeKey(brokerId,ph,gender,req,areas),
     });
   }
