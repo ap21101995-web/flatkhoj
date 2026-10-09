@@ -195,7 +195,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-D · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-E · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -1102,9 +1102,10 @@ async function abReconcile(cutoffIso){
       for(const bid of (abLoggedBy[String(l.id)]||[])){
         const rec=((abLeadIdx[bid]||{})[ph])||{pending:[],sent:[]};
         if(rec.sent.length) continue;
-        if(await abMarkShared(bid,l,nowIso)){
+        const r=await abMarkShared(bid,l,nowIso);
+        if(r){
           changed=true;
-          if(!abIsPaid(l)) await abBumpCount(bid,1);
+          if(r==="marked" && !abIsPaid(l)) await abBumpCount(bid,1);
         }
       }
     }
@@ -1236,6 +1237,7 @@ function abToggleBroker(listingId, brokerId){
   if(s.has(brokerId)) s.delete(brokerId); else s.add(brokerId);
   abRenderModal();
 }
+function abQuotaFull(b){ const q=(!b.contacts_per_month||Number(b.contacts_per_month)<=0)?null:Number(b.contacts_per_month); return q!==null && (Number(b.contacts_sent_this_month)||0)>=q; }
 function abQuotaLabel(b){
   const shared=Number(b.contacts_sent_this_month)||0, quota=(!b.contacts_per_month||Number(b.contacts_per_month)<=0)?null:Number(b.contacts_per_month);
   return `${shared} / ${quota===null?"∞":quota} shared`+(quota!==null&&shared>=quota?" · quota full (paid leads skipped)":"");
@@ -1252,7 +1254,8 @@ function abRenderModal(){
     html+=eligible.map(e=>{
       const off=ex.has(String(e.b.id));
       const why=[e.tagged?"area tagged":"", e.inPot?"in Potential Data":"", e.manual?"added by you":""].filter(Boolean).join(" · ");
-      const ch=e.wa?`<span class="badge b-ok">WhatsApp</span>`:`<span class="badge b-count">Excel only</span>`;
+      const qfull=abIsPaid(l)&&abQuotaFull(e.b);
+      const ch=qfull?`<span class="badge b-count">Quota full – WhatsApp skipped</span>`:(e.wa?`<span class="badge b-ok">WhatsApp</span>`:`<span class="badge b-count">Excel only</span>`);
       return `<div class="ab-chip ${off?"off":""}">
         <div><div class="ab-name" style="font-weight:600;font-size:13px">${escHtml(e.b.name||"Unnamed")} ${ch}</div>
         <div class="ab-sub">${escHtml(why)} · ${escHtml(abQuotaLabel(e.b))}</div></div>
@@ -1291,24 +1294,29 @@ async function abInsert(path, body){
 // Ticks the lead (turns it green) in this broker's Potential Data:
 // every pending row for the number is flipped to 'sent'; if the broker has
 // no row for it yet, a 'sent' row is created.
+// Returns "marked" (newly ticked), "already" (was already shared in the last 15 days) or false (failed).
+// Always checks the database fresh, so a stale screen can never create a second row.
 async function abMarkShared(brokerId, l, nowIso){
   const ph=abDigits(l.custom_contact_phone);
-  const rec=((abLeadIdx[brokerId]||{})[ph])||{pending:[],sent:[]};
-  let ok=true;
-  if(rec.pending.length){
-    for(const r of rec.pending){
-      ok=(await supaPatch("broker_portal_leads",`id=eq.${r.id}`,{status:"sent",sent_at:nowIso}))&&ok;
-    }
-  }else{
-    const areas=abAreasText(l), gender=l.gender_preference||"Undisclosed", req=abReq(l);
-    ok=await abInsert("broker_portal_leads",{
-      broker_id:brokerId, phone:ph, gender, requirement:req, areas,
-      raw_whatsapp_text:l.raw_whatsapp_text||null, whatsapp_group_name:l.whatsapp_group_name||null,
-      posted_at:abPostedIso(l)||l.created_at||null, status:"sent", sent_at:nowIso,
-      dedupe_key:abDedupeKey(brokerId,ph,gender,req,areas),
-    });
+  const cutoff=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
+  let rows;
+  try{ rows=await supaGet(`broker_portal_leads?broker_id=eq.${brokerId}&phone=like.*${ph}&select=id,status,sent_at`); }
+  catch(e){ console.error("mark check failed",e); return false; }
+  const pend=rows.filter(r=>r.status!=="sent");
+  if(pend.length){
+    let ok=true;
+    for(const r of pend) ok=(await supaPatch("broker_portal_leads",`id=eq.${r.id}`,{status:"sent",sent_at:nowIso}))&&ok;
+    return ok?"marked":false;
   }
-  return ok;
+  if(rows.some(r=>r.status==="sent" && r.sent_at && r.sent_at>=cutoff)) return "already";
+  const areas=abAreasText(l), gender=l.gender_preference||"Undisclosed", req=abReq(l);
+  const ok=await abInsert("broker_portal_leads",{
+    broker_id:brokerId, phone:ph, gender, requirement:req, areas,
+    raw_whatsapp_text:l.raw_whatsapp_text||null, whatsapp_group_name:l.whatsapp_group_name||null,
+    posted_at:abPostedIso(l)||l.created_at||null, status:"sent", sent_at:nowIso,
+    dedupe_key:`${brokerId}:${ph}:portal`,
+  });
+  return ok?"marked":false;
 }
 async function abBumpCount(brokerId, n){
   const row=await supaGet(`brokers?id=eq.${brokerId}&select=contacts_sent_this_month`);
@@ -1387,7 +1395,7 @@ async function abDownloadSelected(){
         await abSaveWorkbook(bid,fname,wb);
         emailDownloadToSelf(fname,b.name||"",dateLabel,wb);
         let marked=0;
-        for(const l of leads){ if(await abMarkShared(bid,l,nowIso)) marked++; }
+        for(const l of leads){ if(await abMarkShared(bid,l,nowIso)==='marked') marked++; }
         await abBumpCount(bid,marked);
         done.push(`${b.name} (${leads.length})`);
         await new Promise(r=>setTimeout(r,400));   // let the browser accept several downloads in a row
@@ -1442,10 +1450,12 @@ async function abApprove(id, btn){
   const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
   const inc=abIncluded(l);
   const wa=inc.filter(e=>e.wa), excel=inc.filter(e=>!e.wa);
+  const skipQ=abIsPaid(l)?wa.filter(e=>abQuotaFull(e.b)):[];
   let msg=`Approve +91 ${abDigits(l.custom_contact_phone)} (${abReq(l)} · ${abAreasText(l)||"no area"}) and send it ONLY to:\n\n`;
   msg+=wa.length?wa.map(e=>`• ${e.b.name}`).join("\n"):"• nobody (no WhatsApp-capable broker is included)";
   if(excel.length) msg+=`\n\nIncluded but Excel-only (no area tag / WhatsApp not active, so they will NOT get a WhatsApp — use Download Excel for them):\n`+excel.map(e=>`• ${e.b.name}`).join("\n");
   msg+=`\n\nMake sure you have already edited this listing on the main site. Continue?`;
+  if(skipQ.length) msg+=`\n\nQuota is full for ${skipQ.map(e=>e.b.name).join(", ")} — a paid lead will NOT be sent to them.`;
   if(!confirm(msg)) return;
 
   abBusy=true; btn.disabled=true; const orig=btn.textContent; btn.textContent="Approving…";
@@ -1457,8 +1467,14 @@ async function abApprove(id, btn){
     if(!res.ok||!data.success){ alert(data.error||`Approval failed (${res.status}). Nothing was changed.`); btn.disabled=false; btn.textContent=orig; return; }
 
     abRememberApproved(id);
-    const got=await abAwaitSends(id);
-    alert(got?`Approved. Sent to ${got} broker(s); it is now ticked in their Potential Data and their counts are updated.`:"Approved. No WhatsApp send has been logged yet — it can take a minute. Press Refresh shortly; ticks and counts are added automatically when the sends show up.");
+    await abAwaitSends(id);
+    const gotIds=abLoggedBy[id]||new Set();
+    const nm=e=>e.b.name;
+    const gotN=wa.filter(e=>gotIds.has(String(e.b.id))).map(nm), missN=wa.filter(e=>!gotIds.has(String(e.b.id))).map(nm);
+    let out=`Approved.\n\nWhatsApp sent and ticked: ${gotN.length?gotN.join(", "):"nobody yet"}`;
+    if(missN.length) out+=`\n\nChosen for WhatsApp but no send logged: ${missN.join(", ")}\n(a paid lead is skipped when the quota is full or the send failed; if it was just slow, press Refresh in a minute.)`;
+    if(excel.length) out+=`\n\nExcel-only (not sent): ${excel.map(nm).join(", ")} — use Download Excel for them.`;
+    alert(out);
   }catch(e){
     console.error("Approve failed:",e);
     alert("Approval failed — please check whether the listing is still pending before retrying.");
