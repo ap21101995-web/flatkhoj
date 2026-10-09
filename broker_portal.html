@@ -195,7 +195,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers</div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-B · click Gender / Requirement / Areas / Date to sort</span></div>
         <div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -212,7 +212,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <table>
         <thead><tr>
           <th class="row-select"><input type="checkbox" class="chk" id="abSelectAll" onclick="abToggleAll(this.checked)"></th>
-          <th>Number</th><th class="sortable-th" id="abThGender" onclick="abSetSort('gender')">Gender</th><th class="sortable-th" id="abThRequirement" onclick="abSetSort('requirement')">Requirement</th><th class="sortable-th" id="abThArea" onclick="abSetSort('area')">Areas</th><th class="sortable-th" id="abThDate" onclick="abSetSort('date')">Date</th><th>Brokers</th><th>Approve</th>
+          <th>Number</th><th class="sortable-th" id="abThGender" onclick="abSetSort('gender')">Gender ↕</th><th class="sortable-th" id="abThRequirement" onclick="abSetSort('requirement')">Requirement ↕</th><th class="sortable-th" id="abThArea" onclick="abSetSort('area')">Areas ↕</th><th class="sortable-th" id="abThDate" onclick="abSetSort('date')">Date ↕</th><th>Brokers</th><th>Approve</th>
         </tr></thead>
         <tbody id="abBody"></tbody>
       </table>
@@ -1080,7 +1080,7 @@ async function abReconcile(cutoffIso){
         if(rec.sent.length) continue;
         if(await abMarkShared(bid,l,nowIso)){
           changed=true;
-          if(!abIsPaid(l)) await abBumpCount(bid,l.gender_preference==="Undisclosed"?0.5:1);
+          if(!abIsPaid(l)) await abBumpCount(bid,1);
         }
       }
     }
@@ -1125,7 +1125,7 @@ function abUpdateSortHeads(){
   Object.entries(labels).forEach(([f,[id,label]])=>{
     const th=document.getElementById(id); if(!th) return;
     if(f===abSortField){ th.classList.add("active"); th.textContent=label+(abSortDir===1?" ↑":" ↓"); }
-    else{ th.classList.remove("active"); th.textContent=label; }
+    else{ th.classList.remove("active"); th.textContent=label+" ↕"; }
   });
 }
 function abRender(){
