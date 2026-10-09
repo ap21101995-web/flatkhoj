@@ -1113,11 +1113,11 @@ function abQuotaLabel(b){
 }
 function abRenderModal(){
   const l=abListings.find(x=>String(x.id)===abModalListingId); if(!l) return;
-  const {eligible,received}=abCompute(l);
+  const {eligible}=abCompute(l);
   const ex=abExcluded[abModalListingId]||new Set();
   document.getElementById("abModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
   let html="";
-  if(!eligible.length) html+=`<div class="empty-state">No broker has this area tagged or has this number in their Potential Data (or all of them already received it).</div>`;
+  if(!eligible.length) html+=`<div class="empty-state">No broker is left for this lead: none has the area tagged or this number in their Potential Data, or it was already shared with them.</div>`;
   else{
     html+=`<div class="ab-sec">Will receive (click &times; to leave one out)</div>`;
     html+=eligible.map(e=>{
@@ -1130,10 +1130,6 @@ function abRenderModal(){
         <button class="${off?"ab-plus":"ab-x"}" title="${off?"Add back":"Leave out"}" onclick="abToggleBroker('${escHtml(abModalListingId)}','${escHtml(String(e.b.id))}')">${off?"+":"&times;"}</button>
       </div>`;
     }).join("");
-  }
-  if(received.length){
-    html+=`<div class="ab-sec">Already received this number in the last ${REACTIVATION_DAYS} days (not included)</div>`;
-    html+=received.map(r=>`<div class="ab-chip" style="opacity:0.55"><div><div style="font-weight:600;font-size:13px">${escHtml(r.b.name||"Unnamed")}</div><div class="ab-sub">✓ already shared</div></div></div>`).join("");
   }
   document.getElementById("abModalBody").innerHTML=html;
   const inc=eligible.filter(e=>!ex.has(String(e.b.id))).length;
