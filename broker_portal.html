@@ -195,8 +195,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-B · click Gender / Requirement / Areas / Date to sort</span></div>
-        <div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-C · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
     </div>
@@ -234,7 +234,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="modal-body" id="abModalBody"></div>
     <div class="modal-foot">
       <div style="font-size:13px;color:var(--ink2)" id="abModalCount"></div>
-      <button class="btn btn-ghost" onclick="abCloseModal()">Done</button>
+      <span id="abModalAction"></span><button class="btn btn-ghost" onclick="abCloseModal()">Done</button>
     </div>
   </div>
 </div>
@@ -946,7 +946,10 @@ async function downloadSelected(){
 const AB_WA_STATUS=["active","bank_approval_pending","authorized","initialized","pending"];
 const AB_LIST_COLS="id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold,brokerage_preference,pending_approval,rejected";
 let abListings=[], abBrokers=[], abLeadIdx={}, abExcluded={}, abSelected=new Set(), abModalListingId=null, abBusy=false;
-let abLoggedBy={}, abTargets={}, abReconciling=false, abSortField=null, abSortDir=1;
+let abLoggedBy={}, abTargets={}, abReconciling=false, abSortField=null, abSortDir=1, abExtra={}, abTargetsErr=false;
+const AB_LS_KEY="fk_ab_approved";
+function abLocalApproved(){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); const cut=Date.now()-REACTIVATION_DAYS*864e5; return Object.keys(o).filter(k=>o[k]>cut); }catch(e){ return []; } }
+function abRememberApproved(id){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); o[String(id)]=Date.now(); localStorage.setItem(AB_LS_KEY,JSON.stringify(o)); }catch(e){} }
 
 function abDigits(p){ return String(p||"").replace(/\D/g,"").slice(-10); }
 function abNorm(s){ return String(s==null?"":s).trim().replace(/\s+/g," ").toLowerCase(); }
@@ -1038,11 +1041,12 @@ async function abLoad(){
     supaGetAll(`listings?select=${AB_LIST_COLS}&pending_approval=eq.true&rejected=eq.false&listing_type=eq.flat_wanted&order=created_at.desc`),
     supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"),
     abFetchPortalLeads(cutoffIso),
-    supaGetAll(`listing_broker_targets?select=listing_id,broker_ids,created_at&created_at=gte.${cutoffIso}`).catch(e=>{ console.error("targets read failed",e); return []; }),
+    supaGetAll(`listing_broker_targets?select=listing_id,broker_ids,created_at&created_at=gte.${cutoffIso}`).catch(e=>{ console.error("targets read failed",e); abTargetsErr=true; return []; }),
   ]);
+  abTargetsErr=abTargetsErr&&!targets.length;
   abTargets={}; targets.forEach(t=>{ abTargets[String(t.listing_id)]=t; });
   const pendIds=new Set(pending.map(l=>String(l.id)));
-  const apprIds=targets.map(t=>String(t.listing_id)).filter(i=>!pendIds.has(i));
+  const apprIds=[...new Set(targets.map(t=>String(t.listing_id)).concat(abLocalApproved()))].filter(i=>!pendIds.has(i));
   let approved=[];
   if(apprIds.length){
     approved=await supaGetAll(`listings?select=${AB_LIST_COLS}&id=in.(${apprIds.map(encodeURIComponent).join(",")})&pending_approval=eq.false&rejected=eq.false`).catch(e=>{ console.error(e); return []; });
@@ -1059,8 +1063,9 @@ async function abLoad(){
   }
   abListings=pending.concat(approved).filter(l=>abDigits(l.custom_contact_phone).length===10);
   const ids=new Set(abListings.map(l=>String(l.id)));
-  abSelected=new Set([...abSelected].filter(i=>ids.has(i)&&!abIsApproved(abListings.find(l=>String(l.id)===i))));
+  abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
   await abReconcile(cutoffIso);
+  const nt=document.getElementById('abNote'); if(nt){ nt.style.display=abTargetsErr?'block':'none'; nt.textContent='Could not read the approved-leads history from Supabase (run the latest setup.sql). Leads approved in this browser still stay listed.'; }
   abRender();
 }
 function abIsApproved(l){ return !!(l&&l._approved); }
@@ -1101,15 +1106,30 @@ function abCompute(l){
     const rec=(abLeadIdx[b.id]||{})[ph]||{pending:[],sent:[]};
     const logged=(abLoggedBy[String(l.id)]||new Set()).has(String(b.id));
     if(rec.sent.length||logged){ received.push({b}); return; }
-    if(abIsApproved(l)) return;
     const tagged=abAreaMatch(b.areas,l.areas), inPot=rec.pending.length>0;
     if(tagged||inPot){
       const wa=tagged && AB_WA_STATUS.includes(abNorm(b.subscription_status));
       eligible.push({b,tagged,inPot,wa});
     }
   });
+  // brokers added by hand for this lead (even if the area isn't tagged to them)
+  abExtra[String(l.id)] && [...abExtra[String(l.id)]].forEach(bid=>{
+    const b=abBrokers.find(x=>String(x.id)===bid); if(!b||received.some(r=>r.b===b)||eligible.some(e=>e.b===b)) return;
+    eligible.push({b,tagged:false,inPot:false,manual:true,wa:AB_WA_STATUS.includes(abNorm(b.subscription_status))});
+  });
   return {eligible,received};
 }
+function abAddable(l){
+  const {eligible,received}=abCompute(l), city=abNorm(l.city||"mumbai");
+  return abBrokers.filter(b=>abNorm(b.city||"mumbai")===city && !eligible.some(e=>e.b===b) && !received.some(r=>r.b===b));
+}
+function abAddBroker(){
+  const sel=document.getElementById("abAddSel"); if(!sel||!sel.value) return;
+  (abExtra[abModalListingId]=abExtra[abModalListingId]||new Set()).add(sel.value);
+  const ex=abExcluded[abModalListingId]; if(ex) ex.delete(sel.value);
+  abRenderModal();
+}
+function abRemoveExtra(listingId,brokerId){ if(abExtra[listingId]) abExtra[listingId].delete(brokerId); abRenderModal(); }
 function abIncluded(l){
   const ex=abExcluded[String(l.id)]||new Set();
   return abCompute(l).eligible.filter(e=>!ex.has(String(e.b.id)));
@@ -1151,11 +1171,11 @@ function abRender(){
     abUpdateCount(); return;
   }
   body.innerHTML=rows.map(l=>{
-    const id=String(l.id), ap=abIsApproved(l), n=ap?0:abIncluded(l).length;
+    const id=String(l.id), ap=abIsApproved(l), n=abIncluded(l).length;
     const hold=l.on_hold?` <span class="badge b-count">On hold</span>`:"";
     const rowAttr=ap?` style="background:var(--green-bg)"`:"";
     return `<tr${rowAttr}>
-      <td class="row-select">${ap?`<span style="color:var(--green);font-weight:700">✓</span>`:`<input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')">`}</td>
+      <td class="row-select"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
       <td class="clickable-row" onclick="abOpenText('${escHtml(id)}')" style="font-weight:600">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
       <td>${escHtml(l.gender_preference||"—")}</td>
       <td>${escHtml(abReq(l))}</td>
@@ -1174,7 +1194,7 @@ function abToggle(e,id){
 }
 function abToggleAll(on){
   const q=(document.getElementById("abSearchInput").value||"").trim();
-  abSelected=on?new Set(abListings.filter(l=>!abIsApproved(l)).map(l=>String(l.id))):new Set();
+  abSelected=on?new Set(abListings.map(l=>String(l.id))):new Set();
   abRender();
 }
 function abUpdateCount(){
@@ -1207,24 +1227,33 @@ function abRenderModal(){
   const ex=abExcluded[abModalListingId]||new Set();
   document.getElementById("abModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
   let html="";
-  if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data."}</div>`;
+  if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data. Use \"Add another broker\" below."}</div>`;
   else{
     html+=`<div class="ab-sec">Will receive (click &times; to leave one out)</div>`;
     html+=eligible.map(e=>{
       const off=ex.has(String(e.b.id));
-      const why=[e.tagged?"area tagged":"", e.inPot?"in Potential Data":""].filter(Boolean).join(" · ");
+      const why=[e.tagged?"area tagged":"", e.inPot?"in Potential Data":"", e.manual?"added by you":""].filter(Boolean).join(" · ");
       const ch=e.wa?`<span class="badge b-ok">WhatsApp</span>`:`<span class="badge b-count">Excel only</span>`;
       return `<div class="ab-chip ${off?"off":""}">
         <div><div class="ab-name" style="font-weight:600;font-size:13px">${escHtml(e.b.name||"Unnamed")} ${ch}</div>
         <div class="ab-sub">${escHtml(why)} · ${escHtml(abQuotaLabel(e.b))}</div></div>
-        <button class="${off?"ab-plus":"ab-x"}" title="${off?"Add back":"Leave out"}" onclick="abToggleBroker('${escHtml(abModalListingId)}','${escHtml(String(e.b.id))}')">${off?"+":"&times;"}</button>
+        <button class="${off?"ab-plus":"ab-x"}" title="${off?"Add back":"Leave out"}" onclick="${e.manual?"abRemoveExtra":"abToggleBroker"}('${escHtml(abModalListingId)}','${escHtml(String(e.b.id))}')">${off?"+":"&times;"}</button>
       </div>`;
     }).join("");
   }
   if(received.length){
     html+=`<div class="ab-sec">Already shared with</div><div style="padding:4px 20px 12px;font-size:13px;color:var(--ink2)">${received.map(r=>escHtml(r.b.name||"Unnamed")).join(", ")}</div>`;
   }
+  const addable=abAddable(l);
+  html+=`<div class="ab-sec">Add another broker</div><div style="display:flex;gap:8px;padding:4px 20px 14px">
+    <select id="abAddSel" class="filter-input" style="flex:1"><option value="">${addable.length?"Choose a broker…":"No other active brokers in this city"}</option>${addable.map(b=>`<option value="${escHtml(String(b.id))}">${escHtml(b.name||"Unnamed")}</option>`).join("")}</select>
+    <button class="btn btn-gold" onclick="abAddBroker()">Add</button></div>`;
   document.getElementById("abModalBody").innerHTML=html;
+  const act=document.getElementById("abModalAction");
+  if(act){
+    const w=eligible.filter(e=>!ex.has(String(e.b.id))&&e.wa).length;
+    act.innerHTML=abIsApproved(l)&&w?`<button class="btn btn-teal" id="abSendMoreBtn" onclick="abSendMore('${escHtml(abModalListingId)}',this)">Send WhatsApp to ${w} more</button>`:"";
+  }
   const inc=eligible.filter(e=>!ex.has(String(e.b.id))).length;
   document.getElementById("abModalCount").textContent=`${inc} of ${eligible.length} included`;
 }
@@ -1356,6 +1385,39 @@ async function abDownloadSelected(){
   }
 }
 
+// Waits until the background WhatsApp sender stops logging into broker_leads, then reloads
+// (the reload ticks + counts via abReconcile). Returns how many brokers are logged.
+async function abAwaitSends(id){
+  let seen=-1, stable=0;
+  for(let k=0;k<10 && stable<2;k++){
+    await new Promise(r=>setTimeout(r,3000));
+    const logged=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(id)}&select=broker_id`).catch(()=>[]);
+    if(logged.length>0 && logged.length===seen) stable++; else stable=0;
+    seen=logged.length;
+  }
+  abBusy=false;
+  await abLoad();
+  return (abLoggedBy[id]||new Set()).size;
+}
+// Send an ALREADY approved lead to extra brokers (WhatsApp)
+async function abSendMore(id, btn){
+  const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
+  const wa=abIncluded(l).filter(e=>e.wa);
+  if(!wa.length) return;
+  if(!confirm(`Send +91 ${abDigits(l.custom_contact_phone)} on WhatsApp to:\n\n`+wa.map(e=>"• "+e.b.name).join("\n")+"\n\nContinue?")) return;
+  abBusy=true; btn.disabled=true; btn.textContent="Sending…";
+  try{
+    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id)),resend:true})});
+    let res=await call();
+    if(res.status===401 && await refreshSession()) res=await call();
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success){ alert(data.error||`Sending failed (${res.status}).`); btn.disabled=false; btn.textContent="Send again"; abBusy=false; return; }
+    const got=await abAwaitSends(id);
+    abCloseModal();
+    alert(`Sent. ${got} broker(s) in total have now received it; new ones are ticked in their Potential Data.`);
+  }catch(e){ console.error(e); alert("Sending failed — check the Brokers dialog before retrying."); btn.disabled=false; abBusy=false; }
+}
+
 // ---------- Approve from here: ONLY the included brokers receive it ----------
 async function abApprove(id, btn){
   const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
@@ -1375,18 +1437,8 @@ async function abApprove(id, btn){
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.success){ alert(data.error||`Approval failed (${res.status}). Nothing was changed.`); btn.disabled=false; btn.textContent=orig; return; }
 
-    // The WhatsApp sender runs in the background and logs each successful send in broker_leads.
-    // Wait until that log stops growing (max ~30s), then abLoad() ticks + counts via abReconcile.
-    let seen=-1, stable=0;
-    for(let k=0;k<10 && stable<2;k++){
-      await new Promise(r=>setTimeout(r,3000));
-      const logged=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(id)}&select=broker_id`).catch(()=>[]);
-      if(logged.length>0 && logged.length===seen) stable++; else stable=0;
-      seen=logged.length;
-    }
-    abBusy=false;
-    await abLoad();
-    const got=(abLoggedBy[id]||new Set()).size;
+    abRememberApproved(id);
+    const got=await abAwaitSends(id);
     alert(got?`Approved. Sent to ${got} broker(s); it is now ticked in their Potential Data and their counts are updated.`:"Approved. No WhatsApp send has been logged yet — it can take a minute. Press Refresh shortly; ticks and counts are added automatically when the sends show up.");
   }catch(e){
     console.error("Approve failed:",e);
