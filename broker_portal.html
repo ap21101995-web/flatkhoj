@@ -195,7 +195,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-E · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-F · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -1194,15 +1194,15 @@ function abRender(){
     const id=String(l.id), ap=abIsApproved(l), n=abIncluded(l).length;
     const hold=l.on_hold?` <span class="badge b-count">On hold</span>`:"";
     const rowAttr=ap?` style="background:var(--green-bg)"`:"";
-    return `<tr${rowAttr}>
-      <td class="row-select"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
-      <td class="clickable-row" onclick="abOpenText('${escHtml(id)}')" style="font-weight:600">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
+    return `<tr${rowAttr} class="clickable-row" onclick="abOpenText('${escHtml(id)}')">
+      <td class="row-select" onclick="event.stopPropagation()"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
+      <td style="font-weight:600">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
       <td>${escHtml(l.gender_preference||"—")}</td>
       <td>${escHtml(abReq(l))}</td>
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td style="white-space:nowrap">${abPostedFmt(l)}</td>
-      <td><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
-      <td>${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`}</td>
+      <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
+      <td onclick="event.stopPropagation()">${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`}</td>
     </tr>`;
   }).join("");
   abUpdateCount();
