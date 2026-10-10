@@ -195,7 +195,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Oct-F · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-H · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -1250,10 +1250,11 @@ function abRenderModal(){
   let html="";
   if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data. Use \"Add another broker\" below."}</div>`;
   else{
-    html+=`<div class="ab-sec">Will receive (click &times; to leave one out)</div>`;
+    html+=`<div class="ab-sec">${abIsApproved(l)?"Not sent yet (click &times; to leave one out, then use the button below to send to the rest)":"Will receive (click &times; to leave one out)"}</div>`;
     html+=eligible.map(e=>{
       const off=ex.has(String(e.b.id));
-      const why=[e.tagged?"area tagged":"", e.inPot?"in Potential Data":"", e.manual?"added by you":""].filter(Boolean).join(" · ");
+      const _tg=abTargets[String(l.id)], _held=abIsApproved(l)&&_tg&&Array.isArray(_tg.broker_ids)&&!_tg.broker_ids.map(String).includes(String(e.b.id));
+      const why=[e.tagged?"area tagged":"", e.inPot?"in Potential Data":"", e.manual?"added by you":"", _held?"left out when you approved":""].filter(Boolean).join(" · ");
       const qfull=abIsPaid(l)&&abQuotaFull(e.b);
       const ch=qfull?`<span class="badge b-count">Quota full – WhatsApp skipped</span>`:(e.wa?`<span class="badge b-ok">WhatsApp</span>`:`<span class="badge b-count">Excel only</span>`);
       return `<div class="ab-chip ${off?"off":""}">
