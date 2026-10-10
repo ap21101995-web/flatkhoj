@@ -181,6 +181,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <th class="sortable-th" id="thRequirement" onclick="setSort('requirement')">Requirement</th>
           <th class="sortable-th" id="thArea" onclick="setSort('area')">Areas</th>
           <th class="sortable-th" id="thDate" onclick="setSort('date')">Date</th>
+          <th>Actions</th>
         </tr></thead>
         <tbody id="leadsTableBody"></tbody>
       </table>
@@ -195,7 +196,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-I · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-J · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -684,7 +685,7 @@ function renderLeadsTable(){
     });
   }
   if(!filtered.length){
-    body.innerHTML=`<tr><td colspan="6" class="empty-state">${currentLeads.length?"No leads match that search.":"Nothing pending right now — run the script locally to pull in fresh leads."}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="7" class="empty-state">${currentLeads.length?"No leads match that search.":"Nothing pending right now — run the script locally to pull in fresh leads."}</td></tr>`;
     updateSelectedCount();
     return;
   }
@@ -708,6 +709,7 @@ function renderLeadsTable(){
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.requirement||"—")}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.areas||"—")}${sentTag}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${postedDateStr}</td>
+      <td style="white-space:nowrap">${isSent?`<span class="badge b-ok">Shared ✓</span>`:`<button class="btn btn-teal" onclick="sendSelectedWhatsApp(this,'${l.id}')">Approve</button> <button class="btn btn-ghost" onclick="waEditLead('${l.id}')">✏️ Edit</button>`}</td>
     </tr>`;
   }).join("");
   updateSelectedCount();
@@ -938,13 +940,36 @@ async function downloadSelected(){
 // listing -> re-sent to this broker only. Afterwards the row turns green (Shared) here, and the
 // listing shows this broker under "Already shared with" in All Brokers (same tables).
 let waSending=false;
-async function sendSelectedWhatsApp(btn){
+
+async function waFindListing(ph,cutoffIso){
+  let rows=[];
+  try{ rows=await supaGet(`listings?select=${AB_LIST_COLS},is_active&custom_contact_phone=like.*${ph}&listing_type=eq.flat_wanted&rejected=eq.false&order=created_at.desc&limit=10`); }catch(e){ console.error(e); }
+  rows=rows.filter(r=>abDigits(r.custom_contact_phone)===ph);
+  const pend=rows.find(r=>r.pending_approval);
+  const live=rows.find(r=>!r.pending_approval && r.is_active && r.created_at>=cutoffIso);
+  return {pend,live,any:pend||live||rows[0]||null};
+}
+// Opens the listing's edit form on the main site (same tab group, new tab). The tab is opened
+// straight away so the browser's pop-up blocker allows it, then pointed at the listing.
+async function waEditLead(id){
+  const lead=currentLeads.find(l=>l.id===id); if(!lead) return;
+  const w=window.open("about:blank","_blank");
+  try{
+    const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
+    const {any}=await waFindListing(abDigits(lead.phone),cutoffIso);
+    if(!any){ if(w) w.close(); alert(`No listing exists on the site for +91 ${abDigits(lead.phone)}, so there is nothing to edit.`); return; }
+    if(w) w.location.href=`post_form.html?edit=${encodeURIComponent(any.id)}`;
+    else alert("Your browser blocked the new tab — allow pop-ups for this site and try again.");
+  }catch(e){ console.error(e); if(w) w.close(); alert("Could not open the editor — try again."); }
+}
+async function sendSelectedWhatsApp(btn, only){
   if(waSending) return;
-  const selected=currentLeads.filter(l=>selectedLeadIds.has(l.id) && l.status!=="sent");
+  const selected=only?currentLeads.filter(l=>l.id===only && l.status!=="sent"):currentLeads.filter(l=>selectedLeadIds.has(l.id) && l.status!=="sent");
   if(!selected.length) return;
   waSending=true; updateSelectedCount();
   const label=btn.textContent; document.querySelectorAll(".wa-send-btn").forEach(b=>b.textContent="Checking…");
-  const done=()=>{ waSending=false; document.querySelectorAll(".wa-send-btn").forEach(b=>b.innerHTML="Approve &amp; send on WhatsApp"); updateSelectedCount(); };
+  if(only&&btn){ btn.disabled=true; btn.textContent="Working…"; }
+  const done=()=>{ if(only&&btn){ btn.disabled=false; btn.textContent="Approve"; } waSending=false; document.querySelectorAll(".wa-send-btn").forEach(b=>b.innerHTML="Approve &amp; send on WhatsApp"); updateSelectedCount(); };
   try{
     const brow=(await supaGet(`brokers?id=eq.${currentBrokerId}&select=id,name,city,subscription_status,is_active`))[0];
     if(!brow||!brow.is_active||!AB_WA_STATUS.includes(abNorm(brow.subscription_status))){
@@ -955,11 +980,7 @@ async function sendSelectedWhatsApp(btn){
     const plan=[], skipped=[];
     for(const lead of selected){
       const ph=abDigits(lead.phone);
-      let rows=[];
-      try{ rows=await supaGet(`listings?select=${AB_LIST_COLS},is_active&custom_contact_phone=like.*${ph}&listing_type=eq.flat_wanted&rejected=eq.false&order=created_at.desc&limit=10`); }catch(e){ console.error(e); }
-      rows=rows.filter(r=>abDigits(r.custom_contact_phone)===ph);
-      const pend=rows.find(r=>r.pending_approval);
-      const live=rows.find(r=>!r.pending_approval && r.is_active && r.created_at>=cutoffIso);
+      const {pend,live}=await waFindListing(ph,cutoffIso);
       const target=pend||live;
       if(!target){ skipped.push(`+91 ${ph} — no pending or recent live listing on the site for this number`); continue; }
       const got=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(target.id)}&broker_id=eq.${currentBrokerId}&select=broker_id&limit=1`).catch(()=>[]);
@@ -1007,7 +1028,7 @@ async function sendSelectedWhatsApp(btn){
         }
       }
     }
-    selectedLeadIds=new Set();
+    if(!only) selectedLeadIds=new Set();
     await refreshBrokerQuotaState(); await loadLeads(); await loadBrokerList();
     let out=`Sent and ticked: ${okN}`;
     if(notLogged.length) out+=`\n\nNo send logged yet (quota full, failed, or just slow — press back and re-open in a minute): ${notLogged.join(", ")}`;
