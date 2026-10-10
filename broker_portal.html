@@ -170,7 +170,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="selected-count-text">0</span> selected</div>
-      <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button>
+      <span><button class="btn btn-teal wa-send-btn" onclick="sendSelectedWhatsApp(this)" disabled>Approve &amp; send on WhatsApp</button> <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button></span>
     </div>
     <div class="table-card">
       <table>
@@ -187,7 +187,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="selected-count-text">0</span> selected</div>
-      <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button>
+      <span><button class="btn btn-teal wa-send-btn" onclick="sendSelectedWhatsApp(this)" disabled>Approve &amp; send on WhatsApp</button> <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button></span>
     </div>
   </div>
 
@@ -195,7 +195,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-H · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-I · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -212,7 +212,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <table>
         <thead><tr>
           <th class="row-select"><input type="checkbox" class="chk" id="abSelectAll" onclick="abToggleAll(this.checked)"></th>
-          <th>Number</th><th class="sortable-th" id="abThGender" onclick="abSetSort('gender')">Gender ↕</th><th class="sortable-th" id="abThRequirement" onclick="abSetSort('requirement')">Requirement ↕</th><th class="sortable-th" id="abThArea" onclick="abSetSort('area')">Areas ↕</th><th class="sortable-th" id="abThDate" onclick="abSetSort('date')">Date ↕</th><th>Brokers</th><th>Approve</th>
+          <th>Number</th><th class="sortable-th" id="abThGender" onclick="abSetSort('gender')">Gender ↕</th><th class="sortable-th" id="abThRequirement" onclick="abSetSort('requirement')">Requirement ↕</th><th class="sortable-th" id="abThArea" onclick="abSetSort('area')">Areas ↕</th><th class="sortable-th" id="abThDate" onclick="abSetSort('date')">Date ↕</th><th>Brokers</th><th class="sortable-th" id="abThApprove" onclick="abSetSort('approve')">Approve ↕</th>
         </tr></thead>
         <tbody id="abBody"></tbody>
       </table>
@@ -746,6 +746,7 @@ function updateSelectedCount(){
   const remaining=getRemainingQuota();
   const shouldDisable=selectedLeadIds.size===0 || (remaining!==null && remaining<=0 && selectedLeadIds.size===0);
   document.querySelectorAll(".download-excel-btn").forEach(btn=>btn.disabled=shouldDisable);
+  document.querySelectorAll(".wa-send-btn").forEach(btn=>btn.disabled=shouldDisable||waSending);
 }
 
 function openMsgModal(id){
@@ -928,6 +929,93 @@ async function downloadSelected(){
   }finally{
     btns.forEach(b=>{b.disabled=false; b.textContent="Download Excel";});
   }
+}
+
+
+// ---------- Individual broker: approve + send the selected leads on WhatsApp ----------
+// A lead here is a Potential Data row; WhatsApp goes out for the matching listing on the site
+// (looked up by phone). Pending listing -> approved and sent ONLY to this broker; already-live
+// listing -> re-sent to this broker only. Afterwards the row turns green (Shared) here, and the
+// listing shows this broker under "Already shared with" in All Brokers (same tables).
+let waSending=false;
+async function sendSelectedWhatsApp(btn){
+  if(waSending) return;
+  const selected=currentLeads.filter(l=>selectedLeadIds.has(l.id) && l.status!=="sent");
+  if(!selected.length) return;
+  waSending=true; updateSelectedCount();
+  const label=btn.textContent; document.querySelectorAll(".wa-send-btn").forEach(b=>b.textContent="Checking…");
+  const done=()=>{ waSending=false; document.querySelectorAll(".wa-send-btn").forEach(b=>b.innerHTML="Approve &amp; send on WhatsApp"); updateSelectedCount(); };
+  try{
+    const brow=(await supaGet(`brokers?id=eq.${currentBrokerId}&select=id,name,city,subscription_status,is_active`))[0];
+    if(!brow||!brow.is_active||!AB_WA_STATUS.includes(abNorm(brow.subscription_status))){
+      alert(`${currentBrokerName} is not WhatsApp-eligible right now (subscription status: ${brow?brow.subscription_status:"unknown"}). Use Download Excel for this broker.`);
+      done(); return;
+    }
+    const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
+    const plan=[], skipped=[];
+    for(const lead of selected){
+      const ph=abDigits(lead.phone);
+      let rows=[];
+      try{ rows=await supaGet(`listings?select=${AB_LIST_COLS},is_active&custom_contact_phone=like.*${ph}&listing_type=eq.flat_wanted&rejected=eq.false&order=created_at.desc&limit=10`); }catch(e){ console.error(e); }
+      rows=rows.filter(r=>abDigits(r.custom_contact_phone)===ph);
+      const pend=rows.find(r=>r.pending_approval);
+      const live=rows.find(r=>!r.pending_approval && r.is_active && r.created_at>=cutoffIso);
+      const target=pend||live;
+      if(!target){ skipped.push(`+91 ${ph} — no pending or recent live listing on the site for this number`); continue; }
+      const got=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(target.id)}&broker_id=eq.${currentBrokerId}&select=broker_id&limit=1`).catch(()=>[]);
+      if(got.length){ plan.push({lead,listing:target,already:true}); continue; }
+      plan.push({lead,listing:target,resend:!pend});
+    }
+    const toSend=plan.filter(p=>!p.already);
+    let msg=`Send on WhatsApp to ${currentBrokerName} ONLY:\n\n`+toSend.map(p=>`• +91 ${abDigits(p.lead.phone)} (${p.resend?"already live — re-send":"pending — will be APPROVED and go live"})`).join("\n");
+    if(!toSend.length) msg="Nothing to send.";
+    const paidFull=toSend.filter(p=>abIsPaid(p.listing));
+    if(paidFull.length) msg+=`\n\n${paidFull.length} of these are paid leads — they are skipped automatically if ${currentBrokerName}'s quota is full.`;
+    if(skipped.length) msg+=`\n\nSkipped:\n`+skipped.map(x=>"• "+x).join("\n");
+    if(plan.some(p=>p.already)) msg+=`\n\nAlready sent to ${currentBrokerName} earlier (will just be ticked): ${plan.filter(p=>p.already).length}`;
+    if(toSend.length) msg+=`\n\nMake sure you have already edited these listings on the main site. Continue?`;
+    if(!toSend.length){ if(skipped.length||plan.length){ if(!plan.length){ alert(msg); done(); return; } } }
+    else if(!confirm(msg)){ done(); return; }
+
+    document.querySelectorAll(".wa-send-btn").forEach(b=>b.textContent="Sending…");
+    const failed=[];
+    for(const p of toSend){
+      const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:p.listing.id,brokerIds:[String(currentBrokerId)],resend:!!p.resend})});
+      let res=await call();
+      if(res.status===401 && await refreshSession()) res=await call();
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||!data.success){ failed.push(`+91 ${abDigits(p.lead.phone)}: ${data.error||res.status}`); p.failed=true; }
+    }
+    // wait for the WhatsApp sender to log what it actually delivered
+    const ids=plan.filter(p=>!p.failed&&!p.already).map(p=>String(p.listing.id));
+    let loggedSet=new Set();
+    for(let k=0;k<10 && ids.length;k++){
+      await new Promise(r=>setTimeout(r,3000));
+      const lg=await supaGet(`broker_leads?listing_id=in.(${ids.map(encodeURIComponent).join(",")})&broker_id=eq.${currentBrokerId}&select=listing_id`).catch(()=>[]);
+      loggedSet=new Set(lg.map(r=>String(r.listing_id)));
+      if(loggedSet.size>=ids.length) break;
+    }
+    const nowIso=new Date().toISOString(); let okN=0; const notLogged=[];
+    for(const p of plan){
+      if(p.failed) continue;
+      if(!p.already && !loggedSet.has(String(p.listing.id))){ notLogged.push(`+91 ${abDigits(p.lead.phone)}`); continue; }
+      if(await supaPatch("broker_portal_leads",`id=eq.${p.lead.id}`,{status:"sent",sent_at:nowIso})){
+        okN++;
+        if(!p.already && !abIsPaid(p.listing)){   // free leads are counted here; paid ones by notify-brokers itself
+          const row=await supaGet(`brokers?id=eq.${currentBrokerId}&select=contacts_sent_this_month`).catch(()=>[]);
+          await supaPatch("brokers",`id=eq.${currentBrokerId}`,{contacts_sent_this_month:(Number(row[0]&&row[0].contacts_sent_this_month)||0)+1});
+        }
+      }
+    }
+    selectedLeadIds=new Set();
+    await refreshBrokerQuotaState(); await loadLeads(); await loadBrokerList();
+    let out=`Sent and ticked: ${okN}`;
+    if(notLogged.length) out+=`\n\nNo send logged yet (quota full, failed, or just slow — press back and re-open in a minute): ${notLogged.join(", ")}`;
+    if(failed.length) out+=`\n\nFailed:\n`+failed.join("\n");
+    if(skipped.length) out+=`\n\nSkipped:\n`+skipped.join("\n");
+    alert(out);
+  }catch(e){ console.error(e); alert("Sending failed — nothing was ticked. Check All Brokers before retrying."); }
+  finally{ done(); }
 }
 
 // =====================================================================
@@ -1161,7 +1249,7 @@ function abSetSort(field){
   abRender();
 }
 function abUpdateSortHeads(){
-  const labels={gender:["abThGender","Gender"],requirement:["abThRequirement","Requirement"],area:["abThArea","Areas"],date:["abThDate","Date"]};
+  const labels={gender:["abThGender","Gender"],requirement:["abThRequirement","Requirement"],area:["abThArea","Areas"],date:["abThDate","Date"],approve:["abThApprove","Approve"]};
   Object.entries(labels).forEach(([f,[id,label]])=>{
     const th=document.getElementById(id); if(!th) return;
     if(f===abSortField){ th.classList.add("active"); th.textContent=label+(abSortDir===1?" ↑":" ↓"); }
@@ -1181,6 +1269,7 @@ function abRender(){
       if(abSortField==="requirement") c=requirementRank(abReq(a))-requirementRank(abReq(b));
       else if(abSortField==="gender") c=genderRank(a.gender_preference)-genderRank(b.gender_preference);
       else if(abSortField==="area") c=abAreasText(a).localeCompare(abAreasText(b));
+      else if(abSortField==="approve") c=(abIsApproved(a)?1:0)-(abIsApproved(b)?1:0);
       else if(abSortField==="date") c=new Date(abPostedIso(a)||a.created_at||0)-new Date(abPostedIso(b)||b.created_at||0);
       return c*abSortDir;
     });
