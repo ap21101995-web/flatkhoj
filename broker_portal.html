@@ -196,7 +196,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-J · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-K · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -611,9 +611,33 @@ async function loadLeads(){
   // what the script would currently treat as "still on cooldown").
   const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*24*60*60*1000).toISOString();
   currentLeads=await supaGet(`broker_portal_leads?broker_id=eq.${currentBrokerId}&or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,phone,gender,requirement,areas,raw_whatsapp_text,whatsapp_group_name,posted_at,status,sent_at&order=created_at.desc`);
+  await syncLeadsWithListings();
   renderLeadsTable();
 }
 
+
+// One source of truth: when the site already has a listing for a number (auto-posted, and possibly
+// corrected by hand in the editor), its gender / requirement / areas are what Potential Data and the
+// Excel show. Pending rows are also corrected in the database so every other view agrees.
+async function syncLeadsWithListings(){
+  try{
+    const pend=currentLeads.filter(l=>l.status!=="sent"); if(!pend.length) return;
+    const since=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
+    const rows=await supaGetAll(`listings?select=custom_contact_phone,gender_preference,room_type,flat_type,areas,created_at&listing_type=eq.flat_wanted&rejected=eq.false&created_at=gte.${since}&order=created_at.desc`);
+    const byPh={};
+    rows.forEach(r=>{ const p=abDigits(r.custom_contact_phone); if(p.length===10&&!byPh[p]) byPh[p]=r; });
+    for(const l of pend){
+      const r=byPh[abDigits(l.phone)]; if(!r) continue;
+      const g=r.gender_preference||l.gender;
+      const req=(r.room_type&&r.room_type!=="Undisclosed")?r.room_type:((r.flat_type&&r.flat_type!=="Undisclosed")?r.flat_type:l.requirement);
+      const ar=abArr(r.areas).join(", ")||l.areas;
+      if(g!==l.gender||req!==l.requirement||ar!==l.areas){
+        l.gender=g; l.requirement=req; l.areas=ar;
+        supaPatch("broker_portal_leads",`id=eq.${l.id}`,{gender:g,requirement:req,areas:ar});
+      }
+    }
+  }catch(e){ console.error("listing sync failed",e); }
+}
 // ---------- Sorting ----------
 // Requirement order per explicit instruction: Undisclosed - Double -
 // Single - 1 RK - 1 BHK - 2 BHK - 3 BHK (bigger requirement at one end,
