@@ -196,7 +196,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-K · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-L · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -623,11 +623,12 @@ async function syncLeadsWithListings(){
   try{
     const pend=currentLeads.filter(l=>l.status!=="sent"); if(!pend.length) return;
     const since=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
-    const rows=await supaGetAll(`listings?select=custom_contact_phone,gender_preference,room_type,flat_type,areas,created_at&listing_type=eq.flat_wanted&rejected=eq.false&created_at=gte.${since}&order=created_at.desc`);
+    const rows=await supaGetAll(`listings?select=custom_contact_phone,gender_preference,room_type,flat_type,areas,created_at,pending_approval,is_active&listing_type=eq.flat_wanted&rejected=eq.false&created_at=gte.${since}&order=created_at.desc`);
     const byPh={};
     rows.forEach(r=>{ const p=abDigits(r.custom_contact_phone); if(p.length===10&&!byPh[p]) byPh[p]=r; });
     for(const l of pend){
       const r=byPh[abDigits(l.phone)]; if(!r) continue;
+      l._live=(r.pending_approval===false && r.is_active===true);
       const g=r.gender_preference||l.gender;
       const req=(r.room_type&&r.room_type!=="Undisclosed")?r.room_type:((r.flat_type&&r.flat_type!=="Undisclosed")?r.flat_type:l.requirement);
       const ar=abArr(r.areas).join(", ")||l.areas;
@@ -733,7 +734,7 @@ function renderLeadsTable(){
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.requirement||"—")}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${escHtml(l.areas||"—")}${sentTag}</td>
       <td class="clickable-row" onclick="openMsgModal('${l.id}')">${postedDateStr}</td>
-      <td style="white-space:nowrap">${isSent?`<span class="badge b-ok">Shared ✓</span>`:`<button class="btn btn-teal" onclick="sendSelectedWhatsApp(this,'${l.id}')">Approve</button> <button class="btn btn-ghost" onclick="waEditLead('${l.id}')">✏️ Edit</button>`}</td>
+      <td style="white-space:nowrap">${isSent?`<span class="badge b-ok">Shared ✓</span>`:`${l._live?`<span class="badge" style="background:rgba(220,53,69,.15);color:#ff5b6b;border:1px solid rgba(220,53,69,.45);font-weight:700" title="This number's listing is already live on the site">● Live</span> `:""}<button class="btn btn-teal" onclick="sendSelectedWhatsApp(this,'${l.id}')">Approve</button> <button class="btn btn-ghost" onclick="waEditLead('${l.id}')">✏️ Edit</button>`}</td>
     </tr>`;
   }).join("");
   updateSelectedCount();
