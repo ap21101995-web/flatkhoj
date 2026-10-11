@@ -109,6 +109,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .tp-filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px; }
 .tp-filters .filter-input { min-width:0; width:100%; }
 textarea.filter-input { font-family:var(--font); }
+.tp-big { display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:26px; }
+@media (max-width:760px){ .tp-big { grid-template-columns:1fr; } }
+.tp-bigbtn { background:var(--bg2); border:2px solid var(--border2); border-radius:20px; padding:56px 28px; cursor:pointer; color:var(--ink); font-family:var(--font); display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; transition:all .15s; }
+.tp-bigbtn:hover { border-color:var(--gold); background:var(--gold-bg); transform:translateY(-2px); }
+.tp-big-ico { font-size:56px; line-height:1; }
+.tp-big-t { font-size:30px; font-weight:800; color:var(--gold); }
+.tp-big-s { font-size:14px; color:var(--ink2); max-width:300px; line-height:1.5; }
 .tp-checks { display:flex; flex-wrap:wrap; gap:4px 12px; padding:8px 4px; font-size:13px; color:var(--ink2); }
 .tp-checks label { display:flex; gap:5px; align-items:center; cursor:pointer; }
 </style>
@@ -133,17 +140,27 @@ textarea.filter-input { font-family:var(--font); }
     <button class="btn btn-ghost" onclick="logout()">Sign out</button>
   </div>
 
-  <div class="page" style="max-width:1300px">
+  <div id="tpHome" class="page" style="max-width:980px">
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP3</span></div>
+      <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
+    <div class="tp-big">
+      <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
+      <button class="tp-bigbtn" onclick="tpChoose('offerers')"><span class="tp-big-ico">🏠</span><span class="tp-big-t">Help Offerers</span><span class="tp-big-s">Paste an offerer's vacancy or replacement &rarr; see the seekers who could take it</span></button>
+    </div>
+  </div>
+
+  <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP1</span></div>
-        <div class="psub">Paste a vacancy (for example a girl looking for a replacement in her flat) to see every seeker who could take it, or paste a requirement to see every place that could suit. It searches all auto-posted and site listings &mdash; live or not live. The message is read with the same engine as auto-posting when Run_Pratika_TP.bat is running. Tick the ones you like and press Send to get one WhatsApp-ready message with the numbers masked.</div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP3</span></div>
+        <div class="psub" id="tpModeSub"></div>
       </div>
+      <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
     </div>
 
     <div class="table-card" style="padding:16px 18px">
-      <label class="lbl" for="tpText">Paste the message here</label>
-      <textarea id="tpText" class="filter-input" rows="5" style="width:100%;resize:vertical;line-height:1.5" placeholder="e.g. Looking for a replacement in my flat, Andheri East, double sharing, girls only, from 1st Nov, rent 14k"></textarea>
+      <label class="lbl" for="tpText" id="tpPasteLbl">Paste the message here</label>
+      <textarea id="tpText" class="filter-input" rows="5" style="width:100%;resize:vertical;line-height:1.5" placeholder=""></textarea>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-gold" onclick="tpFind()" id="tpFindBtn">Find matches</button>
         <button class="btn btn-ghost" onclick="tpClear()">Clear</button>
@@ -157,22 +174,22 @@ textarea.filter-input { font-family:var(--font); }
         <div><label class="lbl">Gender</label>
           <select class="filter-input" id="tpGender" onchange="tpApply()"><option value="">Any</option><option value="Female">Female</option><option value="Male">Male</option></select></div>
         <div><label class="lbl">Move-in date</label><input class="filter-input" type="date" id="tpMovein" onchange="tpApply()"></div>
-        <div title="A match may move in up to this many days AFTER the move-in date above. Someone who can move in earlier always counts."><label class="lbl">Allow move-in up to ___ days later</label><input class="filter-input" type="number" id="tpTol" value="10" min="0" max="120" onchange="tpApply()"></div>
         <div><label class="lbl">Rent / budget (optional)</label><input class="filter-input" type="number" id="tpRent" placeholder="e.g. 14000" onchange="tpApply()"></div>
-        <div><label class="lbl">The message is</label><select class="filter-input" id="tpDir" onchange="tpRefetch()"><option value="offer">OFFERING a place &rarr; find seekers</option><option value="seek">LOOKING for a place &rarr; find places</option></select></div>
+        
         <div><label class="lbl">City</label><select class="filter-input" id="tpCity" onchange="tpRefetch()"><option value="mumbai">Mumbai</option><option value="pune">Pune</option></select></div>
-        <div><label class="lbl" title="Only listings created or refreshed within this many days are searched">Look back (listings from the last)</label>
-          <select class="filter-input" id="tpDays" onchange="tpRefetch()"><option value="7">7 days</option><option value="15">15 days</option><option value="30" selected>30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></div>
+        
       </div>
       <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" class="chk" id="tpUnspec" checked onchange="tpApply()"> Also show listings that didn't state their requirement, gender, move-in date or rent</label>
     </div>
 
-    <div id="tpSummary" style="font-size:13px;color:var(--ink2);margin:4px 0 12px"></div>
+    <div id="tpSummary" style="font-size:13px;color:var(--ink2);margin:4px 0 8px"></div>
+    <div id="tpLocalNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:8px">Shared marks are being saved only in this browser (the pratika_tp_shares table is not set up yet). Run the SQL from chat to keep them everywhere.</div>
 
     <div class="search-row">
       <input class="filter-input" id="abSearchInput" placeholder="Search by number, requirement or area..." oninput="tpRender()">
       <button class="btn btn-ghost" onclick="tpRefetch()">&#8635; Refresh</button>
     </div>
+    <label style="display:flex;gap:8px;align-items:center;margin:-4px 0 10px;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" class="chk" id="tpHideShared" onchange="tpRender()"> Hide leads I have already shared</label>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
       <button class="btn btn-gold ab-send-btn" onclick="tpOpenSend()" disabled>Send</button>
@@ -187,13 +204,14 @@ textarea.filter-input { font-family:var(--font); }
           <th class="sortable-th" data-f="area" onclick="tpSetSort('area')">Areas</th>
           <th class="sortable-th" data-f="budget" onclick="tpSetSort('budget')">Budget / Rent</th>
           <th class="sortable-th" data-f="movein" onclick="tpSetSort('movein')">Move-in</th>
-          <th class="sortable-th" data-f="date" onclick="tpSetSort('date')">Posted</th>
+          <th class="sortable-th" data-f="date" onclick="tpSetSort('date')">Posted (latest)</th>
           <th class="sortable-th" data-f="match" onclick="tpSetSort('match')">Match</th>
+          <th class="sortable-th" data-f="shared" onclick="tpSetSort('shared')">Shared</th>
           <th>Brokers</th>
           <th class="sortable-th" data-f="status" onclick="tpSetSort('status')">Approve</th>
           <th>Edit</th>
         </tr></thead>
-        <tbody id="abBody"><tr><td colspan="12" class="empty-state">Paste a message above and press Find matches.</td></tr></tbody>
+        <tbody id="abBody"><tr><td colspan="13" class="empty-state">Paste a message above and press Find matches.</td></tr></tbody>
       </table>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
@@ -245,7 +263,7 @@ textarea.filter-input { font-family:var(--font); }
     </div>
     <div class="modal-foot">
       <div style="font-size:13px;color:var(--ink2)" id="sendCopied"></div>
-      <span><button class="btn btn-ghost" onclick="document.getElementById('sendModal').style.display='none'">Close</button> <button class="btn btn-gold" onclick="tpCopy()">Copy message</button></span>
+      <span><button class="btn btn-ghost" onclick="document.getElementById('sendModal').style.display='none'">Close</button> <button class="btn btn-ghost" onclick="tpCopy(false)">Copy only</button> <button class="btn btn-gold" onclick="tpCopy(true)">Copy &amp; mark as shared</button></span>
     </div>
   </div>
 </div>
@@ -732,6 +750,8 @@ const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov
 const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 let tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpReactCut="";
 let tpSortField="match", tpSortDir=-1, tpSorted=[];
+let tpMode=null, tpShares={}, tpSharesLocal=false;
+const TP_DAYS=60;   // listings created or refreshed in the last 60 days are searched
 
 function abIsApproved(l){ return !!(l&&(l._approved||l._live)); }
 function tpEsc(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); }
@@ -744,6 +764,7 @@ function tpMoney(n){ return "₹"+Number(n).toLocaleString("en-IN"); }
 async function enterApp(){
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("app").style.display="block";
+  tpGoHome();
   try{ abBrokers=await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"); }catch(e){ console.error(e); }
   tpBuildVocab();
 }
@@ -827,8 +848,8 @@ function tpParseDate(text){
 function tpReadOffer(){
   const areas=document.getElementById("tpAreas").value.split(",").map(x=>x.trim()).filter(Boolean);
   return {
-    areas, sharing:tpGetSharing(), dir:document.getElementById("tpDir").value, gender:document.getElementById("tpGender").value,
-    movein:document.getElementById("tpMovein").value, tol:Math.max(0,Number(document.getElementById("tpTol").value)||0),
+    areas, sharing:tpGetSharing(), dir:(tpMode==="seekers"?"seek":"offer"), gender:document.getElementById("tpGender").value,
+    movein:document.getElementById("tpMovein").value,
     rent:Number(document.getElementById("tpRent").value)||0, unspec:document.getElementById("tpUnspec").checked,
     city:document.getElementById("tpCity").value
   };
@@ -853,10 +874,10 @@ function tpClear(){
 }
 // Reads the pasted message with the AUTO-POSTING engine (through the helper running on this PC).
 // If the helper is not running, falls back to the page's own simpler reader.
-async function tpEngineParse(text,city){
+async function tpEngineParse(text,city,type){
   try{
     const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),8000);
-    const r=await fetch(TP_HELPER,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({text,city}),signal:ctl.signal});
+    const r=await fetch(TP_HELPER,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({text,city,type:type||null}),signal:ctl.signal});
     clearTimeout(to);
     if(!r.ok) return null;
     return await r.json();
@@ -867,30 +888,52 @@ async function tpFind(){
   if(!t.trim()){ alert("Paste the message first."); return; }
   const btn=document.getElementById("tpFindBtn"); btn.disabled=true; btn.textContent="Reading…";
   const note=document.getElementById("tpParseNote");
-  let areas, sh, g, d, r, dir=null, src="", extra="";
+  let areas, sh, g, d, r, src="", extra="";
   const city=document.getElementById("tpCity").value;
-  const eng=await tpEngineParse(t,city);
+  // Help Seekers: the pasted text IS a seeker's requirement. Help Offerers: it is a vacancy.
+  let eng=await tpEngineParse(t,city,tpMode==="seekers"?"flat_wanted":null);
+  if(tpMode==="offerers" && eng && eng.ok && eng.listings && eng.listings[0] && eng.listings[0].listing_type==="flat_wanted")
+    eng=await tpEngineParse(t,city,"flatmate_wanted");
   if(eng && eng.ok && eng.listings && eng.listings.length){
     const L=eng.listings[0];
     areas=(L.areas||[]); sh=tpSharingFromText((L.room_type&&L.room_type!=="Undisclosed"?L.room_type:"")+" "+(L.listing_type==="flat_listing"?"entire":""));
     g=(L.gender_preference==="Female"||L.gender_preference==="Male")?L.gender_preference:"";
     d=L.available_from||""; r=L.rent_amount?String(L.rent_amount):"";
-    dir=(L.listing_type==="flat_wanted")?"seek":"offer";
     src="auto-posting engine";
     if(eng.count>1) extra=" The message holds "+eng.count+" listings; using the first.";
   }else{
     areas=tpParseAreas(t); sh=tpSharingFromText(tpParseSharing(t)); g=tpParseGender(t); d=tpParseDate(t); r=tpParseRent(t);
-    dir=/\b(looking for|need|require|wanted|searching)\b/i.test(t)&&!/\b(replacement|vacant|vacancy|available|take ?over|looking for (a )?(flatmate|roommate))\b/i.test(t)?"seek":"offer";
     src="built-in reader (the Pratika_TP helper is not running, so this is NOT the exact auto-posting logic — start Run_Pratika_TP.bat)";
     if(eng&&!eng.ok) extra=" Engine said: "+(eng.reason||"")+".";
   }
   document.getElementById("tpAreas").value=areas.join(", ");
   tpSetSharing(sh); document.getElementById("tpGender").value=g; document.getElementById("tpMovein").value=d; document.getElementById("tpRent").value=r;
-  document.getElementById("tpDir").value=dir;
-  note.innerHTML="Read by the <b>"+escHtml(src)+"</b> &rarr; "+(dir==="seek"?"looking for a place":"offering a place")+" · areas: <b>"+escHtml(areas.join(", ")||"none found")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not found")+"</b>"+(r?" · rent/budget: <b>"+tpMoney(r)+"</b>":"")+"."+escHtml(extra)+" Change anything above if it is wrong.";
+  note.innerHTML="Read by the <b>"+escHtml(src)+"</b> &rarr; areas: <b>"+escHtml(areas.join(", ")||"none found")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not found")+"</b>"+(r?" · rent/budget: <b>"+tpMoney(r)+"</b>":"")+"."+escHtml(extra)+" Change anything above if it is wrong.";
   btn.disabled=false; btn.textContent="Find matches";
   tpTouched=true;
   await tpRefetch();
+}
+
+// ---------- home / mode ----------
+function tpGoHome(){
+  tpMode=null; tpTouched=false; tpToken++;
+  document.getElementById("tpHome").style.display="block";
+  document.getElementById("tpWork").style.display="none";
+}
+function tpChoose(mode){
+  tpMode=mode; tpTouched=false; tpToken++;
+  const seek=(mode==="seekers");
+  document.getElementById("tpModeTitle").textContent=seek?"Help Seekers":"Help Offerers";
+  document.getElementById("tpModeSub").textContent=seek
+    ? "Paste a seeker's requirement. You will see every place (live or not live) that could suit them. Tick the ones to share, press Send, and they are marked as shared."
+    : "Paste an offerer's message — a vacancy, or someone who needs a replacement. You will see every seeker (live or not live) who could take it. Tick the ones to share, press Send, and they are marked as shared.";
+  document.getElementById("tpPasteLbl").textContent=seek?"Paste the seeker's message here":"Paste the offerer's message here";
+  document.getElementById("tpText").placeholder=seek
+    ? "e.g. Girl looking for a single occupancy room in Andheri West, budget 15k, from 15th Nov"
+    : "e.g. Looking for a replacement in my flat, Andheri East, double sharing, girls only, from 1st Nov, rent 14k";
+  document.getElementById("tpHome").style.display="none";
+  document.getElementById("tpWork").style.display="block";
+  tpClear();
 }
 
 // ---------- loading ----------
@@ -898,8 +941,8 @@ async function tpRefetch(){
   if(!tpTouched) return;
   const my=++tpToken;
   const body=document.getElementById("abBody");
-  body.innerHTML=`<tr><td colspan="12" class="empty-state">Loading…</td></tr>`;
-  const days=Number(document.getElementById("tpDays").value)||30, city=document.getElementById("tpCity").value, dir=document.getElementById("tpDir").value;
+  body.innerHTML=`<tr><td colspan="13" class="empty-state">Loading…</td></tr>`;
+  const days=TP_DAYS, city=document.getElementById("tpCity").value, dir=(tpMode==="seekers"?"seek":"offer");
   const typeQ=dir==="seek"?"listing_type=in.(flatmate_wanted,flat_listing)":"listing_type=eq.flat_wanted";
   const cut=new Date(Date.now()-days*864e5).toISOString();
   tpReactCut=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
@@ -927,10 +970,11 @@ async function tpRefetch(){
       tpPool.push(l);
     });
     tpHydrated=new Set(); abLoggedBy={};
+    await tpSharesLoad();
     tpBuildVocab();
   }catch(e){
     console.error("load failed",e);
-    body.innerHTML=`<tr><td colspan="12" class="empty-state">Could not load seekers. Press Refresh to try again.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="13" class="empty-state">Could not load listings. Press Refresh to try again.</td></tr>`;
     return;
   }
   await tpApply();
@@ -963,7 +1007,6 @@ function tpMatch(l,o){
   if(o.movein){
     if(l.available_from){
       const diff=(Date.parse(l.available_from)-Date.parse(o.movein))/864e5;
-      if(diff>o.tol) return null;
       if(Math.abs(diff)<=5){ score+=1; reasons.push("Move-in fits"); } else reasons.push(diff<0?"Can move earlier":"Moves in a bit later");
     }else{ if(!o.unspec) return null; reasons.push("Move-in not stated"); }
   }
@@ -1008,7 +1051,7 @@ async function tpApply(){
   if(rows.some(l=>l._approved)) await abReconcile(tpReactCut);
   if(my!==tpToken) return;
   const live=rows.filter(l=>l._live).length;
-  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched the last ${escHtml(document.getElementById("tpDays").value)} days.`;
+  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched listings created or refreshed in the last ${TP_DAYS} days.`;
   tpRender();
 }
 
@@ -1029,6 +1072,7 @@ function tpSortRows(rows){
     else if(f==="movein") c=(a.available_from?Date.parse(a.available_from):9e15)-(b.available_from?Date.parse(b.available_from):9e15);
     else if(f==="date") c=t(a)-t(b);
     else if(f==="status") c=(a._live?1:0)-(b._live?1:0);
+    else if(f==="shared") c=tpLastShared(a)-tpLastShared(b);
     if(c===0) c=t(b)-t(a);
     return c*d;
   });
@@ -1042,9 +1086,10 @@ function tpRender(){
   const body=document.getElementById("abBody");
   tpSorted=tpSortRows(abListings);
   const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
-  const rows=tpSorted.filter(l=>!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q));
+  const hideSh=document.getElementById("tpHideShared").checked;
+  const rows=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="12" class="empty-state">${!tpTouched?"Paste a message above and press Find matches.":(abListings.length?"No seekers match that search.":"No seekers fit these details. Try more areas, a larger \"days later\" or turn on the box for unstated details.")}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="13" class="empty-state">${!tpTouched?"Paste a message above and press Find matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try more areas, or tick the box for listings that did not state their requirement, gender or rent.")}</td></tr>`;
     abUpdateCount(); return;
   }
   const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
@@ -1055,7 +1100,10 @@ function tpRender(){
     const status=live
       ? `<span class="badge" style="background:rgba(220,53,69,.15);color:#ff5b6b;border:1px solid rgba(220,53,69,.45);font-weight:700" title="This listing is already live on the site">● Live</span>`
       : `<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`;
-    return `<tr class="clickable-row" onclick="abOpenText('${escHtml(id)}')">
+    const sh=tpShares[id], shCell=sh&&sh.length
+      ? `<span class="badge b-ok" title="Shared ${escHtml(sh.map(x=>tpFmtDT(x.shared_at)+(x.client_note?" — "+x.client_note:"")).join("\n"))}">✓ Shared ${escHtml(tpFmtDT(sh[sh.length-1].shared_at))}${sh.length>1?" ×"+sh.length:""}</span> <button class="btn btn-ghost" style="padding:4px 8px" title="The client did not unmask this one — make it open again, as if it was never sent" onclick="tpReopen('${escHtml(id)}',this)">↩ Reopen</button>`
+      : `<span style="color:var(--ink3)">—</span>`;
+    return `<tr class="clickable-row" ${sh&&sh.length?'style="background:var(--green-bg)"':''} onclick="abOpenText('${escHtml(id)}')">
       <td class="row-select" onclick="event.stopPropagation()"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
       <td style="font-weight:600;white-space:nowrap">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
       <td>${escHtml(l.gender_preference||"—")}</td>
@@ -1063,8 +1111,9 @@ function tpRender(){
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td style="white-space:nowrap">${l.rent_amount?escHtml(tpMoney(l.rent_amount)):"—"}</td>
       <td style="white-space:nowrap">${escHtml(tpFmtDate(l.available_from))}</td>
-      <td style="white-space:nowrap">${abPostedFmt(l)}</td>
+      <td style="white-space:nowrap">${tpPostedFmt(l)}</td>
       <td><span class="badge" style="${lblStyle[m.label]}" title="${escHtml(m.reasons.join(" · "))}">${m.label}</span></td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">${shCell}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap">${status}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-ghost" onclick="window.open('post_form.html?edit='+encodeURIComponent('${escHtml(id)}'),'_blank')">✏️ Edit</button></td>
@@ -1074,7 +1123,8 @@ function tpRender(){
 }
 function tpToggleAll(on){
   const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
-  const vis=tpSorted.filter(l=>!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q));
+  const hideSh=document.getElementById("tpHideShared").checked;
+  const vis=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(on) vis.forEach(l=>abSelected.add(String(l.id))); else vis.forEach(l=>abSelected.delete(String(l.id)));
   tpRender();
 }
@@ -1112,6 +1162,7 @@ function tpLeadText(l,i){
 function tpOpenSend(){
   const sel=tpSorted.filter(l=>abSelected.has(String(l.id)));
   if(!sel.length) return;
+  tpSendIds=sel.map(l=>String(l.id));
   const o=tpReadOffer(), n=sel.length;
   const shMap={Single:"single occupancy",Double:"double occupancy",Triple:"triple occupancy",Hall:"hall",Entire:"entire flat"};
   const sh=o.sharing.map(x=>shMap[x]).join(" / ");
@@ -1125,10 +1176,70 @@ function tpOpenSend(){
   document.getElementById("sendCopied").textContent="";
   document.getElementById("sendModal").style.display="flex";
 }
-async function tpCopy(){
+async function tpCopy(mark){
   const ta=document.getElementById("sendText"), msg=document.getElementById("sendCopied");
-  try{ await navigator.clipboard.writeText(ta.value); msg.textContent="Copied ✓"; }
-  catch(e){ ta.focus(); ta.select(); try{ document.execCommand("copy"); msg.textContent="Copied ✓"; }catch(e2){ msg.textContent="Press Ctrl+C to copy"; } }
+  let ok=true;
+  try{ await navigator.clipboard.writeText(ta.value); }
+  catch(e){ ta.focus(); ta.select(); try{ ok=document.execCommand("copy"); }catch(e2){ ok=false; } }
+  if(!ok){ msg.textContent="Could not copy — press Ctrl+C"; return; }
+  if(!mark){ msg.textContent="Copied ✓ (not marked as shared)"; return; }
+  const ids=tpSendIds||[];
+  const note=(document.getElementById("tpText").value||"").replace(/\s+/g," ").trim().slice(0,70);
+  msg.textContent="Copied ✓ — marking as shared…";
+  const done=await tpSharesAdd(ids,note);
+  ids.forEach(i=>abSelected.delete(i));
+  tpRender();
+  msg.textContent="Copied ✓ and marked "+done+" lead"+(done===1?"":"s")+" as shared.";
+}
+
+// ---------- shared marks (which leads were sent to a client) ----------
+let tpSendIds=[];
+function tpLastShared(l){ const a=tpShares[String(l.id)]; return a&&a.length?new Date(a[a.length-1].shared_at).getTime():0; }
+function tpFmtDT(iso){ const d=new Date(iso); if(isNaN(d)) return ""; return d.getDate()+" "+TP_MON_NAMES[d.getMonth()]+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); }
+function tpPostedFmt(l){
+  const iso=abPostedIso(l), d=new Date(iso||l.created_at||0);
+  if(!iso && !l.created_at) return "—";
+  const t=d.getDate()+" "+TP_MON_NAMES[d.getMonth()]+" "+d.getFullYear()+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+  return iso?t:`<span title="No WhatsApp timestamp found for this number; showing when the listing was created or refreshed">${t} ~</span>`;
+}
+const TP_LS_KEY="fk_tp_shares";
+function tpLocalRead(){ try{ return JSON.parse(localStorage.getItem(TP_LS_KEY)||"[]"); }catch(e){ return []; } }
+function tpLocalWrite(a){ try{ localStorage.setItem(TP_LS_KEY,JSON.stringify(a)); }catch(e){} }
+async function tpSharesLoad(){
+  let rows=null;
+  try{
+    const call=()=>fetch(`${SUPA_URL}/rest/v1/pratika_tp_shares?select=id,listing_id,phone,mode,client_note,shared_at&order=shared_at.asc&limit=5000`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`}});
+    let res=await call();
+    if(res.status===401 && await refreshSession()) res=await call();
+    if(res.ok) rows=await res.json();
+  }catch(e){ console.error("shares read failed",e); }
+  tpSharesLocal=(rows===null);
+  if(tpSharesLocal) rows=tpLocalRead();
+  tpShares={};
+  rows.forEach(r=>{ (tpShares[String(r.listing_id)]=tpShares[String(r.listing_id)]||[]).push(r); });
+  document.getElementById("tpLocalNote").style.display=tpSharesLocal?"block":"none";
+}
+async function tpSharesAdd(ids,note){
+  const now=new Date().toISOString(), rows=ids.map(id=>{ const l=abListings.find(x=>String(x.id)===id)||{}; return {listing_id:id,phone:abDigits(l.custom_contact_phone),mode:tpMode,client_note:note,shared_at:now}; });
+  if(!tpSharesLocal){
+    const ok=await abInsert("pratika_tp_shares",rows);
+    if(!ok) tpSharesLocal=true;
+  }
+  if(tpSharesLocal){ tpLocalWrite(tpLocalRead().concat(rows)); document.getElementById("tpLocalNote").style.display="block"; }
+  rows.forEach(r=>{ (tpShares[r.listing_id]=tpShares[r.listing_id]||[]).push(r); });
+  return rows.length;
+}
+async function tpReopen(id,btn){
+  if(!confirm("Make this lead open again, as if it was never sent? Use this when the client declined to unmask it.")) return;
+  btn.disabled=true;
+  if(!tpSharesLocal){
+    const call=()=>fetch(`${SUPA_URL}/rest/v1/pratika_tp_shares?listing_id=eq.${encodeURIComponent(id)}`,{method:"DELETE",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"return=minimal"}});
+    let res=await call();
+    if(res.status===401 && await refreshSession()) res=await call();
+    if(!res.ok){ alert("Could not reopen it ("+res.status+"). Nothing was changed."); btn.disabled=false; return; }
+  }else tpLocalWrite(tpLocalRead().filter(r=>String(r.listing_id)!==id));
+  delete tpShares[id];
+  tpRender();
 }
 tryRestoreSession();
 
