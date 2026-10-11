@@ -181,7 +181,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <th class="sortable-th" id="thRequirement" onclick="setSort('requirement')">Requirement</th>
           <th class="sortable-th" id="thArea" onclick="setSort('area')">Areas</th>
           <th class="sortable-th" id="thDate" onclick="setSort('date')">Date</th>
-          <th>Actions</th>
+          <th class="sortable-th" id="thActions" onclick="setSort('actions')">Actions</th>
         </tr></thead>
         <tbody id="leadsTableBody"></tbody>
       </table>
@@ -196,7 +196,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Oct-L · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-N · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -676,7 +676,7 @@ function setSort(field){
   renderLeadsTable();
 }
 function updateSortButtons(){
-  const labels={requirement:["thRequirement","Requirement"], area:["thArea","Areas"], gender:["thGender","Gender"], date:["thDate","Date"]};
+  const labels={requirement:["thRequirement","Requirement"], area:["thArea","Areas"], gender:["thGender","Gender"], date:["thDate","Date"], actions:["thActions","Actions"]};
   Object.entries(labels).forEach(([field,[id,label]])=>{
     const th=document.getElementById(id);
     if(field===sortField){
@@ -702,6 +702,7 @@ function renderLeadsTable(){
       if(sortField==="requirement") cmp=requirementRank(a.requirement)-requirementRank(b.requirement);
       else if(sortField==="gender") cmp=genderRank(a.gender)-genderRank(b.gender);
       else if(sortField==="area") cmp=(a.areas||"").localeCompare(b.areas||"");
+      else if(sortField==="actions"){ const rk=l=>l.status==="sent"?2:(l._live?1:0); cmp=rk(a)-rk(b); }
       // Date the message was actually posted in the WhatsApp group
       // (posted_at) -- not when it was pulled into the portal. A lead
       // with no readable timestamp sorts as the oldest/earliest.
@@ -1337,7 +1338,7 @@ function abRender(){
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td style="white-space:nowrap">${abPostedFmt(l)}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
-      <td onclick="event.stopPropagation()">${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`}</td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`} <button class="btn btn-ghost" onclick="window.open('post_form.html?edit='+encodeURIComponent('${escHtml(id)}'),'_blank')">✏️ Edit</button></td>
     </tr>`;
   }).join("");
   abUpdateCount();
