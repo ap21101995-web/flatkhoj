@@ -153,7 +153,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP8</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP9</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -164,7 +164,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP8</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP9</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -1241,7 +1241,7 @@ function tpRender(){
       <td onclick="event.stopPropagation()" style="white-space:nowrap">${shCell}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap">${status}</td>
-      <td onclick="event.stopPropagation()"><button class="btn btn-ghost" onclick="window.open('post_form.html?edit='+encodeURIComponent('${escHtml(id)}'),'_blank')">✏️ Edit</button></td>
+      <td onclick="event.stopPropagation()"><button class="btn btn-ghost" onclick="tpEditListing('${escHtml(id)}')">✏️ Edit</button></td>
     </tr>`;
   }).join("");
   abUpdateCount();
@@ -1396,6 +1396,34 @@ async function tpReopen(id,btn){
   tpRender();
 }
 tryRestoreSession();
+
+
+// ---------- edits made in the edit form show up here without a page refresh ----------
+let tpEdited=new Set(), tpRefreshing=false;
+function tpEditListing(id){
+  tpEdited.add(String(id));
+  window.open("post_form.html?edit="+encodeURIComponent(String(id)),"_blank");
+}
+async function tpRefreshEdited(){
+  if(!tpEdited.size || !tpTouched || tpRefreshing) return;
+  tpRefreshing=true;
+  try{
+    const ids=[...tpEdited].map(i=>encodeURIComponent(i)).join(",");
+    const rows=await supaGetAll(`listings?select=${TP_COLS}&id=in.(${ids})`);
+    const local=new Set(abLocalApproved());
+    rows.forEach(r=>{
+      const cur=tpPool.find(x=>String(x.id)===String(r.id)); if(!cur) return;
+      Object.keys(r).forEach(k=>{ cur[k]=r[k]; });
+      cur._live=(cur.pending_approval===false && cur.is_active===true);
+      cur._approved=(cur.pending_approval===false) && (!!abTargets[String(cur.id)] || local.has(String(cur.id)));
+    });
+    await tpApply();
+  }catch(e){ console.error("edit refresh failed",e); }
+  finally{ tpRefreshing=false; }
+}
+function tpOnReturn(){ if(!tpEdited.size) return; tpRefreshEdited(); setTimeout(tpRefreshEdited,2500); }
+window.addEventListener("focus",tpOnReturn);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) tpOnReturn(); });
 
 </script>
 </body>
