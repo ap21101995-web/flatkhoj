@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<!-- FlatKhoj Pratika_TP — matches seekers to an offered flat / replacement (2026-10-11) -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pratika_TP — FlatKhoj</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0f1117; --bg2:#1a1d27; --bg3:#222536;
+  --border:#2a2d3e; --border2:#353849;
+  --ink:#f0f0f0; --ink2:#a0a4b8; --ink3:#6b6f85;
+  --teal:#0f7b6c; --teal-light:#13a090; --teal-bg:rgba(15,123,108,0.15);
+  --red:#e05252; --red-bg:rgba(224,82,82,0.12);
+  --gold:#e6a817; --gold-bg:rgba(230,168,23,0.12);
+  --green:#2ecc71; --green-bg:rgba(46,204,113,0.12);
+  --font:'Plus Jakarta Sans',sans-serif; --radius:10px;
+}
+body { font-family:var(--font); background:var(--bg); color:var(--ink); min-height:100vh; }
+#loginScreen { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:9999; }
+.login-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; text-align:center; }
+.login-logo { font-size:28px; font-weight:800; margin-bottom:4px; }
+.login-logo span { color:var(--teal-light); }
+.login-sub { font-size:13px; color:var(--ink3); margin-bottom:32px; }
+.lbl { font-size:12px; color:var(--ink2); text-align:left; margin-bottom:6px; font-weight:600; display:block; }
+.linput { width:100%; background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; font-family:var(--font); font-size:14px; color:var(--ink); outline:none; margin-bottom:16px; }
+.linput:focus { border-color:var(--teal-light); }
+.lbtn { width:100%; padding:13px; background:var(--teal); color:white; border:none; border-radius:8px; font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer; }
+.lerr { font-size:13px; color:var(--red); margin-top:10px; display:none; }
+
+.topbar { background:var(--bg2); border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:5; }
+.topbar-title { font-size:16px; font-weight:700; }
+.topbar-title span { color:var(--teal-light); }
+.btn { padding:8px 16px; border-radius:6px; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; }
+.btn-ghost { background:var(--bg3); color:var(--ink2); border:1px solid var(--border2); }
+.btn-ghost:hover { color:var(--ink); }
+.btn-red { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); }
+.btn-teal { background:var(--teal-bg); color:var(--teal-light); border:1px solid rgba(19,160,144,0.3); }
+.btn-solid { background:var(--teal); color:#fff; }
+.btn-solid:disabled { background:var(--bg3); color:var(--ink3); cursor:not-allowed; }
+
+.page { max-width:1100px; margin:0 auto; padding:24px; }
+.page-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+.ptitle { font-size:20px; font-weight:800; }
+.psub { font-size:13px; color:var(--ink3); margin-top:2px; }
+.search-row { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.filter-input { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:9px 14px; font-family:var(--font); font-size:13px; color:var(--ink); outline:none; flex:1; min-width:220px; }
+.filter-input:focus { border-color:var(--teal-light); }
+
+.table-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:20px; }
+table { width:100%; border-collapse:collapse; }
+th { padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; background:var(--bg3); border-bottom:1px solid var(--border); }
+th.sortable-th { cursor:pointer; user-select:none; }
+th.sortable-th:hover { color:var(--ink2); }
+th.sortable-th.active { color:var(--teal-light); }
+td { padding:12px 16px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(255,255,255,0.02); }
+.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.b-ok { background:var(--green-bg); color:var(--green); }
+.b-count { background:var(--gold-bg); color:var(--gold); }
+.b-red { background:var(--red-bg); color:var(--red); }
+
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
+.modal-box { background:var(--bg2); border:1px solid var(--border); border-radius:16px; width:100%; max-width:780px; max-height:88vh; overflow-y:auto; display:flex; flex-direction:column; }
+.modal-head { padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; position:sticky; top:0; background:var(--bg2); }
+.modal-title { font-size:16px; font-weight:700; }
+.modal-sub { font-size:12px; color:var(--ink3); margin-top:3px; }
+.modal-close { background:none; border:none; color:var(--ink3); font-size:22px; cursor:pointer; line-height:1; }
+.modal-body { padding:0; }
+.modal-foot { padding:16px 20px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; background:var(--bg2); }
+
+.msg-meta { padding:14px 20px 0; font-size:12px; color:var(--ink3); font-weight:600; }
+.msg-text { padding:12px 20px 20px; font-size:13px; line-height:1.6; white-space:pre-wrap; color:var(--ink2); }
+
+/* Original-message popup is shown on a white card (readability for long
+   pasted WhatsApp text), so its header/body colors are overridden here
+   rather than in the shared dark-theme modal rules above. */
+#msgModal .modal-box { background:#ffffff; border-color:#e2e2e2; }
+#msgModal .modal-head { background:#ffffff; border-bottom-color:#e2e2e2; }
+#msgModal .modal-title { color:#111318; }
+#msgModal .modal-sub { color:#4a4e5c; }
+#msgModal .modal-close { color:#6b6f85; }
+#msgModal .modal-close:hover { color:#111318; }
+#msgModal .msg-meta { color:#4a4e5c; }
+#msgModal .msg-text { color:#111318; }
+.row-select { width:34px; text-align:center; }
+.chk { width:18px; height:18px; cursor:pointer; accent-color:var(--teal-light); }
+.chk:disabled { cursor:not-allowed; opacity:0.35; }
+.clickable-row { cursor:pointer; }
+.empty-state { text-align:center; padding:40px 20px; color:var(--ink3); font-size:13px; }
+.quota-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.quota-banner { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; margin-bottom:14px; }
+/* ---- All Brokers (combined view) ---- */
+.ab-row td { background:rgba(230,168,23,0.16) !important; border-bottom:1px solid rgba(230,168,23,0.35); }
+.ab-row td:first-child { border-left:4px solid var(--gold); font-weight:800; color:var(--gold); }
+.b-gold { background:var(--gold-bg); color:var(--gold); }
+.btn-gold { background:var(--gold); color:#1a1300; }
+.btn-gold:hover { filter:brightness(1.08); }
+.ab-chip { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 20px; border-bottom:1px solid var(--border); }
+.ab-chip.off .ab-name { text-decoration:line-through; color:var(--ink3); }
+.ab-x { background:var(--red-bg); color:var(--red); border:1px solid rgba(224,82,82,0.3); width:26px; height:26px; border-radius:50%; cursor:pointer; font-weight:800; line-height:1; font-family:var(--font); }
+.ab-plus { background:var(--green-bg); color:var(--green); border:1px solid rgba(46,204,113,0.3); width:26px; height:26px; border-radius:50%; cursor:pointer; font-weight:800; line-height:1; font-family:var(--font); }
+.ab-sub { font-size:11px; color:var(--ink3); margin-top:2px; }
+.ab-sec { padding:12px 20px 6px; font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; }
+.tp-filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px; }
+.tp-filters .filter-input { min-width:0; width:100%; }
+textarea.filter-input { font-family:var(--font); }
+</style>
+</head>
+<body>
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Flat<span>Khoj</span></div>
+    <div class="login-sub">Pratika_TP</div>
+    <label class="lbl">Email</label>
+    <input class="linput" type="email" id="emailInput" placeholder="Your owner email" onkeydown="if(event.key==='Enter')doLogin()">
+    <label class="lbl">Password</label>
+    <input class="linput" type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="lbtn" onclick="doLogin()">Sign in</button>
+    <div class="lerr" id="lerr">Invalid login, or this portal is restricted to owner accounts only.</div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-title">Flat<span>Khoj</span> — Pratika_TP</div>
+    <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+  </div>
+
+  <div class="page" style="max-width:1300px">
+    <div class="page-head">
+      <div>
+        <div class="ptitle" style="color:var(--gold)">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP1</span></div>
+        <div class="psub">Paste someone's requirement or vacancy (for example a girl looking for a replacement in her flat) and see every seeker on FlatKhoj who could take it &mdash; live or not live. Tick the ones you like and press Send to get one WhatsApp-ready message with the numbers masked.</div>
+      </div>
+    </div>
+
+    <div class="table-card" style="padding:16px 18px">
+      <label class="lbl" for="tpText">Paste the message here</label>
+      <textarea id="tpText" class="filter-input" rows="5" style="width:100%;resize:vertical;line-height:1.5" placeholder="e.g. Looking for a replacement in my flat, Andheri East, double sharing, girls only, from 1st Nov, rent 14k"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-gold" onclick="tpFind()" id="tpFindBtn">Find matches</button>
+        <button class="btn btn-ghost" onclick="tpClear()">Clear</button>
+        <span id="tpParseNote" style="font-size:12px;color:var(--ink3)">I read the areas, sharing type, gender and move-in date from the text. Check them below and change anything that is wrong.</span>
+      </div>
+
+      <div class="tp-filters">
+        <div><label class="lbl">Areas (comma separated)</label><input class="filter-input" id="tpAreas" list="tpAreaList" placeholder="Andheri East, Vile Parle" onchange="tpApply()"><datalist id="tpAreaList"></datalist></div>
+        <div><label class="lbl">Sharing / room</label>
+          <select class="filter-input" id="tpSharing" onchange="tpApply()">
+            <option value="">Any</option><option value="Single">Single occupancy</option><option value="Double">Double occupancy</option><option value="Triple">Triple occupancy</option><option value="Hall">Hall</option><option value="Entire">Entire flat</option>
+          </select></div>
+        <div><label class="lbl">Gender</label>
+          <select class="filter-input" id="tpGender" onchange="tpApply()"><option value="">Any</option><option value="Female">Female</option><option value="Male">Male</option></select></div>
+        <div><label class="lbl">Move-in date</label><input class="filter-input" type="date" id="tpMovein" onchange="tpApply()"></div>
+        <div><label class="lbl">Seeker can be up to (days later)</label><input class="filter-input" type="number" id="tpTol" value="10" min="0" max="120" onchange="tpApply()"></div>
+        <div><label class="lbl">Rent of the place (optional)</label><input class="filter-input" type="number" id="tpRent" placeholder="e.g. 14000" onchange="tpApply()"></div>
+        <div><label class="lbl">City</label><select class="filter-input" id="tpCity" onchange="tpRefetch()"><option value="mumbai">Mumbai</option><option value="pune">Pune</option></select></div>
+        <div><label class="lbl">Seekers posted in the last</label>
+          <select class="filter-input" id="tpDays" onchange="tpRefetch()"><option value="7">7 days</option><option value="15">15 days</option><option value="30" selected>30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" class="chk" id="tpUnspec" checked onchange="tpApply()"> Also show seekers who didn't say their requirement, gender or move-in date</label>
+    </div>
+
+    <div id="tpSummary" style="font-size:13px;color:var(--ink2);margin:4px 0 12px"></div>
+
+    <div class="search-row">
+      <input class="filter-input" id="abSearchInput" placeholder="Search by number, requirement or area..." oninput="tpRender()">
+      <button class="btn btn-ghost" onclick="tpRefetch()">&#8635; Refresh</button>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+      <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
+      <button class="btn btn-gold ab-send-btn" onclick="tpOpenSend()" disabled>Send</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr>
+          <th class="row-select"><input type="checkbox" class="chk" id="abSelectAll" onclick="tpToggleAll(this.checked)"></th>
+          <th>Number</th>
+          <th class="sortable-th" data-f="gender" onclick="tpSetSort('gender')">Gender</th>
+          <th class="sortable-th" data-f="requirement" onclick="tpSetSort('requirement')">Requirement</th>
+          <th class="sortable-th" data-f="area" onclick="tpSetSort('area')">Areas</th>
+          <th class="sortable-th" data-f="budget" onclick="tpSetSort('budget')">Budget</th>
+          <th class="sortable-th" data-f="movein" onclick="tpSetSort('movein')">Move-in</th>
+          <th class="sortable-th" data-f="date" onclick="tpSetSort('date')">Posted</th>
+          <th class="sortable-th" data-f="match" onclick="tpSetSort('match')">Match</th>
+          <th>Brokers</th>
+          <th class="sortable-th" data-f="status" onclick="tpSetSort('status')">Approve</th>
+          <th>Edit</th>
+        </tr></thead>
+        <tbody id="abBody"><tr><td colspan="12" class="empty-state">Paste a message above and press Find matches.</td></tr></tbody>
+      </table>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
+      <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
+      <button class="btn btn-gold ab-send-btn" onclick="tpOpenSend()" disabled>Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- who can receive this lead -->
+<div class="modal-backdrop" id="abBrokersModal" style="display:none">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-head">
+      <div><div class="modal-title">Brokers who can receive this lead</div><div class="modal-sub" id="abModalSub"></div></div>
+      <button class="modal-close" onclick="abCloseModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="abModalBody"></div>
+    <div class="modal-foot">
+      <div style="font-size:13px;color:var(--ink2)" id="abModalCount"></div>
+      <span id="abModalAction"></span><button class="btn btn-ghost" onclick="abCloseModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Original message modal -->
+<div class="modal-backdrop" id="msgModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><div class="modal-title">Original WhatsApp message</div><div class="modal-sub" id="msgModalSub"></div></div>
+      <button class="modal-close" onclick="document.getElementById('msgModal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="msg-meta" id="msgModalMeta"></div>
+      <div class="msg-text" id="msgModalText"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Send: combined message -->
+<div class="modal-backdrop" id="sendModal" style="display:none">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-head">
+      <div><div class="modal-title">Message to send</div><div class="modal-sub" id="sendModalSub"></div></div>
+      <button class="modal-close" onclick="document.getElementById('sendModal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px">
+      <textarea id="sendText" class="filter-input" style="width:100%;height:50vh;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55"></textarea>
+      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Numbers are masked (first digit and last two digits only) and no names are included. You can edit the text before copying.</div>
+    </div>
+    <div class="modal-foot">
+      <div style="font-size:13px;color:var(--ink2)" id="sendCopied"></div>
+      <span><button class="btn btn-ghost" onclick="document.getElementById('sendModal').style.display='none'">Close</button> <button class="btn btn-gold" onclick="tpCopy()">Copy message</button></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL="https://hbvdboxyppsmcuqgbpwp.supabase.co";
+const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4";
+let ADMIN_SESSION_TOKEN=null, ADMIN_REFRESH_TOKEN=null, currentRole=null;
+
+// ---------- Auth (same Supabase-Auth flow as admin.html, restricted to role==='owner') ----------
+function authToken(){ return ADMIN_SESSION_TOKEN || SUPA_KEY; }
+
+async function refreshSession(){
+  if(!ADMIN_REFRESH_TOKEN) return false;
+  try{
+    const res=await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`,{method:"POST",headers:{apikey:SUPA_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:ADMIN_REFRESH_TOKEN})});
+    if(!res.ok) return false;
+    const data=await res.json();
+    if(!data.access_token) return false;
+    ADMIN_SESSION_TOKEN=data.access_token;
+    ADMIN_REFRESH_TOKEN=data.refresh_token||ADMIN_REFRESH_TOKEN;
+    sessionStorage.setItem("fk_portal_session",ADMIN_SESSION_TOKEN);
+    sessionStorage.setItem("fk_portal_refresh",ADMIN_REFRESH_TOKEN);
+    return true;
+  }catch(e){ return false; }
+}
+
+async function doLogin(){
+  const email=document.getElementById("emailInput").value.trim();
+  const pw=document.getElementById("pwInput").value;
+  document.getElementById("lerr").style.display="none";
+  try{
+    const res=await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`,{
+      method:"POST",
+      headers:{apikey:SUPA_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({email:email,password:pw})
+    });
+    if(!res.ok){ document.getElementById("lerr").style.display="block"; return; }
+    const data=await res.json();
+    const role=(data.user&&data.user.user_metadata&&data.user.user_metadata.role)||"";
+    // Restricted to owner accounts only -- same check admin.html uses to
+    // gate helper access away from sensitive pages, just inverted: here
+    // a HELPER role (or anything that isn't 'owner') is refused entirely,
+    // not just hidden from some nav items, per explicit instruction that
+    // this portal is for the two owner logins only.
+    if(role!=="owner"){
+      document.getElementById("lerr").textContent="This portal is restricted to owner accounts only.";
+      document.getElementById("lerr").style.display="block";
+      return;
+    }
+    ADMIN_SESSION_TOKEN=data.access_token;
+    ADMIN_REFRESH_TOKEN=data.refresh_token;
+    sessionStorage.setItem("fk_portal_session",data.access_token);
+    sessionStorage.setItem("fk_portal_refresh",data.refresh_token);
+    currentRole=role;
+    enterApp();
+  }catch(e){
+    console.error("Login error:",e);
+    document.getElementById("lerr").style.display="block";
+  }
+}
+
+async function tryRestoreSession(){
+  const saved=sessionStorage.getItem("fk_portal_session");
+  if(!saved) return;
+  ADMIN_SESSION_TOKEN=saved;
+  ADMIN_REFRESH_TOKEN=sessionStorage.getItem("fk_portal_refresh");
+  let res=await fetch(`${SUPA_URL}/auth/v1/user`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${saved}`}});
+  if(!res.ok && await refreshSession()){
+    res=await fetch(`${SUPA_URL}/auth/v1/user`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`}});
+  }
+  if(!res.ok){ logout(); return; }
+  const user=await res.json();
+  const role=(user.user_metadata&&user.user_metadata.role)||"";
+  if(role!=="owner"){ logout(); return; }
+  currentRole=role;
+  enterApp();
+}
+
+
+function logout(){
+  ADMIN_SESSION_TOKEN=null; ADMIN_REFRESH_TOKEN=null;
+  sessionStorage.removeItem("fk_portal_session");
+  sessionStorage.removeItem("fk_portal_refresh");
+  document.getElementById("app").style.display="none";
+  document.getElementById("loginScreen").style.display="flex";
+  document.getElementById("pwInput").value="";
+  document.getElementById("emailInput").value="";
+}
+
+// ---------- Supabase REST helpers ----------
+async function supaGet(path){
+  let res=await fetch(`${SUPA_URL}/rest/v1/${path}`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"count=none"}});
+  if(res.status===401 && await refreshSession()){
+    res=await fetch(`${SUPA_URL}/rest/v1/${path}`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"count=none"}});
+  }
+  if(!res.ok){ console.error("supaGet failed:",path,res.status); return []; }
+  return res.json();
+}
+async function supaPatch(path, query, body){
+  let res=await fetch(`${SUPA_URL}/rest/v1/${path}?${query}`,{method:"PATCH",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(body)});
+  if(res.status===401 && await refreshSession()){
+    res=await fetch(`${SUPA_URL}/rest/v1/${path}?${query}`,{method:"PATCH",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(body)});
+  }
+  if(!res.ok) console.error("supaPatch failed:",path,res.status, await res.text());
+  return res.ok;
+}
+
+function escHtml(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+const REACTIVATION_DAYS=15; // keep in sync with vanita_lead_report.py's REACTIVATION_DAYS
+function requirementRank(req){
+  const r=(req||"").toLowerCase();
+  const bhk=r.match(/(\d+)\s*bhk/);
+  if(bhk) return 3+parseInt(bhk[1],10);     // 1 BHK=4, 2 BHK=5, 3 BHK=6, 4 BHK=7...
+  if(/\brk\b/.test(r)) return 3;             // 1 RK
+  if(/\bsingle\b/.test(r)) return 2;
+  if(/\bdouble\b/.test(r)) return 1;
+  return 0;                                   // Undisclosed / anything unrecognized
+}
+function genderRank(g){
+  const x=(g||"").toLowerCase();
+  if(x==="male") return 0;
+  if(x==="female") return 1;
+  return 2;
+}
+const AB_WA_STATUS=["active","bank_approval_pending","authorized","initialized","pending"];
+const AB_LIST_COLS="id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold,brokerage_preference,pending_approval,rejected";
+let abListings=[], abBrokers=[], abLeadIdx={}, abExcluded={}, abSelected=new Set(), abModalListingId=null, abBusy=false;
+let abPostedMap={}, abLoggedBy={}, abTargets={}, abReconciling=false, abSortField=null, abSortDir=1, abExtra={}, abTargetsErr=false;
+const AB_LS_KEY="fk_ab_approved";
+function abLocalApproved(){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); const cut=Date.now()-REACTIVATION_DAYS*864e5; return Object.keys(o).filter(k=>o[k]>cut); }catch(e){ return []; } }
+function abRememberApproved(id){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); o[String(id)]=Date.now(); localStorage.setItem(AB_LS_KEY,JSON.stringify(o)); }catch(e){} }
+
+function abDigits(p){ return String(p||"").replace(/\D/g,"").slice(-10); }
+function abNorm(s){ return String(s==null?"":s).trim().replace(/\s+/g," ").toLowerCase(); }
+function abBase(z){ return abNorm(z).replace(/ (east|west)$/,""); }
+function abArr(v){
+  if(Array.isArray(v)) return v.filter(Boolean).map(String);
+  if(typeof v==="string" && v.trim()){
+    const t=v.trim();
+    if(t.startsWith("{")||t.startsWith("[")){
+      try{ const j=JSON.parse(t.startsWith("{")?"["+t.slice(1,-1)+"]":t); if(Array.isArray(j)) return j.map(String); }catch(e){}
+      return t.replace(/^[\[{]|[\]}]$/g,"").split(",").map(x=>x.replace(/^"|"$/g,"").trim()).filter(Boolean);
+    }
+    return t.split(",").map(x=>x.trim()).filter(Boolean);
+  }
+  return [];
+}
+// Same area logic as the notify-brokers Edge Function (its AREA_GROUPS +
+// expandDown), so this dialog predicts exactly who the WhatsApp send reaches.
+const AB_AREA_GROUPS={"Andheri":["Andheri East","Andheri West"],"Andheri West":["Andheri West","DN Nagar","D N Nagar Metro","Four Bungalows","Seven Bungalows","Gilbert Hill","Lokhandwala","Lokhandwala Complex","Lokhandwala Market","Oshiwara","Lower Oshiwara","Upper Oshiwara","Oshiwara Colony","Oshiwara Market","Oshiwara Depot Area","Amboli","Amboli Naka","JP Road","JP Nagar","New Link Road","MHADA Colony Andheri","Kanchpada","Laxmi Nagar Andheri","Versova","Versova Beach","Versova Village","Yari Road","JVPD Scheme","Andheri Station West","Andheri Link Road","Veera Desai Road","Veera Desai Industrial Estate","Andheri Station","SV Road Andheri","Azad Nagar Andheri","Parsi Colony Andheri","Infinity Mall Area","Azad Nagar","Aram Nagar","Bharat Nagar Andheri","Nehru Nagar Andheri","Shitladevi Chawl"],"Andheri East":["Marol","Marol Naka","Marol Pipeline","Marol Military Road","Marol Maroshi Road","Marol Naka Junction","MIDC Andheri","JB Nagar","JB Nagar Andheri","JB Nagar Metro","Chakala","Chakala Junction","Chakala Metro","Kondivita","Kondivita Village","Gundavali","SEEPZ","SEEPZ Gate","JVLR","WEH","WEH Andheri","Airport Road","Andheri Kurla Road","Saki Naka","Saki Naka Junction","Saki Vihar","Saki Vihar Road","Sakinaka","Sakinaka Junction","Mogra Naka","Mogra Village","Andheri East Station","Andheri Station East","Manish Nagar","Chandivali Studio Road","Sher E Punjab","Andheri East","Mahakali Caves Road"],"Bandra":["Bandra West","Bandra East"],"Bandra West":["Pali Hill","Carter Road","Bandstand","Mount Mary","Land End","Linking Road Bandra","Turner Road Bandra","Hill Road Bandra","Chapel Road","Waroda Road","Ranwar","Perry Road","Reclamation","Bandra Reclamation","National Library Road","Waterfield Road"],"Bandra East":["BKC","Vakola","Kalina","Kalanagar","Khernagar","Sonapur Lane"],"Santacruz":[],"Vile Parle":[],"Vile Parle West":["Irla","Irla Market","Nehru Road Vile Parle","Navpada Vile Parle"],"Goregaon":["Goregaon West","Goregaon East"],"Goregaon West":["Mindspace","Motilal Nagar","Milind Nagar","Rahul Nagar","Ram Mandir Road","Shreyas Colony","Bhatwadi","Siddharth Nagar Goregaon"],"Goregaon East":["Film City","Aarey Colony","Dindoshi","Dindoshi Village","NESCO","Saidham Nagar","Oberoi Garden City","Yashodham","Yashodham Complex","Mahananda Dairy Area"],"Malad":["Malad West","Malad East"],"Malad West":["Marve","Bangur Nagar","Malvani","Chincholi Bunder","Orlem","Liberty Garden","Evershine Nagar"],"Malad East":["Kurar","Kurar Village","MHADA Colony"],"Kandivali":["Kandivali West","Kandivali East"],"Kandivali West":["Poisar","Lokhandwala Kandivali","Akurli Road","Akurli Naka","Charkop Sector 1","Charkop Sector 2","Charkop Sector 3","Charkop Sector 4","Charkop Sector 5","Charkop Sector 6","Charkop Sector 7","Charkop Sector 8","MHB Colony","Parekh Nagar","Mahavir Nagar Kandivali","Shankar Lane","Vijay Park","Dahanukarwadi"],"Kandivali East":["Thakur Village","Thakur Complex","Thakur Nagar","Shankar Nagar"],"Borivali":["Borivali West","Borivali East"],"Borivali West":["IC Colony","Eksar","Shimpoli","Chandavarkar Road","Rajendra Nagar Borivali","Mandapeshwar","Suresh Nagar","Sadguru Nagar","Nutan Nagar","Chadha Colony","Vazira Naka"],"Borivali East":["Kulupwadi","Kulupwadi Road","Pushpak Nagar","Vinayak Nagar"],"Dahisar":[],"Jogeshwari":[],"Kurla":[],"Ghatkopar":["Ghatkopar West","Ghatkopar East"],"Ghatkopar West":["Asalpha","Ghatkopar Pant Nagar","Vikrant Circle","Natwar Parekh Colony","Vidyavihar","Vidyavihar West"],"Ghatkopar East":["Pant Nagar","Rajawadi","Ramabai Colony","Garodia Nagar","Vidyavihar East"],"Vikhroli":[],"Powai":["Hiranandani Gardens","IIT Powai","Chandivali","Powai Lake","Central Avenue Powai","Powai Hiranandani","Powai Galleria","Powai Plaza","NITIE Area","IIT Bombay Area","Nirvana Park","Raheja Vihar","Adi Shankaracharya Marg"],"Kanjurmarg":["Kanjurmarg West","Kanjurmarg East","Kanjurmarg Station"],"Mulund":[],"Bhandup":[],"Chembur":[],"Dadar":[],"Mahim":["Lady Jamshedji Road","Tulsi Pipe Road","Dharavi Cross Road","Shitala Devi","Shitaladevi Mandir","Shitala Devi Temple Road"],"Matunga":[],"Sion":[],"Parel":["Lalbaug","Currey Road","Curry Road","Elphinstone Road","Bhoiwada"],"Lower Parel":["Delisle Road","Senapati Bapat Marg","NM Joshi Marg","Kamala Mills","Phoenix Mills Area"],"Wadala":[],"Worli":["Worli Sea Face","Worli Village","Worli Naka","Worli Koliwada","Annie Besant Road"],"Khar":[],"Juhu":["Juhu Beach","Juhu Scheme","Juhu Tara Road","Airport Road Juhu","Bhakti Vedanta Marg"],"Thane":[],"Mira Road":["Mira Road East","Beverly Park","Bhavani Nagar","Poonam Garden","Poonam Sagar","Gaurav Woods","Kashimira","Penkarpada","Navghar"],"Vashi":["Vashi Sector 1","Vashi Sector 2","Vashi Sector 3","Vashi Sector 4","Vashi Sector 5","Vashi Sector 6","Vashi Sector 7","Vashi Sector 8","Vashi Sector 9","Vashi Sector 10","Sanpada","Turbhe","CIDCO"],"Nerul":["Nerul Sector 1","Nerul Sector 2","Nerul Sector 4","Nerul Sector 6","Juinagar","Seawoods"],"Kharghar":["Kharghar Sector 1","Kharghar Sector 2","Kharghar Sector 3","Kharghar Sector 4","Kharghar Sector 5","Kharghar Sector 6","Kharghar Sector 7","Kharghar Sector 8","Kharghar Sector 9","Kharghar Sector 10","Kharghar Sector 11","Kharghar Sector 12"],"Belapur":["CBD Belapur","Parsik Hill"],"Airoli":["Airoli Sector 1","Airoli Sector 2","Airoli Sector 3","Airoli Sector 4","Airoli Sector 5","Airoli Sector 6","Airoli Sector 7","Airoli Sector 8"],"Colaba":["Cuffe Parade","Colaba Causeway","Gateway of India","Navy Nagar","Sassoon Dock","Cusrow Baug","Merewether Road","Walton Road","Wodehouse Road","Arthur Bunder Road","Regal Cinema Area","Colaba Market"],"Fort":["Ballard Estate","CSMT","Azad Maidan","Cooperage","Cross Maidan","Carnac Bunder","Crawford Market"],"Marine Lines":["Charni Road","Chowpatty","Girgaon","Gamdevi","Marine Drive"],"Grant Road":["Nana Chowk","Laburnum Road","Gamdevi","Tardeo"],"Byculla":["Reay Road","Chinchpokli","Nagpada","Agripada","Clare Road","Sandhurst Road","Mazgaon","Nesbit Road","Dockyard Road"],"Mahalaxmi":["Haji Ali","Peddar Road","Warden Road","Kemps Corner","Bhulabhai Desai Road","Mahalaxmi Racecourse"],"Malabar Hill":["Walkeshwar","Banganga","Ridge Road","Teen Batti","Napeansea Road","Altamount Road","Carmichael Road","Nepean Sea Road","Cumballa Hill","August Kranti Marg"],"Kalbadevi":["Zaveri Bazaar","Bhendi Bazaar","Bhuleshwar","Crawford Market","Null Bazaar","Dongri","Mandvi","Pydhonie","VP Road","Abdul Rehman Street","Princess Street","Vadgadi","Lohar Chawl"],"Dharavi":["60 Feet Road Dharavi","90 Feet Road Dharavi","Dharavi 90 Feet Road","Dharavi Main Road","Dharavi Cross Road"],"Vasai":[],"Nalasopara":[],"Virar":[],"Dombivli":[],"Kalyan":[],"Govandi":[],"Mankhurd":["Mankhurd Station"],"Mumbra":["Mumbra Station","Kausa"],"Chembur East":["Deonar","Trombay","Govandi","Mankhurd","Chembur Camp","RCF Colony","BPCL Colony","Nehru Nagar Chembur","Kamgar Nagar Chembur","Sindhi Camp Chembur","Deonar Colony"],"Shivajinagar":["FC Road","Ganeshkhind Road","University Road","Senapati Bapat Road","Law College Road","Prabhat Road","Deccan Gymkhana"],"Deccan":["Appa Balwant Chowk","Tilak Road","Sadashiv Peth","Narayan Peth","Kasba Peth","Budhwar Peth","Mangalwar Peth"],"Koregaon Park":["North Main Road KP","Lane 1 KP","Lane 5 KP","Lane 6 KP","Mundhwa Road","Aga Khan Palace Area","Boat Club Road Pune"],"Kalyani Nagar":["Viman Nagar","Dhole Patil Road","Airport Road Pune","Weikfield IT Area","Wadgaon Sheri","Nagar Road Pune"],"Pune Camp":["East Street","MG Road Pune","Bund Garden Road","Sangamvadi","Raikar Mala","Ghorpadi","Wanowrie Road"],"Hadapsar":["Magarpatta City","Fursungi","Manjari","Ramtekdi","Hadapsar MIDC","Phursungi","Amanora"],"Kharadi":["EON IT Park Area","Wagholi","Sasane Nagar","Kesnand Road","Lonikand"],"Kondhwa":["Kondhwa Khurd","Undri","Pisoli","Ambegaon Budruk","Mohammadwadi","Katraj South"],"Bibwewadi":["Katraj","Dhankawadi","Anand Nagar Pune","Sinhagad Road","Ambegaon Pathar"],"Wanowrie":["Fatima Nagar","Ramwadi","Salisbury Park","Lullanagar","NIBM Road"],"Baner":["Balewadi","Sus Road","Pashan","Baner Road","Sus Village"],"Aundh":["Aundh Road","Parihar Chowk","ITI Road Aundh","Vivek Colony Aundh"],"Wakad":["Hinjewadi","Pimple Saudagar","Pimple Nilakh","Thergaon","Rahatani"],"Kothrud":["Karve Road","Warje","Bavdhan","Ideal Colony","Erandwane","Market Yard"],"Hinjewadi":["Hinjewadi Phase 1","Hinjewadi Phase 2","Hinjewadi Phase 3","Marunji","Maan","Mann"],"Pimpri Chinchwad":["Pimpri","Chinchwad","Akurdi","Nigdi","Pradhikaran","Bhosari","Moshi","Chikhali"],"Vishrantwadi":["Lohegaon","Dhanori","Alandi Road","Yerwada","Vishrantwadi Road"],"Mundhwa":["Keshavnagar","Ghorpadi East","Koregaon Park Annexe","Yewalewadi"],"Shivaji Nagar":["Model Colony","Bhamburda","Navi Peth","Apte Road"],"Peth Area":["Kasba Peth","Somwar Peth","Raviwar Peth","Guruwar Peth","Shanwar Peth","Ganjve Peth"],"Viman Nagar":["Clover Park","Phoenix Mall Pune Area","Sakore Nagar","Tulja Bhavani Nagar"],"Chinchwad":["Old Chinchwad","Akurdi Station Area","Kalewadi","Ravet","Punawale"]};
+function abExpand(area, out, depth){
+  depth=depth||0;
+  const key=String(area||"").trim(); if(!key) return;
+  const norm=key.toLowerCase(); if(out.has(norm)) return;
+  out.add(norm);
+  if(depth>=3) return;
+  (AB_AREA_GROUPS[key]||[]).forEach(k=>abExpand(k,out,depth+1));
+}
+// A bare tag ("Santacruz") also matches "Santacruz East"/"Santacruz West" and vice versa
+// (same rule as notify-brokers' expandWithSides).
+function abExpandSides(area,out){
+  abExpand(area,out);
+  const k=String(area||"").trim();
+  if(k && !/\s(east|west)$/i.test(k)){ abExpand(k+" East",out); abExpand(k+" West",out); }
+}
+function abAreaMatch(brokerAreas, listingAreas){
+  const la=new Set(); abArr(listingAreas).forEach(a=>abExpandSides(a,la));
+  if(!la.size) return false;
+  return abArr(brokerAreas).some(b=>{
+    const bs=new Set(); abExpandSides(b,bs);
+    for(const x of la) if(bs.has(x)) return true;
+    return false;
+  });
+}
+function abReq(l){ return l.room_type && l.room_type!=="Undisclosed" ? l.room_type : (l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "Undisclosed"); }
+function abAreasText(l){ return abArr(l.areas).join(", "); }
+
+async function supaGetAll(path){
+  let out=[], off=0;
+  while(true){
+    const chunk=await supaGet(`${path}&limit=1000&offset=${off}`);
+    out=out.concat(chunk);
+    if(chunk.length<1000) break;
+    off+=1000;
+  }
+  return out;
+}
+
+
+// The real WhatsApp message time lives in broker_portal_leads.posted_at (listings.created_at is
+// the time the listing was created/approved, not when the person wrote the message).
+function abPostedIso(l){ return abPostedMap[abDigits(l.custom_contact_phone)]||null; }
+function abPostedFmt(l){
+  const iso=abPostedIso(l), d=new Date(iso||l.created_at||0);
+  if(!l.created_at && !iso) return "—";
+  const t=d.toLocaleDateString()+" "+d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  return iso?t:`<span title="No WhatsApp timestamp found for this number; showing when the listing was created">${t} ~</span>`;
+}
+async function abLoadPosted(listings){
+  abPostedMap={};
+  const phones=[...new Set(listings.map(l=>abDigits(l.custom_contact_phone)))];
+  for(let i=0;i<phones.length;i+=40){
+    const chunk=phones.slice(i,i+40);
+    const rows=await supaGetAll(`broker_portal_leads?phone=in.(${chunk.join(",")})&posted_at=not.is.null&select=phone,posted_at&order=posted_at.desc`).catch(e=>{ console.error("posted_at read failed",e); return []; });
+    rows.forEach(r=>{ const k=abDigits(r.phone); if(!abPostedMap[k]) abPostedMap[k]=r.posted_at; });
+  }
+}
+function abIsPaid(l){ return String(l.brokerage_preference||"").toLowerCase()==="yes"; }
+function abIndexLeads(leads){
+  const idx={};
+  leads.forEach(r=>{
+    const ph=abDigits(r.phone);
+    const byPhone=(idx[r.broker_id]=idx[r.broker_id]||{});
+    const rec=(byPhone[ph]=byPhone[ph]||{pending:[],sent:[]});
+    (r.status==="sent"?rec.sent:rec.pending).push(r);
+  });
+  return idx;
+}
+function abFetchPortalLeads(cutoffIso){
+  return supaGetAll(`broker_portal_leads?or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,broker_id,phone,status,sent_at&order=created_at.desc`);
+}
+
+// Anything the WhatsApp sender logged for a portal-approved listing is made visible in the
+// broker's Potential Data (ticked) and, for FREE leads only, counted. Paid leads are already
+// counted by notify-brokers itself, so counting them here would double up.
+async function abReconcile(cutoffIso){
+  if(abReconciling) return; abReconciling=true;
+  try{
+    const nowIso=new Date().toISOString(); let changed=false;
+    for(const l of abListings){
+      if(!l._approved) continue;
+      const ph=abDigits(l.custom_contact_phone);
+      for(const bid of (abLoggedBy[String(l.id)]||[])){
+        const rec=((abLeadIdx[bid]||{})[ph])||{pending:[],sent:[]};
+        if(rec.sent.length) continue;
+        const r=await abMarkShared(bid,l,nowIso);
+        if(r){
+          changed=true;
+          if(r==="marked" && !abIsPaid(l)) await abBumpCount(bid,1);
+        }
+      }
+    }
+    if(changed){
+      abLeadIdx=abIndexLeads(await abFetchPortalLeads(cutoffIso));
+      abBrokers=await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc");
+    }
+  }catch(e){ console.error("reconcile failed",e); }
+  finally{ abReconciling=false; }
+}
+
+// Who can get this listing: {eligible:[{b,tagged,inPot,wa}], received:[{b}]}
+function abCompute(l){
+  const ph=abDigits(l.custom_contact_phone), city=abNorm(l.city||"mumbai");
+  const eligible=[], received=[];
+  abBrokers.forEach(b=>{
+    if(abNorm(b.city||"mumbai")!==city) return;
+    const rec=(abLeadIdx[b.id]||{})[ph]||{pending:[],sent:[]};
+    const logged=(abLoggedBy[String(l.id)]||new Set()).has(String(b.id));
+    if(rec.sent.length||logged){ received.push({b}); return; }
+    const tagged=abAreaMatch(b.areas,l.areas), inPot=rec.pending.length>0;
+    if(tagged||inPot){
+      const wa=tagged && AB_WA_STATUS.includes(abNorm(b.subscription_status));
+      eligible.push({b,tagged,inPot,wa});
+    }
+  });
+  // brokers added by hand for this lead (even if the area isn't tagged to them)
+  abExtra[String(l.id)] && [...abExtra[String(l.id)]].forEach(bid=>{
+    const b=abBrokers.find(x=>String(x.id)===bid); if(!b||received.some(r=>r.b===b)||eligible.some(e=>e.b===b)) return;
+    eligible.push({b,tagged:false,inPot:false,manual:true,wa:AB_WA_STATUS.includes(abNorm(b.subscription_status))});
+  });
+  return {eligible,received};
+}
+function abAddable(l){
+  const {eligible,received}=abCompute(l), city=abNorm(l.city||"mumbai");
+  return abBrokers.filter(b=>abNorm(b.city||"mumbai")===city && !eligible.some(e=>e.b===b) && !received.some(r=>r.b===b));
+}
+function abAddBroker(){
+  const sel=document.getElementById("abAddSel"); if(!sel||!sel.value) return;
+  (abExtra[abModalListingId]=abExtra[abModalListingId]||new Set()).add(sel.value);
+  const ex=abExcluded[abModalListingId]; if(ex) ex.delete(sel.value);
+  abRenderModal();
+}
+function abRemoveExtra(listingId,brokerId){ if(abExtra[listingId]) abExtra[listingId].delete(brokerId); abRenderModal(); }
+function abIncluded(l){
+  const ex=abExcluded[String(l.id)]||new Set();
+  return abCompute(l).eligible.filter(e=>!ex.has(String(e.b.id)));
+}
+
+function abToggle(e,id){
+  e.stopPropagation();
+  if(abSelected.has(id)) abSelected.delete(id); else abSelected.add(id);
+  abUpdateCount();
+}
+function abOpenText(id){
+  const l=abListings.find(x=>String(x.id)===id); if(!l) return;
+  document.getElementById("msgModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
+  document.getElementById("msgModalMeta").textContent=`From: ${l.whatsapp_group_name||"Unknown group"}  ·  Posted: ${(abPostedIso(l)||l.created_at)?new Date(abPostedIso(l)||l.created_at).toLocaleString():"Unknown"}`;
+  document.getElementById("msgModalText").textContent=l.raw_whatsapp_text||"(no message text saved)";
+  document.getElementById("msgModal").style.display="flex";
+}
+
+// ---------- Brokers dialog ----------
+function abOpenBrokers(id){ abModalListingId=id; abRenderModal(); document.getElementById("abBrokersModal").style.display="flex"; }
+function abCloseModal(){ document.getElementById("abBrokersModal").style.display="none"; abModalListingId=null; abRender(); }
+function abToggleBroker(listingId, brokerId){
+  const s=(abExcluded[listingId]=abExcluded[listingId]||new Set());
+  if(s.has(brokerId)) s.delete(brokerId); else s.add(brokerId);
+  abRenderModal();
+}
+function abQuotaFull(b){ const q=(!b.contacts_per_month||Number(b.contacts_per_month)<=0)?null:Number(b.contacts_per_month); return q!==null && (Number(b.contacts_sent_this_month)||0)>=q; }
+function abQuotaLabel(b){
+  const shared=Number(b.contacts_sent_this_month)||0, quota=(!b.contacts_per_month||Number(b.contacts_per_month)<=0)?null:Number(b.contacts_per_month);
+  return `${shared} / ${quota===null?"∞":quota} shared`+(quota!==null&&shared>=quota?" · quota full (paid leads skipped)":"");
+}
+function abRenderModal(){
+  const l=abListings.find(x=>String(x.id)===abModalListingId); if(!l) return;
+  const {eligible,received}=abCompute(l);
+  const ex=abExcluded[abModalListingId]||new Set();
+  document.getElementById("abModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
+  let html="";
+  if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data. Use \"Add another broker\" below."}</div>`;
+  else{
+    html+=`<div class="ab-sec">${abIsApproved(l)?"Not sent yet (click &times; to leave one out, then use the button below to send to the rest)":"Will receive (click &times; to leave one out)"}</div>`;
+    html+=eligible.map(e=>{
+      const off=ex.has(String(e.b.id));
+      const _tg=abTargets[String(l.id)], _held=abIsApproved(l)&&_tg&&Array.isArray(_tg.broker_ids)&&!_tg.broker_ids.map(String).includes(String(e.b.id));
+      const why=[e.tagged?"area tagged":"", e.inPot?"in Potential Data":"", e.manual?"added by you":"", _held?"left out when you approved":""].filter(Boolean).join(" · ");
+      const qfull=abIsPaid(l)&&abQuotaFull(e.b);
+      const ch=qfull?`<span class="badge b-count">Quota full – WhatsApp skipped</span>`:(e.wa?`<span class="badge b-ok">WhatsApp</span>`:`<span class="badge b-count">Excel only</span>`);
+      return `<div class="ab-chip ${off?"off":""}">
+        <div><div class="ab-name" style="font-weight:600;font-size:13px">${escHtml(e.b.name||"Unnamed")} ${ch}</div>
+        <div class="ab-sub">${escHtml(why)} · ${escHtml(abQuotaLabel(e.b))}</div></div>
+        <button class="${off?"ab-plus":"ab-x"}" title="${off?"Add back":"Leave out"}" onclick="${e.manual?"abRemoveExtra":"abToggleBroker"}('${escHtml(abModalListingId)}','${escHtml(String(e.b.id))}')">${off?"+":"&times;"}</button>
+      </div>`;
+    }).join("");
+  }
+  if(received.length){
+    html+=`<div class="ab-sec">Already shared with</div><div style="padding:4px 20px 12px;font-size:13px;color:var(--ink2)">${received.map(r=>escHtml(r.b.name||"Unnamed")).join(", ")}</div>`;
+  }
+  const addable=abAddable(l);
+  html+=`<div class="ab-sec">Add another broker</div><div style="display:flex;gap:8px;padding:4px 20px 14px">
+    <select id="abAddSel" class="filter-input" style="flex:1"><option value="">${addable.length?"Choose a broker…":"No other active brokers in this city"}</option>${addable.map(b=>`<option value="${escHtml(String(b.id))}">${escHtml(b.name||"Unnamed")}</option>`).join("")}</select>
+    <button class="btn btn-gold" onclick="abAddBroker()">Add</button></div>`;
+  document.getElementById("abModalBody").innerHTML=html;
+  const act=document.getElementById("abModalAction");
+  if(act){
+    const w=eligible.filter(e=>!ex.has(String(e.b.id))&&e.wa).length;
+    act.innerHTML=abIsApproved(l)&&w?`<button class="btn btn-teal" id="abSendMoreBtn" onclick="abSendMore('${escHtml(abModalListingId)}',this)">Send WhatsApp to ${w} more</button>`:"";
+  }
+  const inc=eligible.filter(e=>!ex.has(String(e.b.id))).length;
+  document.getElementById("abModalCount").textContent=`${inc} of ${eligible.length} included`;
+}
+
+// ---------- Marking a lead as shared in a broker's Potential Data ----------
+function abDedupeKey(brokerId, phone, gender, requirement, areas){
+  return [String(brokerId), abDigits(phone), abNorm(gender), abNorm(requirement), abNorm(areas)].join(":");
+}
+async function abInsert(path, body){
+  const send=()=>fetch(`${SUPA_URL}/rest/v1/${path}`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(body)});
+  let res=await send();
+  if(res.status===401 && await refreshSession()) res=await send();
+  if(!res.ok) console.error("insert failed:",path,res.status,await res.text());
+  return res.ok;
+}
+// Ticks the lead (turns it green) in this broker's Potential Data:
+// every pending row for the number is flipped to 'sent'; if the broker has
+// no row for it yet, a 'sent' row is created.
+// Returns "marked" (newly ticked), "already" (was already shared in the last 15 days) or false (failed).
+// Always checks the database fresh, so a stale screen can never create a second row.
+async function abMarkShared(brokerId, l, nowIso){
+  const ph=abDigits(l.custom_contact_phone);
+  const cutoff=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
+  let rows;
+  try{ rows=await supaGet(`broker_portal_leads?broker_id=eq.${brokerId}&phone=like.*${ph}&select=id,status,sent_at`); }
+  catch(e){ console.error("mark check failed",e); return false; }
+  const pend=rows.filter(r=>r.status!=="sent");
+  if(pend.length){
+    let ok=true;
+    for(const r of pend) ok=(await supaPatch("broker_portal_leads",`id=eq.${r.id}`,{status:"sent",sent_at:nowIso}))&&ok;
+    return ok?"marked":false;
+  }
+  if(rows.some(r=>r.status==="sent" && r.sent_at && r.sent_at>=cutoff)) return "already";
+  const areas=abAreasText(l), gender=l.gender_preference||"Undisclosed", req=abReq(l);
+  const ok=await abInsert("broker_portal_leads",{
+    broker_id:brokerId, phone:ph, gender, requirement:req, areas,
+    raw_whatsapp_text:l.raw_whatsapp_text||null, whatsapp_group_name:l.whatsapp_group_name||null,
+    posted_at:abPostedIso(l)||l.created_at||null, status:"sent", sent_at:nowIso,
+    dedupe_key:`${brokerId}:${ph}:portal`,
+  });
+  return ok?"marked":false;
+}
+async function abBumpCount(brokerId, n){
+  const row=await supaGet(`brokers?id=eq.${brokerId}&select=contacts_sent_this_month`);
+  const prev=Number(row[0]&&row[0].contacts_sent_this_month)||0;
+  return supaPatch("brokers",`id=eq.${brokerId}`,{contacts_sent_this_month:prev+n});
+}
+
+// ---------- Download Excel: one file per broker ----------
+
+
+// Waits until the background WhatsApp sender stops logging into broker_leads, then reloads
+// (the reload ticks + counts via abReconcile). Returns how many brokers are logged.
+async function abAwaitSends(id){
+  let seen=-1, stable=0;
+  for(let k=0;k<10 && stable<2;k++){
+    await new Promise(r=>setTimeout(r,3000));
+    const logged=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(id)}&select=broker_id`).catch(()=>[]);
+    if(logged.length>0 && logged.length===seen) stable++; else stable=0;
+    seen=logged.length;
+  }
+  abBusy=false;
+  await abLoad();
+  return (abLoggedBy[id]||new Set()).size;
+}
+// Send an ALREADY approved lead to extra brokers (WhatsApp)
+async function abSendMore(id, btn){
+  const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
+  const wa=abIncluded(l).filter(e=>e.wa);
+  if(!wa.length) return;
+  if(!confirm(`Send +91 ${abDigits(l.custom_contact_phone)} on WhatsApp to:\n\n`+wa.map(e=>"• "+e.b.name).join("\n")+"\n\nContinue?")) return;
+  abBusy=true; btn.disabled=true; btn.textContent="Sending…";
+  try{
+    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id)),resend:true})});
+    let res=await call();
+    if(res.status===401 && await refreshSession()) res=await call();
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success){ alert(data.error||`Sending failed (${res.status}).`); btn.disabled=false; btn.textContent="Send again"; abBusy=false; return; }
+    const got=await abAwaitSends(id);
+    abCloseModal();
+    alert(`Sent. ${got} broker(s) in total have now received it; new ones are ticked in their Potential Data.`);
+  }catch(e){ console.error(e); alert("Sending failed — check the Brokers dialog before retrying."); btn.disabled=false; abBusy=false; }
+}
+
+// ---------- Approve from here: ONLY the included brokers receive it ----------
+async function abApprove(id, btn){
+  const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
+  const inc=abIncluded(l);
+  const wa=inc.filter(e=>e.wa), excel=inc.filter(e=>!e.wa);
+  const skipQ=abIsPaid(l)?wa.filter(e=>abQuotaFull(e.b)):[];
+  let msg=`Approve +91 ${abDigits(l.custom_contact_phone)} (${abReq(l)} · ${abAreasText(l)||"no area"}) and send it ONLY to:\n\n`;
+  msg+=wa.length?wa.map(e=>`• ${e.b.name}`).join("\n"):"• nobody (no WhatsApp-capable broker is included)";
+  if(excel.length) msg+=`\n\nIncluded but Excel-only (no area tag / WhatsApp not active, so they will NOT get a WhatsApp — use Download Excel for them):\n`+excel.map(e=>`• ${e.b.name}`).join("\n");
+  msg+=`\n\nMake sure you have already edited this listing on the main site. Continue?`;
+  if(skipQ.length) msg+=`\n\nQuota is full for ${skipQ.map(e=>e.b.name).join(", ")} — a paid lead will NOT be sent to them.`;
+  if(!confirm(msg)) return;
+
+  abBusy=true; btn.disabled=true; const orig=btn.textContent; btn.textContent="Approving…";
+  try{
+    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id))})});
+    let res=await call();
+    if(res.status===401 && await refreshSession()) res=await call();
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success){ alert(data.error||`Approval failed (${res.status}). Nothing was changed.`); btn.disabled=false; btn.textContent=orig; return; }
+
+    abRememberApproved(id);
+    await abAwaitSends(id);
+    const gotIds=abLoggedBy[id]||new Set();
+    const nm=e=>e.b.name;
+    const gotN=wa.filter(e=>gotIds.has(String(e.b.id))).map(nm), missN=wa.filter(e=>!gotIds.has(String(e.b.id))).map(nm);
+    let out=`Approved.\n\nWhatsApp sent and ticked: ${gotN.length?gotN.join(", "):"nobody yet"}`;
+    if(missN.length) out+=`\n\nChosen for WhatsApp but no send logged: ${missN.join(", ")}\n(a paid lead is skipped when the quota is full or the send failed; if it was just slow, press Refresh in a minute.)`;
+    if(excel.length) out+=`\n\nExcel-only (not sent): ${excel.map(nm).join(", ")} — use Download Excel for them.`;
+    alert(out);
+  }catch(e){
+    console.error("Approve failed:",e);
+    alert("Approval failed — please check whether the listing is still pending before retrying.");
+    btn.disabled=false; btn.textContent=orig;
+  }finally{ abBusy=false; abUpdateCount(); }
+}
+// =====================================================================
+// PRATIKA_TP  -- match an offer (a vacancy / replacement message) against every seeker on FlatKhoj
+// ---------------------------------------------------------------------
+// Everything above this block is shared, unchanged, with the Broker Data Portal (login, Supabase
+// helpers, area logic, the Brokers dialog, Approve and "send to more brokers"). This block adds:
+//   1. reading a pasted message into areas / sharing / gender / move-in / rent (all editable),
+//   2. finding seekers (flat_wanted) that fit, LIVE OR NOT LIVE (rejected ones are never shown),
+//   3. a table like All Brokers (Brokers, Approve / red Live, Edit, click a row for the original),
+//   4. Send: one combined message ("Lead 1", "Lead 2" ...) with masked numbers and no names.
+// =====================================================================
+const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active";
+const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpReactCut="";
+let tpSortField="match", tpSortDir=-1, tpSorted=[];
+
+function abIsApproved(l){ return !!(l&&(l._approved||l._live)); }
+function tpEsc(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); }
+function tpTitle(s){ return String(s).replace(/\b[a-z]/g,c=>c.toUpperCase()); }
+function tpMask(p){ const d=abDigits(p); if(d.length<3) return d; return d[0]+"x".repeat(d.length-3)+d.slice(-2); }
+function tpIsoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function tpFmtDate(iso){ if(!iso) return "—"; const d=new Date(iso+"T00:00:00"); if(isNaN(d)) return "—"; return d.getDate()+" "+TP_MON_NAMES[d.getMonth()]+" "+d.getFullYear(); }
+function tpMoney(n){ return "₹"+Number(n).toLocaleString("en-IN"); }
+
+async function enterApp(){
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("app").style.display="block";
+  try{ abBrokers=await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"); }catch(e){ console.error(e); }
+  tpBuildVocab();
+}
+function tpBuildVocab(){
+  tpVocab=new Map();
+  const put=n=>{ n=String(n||"").trim(); if(n.length>=4 && !tpVocab.has(n.toLowerCase())) tpVocab.set(n.toLowerCase(),n); };
+  Object.keys(AB_AREA_GROUPS).forEach(k=>{ put(k); (AB_AREA_GROUPS[k]||[]).forEach(put); });
+  abBrokers.forEach(b=>abArr(b.areas).forEach(put));
+  const dl=document.getElementById("tpAreaList");
+  if(dl) dl.innerHTML=[...tpVocab.values()].sort().map(n=>`<option value="${escHtml(n)}"></option>`).join("");
+}
+
+// ---------- reading the pasted message ----------
+function tpParseAreas(text){
+  let w=" "+String(text||"").toLowerCase().replace(/[‘’]/g,"'")+" ";
+  const out=[], add=n=>{ if(n && !out.some(x=>x.toLowerCase()===n.toLowerCase())) out.push(n); };
+  const names=[...tpVocab.keys()];
+  const bases=[...new Set(names.map(abBase))].filter(b=>b.length>=4).sort((a,b)=>b.length-a.length);
+  for(const b of bases){
+    const re=new RegExp("\\b"+tpEsc(b)+"\\s*[\\(\\-,]?\\s*(east|west|e|w)\\b\\.?\\)?(?:\\s*(?:/|&|,|\\+|and|or)\\s*\\(?(east|west|e|w)\\b\\)?)?","g");
+    w=w.replace(re,(m0,s1,s2)=>{
+      const sides=[...new Set([s1,s2].filter(Boolean).map(x=>x[0]==="e"?"east":"west"))];
+      if(sides.length===2) add(tpVocab.get(b)||tpTitle(b));
+      else add(tpVocab.get(b+" "+sides[0])||tpTitle(b+" "+sides[0]));
+      return " ".repeat(m0.length);
+    });
+  }
+  const plain=names.slice().sort((a,b)=>b.length-a.length);
+  for(const n of plain){
+    const re=new RegExp("\\b"+tpEsc(n)+"\\b","g");
+    if(re.test(w)){ add(tpVocab.get(n)); w=w.replace(re,m0=>" ".repeat(m0.length)); }
+  }
+  return out;
+}
+function tpParseSharing(text){
+  const s=String(text||"").toLowerCase();
+  if(/\bdouble\b|\btwin\b|\b2\s*[- ]?\s*sharing\b/.test(s)) return "Double";
+  if(/\bsingle\b|\bprivate room\b|\b1\s*[- ]?\s*sharing\b/.test(s)) return "Single";
+  if(/\btriple\b|\b3\s*[- ]?\s*sharing\b/.test(s)) return "Triple";
+  if(/\bhall\b/.test(s)) return "Hall";
+  if(/\b\d\s*bhk\b|\b\d\s*rk\b/.test(s)) return "Entire";
+  return "";
+}
+function tpParseGender(text){
+  const s=String(text||"").toLowerCase();
+  const f=/\bfemales?\b|\bgirls?\b|\bladies\b|\blady\b|\bwom[ae]n\b|\bshe\b|\bher\b/.test(s);
+  const m=/\bmales?\b|\bboys?\b|\bguys?\b|\bgents?\b|\bmen\b|\bhe\b|\bhis\b/.test(s);
+  if(f&&!m) return "Female";
+  if(m&&!f) return "Male";
+  return "";
+}
+function tpParseRent(text){
+  const s=String(text||"").toLowerCase().replace(/,/g,"");
+  const m=s.match(/(?:rent|budget|price|₹|rs\.?|inr)\s*(?:is|of|:|-|=|around|approx\.?)?\s*(\d{3,6})(\s*k)?\b|(?:rent|budget|price|₹|rs\.?|inr)\s*(?:is|of|:|-|=|around|approx\.?)?\s*(\d{1,3})\s*k\b/);
+  if(!m) return "";
+  if(m[1]) return String(+m[1]*(m[2]?1000:1));
+  if(m[3]) return String(+m[3]*1000);
+  return "";
+}
+function tpParseDate(text){
+  const s=String(text||"").toLowerCase();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const MON="(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*";
+  const mk=(day,mon)=>{ let y=today.getFullYear(), d=new Date(y,mon,day); if(d<new Date(today.getTime()-7*864e5)) d=new Date(y+1,mon,day); return tpIsoLocal(d); };
+  let m=s.match(new RegExp("\\b(\\d{1,2})\\s*(?:st|nd|rd|th)?\\s*(?:of\\s*)?"+MON+"\\b"));
+  if(m && +m[1]>=1 && +m[1]<=31) return mk(+m[1],TP_MONTHS[m[2]]);
+  m=s.match(new RegExp("\\b"+MON+"\\s*(\\d{1,2})(?:st|nd|rd|th)?\\b"));
+  if(m && +m[3]>=1 && +m[3]<=31) return mk(+m[3],TP_MONTHS[m[1]]);
+  m=s.match(new RegExp("\\b(1st|first|2nd|second|3rd|third|4th|fourth|last)\\s*week\\s*(?:of\\s*)?"+MON+"\\b"));
+  if(m) return mk({"1st":1,first:1,"2nd":8,second:8,"3rd":15,third:15,"4th":22,fourth:22,last:25}[m[1]],TP_MONTHS[m[2]]);
+  m=s.match(new RegExp("\\bmid(?:dle)?\\s*(?:of\\s*)?"+MON+"\\b"));
+  if(m) return mk(15,TP_MONTHS[m[1]]);
+  m=s.match(/\b(\d{1,2})\s*[\/.\-]\s*(\d{1,2})(?:\s*[\/.\-]\s*\d{2,4})?(?![\d]|\s*k\b)/);
+  if(m && +m[1]>=1 && +m[1]<=31 && +m[2]>=1 && +m[2]<=12) return mk(+m[1],+m[2]-1);
+  m=s.match(new RegExp("\\b(?:from|in|by|for|available|move[\\s-]*in)\\s+"+MON+"\\b"));
+  if(m) return mk(1,TP_MONTHS[m[1]]);
+  if(/\bimmediate(ly)?\b|\basap\b|\bright away\b|\bnow\b/.test(s)){ const d=new Date(today.getTime()+864e5); return tpIsoLocal(d); }
+  return "";
+}
+
+function tpReadOffer(){
+  const areas=document.getElementById("tpAreas").value.split(",").map(x=>x.trim()).filter(Boolean);
+  return {
+    areas, sharing:document.getElementById("tpSharing").value, gender:document.getElementById("tpGender").value,
+    movein:document.getElementById("tpMovein").value, tol:Math.max(0,Number(document.getElementById("tpTol").value)||0),
+    rent:Number(document.getElementById("tpRent").value)||0, unspec:document.getElementById("tpUnspec").checked,
+    city:document.getElementById("tpCity").value
+  };
+}
+function tpClear(){
+  ["tpText","tpAreas","tpMovein","tpRent"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("tpSharing").value=""; document.getElementById("tpGender").value="";
+  document.getElementById("tpParseNote").textContent="I read the areas, sharing type, gender and move-in date from the text. Check them below and change anything that is wrong.";
+  abListings=[]; abSelected=new Set(); document.getElementById("tpSummary").textContent="";
+  tpRender();
+}
+async function tpFind(){
+  const t=document.getElementById("tpText").value;
+  if(!t.trim()){ alert("Paste the message first."); return; }
+  const areas=tpParseAreas(t), sh=tpParseSharing(t), g=tpParseGender(t), d=tpParseDate(t), r=tpParseRent(t);
+  document.getElementById("tpAreas").value=areas.join(", ");
+  document.getElementById("tpSharing").value=sh;
+  document.getElementById("tpGender").value=g;
+  document.getElementById("tpMovein").value=d;
+  document.getElementById("tpRent").value=r;
+  document.getElementById("tpParseNote").innerHTML="Read from the message &rarr; areas: <b>"+escHtml(areas.join(", ")||"none found")+"</b> · sharing: <b>"+escHtml(sh||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not found")+"</b>"+(r?" · rent: <b>"+tpMoney(r)+"</b>":"")+". Change anything above if it is wrong.";
+  tpTouched=true;
+  await tpRefetch();
+}
+
+// ---------- loading ----------
+async function tpRefetch(){
+  if(!tpTouched) return;
+  const my=++tpToken;
+  const body=document.getElementById("abBody");
+  body.innerHTML=`<tr><td colspan="12" class="empty-state">Loading…</td></tr>`;
+  const days=Number(document.getElementById("tpDays").value)||30, city=document.getElementById("tpCity").value;
+  const cut=new Date(Date.now()-days*864e5).toISOString();
+  tpReactCut=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
+  try{
+    const [pool, brokers, leads, targets]=await Promise.all([
+      supaGetAll(`listings?select=${TP_COLS}&listing_type=eq.flat_wanted&rejected=eq.false&created_at=gte.${encodeURIComponent(cut)}&order=created_at.desc`),
+      supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"),
+      abFetchPortalLeads(tpReactCut),
+      supaGetAll(`listing_broker_targets?select=listing_id,broker_ids,created_at&created_at=gte.${tpReactCut}`).catch(e=>{ console.error("targets read failed",e); return []; }),
+    ]);
+    if(my!==tpToken) return;
+    abBrokers=brokers; abLeadIdx=abIndexLeads(leads);
+    abTargets={}; targets.forEach(t=>{ abTargets[String(t.listing_id)]=t; });
+    const local=new Set(abLocalApproved());
+    const seen=new Set(); tpPool=[];
+    pool.forEach(l=>{
+      const ph=abDigits(l.custom_contact_phone);
+      if(ph.length!==10 || seen.has(ph)) return;
+      if(abNorm(l.city||"mumbai")!==city) return;
+      seen.add(ph);
+      l._live=(l.pending_approval===false && l.is_active===true);
+      l._approved=(l.pending_approval===false) && (!!abTargets[String(l.id)] || local.has(String(l.id)));
+      tpPool.push(l);
+    });
+    tpHydrated=new Set(); abLoggedBy={};
+    tpBuildVocab();
+  }catch(e){
+    console.error("load failed",e);
+    body.innerHTML=`<tr><td colspan="12" class="empty-state">Could not load seekers. Press Refresh to try again.</td></tr>`;
+    return;
+  }
+  await tpApply();
+}
+async function abLoad(){ await tpRefetch(); }   // used by the shared Approve / Send-more code
+
+// ---------- matching ----------
+function tpMatch(l,o){
+  const reasons=[]; let score=0;
+  const la=abArr(l.areas);
+  if(!abAreaMatch(o.areas,la)) return null;
+  const exact=la.some(a=>o.areas.some(b=>abNorm(a)===abNorm(b)));
+  score+=exact?3:2; reasons.push(exact?"Area matches exactly":"Area overlaps");
+  const req=abReq(l).toLowerCase();
+  const tk={single:/\bsingle\b/.test(req),double:/\bdouble\b|\btwin\b/.test(req),triple:/\btriple\b/.test(req),hall:/\bhall\b/.test(req),entire:/\bentire\b|\bbhk\b|\brk\b/.test(req),any:/\bany\b/.test(req)};
+  const stated=Object.values(tk).some(Boolean);
+  if(o.sharing){
+    if(tk[o.sharing.toLowerCase()]){ score+=2; reasons.push("Asked for "+o.sharing.toLowerCase()); }
+    else if(tk.any){ score+=1; reasons.push("Open to any"); }
+    else if(!stated){ if(!o.unspec) return null; reasons.push("Requirement not stated"); }
+    else return null;
+  }
+  const g=abNorm(l.gender_preference);
+  if(o.gender){
+    if(g===o.gender.toLowerCase()){ score+=1; reasons.push("Gender matches"); }
+    else if(!g||["undisclosed","any","no preference","anyone","none","coed","co-ed"].includes(g)){ if(!o.unspec) return null; reasons.push("Gender not stated"); }
+    else return null;
+  }
+  if(o.movein){
+    if(l.available_from){
+      const diff=(Date.parse(l.available_from)-Date.parse(o.movein))/864e5;
+      if(diff>o.tol) return null;
+      if(Math.abs(diff)<=5){ score+=1; reasons.push("Move-in fits"); } else reasons.push(diff<0?"Can move earlier":"Moves in a bit later");
+    }else{ if(!o.unspec) return null; reasons.push("Move-in not stated"); }
+  }
+  if(o.rent){
+    const r=Number(l.rent_amount)||0;
+    if(r){ if(r>=o.rent*0.9){ score+=1; reasons.push("Budget fits"); } else return null; }
+    else{ if(!o.unspec) return null; reasons.push("Budget not stated"); }
+  }
+  return {score, reasons, label: score>=6?"Strong":(score>=4?"Good":"Possible")};
+}
+async function tpHydrate(rows){
+  const fresh=rows.filter(l=>!tpHydrated.has(String(l.id)));
+  if(!fresh.length) return;
+  for(let i=0;i<fresh.length;i+=40){
+    const ids=fresh.slice(i,i+40).map(l=>encodeURIComponent(String(l.id))).join(",");
+    const logged=await supaGetAll(`broker_leads?select=listing_id,broker_id&listing_id=in.(${ids})`).catch(e=>{ console.error("broker_leads read failed",e); return []; });
+    logged.forEach(r=>{ (abLoggedBy[String(r.listing_id)]=abLoggedBy[String(r.listing_id)]||new Set()).add(String(r.broker_id)); });
+  }
+  const old=abPostedMap; await abLoadPosted(fresh); abPostedMap=Object.assign({},old,abPostedMap);
+  fresh.forEach(l=>tpHydrated.add(String(l.id)));
+}
+async function tpApply(){
+  if(!tpTouched) return;
+  const my=++tpToken;
+  const o=tpReadOffer(), sum=document.getElementById("tpSummary");
+  if(!o.areas.length){
+    abListings=[]; abSelected=new Set(); tpRender();
+    sum.textContent="Add at least one area above to see matches.";
+    return;
+  }
+  const rows=[];
+  tpPool.forEach(l=>{ const m=tpMatch(l,o); if(m){ l._m=m; rows.push(l); } });
+  abListings=rows;
+  const ids=new Set(rows.map(l=>String(l.id)));
+  abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
+  sum.textContent="Loading details for "+rows.length+" seeker(s)…";
+  await tpHydrate(rows);
+  if(my!==tpToken) return;
+  if(rows.some(l=>l._approved)) await abReconcile(tpReactCut);
+  if(my!==tpToken) return;
+  const live=rows.filter(l=>l._live).length;
+  sum.innerHTML=`<b>${rows.length}</b> seeker(s) could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched the last ${escHtml(document.getElementById("tpDays").value)} days.`;
+  tpRender();
+}
+
+// ---------- table ----------
+function tpSetSort(f){
+  if(tpSortField===f){ tpSortDir=(tpSortDir===1)?-1:1; } else { tpSortField=f; tpSortDir=(f==="match"||f==="date")?-1:1; }
+  tpRender();
+}
+function tpSortRows(rows){
+  const f=tpSortField, d=tpSortDir, t=l=>new Date(abPostedIso(l)||l.created_at||0).getTime();
+  return rows.slice().sort((a,b)=>{
+    let c=0;
+    if(f==="match") c=(a._m.score-b._m.score);
+    else if(f==="gender") c=genderRank(a.gender_preference)-genderRank(b.gender_preference);
+    else if(f==="requirement") c=requirementRank(abReq(a))-requirementRank(abReq(b));
+    else if(f==="area") c=abAreasText(a).localeCompare(abAreasText(b));
+    else if(f==="budget") c=(Number(a.rent_amount)||0)-(Number(b.rent_amount)||0);
+    else if(f==="movein") c=(a.available_from?Date.parse(a.available_from):9e15)-(b.available_from?Date.parse(b.available_from):9e15);
+    else if(f==="date") c=t(a)-t(b);
+    else if(f==="status") c=(a._live?1:0)-(b._live?1:0);
+    if(c===0) c=t(b)-t(a);
+    return c*d;
+  });
+}
+function abRender(){ tpRender(); }
+function tpRender(){
+  document.querySelectorAll("th.sortable-th[data-f]").forEach(th=>{
+    const f=th.getAttribute("data-f"), base=th.textContent.replace(/[ ↑↓↕]+$/,"");
+    if(f===tpSortField){ th.classList.add("active"); th.textContent=base+(tpSortDir===1?" ↑":" ↓"); } else { th.classList.remove("active"); th.textContent=base+" ↕"; }
+  });
+  const body=document.getElementById("abBody");
+  tpSorted=tpSortRows(abListings);
+  const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
+  const rows=tpSorted.filter(l=>!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q));
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="12" class="empty-state">${!tpTouched?"Paste a message above and press Find matches.":(abListings.length?"No seekers match that search.":"No seekers fit these details. Try more areas, a larger \"days later\" or turn on the box for unstated details.")}</td></tr>`;
+    abUpdateCount(); return;
+  }
+  const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
+  body.innerHTML=rows.map(l=>{
+    const id=String(l.id), n=abIncluded(l).length, live=!!l._live;
+    const hold=l.on_hold?` <span class="badge b-count">On hold</span>`:"";
+    const m=l._m;
+    const status=live
+      ? `<span class="badge" style="background:rgba(220,53,69,.15);color:#ff5b6b;border:1px solid rgba(220,53,69,.45);font-weight:700" title="This listing is already live on the site">● Live</span>`
+      : `<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`;
+    return `<tr class="clickable-row" onclick="abOpenText('${escHtml(id)}')">
+      <td class="row-select" onclick="event.stopPropagation()"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
+      <td style="font-weight:600;white-space:nowrap">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
+      <td>${escHtml(l.gender_preference||"—")}</td>
+      <td>${escHtml(abReq(l))}</td>
+      <td>${escHtml(abAreasText(l)||"—")}</td>
+      <td style="white-space:nowrap">${l.rent_amount?escHtml(tpMoney(l.rent_amount)):"—"}</td>
+      <td style="white-space:nowrap">${escHtml(tpFmtDate(l.available_from))}</td>
+      <td style="white-space:nowrap">${abPostedFmt(l)}</td>
+      <td><span class="badge" style="${lblStyle[m.label]}" title="${escHtml(m.reasons.join(" · "))}">${m.label}</span></td>
+      <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">${status}</td>
+      <td onclick="event.stopPropagation()"><button class="btn btn-ghost" onclick="window.open('post_form.html?edit='+encodeURIComponent('${escHtml(id)}'),'_blank')">✏️ Edit</button></td>
+    </tr>`;
+  }).join("");
+  abUpdateCount();
+}
+function tpToggleAll(on){
+  const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
+  const vis=tpSorted.filter(l=>!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q));
+  if(on) vis.forEach(l=>abSelected.add(String(l.id))); else vis.forEach(l=>abSelected.delete(String(l.id)));
+  tpRender();
+}
+function abUpdateCount(){
+  document.querySelectorAll(".ab-selected-count").forEach(el=>el.textContent=abSelected.size);
+  document.querySelectorAll(".ab-send-btn").forEach(b=>{ b.disabled=abBusy||abSelected.size===0; b.textContent=abSelected.size?`Send (${abSelected.size})`:"Send"; });
+  const all=document.getElementById("abSelectAll"); if(all) all.checked=abListings.length>0 && abSelected.size>=abListings.length;
+}
+
+// ---------- Send: one combined message ----------
+const TP_BROKERAGE={yes:"Okay with brokerage",prefno:"Prefers no brokerage",no:"No brokerage"};
+function tpLeadText(l,i){
+  const g=l.gender_preference, req=abReq(l), lines=[`*Lead ${i}*`];
+  lines.push(`Gender: ${g&&g!=="Undisclosed"?g:"Not specified"}`);
+  lines.push(`Requirement: ${req==="Undisclosed"?"Not specified":req}`);
+  lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
+  if(l.rent_amount) lines.push(`Budget: ${tpMoney(l.rent_amount)}/month`);
+  if(l.available_from) lines.push(`Move-in: ${tpFmtDate(l.available_from)}`);
+  const b=TP_BROKERAGE[String(l.brokerage_preference||"").toLowerCase()]; if(b) lines.push(`Brokerage: ${b}`);
+  lines.push(`Contact: ${tpMask(l.custom_contact_phone)}`);
+  return lines.join("\n");
+}
+function tpOpenSend(){
+  const sel=tpSorted.filter(l=>abSelected.has(String(l.id)));
+  if(!sel.length) return;
+  const o=tpReadOffer(), n=sel.length;
+  const sh={Single:"single occupancy",Double:"double occupancy",Triple:"triple occupancy",Hall:"hall",Entire:"entire flat"}[o.sharing]||"";
+  const head=`Hi! Here ${n===1?"is 1 person":"are "+n+" people"} looking for a place`+(o.areas.length?` in *${o.areas.join(", ")}*`:"")+(sh?` (${sh})`:"")+(o.movein?`, from ${tpFmtDate(o.movein)}`:"")+":";
+  const foot=`Reply with the Lead number(s) you are interested in and I'll share the contact details.`;
+  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1)).join("\n\n")+"\n\n"+foot;
+  document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers masked · no names";
+  document.getElementById("sendCopied").textContent="";
+  document.getElementById("sendModal").style.display="flex";
+}
+async function tpCopy(){
+  const ta=document.getElementById("sendText"), msg=document.getElementById("sendCopied");
+  try{ await navigator.clipboard.writeText(ta.value); msg.textContent="Copied ✓"; }
+  catch(e){ ta.focus(); ta.select(); try{ document.execCommand("copy"); msg.textContent="Copied ✓"; }catch(e2){ msg.textContent="Press Ctrl+C to copy"; } }
+}
+tryRestoreSession();
+
+</script>
+</body>
+</html>
