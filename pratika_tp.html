@@ -117,6 +117,9 @@ textarea.filter-input { font-family:var(--font); }
 .tp-big-t { font-size:30px; font-weight:800; color:var(--gold); }
 .tp-big-s { font-size:14px; color:var(--ink2); max-width:300px; line-height:1.5; }
 .tp-checks { display:flex; flex-wrap:wrap; gap:4px 12px; padding:8px 4px; font-size:13px; color:var(--ink2); }
+.tp-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+.tp-chip { background:var(--gold-bg); border:1px solid var(--gold); color:var(--gold); border-radius:14px; padding:3px 6px 3px 10px; font-size:12.5px; font-weight:600; }
+.tp-chip b { cursor:pointer; margin-left:6px; }
 .tp-checks label { display:flex; gap:5px; align-items:center; cursor:pointer; }
 </style>
 </head>
@@ -141,7 +144,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP3</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP6</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -152,34 +155,39 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP3</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP6</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
     </div>
 
     <div class="table-card" style="padding:16px 18px">
-      <label class="lbl" for="tpText" id="tpPasteLbl">Paste the message here</label>
-      <textarea id="tpText" class="filter-input" rows="5" style="width:100%;resize:vertical;line-height:1.5" placeholder=""></textarea>
-      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-gold" onclick="tpFind()" id="tpFindBtn">Find matches</button>
-        <button class="btn btn-ghost" onclick="tpClear()">Clear</button>
-        <span id="tpParseNote" style="font-size:12px;color:var(--ink3)">I read the areas, sharing type, gender and move-in date from the text. Check them below and change anything that is wrong.</span>
-      </div>
-
-      <div class="tp-filters">
-        <div><label class="lbl">Areas (comma separated)</label><input class="filter-input" id="tpAreas" list="tpAreaList" placeholder="Andheri East, Vile Parle" onchange="tpApply()"><datalist id="tpAreaList"></datalist></div>
+      <div class="tp-filters" style="margin-top:0">
+        <div style="grid-column:span 2"><label class="lbl">Areas (type and press Enter; add as many as you like)</label>
+          <div id="tpChips" class="tp-chips"></div>
+          <input class="filter-input" id="tpAreaIn" list="tpAreaList" placeholder="Andheri East, Vile Parle…" autocomplete="off" onchange="tpAreaCommit()" onkeydown="tpAreaKey(event)" onblur="tpAreaCommit()">
+          <datalist id="tpAreaList"></datalist><input type="hidden" id="tpAreas"></div>
         <div><label class="lbl">Sharing / room</label>
           <div id="tpSharing" class="tp-checks"><label><input type="checkbox" value="Single" onchange="tpApply()"> Single</label><label><input type="checkbox" value="Double" onchange="tpApply()"> Double</label><label><input type="checkbox" value="Triple" onchange="tpApply()"> Triple</label><label><input type="checkbox" value="Hall" onchange="tpApply()"> Hall</label><label><input type="checkbox" value="Entire" onchange="tpApply()"> Entire flat</label></div></div>
         <div><label class="lbl">Gender</label>
           <select class="filter-input" id="tpGender" onchange="tpApply()"><option value="">Any</option><option value="Female">Female</option><option value="Male">Male</option></select></div>
         <div><label class="lbl">Move-in date</label><input class="filter-input" type="date" id="tpMovein" onchange="tpApply()"></div>
         <div><label class="lbl">Rent / budget (optional)</label><input class="filter-input" type="number" id="tpRent" placeholder="e.g. 14000" onchange="tpApply()"></div>
-        
         <div><label class="lbl">City</label><select class="filter-input" id="tpCity" onchange="tpRefetch()"><option value="mumbai">Mumbai</option><option value="pune">Pune</option></select></div>
-        
       </div>
       <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" class="chk" id="tpUnspec" checked onchange="tpApply()"> Also show listings that didn't state their requirement, gender, move-in date or rent</label>
+      <button class="btn btn-ghost" style="margin-top:10px" onclick="tpClear()">Clear all</button>
+
+      <details style="margin-top:14px;border-top:1px solid var(--border2);padding-top:12px">
+        <summary style="cursor:pointer;font-size:13px;color:var(--ink2)">Optional: paste a message (or a number) to fill the boxes above automatically</summary>
+        <label class="lbl" for="tpText" id="tpPasteLbl" style="margin-top:10px;display:block">Paste the message here (or just the person's number)</label>
+        <textarea id="tpText" class="filter-input" rows="5" style="width:100%;resize:vertical;line-height:1.5" placeholder=""></textarea>
+        <div id="tpHelperChip" style="margin-top:8px"></div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-gold" onclick="tpFind()" id="tpFindBtn">Read message</button>
+          <span id="tpParseNote" style="font-size:12px;color:var(--ink3)">The details are read by the auto-posting engine and filled in above. Change anything that is wrong.</span>
+        </div>
+      </details>
     </div>
 
     <div id="tpSummary" style="font-size:13px;color:var(--ink2);margin:4px 0 8px"></div>
@@ -211,7 +219,7 @@ textarea.filter-input { font-family:var(--font); }
           <th class="sortable-th" data-f="status" onclick="tpSetSort('status')">Approve</th>
           <th>Edit</th>
         </tr></thead>
-        <tbody id="abBody"><tr><td colspan="13" class="empty-state">Paste a message above and press Find matches.</td></tr></tbody>
+        <tbody id="abBody"><tr><td colspan="13" class="empty-state">Pick one or more areas above to see matches.</td></tr></tbody>
       </table>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
@@ -558,13 +566,6 @@ function abToggle(e,id){
   if(abSelected.has(id)) abSelected.delete(id); else abSelected.add(id);
   abUpdateCount();
 }
-function abOpenText(id){
-  const l=abListings.find(x=>String(x.id)===id); if(!l) return;
-  document.getElementById("msgModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
-  document.getElementById("msgModalMeta").textContent=`From: ${l.whatsapp_group_name||"Unknown group"}  ·  Posted: ${(abPostedIso(l)||l.created_at)?new Date(abPostedIso(l)||l.created_at).toLocaleString():"Unknown"}`;
-  document.getElementById("msgModalText").textContent=l.raw_whatsapp_text||"(no message text saved)";
-  document.getElementById("msgModal").style.display="flex";
-}
 
 // ---------- Brokers dialog ----------
 function abOpenBrokers(id){ abModalListingId=id; abRenderModal(); document.getElementById("abBrokersModal").style.display="flex"; }
@@ -749,7 +750,7 @@ const TP_HELPER="http://127.0.0.1:8765/";
 const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 let tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpReactCut="";
-let tpSortField="match", tpSortDir=-1, tpSorted=[];
+let tpSortField="date", tpSortDir=-1, tpSorted=[];   // latest posted on top by default
 let tpMode=null, tpShares={}, tpSharesLocal=false;
 const TP_DAYS=60;   // listings created or refreshed in the last 60 days are searched
 
@@ -846,7 +847,7 @@ function tpParseDate(text){
 }
 
 function tpReadOffer(){
-  const areas=document.getElementById("tpAreas").value.split(",").map(x=>x.trim()).filter(Boolean);
+  const areas=tpAreaList();
   return {
     areas, sharing:tpGetSharing(), dir:(tpMode==="seekers"?"seek":"offer"), gender:document.getElementById("tpGender").value,
     movein:document.getElementById("tpMovein").value,
@@ -865,10 +866,25 @@ function tpSharingFromText(t){
   if(/\bentire\b|\bbhk\b|\brk\b/.test(r)) out.push("Entire");
   return out;
 }
+function tpAreaList(){ return document.getElementById("tpAreas").value.split(",").map(x=>x.trim()).filter(Boolean); }
+function tpSetAreas(arr){
+  const seen=new Set(), out=[];
+  (arr||[]).forEach(a=>{ a=String(a||"").trim(); if(!a) return; const c=tpVocab.get(a.toLowerCase())||a; if(!seen.has(c.toLowerCase())){ seen.add(c.toLowerCase()); out.push(c); } });
+  document.getElementById("tpAreas").value=out.join(", ");
+  document.getElementById("tpChips").innerHTML=out.map((a,i)=>`<span class="tp-chip">${escHtml(a)}<b onclick="tpAreaRemove(${i})">&times;</b></span>`).join("");
+}
+function tpAreaCommit(){
+  const el=document.getElementById("tpAreaIn"); const v=el.value.trim(); if(!v) return;
+  el.value=""; tpSetAreas(tpAreaList().concat(v.split(",")));
+  if(!tpTouched){ tpTouched=true; tpRefetch(); } else tpApply();
+}
+function tpAreaKey(ev){ if(ev.key==="Enter"||ev.key===","){ ev.preventDefault(); tpAreaCommit(); } }
+function tpAreaRemove(i){ const a=tpAreaList(); a.splice(i,1); tpSetAreas(a); tpApply(); }
 function tpClear(){
-  ["tpText","tpAreas","tpMovein","tpRent"].forEach(i=>document.getElementById(i).value="");
+  ["tpText","tpMovein","tpRent","tpAreaIn"].forEach(i=>document.getElementById(i).value="");
+  tpSetAreas([]); if(tpTouched) tpApply();
   tpSetSharing([]); document.getElementById("tpGender").value="";
-  document.getElementById("tpParseNote").textContent="I read the areas, sharing type, gender and move-in date from the text. Check them below and change anything that is wrong.";
+  document.getElementById("tpParseNote").textContent="The areas, sharing type, gender, move-in date and rent are read from the text by the auto-posting engine. Check them below and change anything that is wrong.";
   abListings=[]; abSelected=new Set(); document.getElementById("tpSummary").textContent="";
   tpRender();
 }
@@ -883,35 +899,92 @@ async function tpEngineParse(text,city,type){
     return await r.json();
   }catch(e){ return null; }
 }
+// The helper is the ONLY reader: no simplified fallback, so the page can never show data that the
+// auto-posting logic would not have produced.
+async function tpPing(){
+  const chip=document.getElementById("tpHelperChip");
+  let ok=false;
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),3000);
+    const r=await fetch(TP_HELPER,{signal:ctl.signal}); clearTimeout(to);
+    if(r.ok){ const j=await r.json(); ok=Array.isArray(j.cities)&&j.cities.length>0; tpHelperInfo=j; }
+  }catch(e){ ok=false; }
+  if(chip){
+    chip.innerHTML=ok
+      ? `<span class="badge b-ok">● Auto-posting engine connected</span> <span style="font-size:12px;color:var(--ink3)">(only used for a message that is not already in the auto-posted data)</span>`
+      : `<span class="badge b-count">● Auto-posting engine not running</span> <span style="font-size:12px;color:var(--ink3)">Not needed when the person's message is already in the auto-posted data (it is found by number or text). For a brand-new message, start <b>Run_Pratika_TP.bat</b> (Data\\Auto-Posting) or type the details by hand below.</span>`;
+  }
+  return ok;
+}
+let tpHelperInfo=null;
+// If the pasted message (or just a number) is ALREADY in the auto-posted listings, use the details the
+// auto-posting engine stored for it -- no engine needed, and it is exactly what the site has.
+async function tpLookupStored(text){
+  const wantOffer=(tpMode==="offerers");
+  const okType=l=>wantOffer?(l.listing_type==="flatmate_wanted"||l.listing_type==="flat_listing"):(l.listing_type==="flat_wanted");
+  let rows=[];
+  const m=String(text||"").replace(/[\s\-]/g,"").match(/(?<!\d)(?:\+?91)?([6-9]\d{9})(?!\d)/);
+  try{
+    if(m){
+      rows=await supaGet(`listings?select=${TP_COLS}&custom_contact_phone=like.*${m[1]}&rejected=eq.false&order=created_at.desc&limit=20`);
+    }else{
+      const words=[...new Set((String(text||"").match(/[A-Za-z0-9]{5,}/g)||[]))].slice(0,40);
+      const pick=words.slice().sort((a,b)=>b.length-a.length).slice(0,4);
+      const ordered=words.filter(w=>pick.includes(w)).slice(0,4);
+      if(ordered.length>=3) rows=await supaGet(`listings?select=${TP_COLS}&raw_whatsapp_text=ilike.*${ordered.join("*")}*&rejected=eq.false&order=created_at.desc&limit=10`);
+    }
+  }catch(e){ console.error("stored lookup failed",e); return null; }
+  const hit=(rows||[]).find(okType);
+  return hit||null;
+}
 async function tpFind(){
   const t=document.getElementById("tpText").value;
-  if(!t.trim()){ alert("Paste the message first."); return; }
+  if(!t.trim()){ alert("Paste a message first, or just pick the details above."); return; }
   const btn=document.getElementById("tpFindBtn"); btn.disabled=true; btn.textContent="Reading…";
   const note=document.getElementById("tpParseNote");
-  let areas, sh, g, d, r, src="", extra="";
   const city=document.getElementById("tpCity").value;
-  // Help Seekers: the pasted text IS a seeker's requirement. Help Offerers: it is a vacancy.
-  let eng=await tpEngineParse(t,city,tpMode==="seekers"?"flat_wanted":null);
-  if(tpMode==="offerers" && eng && eng.ok && eng.listings && eng.listings[0] && eng.listings[0].listing_type==="flat_wanted")
-    eng=await tpEngineParse(t,city,"flatmate_wanted");
-  if(eng && eng.ok && eng.listings && eng.listings.length){
+  try{
+    const st=await tpLookupStored(t);
+    if(st){
+      const areas=abArr(st.areas), sh=tpSharingFromText((st.room_type&&st.room_type!=="Undisclosed"?st.room_type:"")+" "+(st.listing_type==="flat_listing"?"entire":""));
+      const g=(st.gender_preference==="Female"||st.gender_preference==="Male")?st.gender_preference:"";
+      tpSetAreas(areas);
+      tpSetSharing(sh); document.getElementById("tpGender").value=g; document.getElementById("tpMovein").value=st.available_from||""; document.getElementById("tpRent").value=st.rent_amount?String(st.rent_amount):"";
+      const live=(st.pending_approval===false&&st.is_active===true);
+      note.innerHTML="Found this person in the <b>auto-posted data</b> (+91 "+escHtml(abDigits(st.custom_contact_phone))+", "+(live?"live":"pending")+", "+escHtml(tpFmtDate(String(st.created_at||"").slice(0,10)))+") &rarr; using the details already stored for it: areas: <b>"+escHtml(areas.join(", ")||"none")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(st.available_from?tpFmtDate(st.available_from):"not stated")+"</b>"+(st.rent_amount?" · rent/budget: <b>"+tpMoney(st.rent_amount)+"</b>":"")+". Change anything above if it is wrong.";
+      tpTouched=true; await tpRefetch(); return;
+    }
+    // Help Seekers: the pasted text IS a seeker's requirement. Help Offerers: it is a vacancy.
+    let eng=await tpEngineParse(t,city,tpMode==="seekers"?"flat_wanted":null);
+    if(tpMode==="offerers" && eng && eng.ok && eng.listings && eng.listings[0] && eng.listings[0].listing_type==="flat_wanted")
+      eng=await tpEngineParse(t,city,"flatmate_wanted");
+    if(eng===null){
+      await tpPing();
+      if(tpAreaList().length){
+        note.innerHTML=`<span style="color:var(--ink2)">This message is not in the auto-posted data and the engine is not running, so I used the details typed in the boxes below.</span>`;
+        tpTouched=true; await tpRefetch(); return;
+      }
+      note.innerHTML=`<span style="color:var(--red)">This message is not in the auto-posted data, and the auto-posting engine is not running to read it. Either start <b>Run_Pratika_TP.bat</b> and press Read message again, or just pick the areas and details in the boxes above.</span>`;
+      return;
+    }
+    if(!eng.ok || !eng.listings || !eng.listings.length){
+      const why={not_a_listing:"The engine does not see this as a flat/flatmate post.",city_unavailable:"The engine for this city could not be loaded ("+(eng.detail||"")+").",no_contact_phone:"The engine found no contact number."}[eng.reason]||("The engine could not read it ("+(eng.reason||"unknown")+").");
+      note.innerHTML=`<span style="color:var(--red)">${escHtml(why)}</span> You can still fill the boxes below by hand and the list will update.`;
+      tpTouched=true; abListings=[]; tpRender(); return;
+    }
     const L=eng.listings[0];
-    areas=(L.areas||[]); sh=tpSharingFromText((L.room_type&&L.room_type!=="Undisclosed"?L.room_type:"")+" "+(L.listing_type==="flat_listing"?"entire":""));
-    g=(L.gender_preference==="Female"||L.gender_preference==="Male")?L.gender_preference:"";
-    d=L.available_from||""; r=L.rent_amount?String(L.rent_amount):"";
-    src="auto-posting engine";
-    if(eng.count>1) extra=" The message holds "+eng.count+" listings; using the first.";
-  }else{
-    areas=tpParseAreas(t); sh=tpSharingFromText(tpParseSharing(t)); g=tpParseGender(t); d=tpParseDate(t); r=tpParseRent(t);
-    src="built-in reader (the Pratika_TP helper is not running, so this is NOT the exact auto-posting logic — start Run_Pratika_TP.bat)";
-    if(eng&&!eng.ok) extra=" Engine said: "+(eng.reason||"")+".";
-  }
-  document.getElementById("tpAreas").value=areas.join(", ");
-  tpSetSharing(sh); document.getElementById("tpGender").value=g; document.getElementById("tpMovein").value=d; document.getElementById("tpRent").value=r;
-  note.innerHTML="Read by the <b>"+escHtml(src)+"</b> &rarr; areas: <b>"+escHtml(areas.join(", ")||"none found")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not found")+"</b>"+(r?" · rent/budget: <b>"+tpMoney(r)+"</b>":"")+"."+escHtml(extra)+" Change anything above if it is wrong.";
-  btn.disabled=false; btn.textContent="Find matches";
-  tpTouched=true;
-  await tpRefetch();
+    const areas=(L.areas||[]), sh=tpSharingFromText((L.room_type&&L.room_type!=="Undisclosed"?L.room_type:"")+" "+(L.listing_type==="flat_listing"?"entire":""));
+    const g=(L.gender_preference==="Female"||L.gender_preference==="Male")?L.gender_preference:"";
+    const d=L.available_from||"", r=L.rent_amount?String(L.rent_amount):"";
+    tpSetAreas(areas);
+    tpSetSharing(sh); document.getElementById("tpGender").value=g; document.getElementById("tpMovein").value=d; document.getElementById("tpRent").value=r;
+    let extra="";
+    if(eng.count>1) extra+=" The message holds "+eng.count+" listings; using the first.";
+    if(eng.partial) extra+=" <b style=\"color:var(--red)\">The engine found no area it recognises"+((eng.unresolved&&eng.unresolved.length)?" ("+escHtml(eng.unresolved.join("; "))+")":"")+" — type the area(s) above.</b>";
+    note.innerHTML="Read by the <b>auto-posting engine</b> &rarr; areas: <b>"+escHtml(areas.join(", ")||"none")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not stated")+"</b>"+(r?" · rent/budget: <b>"+tpMoney(r)+"</b>":"")+"."+extra+" Change anything above if it is wrong.";
+    tpTouched=true;
+    await tpRefetch();
+  }finally{ btn.disabled=false; btn.textContent="Read message"; }
 }
 
 // ---------- home / mode ----------
@@ -925,15 +998,17 @@ function tpChoose(mode){
   const seek=(mode==="seekers");
   document.getElementById("tpModeTitle").textContent=seek?"Help Seekers":"Help Offerers";
   document.getElementById("tpModeSub").textContent=seek
-    ? "Paste a seeker's requirement. You will see every place (live or not live) that could suit them. Tick the ones to share, press Send, and they are marked as shared."
-    : "Paste an offerer's message — a vacancy, or someone who needs a replacement. You will see every seeker (live or not live) who could take it. Tick the ones to share, press Send, and they are marked as shared.";
-  document.getElementById("tpPasteLbl").textContent=seek?"Paste the seeker's message here":"Paste the offerer's message here";
+    ? "Pick the areas and details of the seeker (or paste their message). You will see every place (live or not live) that could suit them. Tick the ones to share, press Send, and they are marked as shared."
+    : "Pick the areas and details of the vacancy / replacement (or paste the message). You will see every seeker (live or not live) who could take it. Tick the ones to share, press Send, and they are marked as shared.";
+  document.getElementById("tpPasteLbl").textContent=seek?"Paste the seeker's message here (or just their number)":"Paste the offerer's message here (or just their number)";
   document.getElementById("tpText").placeholder=seek
     ? "e.g. Girl looking for a single occupancy room in Andheri West, budget 15k, from 15th Nov"
     : "e.g. Looking for a replacement in my flat, Andheri East, double sharing, girls only, from 1st Nov, rent 14k";
   document.getElementById("tpHome").style.display="none";
   document.getElementById("tpWork").style.display="block";
   tpClear();
+  tpTouched=true; tpRefetch();
+  tpPing();
 }
 
 // ---------- loading ----------
@@ -1029,6 +1104,7 @@ async function tpHydrate(rows){
     logged.forEach(r=>{ (abLoggedBy[String(r.listing_id)]=abLoggedBy[String(r.listing_id)]||new Set()).add(String(r.broker_id)); });
   }
   const old=abPostedMap; await abLoadPosted(fresh); abPostedMap=Object.assign({},old,abPostedMap);
+  await tpLoadPortalInfo(fresh);
   fresh.forEach(l=>tpHydrated.add(String(l.id)));
 }
 async function tpApply(){
@@ -1037,7 +1113,7 @@ async function tpApply(){
   const o=tpReadOffer(), sum=document.getElementById("tpSummary");
   if(!o.areas.length){
     abListings=[]; abSelected=new Set(); tpRender();
-    sum.textContent="Add at least one area above to see matches.";
+    sum.textContent="Pick one or more areas above to see matches.";
     return;
   }
   const rows=[];
@@ -1089,7 +1165,7 @@ function tpRender(){
   const hideSh=document.getElementById("tpHideShared").checked;
   const rows=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="13" class="empty-state">${!tpTouched?"Paste a message above and press Find matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try more areas, or tick the box for listings that did not state their requirement, gender or rent.")}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="13" class="empty-state">${!tpTouched?"Pick one or more areas above to see matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try more areas, or tick the box for listings that did not state their requirement, gender or rent.")}</td></tr>`;
     abUpdateCount(); return;
   }
   const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
@@ -1190,6 +1266,35 @@ async function tpCopy(mark){
   ids.forEach(i=>abSelected.delete(i));
   tpRender();
   msg.textContent="Copied ✓ and marked "+done+" lead"+(done===1?"":"s")+" as shared.";
+}
+
+// A listing posted through the site form (or by an older script) has no raw_whatsapp_text of its own.
+// The Broker Data Portal rows for the same number usually still hold the original message and group.
+let tpPortalInfo={};
+async function tpLoadPortalInfo(rows){
+  const need=rows.filter(l=>!l.raw_whatsapp_text);
+  const phones=[...new Set(need.map(l=>abDigits(l.custom_contact_phone)))];
+  for(let i=0;i<phones.length;i+=30){
+    const chunk=phones.slice(i,i+30);
+    const found=await supaGetAll(`broker_portal_leads?phone=in.(${chunk.join(",")})&raw_whatsapp_text=not.is.null&select=phone,raw_whatsapp_text,whatsapp_group_name,posted_at&order=posted_at.desc`).catch(e=>{ console.error("portal text read failed",e); return []; });
+    found.forEach(r=>{ const k=abDigits(r.phone); if(!tpPortalInfo[k] && r.raw_whatsapp_text) tpPortalInfo[k]=r; });
+  }
+}
+function abOpenText(id){
+  const l=abListings.find(x=>String(x.id)===id); if(!l) return;
+  const k=abDigits(l.custom_contact_phone), pi=tpPortalInfo[k];
+  const raw=l.raw_whatsapp_text||(pi&&pi.raw_whatsapp_text)||"";
+  const grp=l.whatsapp_group_name||(pi&&pi.whatsapp_group_name)||"";
+  const when=abPostedIso(l)||l.created_at;
+  document.getElementById("msgModalSub").textContent=`+91 ${k} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
+  document.getElementById("msgModalMeta").textContent=`From: ${grp||(raw?"Unknown group":"posted on the site, not from a WhatsApp group")}  ·  Posted: ${when?new Date(when).toLocaleString():"Unknown"}`;
+  let txt=raw;
+  if(!txt){
+    const rows=[["Gender",l.gender_preference],["Requirement",abReq(l)],["Areas",abAreasText(l)],["Budget / rent",l.rent_amount?tpMoney(l.rent_amount):""],["Move-in",l.available_from?tpFmtDate(l.available_from):""],["Brokerage",l.brokerage_preference],["Furnishing",l.furnishing]].filter(r=>r[1]&&r[1]!=="Undisclosed");
+    txt="No original WhatsApp message is saved for this number — the listing was posted through the site form, or before messages were stored.\n\nDetails on the listing:\n"+rows.map(r=>r[0]+": "+r[1]).join("\n");
+  }
+  document.getElementById("msgModalText").textContent=txt;
+  document.getElementById("msgModal").style.display="flex";
 }
 
 // ---------- shared marks (which leads were sent to a client) ----------
