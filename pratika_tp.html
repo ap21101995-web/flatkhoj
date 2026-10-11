@@ -109,6 +109,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .tp-filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px; }
 .tp-filters .filter-input { min-width:0; width:100%; }
 textarea.filter-input { font-family:var(--font); }
+.tp-checks { display:flex; flex-wrap:wrap; gap:4px 12px; padding:8px 4px; font-size:13px; color:var(--ink2); }
+.tp-checks label { display:flex; gap:5px; align-items:center; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -135,7 +137,7 @@ textarea.filter-input { font-family:var(--font); }
     <div class="page-head">
       <div>
         <div class="ptitle" style="color:var(--gold)">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP1</span></div>
-        <div class="psub">Paste someone's requirement or vacancy (for example a girl looking for a replacement in her flat) and see every seeker on FlatKhoj who could take it &mdash; live or not live. Tick the ones you like and press Send to get one WhatsApp-ready message with the numbers masked.</div>
+        <div class="psub">Paste a vacancy (for example a girl looking for a replacement in her flat) to see every seeker who could take it, or paste a requirement to see every place that could suit. It searches all auto-posted and site listings &mdash; live or not live. The message is read with the same engine as auto-posting when Run_Pratika_TP.bat is running. Tick the ones you like and press Send to get one WhatsApp-ready message with the numbers masked.</div>
       </div>
     </div>
 
@@ -151,19 +153,18 @@ textarea.filter-input { font-family:var(--font); }
       <div class="tp-filters">
         <div><label class="lbl">Areas (comma separated)</label><input class="filter-input" id="tpAreas" list="tpAreaList" placeholder="Andheri East, Vile Parle" onchange="tpApply()"><datalist id="tpAreaList"></datalist></div>
         <div><label class="lbl">Sharing / room</label>
-          <select class="filter-input" id="tpSharing" onchange="tpApply()">
-            <option value="">Any</option><option value="Single">Single occupancy</option><option value="Double">Double occupancy</option><option value="Triple">Triple occupancy</option><option value="Hall">Hall</option><option value="Entire">Entire flat</option>
-          </select></div>
+          <div id="tpSharing" class="tp-checks"><label><input type="checkbox" value="Single" onchange="tpApply()"> Single</label><label><input type="checkbox" value="Double" onchange="tpApply()"> Double</label><label><input type="checkbox" value="Triple" onchange="tpApply()"> Triple</label><label><input type="checkbox" value="Hall" onchange="tpApply()"> Hall</label><label><input type="checkbox" value="Entire" onchange="tpApply()"> Entire flat</label></div></div>
         <div><label class="lbl">Gender</label>
           <select class="filter-input" id="tpGender" onchange="tpApply()"><option value="">Any</option><option value="Female">Female</option><option value="Male">Male</option></select></div>
         <div><label class="lbl">Move-in date</label><input class="filter-input" type="date" id="tpMovein" onchange="tpApply()"></div>
-        <div><label class="lbl">Seeker can be up to (days later)</label><input class="filter-input" type="number" id="tpTol" value="10" min="0" max="120" onchange="tpApply()"></div>
-        <div><label class="lbl">Rent of the place (optional)</label><input class="filter-input" type="number" id="tpRent" placeholder="e.g. 14000" onchange="tpApply()"></div>
+        <div title="A match may move in up to this many days AFTER the move-in date above. Someone who can move in earlier always counts."><label class="lbl">Allow move-in up to ___ days later</label><input class="filter-input" type="number" id="tpTol" value="10" min="0" max="120" onchange="tpApply()"></div>
+        <div><label class="lbl">Rent / budget (optional)</label><input class="filter-input" type="number" id="tpRent" placeholder="e.g. 14000" onchange="tpApply()"></div>
+        <div><label class="lbl">The message is</label><select class="filter-input" id="tpDir" onchange="tpRefetch()"><option value="offer">OFFERING a place &rarr; find seekers</option><option value="seek">LOOKING for a place &rarr; find places</option></select></div>
         <div><label class="lbl">City</label><select class="filter-input" id="tpCity" onchange="tpRefetch()"><option value="mumbai">Mumbai</option><option value="pune">Pune</option></select></div>
-        <div><label class="lbl">Seekers posted in the last</label>
+        <div><label class="lbl" title="Only listings created or refreshed within this many days are searched">Look back (listings from the last)</label>
           <select class="filter-input" id="tpDays" onchange="tpRefetch()"><option value="7">7 days</option><option value="15">15 days</option><option value="30" selected>30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></div>
       </div>
-      <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" class="chk" id="tpUnspec" checked onchange="tpApply()"> Also show seekers who didn't say their requirement, gender or move-in date</label>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" class="chk" id="tpUnspec" checked onchange="tpApply()"> Also show listings that didn't state their requirement, gender, move-in date or rent</label>
     </div>
 
     <div id="tpSummary" style="font-size:13px;color:var(--ink2);margin:4px 0 12px"></div>
@@ -184,7 +185,7 @@ textarea.filter-input { font-family:var(--font); }
           <th class="sortable-th" data-f="gender" onclick="tpSetSort('gender')">Gender</th>
           <th class="sortable-th" data-f="requirement" onclick="tpSetSort('requirement')">Requirement</th>
           <th class="sortable-th" data-f="area" onclick="tpSetSort('area')">Areas</th>
-          <th class="sortable-th" data-f="budget" onclick="tpSetSort('budget')">Budget</th>
+          <th class="sortable-th" data-f="budget" onclick="tpSetSort('budget')">Budget / Rent</th>
           <th class="sortable-th" data-f="movein" onclick="tpSetSort('movein')">Move-in</th>
           <th class="sortable-th" data-f="date" onclick="tpSetSort('date')">Posted</th>
           <th class="sortable-th" data-f="match" onclick="tpSetSort('match')">Match</th>
@@ -725,7 +726,8 @@ async function abApprove(id, btn){
 //   3. a table like All Brokers (Brokers, Approve / red Live, Edit, click a row for the original),
 //   4. Send: one combined message ("Lead 1", "Lead 2" ...) with masked numbers and no names.
 // =====================================================================
-const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active";
+const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active,listing_type,furnishing,has_brokerage,brokerage_confirmed";
+const TP_HELPER="http://127.0.0.1:8765/";
 const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 let tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpReactCut="";
@@ -825,29 +827,68 @@ function tpParseDate(text){
 function tpReadOffer(){
   const areas=document.getElementById("tpAreas").value.split(",").map(x=>x.trim()).filter(Boolean);
   return {
-    areas, sharing:document.getElementById("tpSharing").value, gender:document.getElementById("tpGender").value,
+    areas, sharing:tpGetSharing(), dir:document.getElementById("tpDir").value, gender:document.getElementById("tpGender").value,
     movein:document.getElementById("tpMovein").value, tol:Math.max(0,Number(document.getElementById("tpTol").value)||0),
     rent:Number(document.getElementById("tpRent").value)||0, unspec:document.getElementById("tpUnspec").checked,
     city:document.getElementById("tpCity").value
   };
 }
+function tpGetSharing(){ return [...document.querySelectorAll("#tpSharing input:checked")].map(i=>i.value); }
+function tpSetSharing(arr){ document.querySelectorAll("#tpSharing input").forEach(i=>{ i.checked=arr.includes(i.value); }); }
+function tpSharingFromText(t){
+  const r=String(t||"").toLowerCase(), out=[];
+  if(/\bsingle\b/.test(r)) out.push("Single");
+  if(/\bdouble\b|\btwin\b/.test(r)) out.push("Double");
+  if(/\btriple\b/.test(r)) out.push("Triple");
+  if(/\bhall\b/.test(r)) out.push("Hall");
+  if(/\bentire\b|\bbhk\b|\brk\b/.test(r)) out.push("Entire");
+  return out;
+}
 function tpClear(){
   ["tpText","tpAreas","tpMovein","tpRent"].forEach(i=>document.getElementById(i).value="");
-  document.getElementById("tpSharing").value=""; document.getElementById("tpGender").value="";
+  tpSetSharing([]); document.getElementById("tpGender").value="";
   document.getElementById("tpParseNote").textContent="I read the areas, sharing type, gender and move-in date from the text. Check them below and change anything that is wrong.";
   abListings=[]; abSelected=new Set(); document.getElementById("tpSummary").textContent="";
   tpRender();
 }
+// Reads the pasted message with the AUTO-POSTING engine (through the helper running on this PC).
+// If the helper is not running, falls back to the page's own simpler reader.
+async function tpEngineParse(text,city){
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),8000);
+    const r=await fetch(TP_HELPER,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({text,city}),signal:ctl.signal});
+    clearTimeout(to);
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
 async function tpFind(){
   const t=document.getElementById("tpText").value;
   if(!t.trim()){ alert("Paste the message first."); return; }
-  const areas=tpParseAreas(t), sh=tpParseSharing(t), g=tpParseGender(t), d=tpParseDate(t), r=tpParseRent(t);
+  const btn=document.getElementById("tpFindBtn"); btn.disabled=true; btn.textContent="Reading…";
+  const note=document.getElementById("tpParseNote");
+  let areas, sh, g, d, r, dir=null, src="", extra="";
+  const city=document.getElementById("tpCity").value;
+  const eng=await tpEngineParse(t,city);
+  if(eng && eng.ok && eng.listings && eng.listings.length){
+    const L=eng.listings[0];
+    areas=(L.areas||[]); sh=tpSharingFromText((L.room_type&&L.room_type!=="Undisclosed"?L.room_type:"")+" "+(L.listing_type==="flat_listing"?"entire":""));
+    g=(L.gender_preference==="Female"||L.gender_preference==="Male")?L.gender_preference:"";
+    d=L.available_from||""; r=L.rent_amount?String(L.rent_amount):"";
+    dir=(L.listing_type==="flat_wanted")?"seek":"offer";
+    src="auto-posting engine";
+    if(eng.count>1) extra=" The message holds "+eng.count+" listings; using the first.";
+  }else{
+    areas=tpParseAreas(t); sh=tpSharingFromText(tpParseSharing(t)); g=tpParseGender(t); d=tpParseDate(t); r=tpParseRent(t);
+    dir=/\b(looking for|need|require|wanted|searching)\b/i.test(t)&&!/\b(replacement|vacant|vacancy|available|take ?over|looking for (a )?(flatmate|roommate))\b/i.test(t)?"seek":"offer";
+    src="built-in reader (the Pratika_TP helper is not running, so this is NOT the exact auto-posting logic — start Run_Pratika_TP.bat)";
+    if(eng&&!eng.ok) extra=" Engine said: "+(eng.reason||"")+".";
+  }
   document.getElementById("tpAreas").value=areas.join(", ");
-  document.getElementById("tpSharing").value=sh;
-  document.getElementById("tpGender").value=g;
-  document.getElementById("tpMovein").value=d;
-  document.getElementById("tpRent").value=r;
-  document.getElementById("tpParseNote").innerHTML="Read from the message &rarr; areas: <b>"+escHtml(areas.join(", ")||"none found")+"</b> · sharing: <b>"+escHtml(sh||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not found")+"</b>"+(r?" · rent: <b>"+tpMoney(r)+"</b>":"")+". Change anything above if it is wrong.";
+  tpSetSharing(sh); document.getElementById("tpGender").value=g; document.getElementById("tpMovein").value=d; document.getElementById("tpRent").value=r;
+  document.getElementById("tpDir").value=dir;
+  note.innerHTML="Read by the <b>"+escHtml(src)+"</b> &rarr; "+(dir==="seek"?"looking for a place":"offering a place")+" · areas: <b>"+escHtml(areas.join(", ")||"none found")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not found")+"</b>"+(r?" · rent/budget: <b>"+tpMoney(r)+"</b>":"")+"."+escHtml(extra)+" Change anything above if it is wrong.";
+  btn.disabled=false; btn.textContent="Find matches";
   tpTouched=true;
   await tpRefetch();
 }
@@ -858,12 +899,13 @@ async function tpRefetch(){
   const my=++tpToken;
   const body=document.getElementById("abBody");
   body.innerHTML=`<tr><td colspan="12" class="empty-state">Loading…</td></tr>`;
-  const days=Number(document.getElementById("tpDays").value)||30, city=document.getElementById("tpCity").value;
+  const days=Number(document.getElementById("tpDays").value)||30, city=document.getElementById("tpCity").value, dir=document.getElementById("tpDir").value;
+  const typeQ=dir==="seek"?"listing_type=in.(flatmate_wanted,flat_listing)":"listing_type=eq.flat_wanted";
   const cut=new Date(Date.now()-days*864e5).toISOString();
   tpReactCut=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
   try{
     const [pool, brokers, leads, targets]=await Promise.all([
-      supaGetAll(`listings?select=${TP_COLS}&listing_type=eq.flat_wanted&rejected=eq.false&created_at=gte.${encodeURIComponent(cut)}&order=created_at.desc`),
+      supaGetAll(`listings?select=${TP_COLS}&${typeQ}&rejected=eq.false&created_at=gte.${encodeURIComponent(cut)}&order=created_at.desc`),
       supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"),
       abFetchPortalLeads(tpReactCut),
       supaGetAll(`listing_broker_targets?select=listing_id,broker_ids,created_at&created_at=gte.${tpReactCut}`).catch(e=>{ console.error("targets read failed",e); return []; }),
@@ -875,9 +917,11 @@ async function tpRefetch(){
     const seen=new Set(); tpPool=[];
     pool.forEach(l=>{
       const ph=abDigits(l.custom_contact_phone);
-      if(ph.length!==10 || seen.has(ph)) return;
+      if(ph.length!==10) return;
+      const key=dir==="seek"?[ph,abNorm(l.room_type),abNorm(abAreasText(l)),abNorm(l.flat_type)].join("|"):ph;
+      if(seen.has(key)) return;
       if(abNorm(l.city||"mumbai")!==city) return;
-      seen.add(ph);
+      seen.add(key);
       l._live=(l.pending_approval===false && l.is_active===true);
       l._approved=(l.pending_approval===false) && (!!abTargets[String(l.id)] || local.has(String(l.id)));
       tpPool.push(l);
@@ -900,11 +944,12 @@ function tpMatch(l,o){
   if(!abAreaMatch(o.areas,la)) return null;
   const exact=la.some(a=>o.areas.some(b=>abNorm(a)===abNorm(b)));
   score+=exact?3:2; reasons.push(exact?"Area matches exactly":"Area overlaps");
-  const req=abReq(l).toLowerCase();
+  const req=(o.dir==="seek"?String(l.room_type||""):abReq(l)).toLowerCase();
   const tk={single:/\bsingle\b/.test(req),double:/\bdouble\b|\btwin\b/.test(req),triple:/\btriple\b/.test(req),hall:/\bhall\b/.test(req),entire:/\bentire\b|\bbhk\b|\brk\b/.test(req),any:/\bany\b/.test(req)};
   const stated=Object.values(tk).some(Boolean);
-  if(o.sharing){
-    if(tk[o.sharing.toLowerCase()]){ score+=2; reasons.push("Asked for "+o.sharing.toLowerCase()); }
+  if(o.sharing.length){
+    const hit=o.sharing.find(k=>tk[k.toLowerCase()]);
+    if(hit){ score+=2; reasons.push(o.dir==="seek"?"Offers "+hit.toLowerCase():"Asked for "+hit.toLowerCase()); }
     else if(tk.any){ score+=1; reasons.push("Open to any"); }
     else if(!stated){ if(!o.unspec) return null; reasons.push("Requirement not stated"); }
     else return null;
@@ -924,8 +969,11 @@ function tpMatch(l,o){
   }
   if(o.rent){
     const r=Number(l.rent_amount)||0;
-    if(r){ if(r>=o.rent*0.9){ score+=1; reasons.push("Budget fits"); } else return null; }
-    else{ if(!o.unspec) return null; reasons.push("Budget not stated"); }
+    if(r){
+      if(o.dir==="seek"){ if(r<=o.rent*1.1){ score+=1; reasons.push("Rent fits the budget"); } else return null; }
+      else { if(r>=o.rent*0.9){ score+=1; reasons.push("Budget fits"); } else return null; }
+    }
+    else{ if(!o.unspec) return null; reasons.push(o.dir==="seek"?"Rent not stated":"Budget not stated"); }
   }
   return {score, reasons, label: score>=6?"Strong":(score>=4?"Good":"Possible")};
 }
@@ -954,13 +1002,13 @@ async function tpApply(){
   abListings=rows;
   const ids=new Set(rows.map(l=>String(l.id)));
   abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
-  sum.textContent="Loading details for "+rows.length+" seeker(s)…";
+  sum.textContent="Loading details for "+rows.length+" listing(s)…";
   await tpHydrate(rows);
   if(my!==tpToken) return;
   if(rows.some(l=>l._approved)) await abReconcile(tpReactCut);
   if(my!==tpToken) return;
   const live=rows.filter(l=>l._live).length;
-  sum.innerHTML=`<b>${rows.length}</b> seeker(s) could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched the last ${escHtml(document.getElementById("tpDays").value)} days.`;
+  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched the last ${escHtml(document.getElementById("tpDays").value)} days.`;
   tpRender();
 }
 
@@ -1040,12 +1088,24 @@ function abUpdateCount(){
 const TP_BROKERAGE={yes:"Okay with brokerage",prefno:"Prefers no brokerage",no:"No brokerage"};
 function tpLeadText(l,i){
   const g=l.gender_preference, req=abReq(l), lines=[`*Lead ${i}*`];
-  lines.push(`Gender: ${g&&g!=="Undisclosed"?g:"Not specified"}`);
-  lines.push(`Requirement: ${req==="Undisclosed"?"Not specified":req}`);
-  lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
-  if(l.rent_amount) lines.push(`Budget: ${tpMoney(l.rent_amount)}/month`);
-  if(l.available_from) lines.push(`Move-in: ${tpFmtDate(l.available_from)}`);
-  const b=TP_BROKERAGE[String(l.brokerage_preference||"").toLowerCase()]; if(b) lines.push(`Brokerage: ${b}`);
+  const gtxt=g&&g!=="Undisclosed"?g:"Not specified";
+  if(l.listing_type==="flat_wanted"){
+    lines.push(`Gender: ${gtxt}`);
+    lines.push(`Requirement: ${req==="Undisclosed"?"Not specified":req}`);
+    lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
+    if(l.rent_amount) lines.push(`Budget: ${tpMoney(l.rent_amount)}/month`);
+    if(l.available_from) lines.push(`Move-in: ${tpFmtDate(l.available_from)}`);
+    const b=TP_BROKERAGE[String(l.brokerage_preference||"").toLowerCase()]; if(b) lines.push(`Brokerage: ${b}`);
+  }else{
+    const rt=l.room_type&&l.room_type!=="Undisclosed"?l.room_type:"", ft=l.flat_type&&l.flat_type!=="Undisclosed"?l.flat_type:"";
+    lines.push(`Place: ${rt?rt+(ft?" in "+ft:""):(ft||"Not specified")}`);
+    lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
+    if(l.rent_amount) lines.push(`Rent: ${tpMoney(l.rent_amount)}/month`);
+    if(l.available_from) lines.push(`Available from: ${tpFmtDate(l.available_from)}`);
+    lines.push(`Preferred gender: ${gtxt}`);
+    if(l.furnishing && l.furnishing!=="Undisclosed") lines.push(`Furnishing: ${l.furnishing}`);
+    if(l.brokerage_confirmed===true) lines.push(`Brokerage: ${l.has_brokerage?"Applies":"No brokerage"}`);
+  }
   lines.push(`Contact: ${tpMask(l.custom_contact_phone)}`);
   return lines.join("\n");
 }
@@ -1053,8 +1113,12 @@ function tpOpenSend(){
   const sel=tpSorted.filter(l=>abSelected.has(String(l.id)));
   if(!sel.length) return;
   const o=tpReadOffer(), n=sel.length;
-  const sh={Single:"single occupancy",Double:"double occupancy",Triple:"triple occupancy",Hall:"hall",Entire:"entire flat"}[o.sharing]||"";
-  const head=`Hi! Here ${n===1?"is 1 person":"are "+n+" people"} looking for a place`+(o.areas.length?` in *${o.areas.join(", ")}*`:"")+(sh?` (${sh})`:"")+(o.movein?`, from ${tpFmtDate(o.movein)}`:"")+":";
+  const shMap={Single:"single occupancy",Double:"double occupancy",Triple:"triple occupancy",Hall:"hall",Entire:"entire flat"};
+  const sh=o.sharing.map(x=>shMap[x]).join(" / ");
+  const where=(o.areas.length?` in *${o.areas.join(", ")}*`:"")+(sh?` (${sh})`:"")+(o.movein?`, from ${tpFmtDate(o.movein)}`:"");
+  const head=o.dir==="seek"
+    ? `Hi! Here ${n===1?"is 1 place":"are "+n+" places"} that could suit you${where}:`
+    : `Hi! Here ${n===1?"is 1 person":"are "+n+" people"} looking for a place${where}:`;
   const foot=`Reply with the Lead number(s) you are interested in and I'll share the contact details.`;
   document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1)).join("\n\n")+"\n\n"+foot;
   document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers masked · no names";
