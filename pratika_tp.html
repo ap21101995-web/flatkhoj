@@ -153,7 +153,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 12-Oct-TP12</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 12-Oct-TP13</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -164,7 +164,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 12-Oct-TP12</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 12-Oct-TP13</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -392,13 +392,16 @@ async function supaPatch(path, query, body){
 function escHtml(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 const REACTIVATION_DAYS=15; // keep in sync with vanita_lead_report.py's REACTIVATION_DAYS
 function requirementRank(req){
-  const r=(req||"").toLowerCase();
-  const bhk=r.match(/(\d+)\s*bhk/);
-  if(bhk) return 3+parseInt(bhk[1],10);     // 1 BHK=4, 2 BHK=5, 3 BHK=6, 4 BHK=7...
-  if(/\brk\b/.test(r)) return 3;             // 1 RK
-  if(/\bsingle\b/.test(r)) return 2;
-  if(/\bdouble\b/.test(r)) return 1;
-  return 0;                                   // Undisclosed / anything unrecognized
+  const r=String(req||"").toLowerCase();
+  let best=0;
+  const bhk=[...r.matchAll(/(\d+(?:\.\d+)?)\s*bhk/g)];
+  bhk.forEach(m=>{ best=Math.max(best,10+parseFloat(m[1])); });   // 1 BHK=11, 1.5=11.5, 2=12 ... 4=14
+  if(/\b\d*\s*rk\b/.test(r)) best=Math.max(best,9);
+  if(/\bsingle\b/.test(r)) best=Math.max(best,8);
+  if(/\bdouble\b|\btwin\b/.test(r)) best=Math.max(best,7);
+  if(/\btriple\b/.test(r)) best=Math.max(best,6);
+  if(/\bany\b/.test(r)) best=Math.max(best,5);
+  return best;                                // 0 = Undisclosed / unrecognised
 }
 function genderRank(g){
   const x=(g||"").toLowerCase();
@@ -1223,7 +1226,7 @@ function tpSortRows(rows){
     let c=0;
     if(f==="match") c=(a._m.score-b._m.score);
     else if(f==="gender") c=genderRank(a.gender_preference)-genderRank(b.gender_preference);
-    else if(f==="requirement") c=requirementRank(abReq(a))-requirementRank(abReq(b));
+    else if(f==="requirement") c=requirementRank(abReq(b))-requirementRank(abReq(a));
     else if(f==="area") c=abAreasText(a).localeCompare(abAreasText(b));
     else if(f==="budget") c=(Number(a.rent_amount)||0)-(Number(b.rent_amount)||0);
     else if(f==="movein") c=(a.available_from?Date.parse(a.available_from):9e15)-(b.available_from?Date.parse(b.available_from):9e15);

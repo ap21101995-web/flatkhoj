@@ -658,14 +658,19 @@ async function syncLeadsWithListings(){
 // Single - 1 RK - 1 BHK - 2 BHK - 3 BHK (bigger requirement at one end,
 // smaller/undisclosed at the other). Any "N BHK" generalizes cleanly
 // past 3 (4 BHK sorts above 3 BHK, etc.) since it's just 3+N.
+// Requirement order (high -> low): 4 BHK > 3.5 BHK > 3 > 2.5 > 2 > 1.5 > 1 BHK > 1 RK > Single > Double > Triple > Any > Undisclosed.
+// A requirement can list several things ("Double occupancy, Entire 2 BHK"); it ranks by its best part.
 function requirementRank(req){
-  const r=(req||"").toLowerCase();
-  const bhk=r.match(/(\d+)\s*bhk/);
-  if(bhk) return 3+parseInt(bhk[1],10);     // 1 BHK=4, 2 BHK=5, 3 BHK=6, 4 BHK=7...
-  if(/\brk\b/.test(r)) return 3;             // 1 RK
-  if(/\bsingle\b/.test(r)) return 2;
-  if(/\bdouble\b/.test(r)) return 1;
-  return 0;                                   // Undisclosed / anything unrecognized
+  const r=String(req||"").toLowerCase();
+  let best=0;
+  const bhk=[...r.matchAll(/(\d+(?:\.\d+)?)\s*bhk/g)];
+  bhk.forEach(m=>{ best=Math.max(best,10+parseFloat(m[1])); });   // 1 BHK=11, 1.5=11.5, 2=12 ... 4=14
+  if(/\b\d*\s*rk\b/.test(r)) best=Math.max(best,9);
+  if(/\bsingle\b/.test(r)) best=Math.max(best,8);
+  if(/\bdouble\b|\btwin\b/.test(r)) best=Math.max(best,7);
+  if(/\btriple\b/.test(r)) best=Math.max(best,6);
+  if(/\bany\b/.test(r)) best=Math.max(best,5);
+  return best;                                // 0 = Undisclosed / unrecognised
 }
 // Gender order per explicit instruction: Male - Female - Undisclosed.
 function genderRank(g){
@@ -713,7 +718,7 @@ function renderLeadsTable(){
   if(sortField){
     filtered=filtered.slice().sort((a,b)=>{
       let cmp=0;
-      if(sortField==="requirement") cmp=requirementRank(a.requirement)-requirementRank(b.requirement);
+      if(sortField==="requirement") cmp=requirementRank(b.requirement)-requirementRank(a.requirement);
       else if(sortField==="gender") cmp=genderRank(a.gender)-genderRank(b.gender);
       else if(sortField==="area") cmp=(a.areas||"").localeCompare(b.areas||"");
       else if(sortField==="actions"){ const rk=l=>l.status==="sent"?2:(l._live?1:0); cmp=rk(a)-rk(b); }
@@ -1357,7 +1362,7 @@ function abRender(){
   if(abSortField){
     rows=rows.slice().sort((a,b)=>{
       let c=0;
-      if(abSortField==="requirement") c=requirementRank(abReq(a))-requirementRank(abReq(b));
+      if(abSortField==="requirement") c=requirementRank(abReq(b))-requirementRank(abReq(a));
       else if(abSortField==="gender") c=genderRank(a.gender_preference)-genderRank(b.gender_preference);
       else if(abSortField==="area") c=abAreasText(a).localeCompare(abAreasText(b));
       else if(abSortField==="approve") c=(abIsApproved(a)?1:0)-(abIsApproved(b)?1:0);
