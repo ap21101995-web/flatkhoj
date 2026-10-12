@@ -1238,6 +1238,36 @@ async function abLoad(){
 }
 function abIsApproved(l){ return !!(l&&l._approved); }
 
+// Edit on the main site, then refresh this lead (and its broker list) as soon as the person comes back.
+let abEdited=new Set(), abEditBusy=false;
+function abEditListing(id){ abEdited.add(String(id)); window.open('post_form.html?edit='+encodeURIComponent(id),'_blank'); }
+async function abRefreshEdited(){
+  if(abEditBusy||!abEdited.size) return;
+  const pg=document.getElementById("pg-allBrokers"); if(pg&&pg.style.display==="none") return;
+  abEditBusy=true;
+  try{
+    const ids=[...abEdited];
+    const rows=await supaGetAll(`listings?select=${AB_LIST_COLS}&id=in.(${ids.map(encodeURIComponent).join(",")})`);
+    let changed=false;
+    rows.forEach(r=>{
+      const i=abListings.findIndex(x=>String(x.id)===String(r.id)); if(i<0) return;
+      const old=abListings[i];
+      if(JSON.stringify(old.areas)!==JSON.stringify(r.areas)||old.gender_preference!==r.gender_preference||old.room_type!==r.room_type||old.flat_type!==r.flat_type||old.city!==r.city) changed=true;
+      // keep the Approved flag, the manual add/leave-out choices only for brokers still relevant
+      r._approved=old._approved;
+      abListings[i]=r;
+      delete abExtra[String(r.id)]; delete abExcluded[String(r.id)];
+    });
+    abListings=abListings.filter(l=>bpCityListings([l]).length);
+    abRender();
+    if(abModalListingId) abRenderModal();
+  }catch(e){ console.error("refresh edited failed",e); }
+  finally{ abEditBusy=false; }
+}
+function abOnReturn(){ if(document.visibilityState==="hidden") return; abRefreshEdited(); setTimeout(abRefreshEdited,2500); }
+window.addEventListener("focus",abOnReturn);
+document.addEventListener("visibilitychange",abOnReturn);
+
 // Anything the WhatsApp sender logged for a portal-approved listing is made visible in the
 // broker's Potential Data (ticked) and, for FREE leads only, counted. Paid leads are already
 // counted by notify-brokers itself, so counting them here would double up.
@@ -1276,7 +1306,7 @@ function abCompute(l){
     const logged=(abLoggedBy[String(l.id)]||new Set()).has(String(b.id));
     if(rec.sent.length||logged){ received.push({b}); return; }
     const tagged=abAreaMatch(b.areas,l.areas), inPot=rec.pending.length>0;
-    if(tagged||inPot){
+    if(tagged||(inPot&&abIsApproved(l))){
       const wa=tagged && AB_WA_STATUS.includes(abNorm(b.subscription_status));
       eligible.push({b,tagged,inPot,wa});
     }
@@ -1352,7 +1382,7 @@ function abRender(){
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td style="white-space:nowrap">${abPostedFmt(l)}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
-      <td onclick="event.stopPropagation()" style="white-space:nowrap">${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`} <button class="btn btn-ghost" onclick="window.open('post_form.html?edit='+encodeURIComponent('${escHtml(id)}'),'_blank')">✏️ Edit</button></td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">${ap?`<span class="badge b-ok">Approved ✓</span>`:`<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`} <button class="btn btn-ghost" onclick="abEditListing('${escHtml(id)}')">✏️ Edit</button></td>
     </tr>`;
   }).join("");
   abUpdateCount();
