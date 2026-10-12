@@ -126,7 +126,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 <div id="app" style="display:none">
   <div class="topbar">
     <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal</div>
-    <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+    <div style="display:flex;gap:10px;align-items:center">
+      <select id="bpCity" class="filter-input" style="width:auto;flex:none;font-weight:700" onchange="bpCityChanged()" title="Which city's brokers and leads to show"><option value="mumbai">Mumbai</option><option value="pune">Pune</option></select>
+      <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+    </div>
   </div>
 
   <!-- ============== BROKER LIST PAGE ============== -->
@@ -402,9 +405,20 @@ async function emailDownloadToSelf(filename, brokerName, dateLabel, wb){
 
 // ---------- Broker list ----------
 let allPortalBrokers=[];
+// City switch (Mumbai / Pune) at the top: everything below -- broker list, All Brokers, Add Broker --
+// shows only that city's brokers and leads. A broker / listing with no city counts as Mumbai.
+function bpCity(){ const e=document.getElementById("bpCity"); return e?e.value:"mumbai"; }
+function bpCityBrokers(list){ const c=bpCity(); return (list||[]).filter(b=>abNorm(b.city||"mumbai")===c); }
+function bpCityListings(list){ const c=bpCity(); return (list||[]).filter(l=>abNorm(l.city||"mumbai")===c); }
+try{ const _c=localStorage.getItem("fk_bp_city"); const _e=document.getElementById("bpCity"); if(_c&&_e&&(_c==="mumbai"||_c==="pune")) _e.value=_c; }catch(e){}
+function bpCityChanged(){
+  try{ localStorage.setItem("fk_bp_city",bpCity()); }catch(e){}
+  if(document.getElementById("pg-allBrokers").style.display!=="none"){ abSelected=new Set(); abLoad(); }
+  else { document.getElementById("pg-potentialData").style.display="none"; document.getElementById("pg-brokerList").style.display="block"; loadBrokerList(); }
+}
 async function loadBrokerList(){
-  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,contacts_sent_this_month,contacts_per_month,billing_cycle_start,billing_cycle,is_active,subscription_status&order=name.asc");
-  allPortalBrokers=brokers;
+  const brokers=await supaGet("brokers?portal_enabled=eq.true&select=id,name,phone,city,contacts_sent_this_month,contacts_per_month,billing_cycle_start,billing_cycle,is_active,subscription_status&order=name.asc");
+  allPortalBrokers=bpCityBrokers(brokers);
   renderBrokerList();
 }
 
@@ -508,7 +522,7 @@ let allBrokersForAdd=[];
 async function openAddBrokerModal(){
   document.getElementById("addBrokerModal").style.display="flex";
   document.getElementById("addBrokerSearchInput").value="";
-  allBrokersForAdd=await supaGet("brokers?select=id,name,phone,portal_enabled&order=name.asc");
+  allBrokersForAdd=bpCityBrokers(await supaGet("brokers?select=id,name,phone,city,portal_enabled&order=name.asc"));
   renderAddBrokerResults();
 }
 function closeAddBrokerModal(){ document.getElementById("addBrokerModal").style.display="none"; }
@@ -518,7 +532,7 @@ function renderAddBrokerResults(){
   const wrap=document.getElementById("addBrokerResults");
   if(!q){ wrap.innerHTML=`<div class="empty-state">Type a name or phone number to search.</div>`; return; }
   const matches=allBrokersForAdd.filter(b=>(b.name||"").toLowerCase().includes(q) || (b.phone||"").includes(q.replace(/\D/g,"")||q)).slice(0,20);
-  if(!matches.length){ wrap.innerHTML=`<div class="empty-state">No brokers match that search.</div>`; return; }
+  if(!matches.length){ wrap.innerHTML=`<div class="empty-state">No brokers match that search in this city.</div>`; return; }
   wrap.innerHTML=matches.map(b=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--border)">
       <div><div style="font-weight:600;font-size:13px">${escHtml(b.name||"Unnamed")}</div><div style="font-size:12px;color:var(--ink3)">+91 ${escHtml(b.phone||"")}</div></div>
@@ -1205,7 +1219,7 @@ async function abLoad(){
     approved=await supaGetAll(`listings?select=${AB_LIST_COLS}&id=in.(${apprIds.map(encodeURIComponent).join(",")})&pending_approval=eq.false&rejected=eq.false`).catch(e=>{ console.error(e); return []; });
     approved.forEach(l=>{ l._approved=true; });
   }
-  abBrokers=brokers;
+  abBrokers=bpCityBrokers(brokers);
   abLeadIdx=abIndexLeads(leads);
   // brokers the WhatsApp sender actually logged for these listings
   abLoggedBy={};
@@ -1214,7 +1228,7 @@ async function abLoad(){
     const logged=await supaGetAll(`broker_leads?select=listing_id,broker_id&listing_id=in.(${allIds.map(encodeURIComponent).join(",")})`).catch(e=>{ console.error("broker_leads read failed",e); return []; });
     logged.forEach(r=>{ (abLoggedBy[String(r.listing_id)]=abLoggedBy[String(r.listing_id)]||new Set()).add(String(r.broker_id)); });
   }
-  abListings=pending.concat(approved).filter(l=>abDigits(l.custom_contact_phone).length===10);
+  abListings=bpCityListings(pending.concat(approved)).filter(l=>abDigits(l.custom_contact_phone).length===10);
   await abLoadPosted(abListings);
   const ids=new Set(abListings.map(l=>String(l.id)));
   abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
@@ -1246,7 +1260,7 @@ async function abReconcile(cutoffIso){
     }
     if(changed){
       abLeadIdx=abIndexLeads(await abFetchPortalLeads(cutoffIso));
-      abBrokers=await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc");
+      abBrokers=bpCityBrokers(await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"));
     }
   }catch(e){ console.error("reconcile failed",e); }
   finally{ abReconciling=false; }

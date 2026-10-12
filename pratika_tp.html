@@ -153,7 +153,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP9</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 12-Oct-TP11</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -164,7 +164,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 11-Oct-TP9</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 12-Oct-TP11</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -526,7 +526,7 @@ async function abReconcile(cutoffIso){
     }
     if(changed){
       abLeadIdx=abIndexLeads(await abFetchPortalLeads(cutoffIso));
-      abBrokers=await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc");
+      abBrokers=bpCityBrokers(await supaGetAll("brokers?select=id,name,phone,city,areas,is_active,subscription_status,contacts_sent_this_month,contacts_per_month,portal_enabled&is_active=eq.true&order=name.asc"));
     }
   }catch(e){ console.error("reconcile failed",e); }
   finally{ abReconciling=false; }
@@ -759,7 +759,7 @@ const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active,listing_type,f
 const TP_HELPER="http://127.0.0.1:8765/";
 const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-let tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpReactCut="";
+let tpPoolStat={fetched:0,kept:0,city:""}, tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpReactCut="";
 let tpSortField="date", tpSortDir=-1, tpSorted=[];   // latest posted on top by default
 let tpMode=null, tpShares={}, tpSharesLocal=false;
 const TP_DAYS=60;   // listings created or refreshed in the last 60 days are searched
@@ -1094,12 +1094,13 @@ async function tpRefetch(){
       l._approved=(l.pending_approval===false) && (!!abTargets[String(l.id)] || local.has(String(l.id)));
       tpPool.push(l);
     });
+    tpPoolStat={fetched:pool.length, kept:tpPool.length, city:city};
     tpHydrated=new Set(); abLoggedBy={};
     await tpSharesLoad();
     tpBuildVocab();
   }catch(e){
     console.error("load failed",e);
-    body.innerHTML=`<tr><td colspan="12" class="empty-state">Could not load listings. Press Refresh to try again.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="12" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
     return;
   }
   await tpApply();
@@ -1163,7 +1164,7 @@ async function tpApply(){
   const o=tpReadOffer(), sum=document.getElementById("tpSummary");
   if(!o.areas.length){
     abListings=[]; abSelected=new Set(); tpRender();
-    sum.textContent="Pick one or more areas above to see matches.";
+    sum.textContent="Pick one or more areas above to see matches."+(tpPoolStat.fetched?" ("+tpPoolStat.kept+" "+tpPoolStat.city+" listings loaded)":"");
     return;
   }
   const rows=[];
@@ -1177,7 +1178,7 @@ async function tpApply(){
   if(rows.some(l=>l._approved)) await abReconcile(tpReactCut);
   if(my!==tpToken) return;
   const live=rows.filter(l=>l._live).length;
-  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched listings created or refreshed in the last ${TP_DAYS} days.`;
+  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched ${tpPoolStat.kept} ${tpPoolStat.city} listing(s) created or refreshed in the last ${TP_DAYS} days (${tpPoolStat.fetched} fetched).`;
   tpRender();
 }
 
@@ -1424,6 +1425,11 @@ async function tpRefreshEdited(){
 function tpOnReturn(){ if(!tpEdited.size) return; tpRefreshEdited(); setTimeout(tpRefreshEdited,2500); }
 window.addEventListener("focus",tpOnReturn);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) tpOnReturn(); });
+
+// TP has its own City select; the broker-portal city dropdown helpers must not filter here.
+function bpCityBrokers(l){ return l||[]; }
+function bpCityListings(l){ return l||[]; }
+function bpCityChanged(){}
 
 </script>
 </body>
