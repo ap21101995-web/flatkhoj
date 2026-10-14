@@ -159,7 +159,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <div class="ptitle" id="pdBrokerName">Potential Data</div>
         <div class="psub">Seeker leads waiting to be shared. Rows shared in the last 15 days stay listed in green. Click a row to read the original message.</div>
       </div>
-      <button class="btn btn-ghost" onclick="backToBrokerList()">&larr; Back to brokers</button>
+      <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" id="pdRefreshBtn" onclick="pdRefresh()">&#8635; Refresh</button><button class="btn btn-ghost" onclick="backToBrokerList()">&larr; Back to brokers</button></span>
     </div>
     <div id="quotaBanner" class="quota-banner" style="display:none"></div>
     <div class="quota-row">
@@ -615,6 +615,30 @@ function backToBrokerList(){
   loadBrokerList();
 }
 
+// Refresh for an individual broker's Potential Data: re-reads quota + leads and re-applies the latest
+// listing edits (gender / requirement / areas), keeping whatever rows are ticked.
+let pdEditedFlag=false, pdRefreshing=false;
+async function pdRefresh(){
+  if(pdRefreshing||!currentBrokerId) return;
+  pdRefreshing=true; const b=document.getElementById("pdRefreshBtn"); if(b){ b.disabled=true; b.textContent="Refreshing…"; }
+  try{
+    const keep=new Set(selectedLeadIds);
+    await refreshBrokerQuotaState();
+    await loadLeads();
+    const ids=new Set(currentLeads.map(l=>String(l.id)));
+    selectedLeadIds=new Set([...keep].filter(i=>ids.has(String(i))));
+    renderLeadsTable();
+  }catch(e){ console.error("refresh failed",e); alert("Could not refresh — please try again."); }
+  finally{ pdRefreshing=false; if(b){ b.disabled=false; b.innerHTML="&#8635; Refresh"; } }
+}
+function pdOnReturn(){
+  if(!pdEditedFlag||document.visibilityState==="hidden") return;
+  const pg=document.getElementById("pg-potentialData"); if(!pg||pg.style.display==="none") return;
+  pdEditedFlag=false; pdRefresh(); setTimeout(pdRefresh,2500);
+}
+window.addEventListener("focus",pdOnReturn);
+document.addEventListener("visibilitychange",pdOnReturn);
+
 async function loadLeads(){
   // Shows every still-pending lead PLUS any 'sent' lead whose sent_at
   // falls within the last REACTIVATION_DAYS -- so a just-shared contact
@@ -998,6 +1022,7 @@ async function waFindListing(ph,cutoffIso){
 // straight away so the browser's pop-up blocker allows it, then pointed at the listing.
 async function waEditLead(id){
   const lead=currentLeads.find(l=>l.id===id); if(!lead) return;
+  pdEditedFlag=true;
   const w=window.open("about:blank","_blank");
   try{
     const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*864e5).toISOString();
