@@ -173,7 +173,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="selected-count-text">0</span> selected</div>
-      <span><button class="btn btn-teal wa-send-btn" onclick="sendSelectedWhatsApp(this)" disabled>Approve &amp; send on WhatsApp</button> <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button></span>
+      <span><button class="btn btn-ghost lead-del-btn" style="color:#ff5b6b;border-color:rgba(220,53,69,.5)" onclick="pdDeleteSelected()" disabled>&#128465; Delete</button> <button class="btn btn-teal wa-send-btn" onclick="sendSelectedWhatsApp(this)" disabled>Approve &amp; send on WhatsApp</button> <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button></span>
     </div>
     <div class="table-card">
       <table>
@@ -191,7 +191,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="selected-count-text">0</span> selected</div>
-      <span><button class="btn btn-teal wa-send-btn" onclick="sendSelectedWhatsApp(this)" disabled>Approve &amp; send on WhatsApp</button> <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button></span>
+      <span><button class="btn btn-ghost lead-del-btn" style="color:#ff5b6b;border-color:rgba(220,53,69,.5)" onclick="pdDeleteSelected()" disabled>&#128465; Delete</button> <button class="btn btn-teal wa-send-btn" onclick="sendSelectedWhatsApp(this)" disabled>Approve &amp; send on WhatsApp</button> <button class="btn btn-solid download-excel-btn" onclick="downloadSelected()" disabled>Download Excel</button></span>
     </div>
   </div>
 
@@ -210,7 +210,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
-      <button class="btn btn-gold ab-download-btn" onclick="abDownloadSelected()" disabled>Download Excel (per broker)</button>
+      <span><button class="btn btn-ghost ab-del-btn" style="color:#ff5b6b;border-color:rgba(220,53,69,.5)" onclick="abDeleteSelected()" disabled>&#128465; Delete</button> <button class="btn btn-gold ab-download-btn" onclick="abDownloadSelected()" disabled>Download Excel (per broker)</button></span>
     </div>
     <div class="table-card">
       <table>
@@ -223,7 +223,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
-      <button class="btn btn-gold ab-download-btn" onclick="abDownloadSelected()" disabled>Download Excel (per broker)</button>
+      <span><button class="btn btn-ghost ab-del-btn" style="color:#ff5b6b;border-color:rgba(220,53,69,.5)" onclick="abDeleteSelected()" disabled>&#128465; Delete</button> <button class="btn btn-gold ab-download-btn" onclick="abDownloadSelected()" disabled>Download Excel (per broker)</button></span>
     </div>
   </div>
 </div>
@@ -858,6 +858,7 @@ function updateSelectedCount(){
   const shouldDisable=selectedLeadIds.size===0 || (remaining!==null && remaining<=0 && selectedLeadIds.size===0);
   document.querySelectorAll(".download-excel-btn").forEach(btn=>btn.disabled=shouldDisable);
   document.querySelectorAll(".wa-send-btn").forEach(btn=>btn.disabled=shouldDisable||waSending);
+  document.querySelectorAll(".lead-del-btn").forEach(btn=>btn.disabled=selectedLeadIds.size===0||fkDeleting);
 }
 
 function openMsgModal(id){
@@ -1470,6 +1471,7 @@ function abToggleAll(on){
 function abUpdateCount(){
   document.querySelectorAll(".ab-selected-count").forEach(el=>el.textContent=abSelected.size);
   document.querySelectorAll(".ab-download-btn").forEach(b=>b.disabled=abBusy||abSelected.size===0);
+  document.querySelectorAll(".ab-del-btn").forEach(b=>b.disabled=abBusy||fkDeleting||abSelected.size===0);
 }
 function abOpenText(id){
   const l=abListings.find(x=>String(x.id)===id); if(!l) return;
@@ -1573,6 +1575,69 @@ async function abBumpCount(brokerId, n){
   const row=await supaGet(`brokers?id=eq.${brokerId}&select=contacts_sent_this_month`);
   const prev=Number(row[0]&&row[0].contacts_sent_this_month)||0;
   return supaPatch("brokers",`id=eq.${brokerId}`,{contacts_sent_this_month:prev+n});
+}
+
+
+// ---------- Delete leads ----------
+// A lead is junk (wrong person, not a seeker, duplicate ...). Deleting it removes it from EVERY broker's
+// Potential Data (rows still waiting; anything already shared - the green tick - is kept as the record) and, if
+// its site listing is still waiting for approval, rejects that listing so it stops showing in All Brokers and
+// is not re-added to a broker's list. A listing that is already live is left alone.
+let fkDeleting=false;
+async function supaDelete(path, query){
+  const go=()=>fetch(`${SUPA_URL}/rest/v1/${path}?${query}`,{method:"DELETE",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"return=representation"}});
+  let res=await go();
+  if(res.status===401 && await refreshSession()) res=await go();
+  if(!res.ok){ console.error("supaDelete failed:",path,res.status,await res.text()); return null; }
+  try{ return await res.json(); }catch(e){ return []; }
+}
+async function fkDeleteLeads(phones){
+  // phones: 10-digit numbers. Returns {rows, rejected, failed:[...]}
+  const out={rows:0,rejected:0,failed:[]};
+  const list=[...new Set(phones.map(abDigits).filter(p=>p.length===10))];
+  for(const ph of list){
+    const del=await supaDelete("broker_portal_leads",`phone=like.*${ph}&status=eq.pending`);
+    if(del===null){ out.failed.push(ph); continue; }
+    out.rows+=del.length;
+    // the site listing, only while it is still waiting for approval
+    try{
+      const ls=await supaGet(`listings?custom_contact_phone=like.*${ph}&listing_type=eq.flat_wanted&pending_approval=eq.true&rejected=eq.false&select=id`);
+      for(const l of ls){ if(await supaPatch("listings",`id=eq.${encodeURIComponent(l.id)}`,{rejected:true})) out.rejected++; else out.failed.push(ph); }
+    }catch(e){ console.error("reject listing failed",e); out.failed.push(ph); }
+  }
+  return out;
+}
+function fkDeleteReport(r, n){
+  let m=`Deleted ${n} lead(s): ${r.rows} broker row(s) removed, ${r.rejected} waiting listing(s) rejected.`;
+  if(r.failed.length) m+=`\n\nCould not fully delete: ${[...new Set(r.failed)].join(", ")}.\nIf this keeps happening, Supabase is refusing the delete - run the "owner can delete broker_portal_leads" SQL once.`;
+  alert(m);
+}
+async function pdDeleteSelected(){
+  if(fkDeleting||!selectedLeadIds.size) return;
+  const leads=currentLeads.filter(l=>selectedLeadIds.has(l.id)&&l.status!=="sent");
+  if(!leads.length) return;
+  if(!confirm(`Delete ${leads.length} lead(s)?\n\nThey are removed from EVERY broker's list, and their site listing (if still waiting for approval) is rejected.\nLeads already shared (green tick) are kept.\n\nThis cannot be undone.`)) return;
+  fkDeleting=true; updateSelectedCount();
+  try{
+    const r=await fkDeleteLeads(leads.map(l=>l.phone));
+    selectedLeadIds=new Set();
+    fkDeleteReport(r,leads.length);
+    await loadLeads();
+  }finally{ fkDeleting=false; updateSelectedCount(); }
+}
+async function abDeleteSelected(){
+  if(fkDeleting||abBusy||!abSelected.size) return;
+  const ls=abListings.filter(l=>abSelected.has(String(l.id)));
+  if(!ls.length) return;
+  const live=ls.filter(l=>l.pending_approval===false).length;
+  if(!confirm(`Delete ${ls.length} lead(s)?\n\nThey are removed from EVERY broker's list, and listings still waiting for approval are rejected.`+(live?`\n${live} of them are already live on the site - those stay live; only their broker rows are removed.`:"")+`\nLeads already shared with a broker keep their record.\n\nThis cannot be undone.`)) return;
+  fkDeleting=true; abUpdateCount();
+  try{
+    const r=await fkDeleteLeads(ls.map(l=>l.custom_contact_phone));
+    abSelected=new Set();
+    fkDeleteReport(r,ls.length);
+    await abLoad();
+  }finally{ fkDeleting=false; abUpdateCount(); }
 }
 
 // ---------- Download Excel: one file per broker ----------
