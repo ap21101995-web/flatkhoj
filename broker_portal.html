@@ -639,6 +639,45 @@ function pdOnReturn(){
 window.addEventListener("focus",pdOnReturn);
 document.addEventListener("visibilitychange",pdOnReturn);
 
+
+// Anything the All Brokers page shows with THIS broker as a possible receiver must also be in this
+// broker's own list. The daily client script only writes rows for chats it reads in a run, so a broker
+// enabled (or with areas changed) after a lead came in never got that lead's row. Same area rule as the
+// All Brokers dialog (abAreaMatch); only seekers still waiting for approval, within the last 15 days.
+async function bfMissingLeads(cutoffIso){
+  try{
+    const bid=currentBrokerId;
+    const br=(await supaGet(`brokers?id=eq.${bid}&select=id,areas,city`))[0]; if(!br) return;
+    const city=abNorm(br.city||"mumbai");
+    const [pend,rows]=await Promise.all([
+      supaGetAll(`listings?select=${AB_LIST_COLS}&pending_approval=eq.true&rejected=eq.false&listing_type=eq.flat_wanted&created_at=gte.${cutoffIso}&order=created_at.desc`),
+      supaGetAll(`broker_portal_leads?broker_id=eq.${bid}&or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=phone`)
+    ]);
+    const have=new Set(rows.map(r=>abDigits(r.phone)));
+    const logged=new Set((await supaGetAll(`broker_leads?broker_id=eq.${bid}&select=listing_id`).catch(()=>[])).map(r=>String(r.listing_id)));
+    const todo=[]; const seen=new Set();
+    pend.forEach(l=>{
+      const ph=abDigits(l.custom_contact_phone);
+      if(ph.length!==10||have.has(ph)||seen.has(ph)||logged.has(String(l.id))) return;
+      if(abNorm(l.city||"mumbai")!==city) return;
+      if(!abAreaMatch(br.areas,l.areas)) return;
+      seen.add(ph); todo.push(l);
+    });
+    if(!todo.length) return;
+    await abLoadPosted(todo);
+    for(const l of todo){
+      const ph=abDigits(l.custom_contact_phone), g=l.gender_preference||"Undisclosed", rq=abReq(l), ar=abAreasText(l);
+      const f=x=>String(x||"").trim().replace(/\s+/g," ").toLowerCase();
+      await abInsert("broker_portal_leads",{
+        broker_id:bid, phone:ph, gender:g, requirement:rq, areas:ar,
+        raw_whatsapp_text:l.raw_whatsapp_text||null, whatsapp_group_name:l.whatsapp_group_name||null,
+        posted_at:abPostedIso(l)||l.created_at||null, status:"pending",
+        dedupe_key:[bid,ph,f(g),f(rq),f(ar)].join(":")
+      });
+    }
+  }catch(e){ console.error("backfill of missing leads failed",e); }
+}
+
 async function loadLeads(){
   // Shows every still-pending lead PLUS any 'sent' lead whose sent_at
   // falls within the last REACTIVATION_DAYS -- so a just-shared contact
@@ -648,6 +687,7 @@ async function loadLeads(){
   // reactivation-cooldown logic, so what's visible here always matches
   // what the script would currently treat as "still on cooldown").
   const cutoffIso=new Date(Date.now()-REACTIVATION_DAYS*24*60*60*1000).toISOString();
+  await bfMissingLeads(cutoffIso);
   currentLeads=await supaGet(`broker_portal_leads?broker_id=eq.${currentBrokerId}&or=(status.eq.pending,and(status.eq.sent,sent_at.gte.${cutoffIso}))&select=id,phone,gender,requirement,areas,raw_whatsapp_text,whatsapp_group_name,posted_at,status,sent_at&order=created_at.desc`);
   await syncLeadsWithListings();
   renderLeadsTable();
