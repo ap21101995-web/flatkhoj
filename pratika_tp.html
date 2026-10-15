@@ -153,7 +153,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 15-Oct-TP16</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 15-Oct-TP17</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -164,7 +164,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 15-Oct-TP16</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 15-Oct-TP17</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -221,13 +221,14 @@ textarea.filter-input { font-family:var(--font); }
           <th class="sortable-th" data-f="area" onclick="tpSetSort('area')">Areas</th>
           <th class="sortable-th" data-f="budget" onclick="tpSetSort('budget')">Budget / Rent</th>
           <th class="sortable-th" data-f="movein" onclick="tpSetSort('movein')">Move-in</th>
+          <th class="sortable-th" data-f="brokerage" onclick="tpSetSort('brokerage')">Brokerage</th>
           <th class="sortable-th" data-f="date" onclick="tpSetSort('date')">Posted (latest)</th>
           <th class="sortable-th" data-f="shared" onclick="tpSetSort('shared')">Shared</th>
           <th>Brokers</th>
           <th class="sortable-th" data-f="status" onclick="tpSetSort('status')">Approve</th>
           <th>Edit</th>
         </tr></thead>
-        <tbody id="abBody"><tr><td colspan="12" class="empty-state">Pick one or more areas above to see matches.</td></tr></tbody>
+        <tbody id="abBody"><tr><td colspan="13" class="empty-state">Pick one or more areas above to see matches.</td></tr></tbody>
       </table>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
@@ -1160,7 +1161,7 @@ async function tpRefetch(){
   if(!tpTouched) return;
   const my=++tpToken;
   const body=document.getElementById("abBody");
-  body.innerHTML=`<tr><td colspan="12" class="empty-state">Loading…</td></tr>`;
+  body.innerHTML=`<tr><td colspan="13" class="empty-state">Loading…</td></tr>`;
   const days=TP_DAYS, city=document.getElementById("tpCity").value, dir=(tpMode==="seekers"?"seek":"offer");
   const typeQ=dir==="seek"?"listing_type=in.(flatmate_wanted,flat_listing)":"listing_type=eq.flat_wanted";
   const cut=new Date(Date.now()-days*864e5).toISOString();
@@ -1194,7 +1195,7 @@ async function tpRefetch(){
     tpBuildVocab();
   }catch(e){
     console.error("load failed",e);
-    body.innerHTML=`<tr><td colspan="12" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="13" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
     return;
   }
   await tpApply();
@@ -1297,6 +1298,7 @@ function tpSortRows(rows){
     else if(f==="requirement") c=requirementRank(abReq(b))-requirementRank(abReq(a));
     else if(f==="area") c=abAreasText(a).localeCompare(abAreasText(b));
     else if(f==="budget") c=(Number(a.rent_amount)||0)-(Number(b.rent_amount)||0);
+    else if(f==="brokerage"){ const r={none:0,applies:1,info:2}; c=r[tpBrokerageKind(a)]-r[tpBrokerageKind(b)]; }
     else if(f==="movein") c=(a.available_from?Date.parse(a.available_from):9e15)-(b.available_from?Date.parse(b.available_from):9e15);
     else if(f==="date") c=t(a)-t(b);
     else if(f==="status") c=(a._live?1:0)-(b._live?1:0);
@@ -1316,7 +1318,7 @@ function tpRender(){
   const hideSh=document.getElementById("tpHideShared").checked;
   const rows=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="12" class="empty-state">${!tpTouched?"Pick one or more areas above to see matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="13" class="empty-state">${!tpTouched?"Pick one or more areas above to see matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
     abUpdateCount(); return;
   }
   const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
@@ -1338,6 +1340,7 @@ function tpRender(){
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td style="white-space:nowrap">${l.rent_amount?escHtml(tpMoney(l.rent_amount)):"—"}</td>
       <td style="white-space:nowrap">${escHtml(tpFmtDate(l.available_from))}</td>
+      <td style="white-space:nowrap">${tpBrokerageCell(l)}</td>
       <td style="white-space:nowrap">${tpPostedFmt(l)}</td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap">${shCell}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
@@ -1362,6 +1365,18 @@ function abUpdateCount(){
 
 // ---------- Send: one combined message ----------
 const TP_BROKERAGE={yes:"Okay with brokerage",prefno:"Prefers no brokerage",no:"No brokerage"};
+// Brokerage, three kinds: "No brokerage" / "Brokerage applies" / "No info" (the post said nothing - most of them).
+function tpBrokerageKind(l){
+  if(l.brokerage_confirmed===true) return l.has_brokerage?"applies":"none";
+  if(l.listing_type==="flat_wanted"){ const p=String(l.brokerage_preference||"").toLowerCase(); if(p==="no"||p==="prefno") return "none"; }
+  return "info";
+}
+function tpBrokerageCell(l){
+  const k=tpBrokerageKind(l);
+  if(k==="none") return '<span class="badge b-ok">No brokerage</span>';
+  if(k==="applies") return '<span class="badge" style="background:var(--gold-bg);color:var(--gold)">Brokerage applies</span>';
+  return '<span style="color:var(--ink3)">No info</span>';
+}
 function tpLeadText(l,i){
   const g=l.gender_preference, req=abReq(l), lines=[`*Lead ${i}*`];
   const gtxt=g&&g!=="Undisclosed"?g:"Not specified";
@@ -1377,7 +1392,6 @@ function tpLeadText(l,i){
     lines.push(`Place: ${rt?rt+(ft?" in "+ft:""):(ft||"Not specified")}`);
     lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
     if(l.rent_amount) lines.push(`Rent: ${tpMoney(l.rent_amount)}/month`);
-    if(l.available_from) lines.push(`Available from: ${tpFmtDate(l.available_from)}`);
     lines.push(`Preferred gender: ${gtxt}`);
     if(l.furnishing && l.furnishing!=="Undisclosed") lines.push(`Furnishing: ${l.furnishing}`);
     if(l.brokerage_confirmed===true) lines.push(`Brokerage: ${l.has_brokerage?"Applies":"No brokerage"}`);
