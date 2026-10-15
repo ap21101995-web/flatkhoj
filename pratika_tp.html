@@ -153,7 +153,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 15-Oct-TP18</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP19</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -164,7 +164,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 15-Oct-TP18</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP19</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -1141,6 +1141,9 @@ function tpGoHome(){
 function tpChoose(mode){
   tpMode=mode; tpTouched=false; tpToken++;
   const seek=(mode==="seekers");
+  // Brokerage column: only for offer leads (Help Seekers). A seeker's lead has no 'brokerage' to speak of.
+  const bth=document.querySelector('th[data-f="brokerage"]'); if(bth) bth.style.display=seek?"":"none";
+  if(!seek && tpSortField==="brokerage"){ tpSortField="match"; tpSortDir=-1; }
   document.getElementById("tpModeTitle").textContent=seek?"Help Seekers":"Help Offerers";
   document.getElementById("tpModeSub").textContent=seek
     ? "Pick the areas and details of the seeker (or paste their message). You will see every place (live or not live) that could suit them. Tick the ones to share, press Send, and they are marked as shared."
@@ -1161,7 +1164,7 @@ async function tpRefetch(){
   if(!tpTouched) return;
   const my=++tpToken;
   const body=document.getElementById("abBody");
-  body.innerHTML=`<tr><td colspan="13" class="empty-state">Loading…</td></tr>`;
+  body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">Loading…</td></tr>`;
   const days=TP_DAYS, city=document.getElementById("tpCity").value, dir=(tpMode==="seekers"?"seek":"offer");
   const typeQ=dir==="seek"?"listing_type=in.(flatmate_wanted,flat_listing)":"listing_type=eq.flat_wanted";
   const cut=new Date(Date.now()-days*864e5).toISOString();
@@ -1195,7 +1198,7 @@ async function tpRefetch(){
     tpBuildVocab();
   }catch(e){
     console.error("load failed",e);
-    body.innerHTML=`<tr><td colspan="13" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
     return;
   }
   await tpApply();
@@ -1318,7 +1321,7 @@ function tpRender(){
   const hideSh=document.getElementById("tpHideShared").checked;
   const rows=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="13" class="empty-state">${!tpTouched?"Pick one or more areas above to see matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">${!tpTouched?"Pick one or more areas above to see matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
     abUpdateCount(); return;
   }
   const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
@@ -1340,7 +1343,7 @@ function tpRender(){
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td style="white-space:nowrap">${l.rent_amount?escHtml(tpMoney(l.rent_amount)):"—"}</td>
       <td style="white-space:nowrap">${escHtml(tpFmtDate(l.available_from))}</td>
-      <td style="white-space:nowrap">${tpBrokerageCell(l)}</td>
+      ${tpMode==="seekers"?`<td style="white-space:nowrap">${tpBrokerageCell(l)}</td>`:""}
       <td style="white-space:nowrap">${tpPostedFmt(l)}</td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap">${shCell}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
@@ -1388,8 +1391,7 @@ function tpLeadText(l,i){
     if(l.available_from) lines.push(`Move-in: ${tpFmtDate(l.available_from)}`);
     const b=TP_BROKERAGE[String(l.brokerage_preference||"").toLowerCase()]; if(b) lines.push(`Brokerage: ${b}`);
   }else{
-    const rt=l.room_type&&l.room_type!=="Undisclosed"?l.room_type:"", ft=l.flat_type&&l.flat_type!=="Undisclosed"?l.flat_type:"";
-    lines.push(`Place: ${rt?rt+(ft?" in "+ft:""):(ft||"Not specified")}`);
+    lines.push(`Requirement: ${req==="Undisclosed"?"Not specified":req}`);   // same text as the Requirement column / main portal
     lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
     if(l.rent_amount) lines.push(`Rent: ${tpMoney(l.rent_amount)}/month`);
     lines.push(`Preferred gender: ${gtxt}`);
