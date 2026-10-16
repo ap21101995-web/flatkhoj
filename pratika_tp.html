@@ -153,7 +153,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP20</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP21</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -164,7 +164,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP20</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP21</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -1400,7 +1400,7 @@ function tpLeadText(l,i){
   }
   // when the person actually wrote it in the WhatsApp group (real message time only - never the listing's creation time)
   const wi=abPostedIso(l), wd=wi?new Date(wi):null;
-  if(wd&&!isNaN(wd)) lines.push(`Posting Time: ${wd.getDate()} ${TP_MON_NAMES[wd.getMonth()]} ${wd.getFullYear()}, ${wd.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}`);
+  if(wd&&!isNaN(wd)) lines.push(`Searched at: ${wd.getDate()} ${TP_MON_NAMES[wd.getMonth()]} ${wd.getFullYear()}, ${wd.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}`);
   lines.push(`Contact: ${tpMask(l.custom_contact_phone)}`);
   return lines.join("\n");
 }
