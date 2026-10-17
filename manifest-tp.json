@@ -1,0 +1,26 @@
+{
+ "id": "/pratika_tp.html",
+ "name": "Pratika TP",
+ "short_name": "Pratika TP",
+ "description": "Pratika TP portal",
+ "start_url": "/pratika_tp.html",
+ "scope": "/",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#0f1117",
+ "theme_color": "#0f1117",
+ "icons": [
+  {
+   "src": "/icon-tp-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any maskable"
+  },
+  {
+   "src": "/icon-tp-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}

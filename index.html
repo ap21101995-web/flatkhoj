@@ -605,6 +605,15 @@ const AREA_GROUPS = window._AG || {};
 const CHILD_TO_PARENTS = window._CP || {};
 const AREA_COORDS = window._AC || {};
 </script>
+<link rel="manifest" href="/manifest-main.json">
+<meta name="theme-color" content="#e6a817">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FlatKhoj">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="/apple-touch-main.png">
+<link rel="icon" type="image/png" href="/icon-main-192.png">
+<script>if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});</script>
 </head>
 <body>
 

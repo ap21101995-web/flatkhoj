@@ -131,6 +131,15 @@ textarea.filter-input { font-family:var(--font); }
 .tp-chip b { cursor:pointer; margin-left:6px; }
 .tp-checks label { display:flex; gap:5px; align-items:center; cursor:pointer; }
 </style>
+<link rel="manifest" href="/manifest-tp.json">
+<meta name="theme-color" content="#0f1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pratika TP">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="/apple-touch-tp.png">
+<link rel="icon" type="image/png" href="/icon-tp-192.png">
+<script>if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});</script>
 </head>
 <body>
 <div id="loginScreen">
@@ -153,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP21</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP22</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -164,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 16-Oct-TP21</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP22</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -1382,6 +1391,9 @@ function tpBrokerageCell(l){
 }
 function tpLeadText(l,i){
   const g=l.gender_preference, req=abReq(l), lines=[`*Lead ${i}*`];
+  // when the person actually wrote it in the WhatsApp group (real message time only - never the listing's creation time)
+  const wi=abPostedIso(l), wd=wi?new Date(wi):null;
+  if(wd&&!isNaN(wd)) lines.push(`Searched at: ${wd.getDate()} ${TP_MON_NAMES[wd.getMonth()]} ${wd.getFullYear()}, ${wd.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}`);
   const gtxt=g&&g!=="Undisclosed"?g:"Not specified";
   if(l.listing_type==="flat_wanted"){
     lines.push(`Gender: ${gtxt}`);
@@ -1398,9 +1410,6 @@ function tpLeadText(l,i){
     if(l.furnishing && l.furnishing!=="Undisclosed") lines.push(`Furnishing: ${l.furnishing}`);
     if(l.brokerage_confirmed===true) lines.push(`Brokerage: ${l.has_brokerage?"Applies":"No brokerage"}`);
   }
-  // when the person actually wrote it in the WhatsApp group (real message time only - never the listing's creation time)
-  const wi=abPostedIso(l), wd=wi?new Date(wi):null;
-  if(wd&&!isNaN(wd)) lines.push(`Searched at: ${wd.getDate()} ${TP_MON_NAMES[wd.getMonth()]} ${wd.getFullYear()}, ${wd.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}`);
   lines.push(`Contact: ${tpMask(l.custom_contact_phone)}`);
   return lines.join("\n");
 }
