@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP23</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP24</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -173,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP23</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP24</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -485,21 +485,31 @@ async function supaGetAll(path){
 
 // The real WhatsApp message time lives in broker_portal_leads.posted_at (listings.created_at is
 // the time the listing was created/approved, not when the person wrote the message).
-function abPostedIso(l){ return abPostedMap[abDigits(l.custom_contact_phone)]||null; }
+function abPostedIso(l){ return abPostedMap["L"+l.id]||null; }
 function abPostedFmt(l){
   const iso=abPostedIso(l), d=new Date(iso||l.created_at||0);
   if(!l.created_at && !iso) return "—";
   const t=d.toLocaleDateString()+" "+d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
   return iso?t:`<span title="No WhatsApp timestamp found for this number; showing when the listing was created">${t} ~</span>`;
 }
+// (2026-10-17) The time must belong to THIS listing's own message. It used to be "the latest message ever seen from
+// that number", so an offer posted 14 days ago picked up the time of a seeker message the same person wrote today.
+// Now the stored WhatsApp text of the listing is matched with the saved message rows of that number; no match = no time.
+function abTxtKey(t){ return String(t||"").toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,120); }
 async function abLoadPosted(listings){
   abPostedMap={};
   const phones=[...new Set(listings.map(l=>abDigits(l.custom_contact_phone)))];
+  const byPhone={};
   for(let i=0;i<phones.length;i+=40){
     const chunk=phones.slice(i,i+40);
-    const rows=await supaGetAll(`broker_portal_leads?phone=in.(${chunk.join(",")})&posted_at=not.is.null&select=phone,posted_at&order=posted_at.desc`).catch(e=>{ console.error("posted_at read failed",e); return []; });
-    rows.forEach(r=>{ const k=abDigits(r.phone); if(!abPostedMap[k]) abPostedMap[k]=r.posted_at; });
+    const rows=await supaGetAll(`broker_portal_leads?phone=in.(${chunk.join(",")})&posted_at=not.is.null&select=phone,posted_at,raw_whatsapp_text&order=posted_at.desc`).catch(e=>{ console.error("posted_at read failed",e); return []; });
+    rows.forEach(r=>{ const k=abDigits(r.phone); (byPhone[k]=byPhone[k]||[]).push(r); });
   }
+  listings.forEach(l=>{
+    const key=abTxtKey(l.raw_whatsapp_text); if(!key) return;
+    const hit=(byPhone[abDigits(l.custom_contact_phone)]||[]).find(r=>abTxtKey(r.raw_whatsapp_text)===key);
+    if(hit) abPostedMap["L"+l.id]=hit.posted_at;
+  });
 }
 function abIsPaid(l){ return String(l.brokerage_preference||"").toLowerCase()==="yes"; }
 function abIndexLeads(leads){
