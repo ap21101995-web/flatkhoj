@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP22</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP23</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -173,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP22</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP23</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -237,7 +237,7 @@ textarea.filter-input { font-family:var(--font); }
           <th class="sortable-th" data-f="status" onclick="tpSetSort('status')">Approve</th>
           <th>Edit</th>
         </tr></thead>
-        <tbody id="abBody"><tr><td colspan="13" class="empty-state">Pick one or more areas above to see matches.</td></tr></tbody>
+        <tbody id="abBody"><tr><td colspan="13" class="empty-state">Loading…</td></tr></tbody>
       </table>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
@@ -1189,19 +1189,20 @@ async function tpRefetch(){
     abBrokers=brokers; abLeadIdx=abIndexLeads(leads);
     abTargets={}; targets.forEach(t=>{ abTargets[String(t.listing_id)]=t; });
     const local=new Set(abLocalApproved());
-    const seen=new Set(); tpPool=[];
+    const seen=new Set(); tpPool=[]; const drop={city:0,phone:0,dup:0};
     pool.forEach(l=>{
+      if(abNorm(l.city||"mumbai")!==city){ drop.city++; return; }
       const ph=abDigits(l.custom_contact_phone);
-      if(ph.length!==10) return;
-      const key=dir==="seek"?[ph,abNorm(l.room_type),abNorm(abAreasText(l)),abNorm(l.flat_type)].join("|"):ph;
-      if(seen.has(key)) return;
-      if(abNorm(l.city||"mumbai")!==city) return;
+      if(ph.length!==10){ drop.phone++; return; }
+      // only a true repeat (same number, same room type, same areas, same flat type) collapses into one row
+      const key=[ph,abNorm(l.room_type),abNorm(abAreasText(l)),abNorm(l.flat_type),abNorm(l.listing_type)].join("|");
+      if(seen.has(key)){ drop.dup++; return; }
       seen.add(key);
       l._live=(l.pending_approval===false && l.is_active===true);
       l._approved=(l.pending_approval===false) && (!!abTargets[String(l.id)] || local.has(String(l.id)));
       tpPool.push(l);
     });
-    tpPoolStat={fetched:pool.length, kept:tpPool.length, city:city};
+    tpPoolStat={fetched:pool.length, kept:tpPool.length, city:city, drop:drop};
     tpHydrated=new Set(); abLoggedBy={};
     await tpSharesLoad();
     tpBuildVocab();
@@ -1221,9 +1222,11 @@ function tpMatch(l,o){
   // moves a listing up or down the list (best fit on top) and is never a reason to hide it.
   const reasons=[]; let score=0;
   const la=abArr(l.areas);
-  if(!abAreaMatch(o.areas,la)) return null;
-  const exact=la.some(a=>o.areas.some(b=>abNorm(a)===abNorm(b)));
-  score+=exact?3:2; reasons.push(exact?"Area matches exactly":"Area overlaps");
+  if(o.areas.length){   // no area picked = every area of the city stays in the list
+    if(!abAreaMatch(o.areas,la)) return null;
+    const exact=la.some(a=>o.areas.some(b=>abNorm(a)===abNorm(b)));
+    score+=exact?3:2; reasons.push(exact?"Area matches exactly":"Area overlaps");
+  }
   const req=((o.dir==="seek"?String(l.room_type||""):abReq(l))+(o.dir==="seek"&&l.listing_type==="flat_listing"?" entire":"")).toLowerCase();
   const tk={single:/\bsingle\b/.test(req),double:/\bdouble\b|\btwin\b/.test(req),triple:/\btriple\b/.test(req),hall:/\bhall\b/.test(req),entire:/\bentire\b|\bbhk\b|\brk\b/.test(req),any:/\bany\b/.test(req)};
   const stated=Object.values(tk).some(Boolean);
@@ -1276,11 +1279,6 @@ async function tpApply(){
   if(!tpTouched) return;
   const my=++tpToken;
   const o=tpReadOffer(), sum=document.getElementById("tpSummary");
-  if(!o.areas.length){
-    abListings=[]; abSelected=new Set(); tpRender();
-    sum.textContent="Pick one or more areas above to see matches."+(tpPoolStat.fetched?" ("+tpPoolStat.kept+" "+tpPoolStat.city+" listings loaded)":"");
-    return;
-  }
   const rows=[];
   tpPool.forEach(l=>{ const m=tpMatch(l,o); if(m){ l._m=m; rows.push(l); } });
   abListings=rows;
@@ -1292,7 +1290,7 @@ async function tpApply(){
   if(rows.some(l=>l._approved)) await abReconcile(tpReactCut);
   if(my!==tpToken) return;
   const live=rows.filter(l=>l._live).length;
-  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} could fit &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched ${tpPoolStat.kept} ${tpPoolStat.city} listing(s) created or refreshed in the last ${TP_DAYS} days (${tpPoolStat.fetched} fetched).`;
+  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} ${o.areas.length?"could fit":"in "+tpPoolStat.city+" (no filters yet)"} &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched ${tpPoolStat.kept} ${tpPoolStat.city} listing(s) created or refreshed in the last ${TP_DAYS} days (${tpPoolStat.fetched} fetched${tpPoolStat.drop?`; left out: ${tpPoolStat.drop.city} other-city, ${tpPoolStat.drop.dup} exact repeats, ${tpPoolStat.drop.phone} without a valid 10-digit number`:""}).`;
   tpRender();
 }
 
@@ -1330,7 +1328,7 @@ function tpRender(){
   const hideSh=document.getElementById("tpHideShared").checked;
   const rows=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">${!tpTouched?"Pick one or more areas above to see matches.":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">${!tpTouched?"Loading…":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
     abUpdateCount(); return;
   }
   const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
