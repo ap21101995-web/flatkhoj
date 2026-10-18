@@ -1803,22 +1803,14 @@ async function abApprove(id, btn){
 
     abRememberApproved(id);
     // (2026-10-18) Approval itself is already done on the server at this point -- mark it
-    // approved and re-render RIGHT NOW so the next listing is free to work on immediately,
-    // instead of blocking here while we wait (up to 30s) for the WhatsApp sender to log its
-    // sends and then reload the whole table. That wait + reload now happens in the
-    // background and only pops an informational alert when it's done.
+    // approved and re-render RIGHT NOW so the next listing is free to work on immediately.
+    // The wait for the WhatsApp sender to log its sends, and the table reload, happen fully
+    // in the background with NO popup at all -- if a send is missing, it'll just show up
+    // when you open "Brokers (n)" on that row or press Refresh; nothing interrupts you.
     l._approved=true;
     abRender();
     abBusy=false; abUpdateCount();
-    abAwaitSends(id).then(()=>{
-      const gotIds=abLoggedBy[id]||new Set();
-      const nm=e=>e.b.name;
-      const gotN=wa.filter(e=>gotIds.has(String(e.b.id))).map(nm), missN=wa.filter(e=>!gotIds.has(String(e.b.id))).map(nm);
-      let out=`Approved +91 ${abDigits(l.custom_contact_phone)}.\n\nWhatsApp sent and ticked: ${gotN.length?gotN.join(", "):"nobody yet"}`;
-      if(missN.length) out+=`\n\nChosen for WhatsApp but no send logged: ${missN.join(", ")}\n(a paid lead is skipped when the quota is full or the send failed; if it was just slow, press Refresh in a minute.)`;
-      if(excel.length) out+=`\n\nExcel-only (not sent): ${excel.map(nm).join(", ")} — use Download Excel for them.`;
-      alert(out);
-    }).catch(e=>console.error("abAwaitSends failed:",e));
+    abAwaitSends(id).catch(e=>console.error("abAwaitSends failed:",e));
     return;
   }catch(e){
     console.error("Approve failed:",e);
