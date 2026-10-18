@@ -2640,7 +2640,20 @@ async function submitListing() {
         console.error('PATCH error:', res.status, resText);
         throw new Error(resText);
       }
-      window.location.href = 'index.html';
+      // (2026-10-18) This edit screen is always opened in a NEW tab/window from an admin-style
+      // page (a pending-review card on the main site, admin.html, Pratika TP, or the broker
+      // portal) via window.open/target="_blank" -- never navigated to directly. Jumping this
+      // tab to index.html left the person on the wrong app once admin/Pratika TP/the broker
+      // portal became separate installed home-screen apps, not just tabs in one browser
+      // window -- closing the tab instead returns them straight to whichever app they came
+      // from. If the browser won't allow the close (this tab wasn't opened by script, an edge
+      // case outside the normal flow above), fall back to the old index.html redirect so the
+      // person is never stuck on a dead screen.
+      showToast('✅ Saved. Closing…');
+      setTimeout(() => {
+        window.close();
+        setTimeout(() => { window.location.href = 'index.html'; }, 500);
+      }, 300);
       return;
     }
     formData.user_id = user.userId;
