@@ -85,6 +85,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .filter-input { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:7px 12px; font-family:var(--font); font-size:13px; color:var(--ink); outline:none; }
 .filter-input:focus { border-color:var(--teal-light); }
 .badge.b-warn{background:#fff4e5;color:#b45309;border:1px solid #f59e0b}
+/* (2026-10-18) On a narrow phone, a wide table overflows .table-card's width -- without this,
+   .table-card's own overflow:hidden (needed to clip the table's corners to its rounded border)
+   also silently clips off the extra columns instead of letting you scroll sideways to them.
+   pratika_tp.html already carries this exact fix; it was missing here and on the broker portal. */
+.table-card { overflow-x:auto; }
+.table-card th, .table-card td { padding-left:8px; padding-right:8px; }
 </style>
 <link rel="manifest" href="/manifest-admin.json">
 <meta name="theme-color" content="#0f1117">

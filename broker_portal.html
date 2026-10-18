@@ -106,6 +106,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .ab-plus { background:var(--green-bg); color:var(--green); border:1px solid rgba(46,204,113,0.3); width:26px; height:26px; border-radius:50%; cursor:pointer; font-weight:800; line-height:1; font-family:var(--font); }
 .ab-sub { font-size:11px; color:var(--ink3); margin-top:2px; }
 .ab-sec { padding:12px 20px 6px; font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.5px; }
+/* (2026-10-18) On a narrow phone, a wide table overflows .table-card's width -- without this,
+   .table-card's own overflow:hidden (needed to clip the table's corners to its rounded border)
+   also silently clips off the extra columns instead of letting you scroll sideways to them.
+   pratika_tp.html already carries this exact fix; it was missing here and on the admin page. */
+.table-card { overflow-x:auto; }
+.table-card th, .table-card td { padding-left:8px; padding-right:8px; }
 </style>
 <link rel="manifest" href="/manifest-brokers.json">
 <meta name="theme-color" content="#1e6fd9">
