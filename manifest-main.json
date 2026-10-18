@@ -2,25 +2,15 @@
  "id": "/index.html",
  "name": "FlatKhoj",
  "short_name": "FlatKhoj",
- "description": "FlatKhoj \u2013 flats & flatmates in Mumbai & Pune",
+ "description": "FlatKhoj main portal",
  "start_url": "/index.html",
- "scope": "/",
+ "scope": "/index.html",
  "display": "standalone",
  "orientation": "any",
  "background_color": "#e6a817",
  "theme_color": "#e6a817",
  "icons": [
-  {
-   "src": "/icon-main-192.png",
-   "sizes": "192x192",
-   "type": "image/png",
-   "purpose": "any maskable"
-  },
-  {
-   "src": "/icon-main-512.png",
-   "sizes": "512x512",
-   "type": "image/png",
-   "purpose": "any maskable"
-  }
+  {"src": "/icon-main-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+  {"src": "/icon-main-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
  ]
 }

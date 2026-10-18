@@ -1,26 +1,16 @@
 {
  "id": "/broker_portal.html",
- "name": "FlatKhoj Brokers",
+ "name": "FlatKhoj Broker Portal",
  "short_name": "FK Brokers",
- "description": "FlatKhoj broker portal",
+ "description": "FlatKhoj broker data portal",
  "start_url": "/broker_portal.html",
- "scope": "/",
+ "scope": "/broker_portal.html",
  "display": "standalone",
  "orientation": "any",
- "background_color": "#0f1117",
- "theme_color": "#0f1117",
+ "background_color": "#1e6fd9",
+ "theme_color": "#1e6fd9",
  "icons": [
-  {
-   "src": "/icon-brokers-192.png",
-   "sizes": "192x192",
-   "type": "image/png",
-   "purpose": "any maskable"
-  },
-  {
-   "src": "/icon-brokers-512.png",
-   "sizes": "512x512",
-   "type": "image/png",
-   "purpose": "any maskable"
-  }
+  {"src": "/icon-brokers-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+  {"src": "/icon-brokers-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
  ]
 }
