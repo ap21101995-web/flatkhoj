@@ -989,7 +989,7 @@ function renderListing(){
     if(listing.flat_type) fields.push(['Looking for',listing.flat_type]);
     if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'||listing.food_preference==='🍽️ No Veg/Non-Veg Preference'?'🍽️ No Preference':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
-    if(listing.available_from) fields.push(['Move-in date', formatDate(listing.available_from)]);
+    if(listing.available_from || listing.available_immediately) fields.push(['Move-in date', formatDate(listing.available_from)]);
     if(listing.room_type) fields.push(['Looking for', listing.room_type]);
     if(listing.stay_duration) fields.push(['Stay duration', listing.stay_duration]);
     const brokerPref = listing.brokerage_preference;
@@ -1002,12 +1002,12 @@ function renderListing(){
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
     if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'||listing.food_preference==='🍽️ No Veg/Non-Veg Preference'?'🍽️ No Preference':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preferred',listing.gender_preference]);
-    if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
+    if(listing.available_from || listing.available_immediately) fields.push(['Available from', formatDate(listing.available_from)]);
   } else {
     if(listing.flat_type) fields.push(['Flat type',listing.flat_type]);
     if(listing.room_type) fields.push(['Room type',listing.room_type]);
     if(listing.furnishing) fields.push(['Furnishing',listing.furnishing]);
-    if(listing.available_from) fields.push(['Available from', formatDate(listing.available_from)]);
+    if(listing.available_from || listing.available_immediately) fields.push(['Available from', formatDate(listing.available_from)]);
     if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'||listing.food_preference==='🍽️ No Veg/Non-Veg Preference'?'🍽️ No Preference':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender preference',listing.gender_preference]);
   }

@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP27</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP28</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -173,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP27</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP28</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -887,7 +887,7 @@ const TP_AREAS={"mumbai": {"list": ["16th Road Khar", "17th Road Khar", "20th Ro
 //   3. a table like All Brokers (Brokers, Approve / red Live, Edit, click a row for the original),
 //   4. Send: one combined message ("Lead 1", "Lead 2" ...) with masked numbers and no names.
 // =====================================================================
-const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active,listing_type,furnishing,has_brokerage,brokerage_confirmed,whatsapp_posted_at";
+const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,available_immediately,is_active,listing_type,furnishing,has_brokerage,brokerage_confirmed,whatsapp_posted_at";
 const TP_HELPER="http://127.0.0.1:8765/";
 const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -914,6 +914,13 @@ function tpTitle(s){ return String(s).replace(/\b[a-z]/g,c=>c.toUpperCase()); }
 function tpMask(p){ const d=abDigits(p); if(d.length<3) return d; return d[0]+"x".repeat(d.length-3)+d.slice(-2); }
 function tpIsoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function tpFmtDate(iso){ if(!iso) return "—"; const d=new Date(iso+"T00:00:00"); if(isNaN(d)) return "—"; return d.getDate()+" "+TP_MON_NAMES[d.getMonth()]+" "+d.getFullYear(); }
+// (2026-10-19) Move-in display for a listing object -- available_immediately is a stable
+// boolean set whenever the pipeline/engine is ASSUMING "available right away" rather than
+// reading a stated date (so available_from stays null for those and is never a stale,
+// churning "tomorrow" placeholder -- see auto_post_engine.py's movein_to_date docstring for
+// the full writeup). tpFmtDate's own "—" convention for a null/falsy date is kept as-is for
+// every OTHER null case (genuinely unstated), so this wraps it rather than changing it.
+function tpMoveinText(l){ return l && l.available_immediately ? "Immediately Available" : tpFmtDate(l && l.available_from); }
 function tpMoney(n){ return "₹"+Number(n).toLocaleString("en-IN"); }
 
 async function enterApp(){
@@ -1144,7 +1151,7 @@ async function tpFind(){
       tpSetAreas(areas);
       tpSetSharing(sh); document.getElementById("tpGender").value=g; document.getElementById("tpMovein").value=st.available_from||""; document.getElementById("tpRent").value=st.rent_amount?String(st.rent_amount):"";
       const live=(st.pending_approval===false&&st.is_active===true);
-      note.innerHTML="Found this person in the <b>auto-posted data</b> (+91 "+escHtml(abDigits(st.custom_contact_phone))+", "+(live?"live":"pending")+", "+escHtml(tpFmtDate(String(st.created_at||"").slice(0,10)))+") &rarr; using the details already stored for it: areas: <b>"+escHtml(areas.join(", ")||"none")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(st.available_from?tpFmtDate(st.available_from):"not stated")+"</b>"+(st.rent_amount?" · rent/budget: <b>"+tpMoney(st.rent_amount)+"</b>":"")+". Change anything above if it is wrong.";
+      note.innerHTML="Found this person in the <b>auto-posted data</b> (+91 "+escHtml(abDigits(st.custom_contact_phone))+", "+(live?"live":"pending")+", "+escHtml(tpFmtDate(String(st.created_at||"").slice(0,10)))+") &rarr; using the details already stored for it: areas: <b>"+escHtml(areas.join(", ")||"none")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml((st.available_from||st.available_immediately)?tpMoveinText(st):"not stated")+"</b>"+(st.rent_amount?" · rent/budget: <b>"+tpMoney(st.rent_amount)+"</b>":"")+". Change anything above if it is wrong.";
       tpTouched=true; await tpRefetch(); return;
     }
     // Help Seekers: the pasted text IS a seeker's requirement. Help Offerers: it is a vacancy.
@@ -1174,7 +1181,7 @@ async function tpFind(){
     let extra="";
     if(eng.count>1) extra+=" The message holds "+eng.count+" listings; using the first.";
     if(eng.partial) extra+=" <b style=\"color:var(--red)\">The engine found no area it recognises"+((eng.unresolved&&eng.unresolved.length)?" ("+escHtml(eng.unresolved.join("; "))+")":"")+" — type the area(s) above.</b>";
-    note.innerHTML="Read by the <b>auto-posting engine</b> &rarr; areas: <b>"+escHtml(areas.join(", ")||"none")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml(d?tpFmtDate(d):"not stated")+"</b>"+(r?" · rent/budget: <b>"+tpMoney(r)+"</b>":"")+"."+extra+" Change anything above if it is wrong.";
+    note.innerHTML="Read by the <b>auto-posting engine</b> &rarr; areas: <b>"+escHtml(areas.join(", ")||"none")+"</b> · sharing: <b>"+escHtml(sh.join(", ")||"any")+"</b> · gender: <b>"+escHtml(g||"any")+"</b> · move-in: <b>"+escHtml((d||L.available_immediately)?tpMoveinText(L):"not stated")+"</b>"+(r?" · rent/budget: <b>"+tpMoney(r)+"</b>":"")+"."+extra+" Change anything above if it is wrong.";
     tpTouched=true;
     await tpRefetch();
   }finally{ btn.disabled=false; btn.textContent="Read message"; }
@@ -1283,7 +1290,12 @@ function tpMatch(l,o){
     else return null;
   }
   if(o.movein){
-    if(l.available_from){
+    // (2026-10-19) available_immediately means the place is assumed available right away --
+    // that always satisfies (or beats) any desired move-in date, so it scores the same as a
+    // date that fits, rather than falling into "Move-in not stated" just because
+    // available_from itself is null for this case.
+    if(l.available_immediately){ score+=1; reasons.push("Available immediately"); }
+    else if(l.available_from){
       const diff=(Date.parse(l.available_from)-Date.parse(o.movein))/864e5;
       if(Math.abs(diff)<=5){ score+=1; reasons.push("Move-in fits"); } else reasons.push(diff<0?"Can move earlier":"Moves in a bit later");
     }else reasons.push("Move-in not stated");
@@ -1348,7 +1360,12 @@ function tpSortRows(rows){
     else if(f==="area") c=abAreasText(a).localeCompare(abAreasText(b));
     else if(f==="budget") c=(Number(a.rent_amount)||0)-(Number(b.rent_amount)||0);
     else if(f==="brokerage"){ const r={none:0,applies:1,info:2}; c=r[tpBrokerageKind(a)]-r[tpBrokerageKind(b)]; }
-    else if(f==="movein") c=(a.available_from?Date.parse(a.available_from):9e15)-(b.available_from?Date.parse(b.available_from):9e15);
+    else if(f==="movein"){
+      // (2026-10-19) available_immediately sorts as the earliest possible move-in (0) --
+      // genuinely unstated (neither a date nor the immediate flag) sorts last, same as before.
+      const mv=x=>x.available_immediately?0:(x.available_from?Date.parse(x.available_from):9e15);
+      c=mv(a)-mv(b);
+    }
     else if(f==="date") c=t(a)-t(b);
     else if(f==="status") c=(a._live?1:0)-(b._live?1:0);
     else if(f==="shared") c=tpLastShared(a)-tpLastShared(b);
@@ -1388,7 +1405,7 @@ function tpRender(){
       <td>${escHtml(abReq(l))}</td>
       <td>${escHtml(abAreasText(l)||"—")}</td>
       <td style="white-space:nowrap">${l.rent_amount?escHtml(tpMoney(l.rent_amount)):"—"}</td>
-      <td style="white-space:nowrap">${escHtml(tpFmtDate(l.available_from))}</td>
+      <td style="white-space:nowrap">${escHtml(tpMoveinText(l))}</td>
       ${tpMode==="seekers"?`<td style="white-space:nowrap">${tpBrokerageCell(l)}</td>`:""}
       <td style="white-space:nowrap">${tpPostedFmt(l)}</td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap">${shCell}</td>
@@ -1451,7 +1468,7 @@ function tpLeadText(l,i){
     lines.push(`Requirement: ${req==="Undisclosed"?"Not specified":req}`);
     lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
     if(l.rent_amount) lines.push(`Budget: ${tpMoney(l.rent_amount)}/month`);
-    if(l.available_from) lines.push(`Move-in: ${tpFmtDate(l.available_from)}`);
+    if(l.available_from||l.available_immediately) lines.push(`Move-in: ${tpMoveinText(l)}`);
     const b=TP_BROKERAGE[String(l.brokerage_preference||"").toLowerCase()]; if(b) lines.push(`Brokerage: ${b}`);
   }else{
     // (2026-10-19) Brokerage moved right below "Searched at" (was at the very bottom, and only
@@ -1522,7 +1539,7 @@ function abOpenText(id){
   document.getElementById("msgModalMeta").textContent=`From: ${grp||(raw?"Unknown group":"posted on the site, not from a WhatsApp group")}  ·  Posted: ${when?new Date(when).toLocaleString():"Unknown"}`;
   let txt=raw;
   if(!txt){
-    const rows=[["Gender",l.gender_preference],["Requirement",abReq(l)],["Areas",abAreasText(l)],["Budget / rent",l.rent_amount?tpMoney(l.rent_amount):""],["Move-in",l.available_from?tpFmtDate(l.available_from):""],["Brokerage",l.brokerage_preference],["Furnishing",l.furnishing]].filter(r=>r[1]&&r[1]!=="Undisclosed");
+    const rows=[["Gender",l.gender_preference],["Requirement",abReq(l)],["Areas",abAreasText(l)],["Budget / rent",l.rent_amount?tpMoney(l.rent_amount):""],["Move-in",(l.available_from||l.available_immediately)?tpMoveinText(l):""],["Brokerage",l.brokerage_preference],["Furnishing",l.furnishing]].filter(r=>r[1]&&r[1]!=="Undisclosed");
     txt="No original WhatsApp message is saved for this number — the listing was posted through the site form, or before messages were stored.\n\nDetails on the listing:\n"+rows.map(r=>r[0]+": "+r[1]).join("\n");
   }
   document.getElementById("msgModalText").textContent=txt;
