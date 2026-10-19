@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP25</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP26</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -173,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP25</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP26</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -884,7 +884,19 @@ const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active,listing_type,f
 const TP_HELPER="http://127.0.0.1:8765/";
 const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-let tpPoolStat={fetched:0,kept:0,city:""}, tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpReactCut="";
+// (2026-10-19) tpToken guards tpRefetch() against an OLDER refetch's results landing after a
+// NEWER one started (e.g. switching City twice quickly). tpApplyToken is the SEPARATE guard for
+// tpApply()/tpHydrate() (filtering the already-loaded pool -- Gender, Sharing, Rent, etc). They
+// used to share one counter, which meant simply changing a filter WHILE the initial pool fetch
+// for a freshly-opened mode was still in flight (tpChoose() fires tpRefetch() without awaiting
+// it) bumped the same counter tpRefetch() was about to check -- so tpRefetch() saw a mismatch
+// right after its query came back, concluded it was stale, and silently threw away the real,
+// successfully-fetched listings instead of ever assigning them to tpPool. The summary line was
+// then left showing the empty "0 fetched" placeholder with no way to recover except pressing
+// Refresh again and hoping no filter got touched during that window -- exactly the "weird,
+// works after refreshing a few times" behaviour reported. Splitting the two counters means a
+// filter change can no longer cancel an in-flight full data load.
+let tpPoolStat={fetched:0,kept:0,city:""}, tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpApplyToken=0, tpReactCut="";
 let tpSortField="match", tpSortDir=-1, tpSorted=[];   // best fit on top (latest posted first among equals)
 let tpMode=null, tpShares={}, tpSharesLocal=false;
 const TP_DAYS=60;   // listings created or refreshed in the last 60 days are searched
@@ -1163,12 +1175,12 @@ async function tpFind(){
 
 // ---------- home / mode ----------
 function tpGoHome(){
-  tpMode=null; tpTouched=false; tpToken++;
+  tpMode=null; tpTouched=false; tpToken++; tpApplyToken++;
   document.getElementById("tpHome").style.display="block";
   document.getElementById("tpWork").style.display="none";
 }
 function tpChoose(mode){
-  tpMode=mode; tpTouched=false; tpToken++;
+  tpMode=mode; tpTouched=false; tpToken++; tpApplyToken++;
   const seek=(mode==="seekers");
   // Brokerage column: only for offer leads (Help Seekers). A seeker's lead has no 'brokerage' to speak of.
   const bth=document.querySelector('th[data-f="brokerage"]'); if(bth) bth.style.display=seek?"":"none";
@@ -1297,7 +1309,7 @@ async function tpHydrate(rows){
 }
 async function tpApply(){
   if(!tpTouched) return;
-  const my=++tpToken;
+  const my=++tpApplyToken;   // own counter -- see the note on tpApplyToken above; must never share tpRefetch()'s tpToken
   const o=tpReadOffer(), sum=document.getElementById("tpSummary");
   const rows=[];
   tpPool.forEach(l=>{ const m=tpMatch(l,o); if(m){ l._m=m; rows.push(l); } });
@@ -1306,9 +1318,9 @@ async function tpApply(){
   abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
   sum.textContent="Loading details for "+rows.length+" listing(s)…";
   await tpHydrate(rows);
-  if(my!==tpToken) return;
+  if(my!==tpApplyToken) return;
   if(rows.some(l=>l._approved)) await abReconcile(tpReactCut);
-  if(my!==tpToken) return;
+  if(my!==tpApplyToken) return;
   const live=rows.filter(l=>l._live).length;
   sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} ${o.areas.length?"could fit":"in "+tpPoolStat.city+" (no filters yet)"} &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched ${tpPoolStat.kept} ${tpPoolStat.city} listing(s) created or refreshed in the last ${TP_DAYS} days (${tpPoolStat.fetched} fetched${tpPoolStat.drop?`; left out: ${tpPoolStat.drop.city} other-city, ${tpPoolStat.drop.dup} exact repeats, ${tpPoolStat.drop.phone} without a valid 10-digit number`:""}).`;
   tpRender();
