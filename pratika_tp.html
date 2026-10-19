@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP24</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP25</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -173,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 17-Oct-TP24</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP25</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -505,10 +505,20 @@ async function abLoadPosted(listings){
     const rows=await supaGetAll(`broker_portal_leads?phone=in.(${chunk.join(",")})&posted_at=not.is.null&select=phone,posted_at,raw_whatsapp_text&order=posted_at.desc`).catch(e=>{ console.error("posted_at read failed",e); return []; });
     rows.forEach(r=>{ const k=abDigits(r.phone); (byPhone[k]=byPhone[k]||[]).push(r); });
   }
+  // (2026-10-19) Exact text match still wins when it's there -- it's the most certain way to
+  // tie a time to THIS specific message, especially when the same number has posted more than
+  // once with a genuinely different ask. But most leads never had a byte-for-byte match (a
+  // retyped repost, a listing synced/edited after posting, or one posted through the site form
+  // with no raw_whatsapp_text at all) and used to silently get NO "Searched at" line at all as
+  // a result -- only the lucky exact match did. Falling back to this number's own LATEST
+  // posting (rows are already ordered posted_at.desc) means every lead with ANY WhatsApp
+  // history for that number gets a real time, per the owner's own description: "the latest
+  // time of the latest posting if multiple postings made."
   listings.forEach(l=>{
-    const key=abTxtKey(l.raw_whatsapp_text); if(!key) return;
-    const hit=(byPhone[abDigits(l.custom_contact_phone)]||[]).find(r=>abTxtKey(r.raw_whatsapp_text)===key);
-    if(hit) abPostedMap["L"+l.id]=hit.posted_at;
+    const rowsForPhone=byPhone[abDigits(l.custom_contact_phone)]||[]; if(!rowsForPhone.length) return;
+    const key=abTxtKey(l.raw_whatsapp_text);
+    const hit=key?rowsForPhone.find(r=>abTxtKey(r.raw_whatsapp_text)===key):null;
+    abPostedMap["L"+l.id]=(hit||rowsForPhone[0]).posted_at;
   });
 }
 function abIsPaid(l){ return String(l.brokerage_preference||"").toLowerCase()==="yes"; }
@@ -1397,9 +1407,23 @@ function tpBrokerageCell(l){
   if(k==="applies") return '<span class="badge" style="background:var(--gold-bg);color:var(--gold)">Brokerage applies</span>';
   return '<span style="color:var(--ink3)">No info</span>';
 }
+// (2026-10-19) Plain-text version of the same 3-state brokerage read the table cell already
+// uses (tpBrokerageKind/tpBrokerageCell) -- "No brokerage" / "Brokerage applies" / "No info",
+// never silently omitted, so every offer lead in the sent message says something about
+// brokerage (the owner's own words: "people will get more interested after seeing brokerage").
+function tpBrokerageText(l){
+  const k=tpBrokerageKind(l);
+  if(k==="none") return "No brokerage";
+  if(k==="applies") return "Brokerage applies";
+  return "No info";
+}
 function tpLeadText(l,i){
   const g=l.gender_preference, req=abReq(l), lines=[`*Lead ${i}*`];
-  // when the person actually wrote it in the WhatsApp group (real message time only - never the listing's creation time)
+  // when the person actually wrote it in the WhatsApp group (real message time only - never the listing's creation time).
+  // (2026-10-19) abPostedIso now always resolves to SOME time whenever this number has any
+  // broker_portal_leads row at all (exact text match preferred; falls back to that number's
+  // own latest posting otherwise -- see abLoadPosted) rather than silently going blank, which
+  // is why most leads used to show no "Searched at" line at all except the lucky exact-match one.
   const wi=abPostedIso(l), wd=wi?new Date(wi):null;
   if(wd&&!isNaN(wd)) lines.push(`Searched at: ${wd.getDate()} ${TP_MON_NAMES[wd.getMonth()]} ${wd.getFullYear()}, ${wd.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}`);
   const gtxt=g&&g!=="Undisclosed"?g:"Not specified";
@@ -1411,12 +1435,15 @@ function tpLeadText(l,i){
     if(l.available_from) lines.push(`Move-in: ${tpFmtDate(l.available_from)}`);
     const b=TP_BROKERAGE[String(l.brokerage_preference||"").toLowerCase()]; if(b) lines.push(`Brokerage: ${b}`);
   }else{
+    // (2026-10-19) Brokerage moved right below "Searched at" (was at the very bottom, and only
+    // shown when brokerage_confirmed===true -- silently omitted for the "No info" majority of
+    // posts). Now always present, in the same 3-state wording as the Brokerage table column.
+    lines.push(`Brokerage: ${tpBrokerageText(l)}`);
     lines.push(`Requirement: ${req==="Undisclosed"?"Not specified":req}`);   // same text as the Requirement column / main portal
     lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
     if(l.rent_amount) lines.push(`Rent: ${tpMoney(l.rent_amount)}/month`);
     lines.push(`Preferred gender: ${gtxt}`);
     if(l.furnishing && l.furnishing!=="Undisclosed") lines.push(`Furnishing: ${l.furnishing}`);
-    if(l.brokerage_confirmed===true) lines.push(`Brokerage: ${l.has_brokerage?"Applies":"No brokerage"}`);
   }
   lines.push(`Contact: ${tpMask(l.custom_contact_phone)}`);
   return lines.join("\n");
