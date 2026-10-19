@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP26</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP27</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -173,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP26</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP27</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -483,9 +483,16 @@ async function supaGetAll(path){
 }
 
 
-// The real WhatsApp message time lives in broker_portal_leads.posted_at (listings.created_at is
-// the time the listing was created/approved, not when the person wrote the message).
-function abPostedIso(l){ return abPostedMap["L"+l.id]||null; }
+// (2026-10-19) The real WhatsApp message time now lives directly on the listing itself, in
+// whatsapp_posted_at -- captured straight from the WhatsApp export's own timestamp at
+// posting/refresh time (see the pipeline's process_message). This is now the primary source
+// for BOTH seeker and offer leads, and it no longer depends on broker_portal_leads at all --
+// that table was always seeker-only (only flat_wanted posts get pushed to brokers), which is
+// exactly why offer leads' "Searched at" used to be missing or, worse, silently wrong (picking
+// up an unrelated seeker post by the same number). abPostedMap (built by abLoadPosted, below)
+// is kept ONLY as a fallback for legacy rows posted before this column existed, or for any
+// row where the one-time ALTER TABLE hadn't run yet when it was posted.
+function abPostedIso(l){ return l.whatsapp_posted_at||abPostedMap["L"+l.id]||null; }
 function abPostedFmt(l){
   const iso=abPostedIso(l), d=new Date(iso||l.created_at||0);
   if(!l.created_at && !iso) return "—";
@@ -880,7 +887,7 @@ const TP_AREAS={"mumbai": {"list": ["16th Road Khar", "17th Road Khar", "20th Ro
 //   3. a table like All Brokers (Brokers, Approve / red Live, Edit, click a row for the original),
 //   4. Send: one combined message ("Lead 1", "Lead 2" ...) with masked numbers and no names.
 // =====================================================================
-const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active,listing_type,furnishing,has_brokerage,brokerage_confirmed";
+const TP_COLS=AB_LIST_COLS+",rent_amount,available_from,is_active,listing_type,furnishing,has_brokerage,brokerage_confirmed,whatsapp_posted_at";
 const TP_HELPER="http://127.0.0.1:8765/";
 const TP_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
