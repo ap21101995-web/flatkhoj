@@ -168,6 +168,7 @@ textarea.filter-input { font-family:var(--font); }
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
       <button class="tp-bigbtn" onclick="tpChoose('offerers')"><span class="tp-big-ico">🏠</span><span class="tp-big-t">Help Offerers</span><span class="tp-big-s">Paste an offerer's vacancy or replacement &rarr; see the seekers who could take it</span></button>
     </div>
+    <div style="text-align:center;margin-top:16px"><button class="btn btn-ghost" onclick="tpOpenSentLog()">🗂️ Check what I've already sent to a number</button></div>
   </div>
 
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
@@ -177,6 +178,12 @@ textarea.filter-input { font-family:var(--font); }
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
+    </div>
+
+    <div class="table-card" style="padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label class="lbl" style="margin:0" for="tpSendTo">Sending to (optional)</label>
+      <input class="filter-input" style="max-width:220px" id="tpSendTo" placeholder="Type their number…" oninput="tpSendToChanged()">
+      <span style="font-size:12px;color:var(--ink3)">Leads already sent to this number are hidden below, so you never send the same lead twice.</span>
     </div>
 
     <div class="table-card" style="padding:16px 18px">
@@ -209,13 +216,12 @@ textarea.filter-input { font-family:var(--font); }
     </div>
 
     <div id="tpSummary" style="font-size:13px;color:var(--ink2);margin:4px 0 8px"></div>
-    <div id="tpLocalNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:8px">Shared marks are being saved only in this browser (the pratika_tp_shares table is not set up yet). Run the SQL from chat to keep them everywhere.</div>
+    <div id="tpLocalNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:8px">Sent-log entries are being saved only in this browser (the pratika_tp_sent_log table is not set up yet). Run the SQL from chat to keep them everywhere.</div>
 
     <div class="search-row">
       <input class="filter-input" id="abSearchInput" placeholder="Search by number, requirement or area..." oninput="tpRender()">
       <button class="btn btn-ghost" onclick="tpRefetch()">&#8635; Refresh</button>
     </div>
-    <label style="display:flex;gap:8px;align-items:center;margin:-4px 0 10px;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" class="chk" id="tpHideShared" onchange="tpRender()"> Hide leads I have already shared</label>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
       <button class="btn btn-gold ab-send-btn" onclick="tpOpenSend()" disabled>Send</button>
@@ -232,17 +238,31 @@ textarea.filter-input { font-family:var(--font); }
           <th class="sortable-th" data-f="movein" onclick="tpSetSort('movein')">Move-in</th>
           <th class="sortable-th" data-f="brokerage" onclick="tpSetSort('brokerage')">Brokerage</th>
           <th class="sortable-th" data-f="date" onclick="tpSetSort('date')">Posted (latest)</th>
-          <th class="sortable-th" data-f="shared" onclick="tpSetSort('shared')">Shared</th>
           <th>Brokers</th>
           <th class="sortable-th" data-f="status" onclick="tpSetSort('status')">Approve</th>
           <th>Edit</th>
         </tr></thead>
-        <tbody id="abBody"><tr><td colspan="13" class="empty-state">Loading…</td></tr></tbody>
+        <tbody id="abBody"><tr><td colspan="12" class="empty-state">Loading…</td></tr></tbody>
       </table>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
       <button class="btn btn-gold ab-send-btn" onclick="tpOpenSend()" disabled>Send</button>
+    </div>
+  </div>
+
+  <div class="page" id="tpSentPage" style="max-width:700px;display:none">
+    <div class="page-head">
+      <div><div class="ptitle" style="color:var(--gold)">Sent Log</div>
+        <div class="psub">Type a number to see every lead's unmasked number you've already sent them.</div></div>
+      <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
+    </div>
+    <div class="table-card" style="padding:16px 18px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input class="filter-input" style="flex:1;min-width:200px" id="tpSentLogNum" placeholder="Enter the number, e.g. 9876543210" onkeydown="if(event.key==='Enter')tpSentLogSearch()">
+        <button class="btn btn-gold" onclick="tpSentLogSearch()">Find</button>
+      </div>
+      <div id="tpSentLogResult" style="margin-top:14px"></div>
     </div>
   </div>
 </div>
@@ -284,12 +304,14 @@ textarea.filter-input { font-family:var(--font); }
       <button class="modal-close" onclick="document.getElementById('sendModal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body" style="padding:16px 20px">
-      <textarea id="sendText" class="filter-input" style="width:100%;height:50vh;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55"></textarea>
-      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Numbers are masked (first digit and last two digits only) and no names are included. You can edit the text before copying.</div>
+      <label class="lbl" for="sendTo">Sending to (number(s) — comma or new line separated)</label>
+      <input class="filter-input" id="sendTo" style="width:100%;margin:6px 0 12px" placeholder="e.g. 9876543210, 9123456789">
+      <textarea id="sendText" class="filter-input" style="width:100%;height:42vh;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55"></textarea>
+      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Numbers in the message above are masked (first digit and last two digits only) and no names are included. You can edit the text before copying. The number(s) you type above are only used for your own sent log — they are never added to the message itself.</div>
     </div>
     <div class="modal-foot">
       <div style="font-size:13px;color:var(--ink2)" id="sendCopied"></div>
-      <span><button class="btn btn-ghost" onclick="document.getElementById('sendModal').style.display='none'">Close</button> <button class="btn btn-ghost" onclick="tpCopy(false)">Copy only</button> <button class="btn btn-gold" onclick="tpCopy(true)">Copy &amp; mark as shared</button></span>
+      <span><button class="btn btn-ghost" onclick="document.getElementById('sendModal').style.display='none'">Close</button> <button class="btn btn-ghost" onclick="tpCopy(false)">Copy only</button> <button class="btn btn-gold" onclick="tpCopy(true)">Copy &amp; save as sent</button></span>
     </div>
   </div>
 </div>
@@ -905,7 +927,7 @@ const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct",
 // filter change can no longer cancel an in-flight full data load.
 let tpPoolStat={fetched:0,kept:0,city:""}, tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpApplyToken=0, tpReactCut="";
 let tpSortField="match", tpSortDir=-1, tpSorted=[];   // best fit on top (latest posted first among equals)
-let tpMode=null, tpShares={}, tpSharesLocal=false;
+let tpMode=null, tpSentIndex={}, tpSentLocal=false;
 const TP_DAYS=60;   // listings created or refreshed in the last 60 days are searched
 
 function abIsApproved(l){ return !!(l&&(l._approved||l._live)); }
@@ -1192,9 +1214,18 @@ function tpGoHome(){
   tpMode=null; tpTouched=false; tpToken++; tpApplyToken++;
   document.getElementById("tpHome").style.display="block";
   document.getElementById("tpWork").style.display="none";
+  document.getElementById("tpSentPage").style.display="none";
+}
+function tpOpenSentLog(){
+  document.getElementById("tpHome").style.display="none";
+  document.getElementById("tpWork").style.display="none";
+  document.getElementById("tpSentPage").style.display="block";
+  document.getElementById("tpSentLogNum").value="";
+  document.getElementById("tpSentLogResult").innerHTML="";
 }
 function tpChoose(mode){
   tpMode=mode; tpTouched=false; tpToken++; tpApplyToken++;
+  document.getElementById("tpSendTo").value="";
   const seek=(mode==="seekers");
   // Brokerage column: only for offer leads (Help Seekers). A seeker's lead has no 'brokerage' to speak of.
   const bth=document.querySelector('th[data-f="brokerage"]'); if(bth) bth.style.display=seek?"":"none";
@@ -1205,8 +1236,8 @@ function tpChoose(mode){
   const reqth=document.querySelector('th[data-f="requirement"]'); if(reqth) reqth.textContent=seek?"Offering":"Requirement";
   document.getElementById("tpModeTitle").textContent=seek?"Help Seekers":"Help Offerers";
   document.getElementById("tpModeSub").textContent=seek
-    ? "Pick the areas and details of the seeker (or paste their message). You will see every place (live or not live) that could suit them. Tick the ones to share, press Send, and they are marked as shared."
-    : "Pick the areas and details of the vacancy / replacement (or paste the message). You will see every seeker (live or not live) who could take it. Tick the ones to share, press Send, and they are marked as shared.";
+    ? "Pick the areas and details of the seeker (or paste their message). You will see every place (live or not live) that could suit them. Tick the ones to share, press Send, and copy the message. Type the number you're sending to and it's saved to your sent log."
+    : "Pick the areas and details of the vacancy / replacement (or paste the message). You will see every seeker (live or not live) who could take it. Tick the ones to share, press Send, and copy the message. Type the number you're sending to and it's saved to your sent log.";
   document.getElementById("tpPasteLbl").textContent=seek?"Paste the seeker's message here (or just their number)":"Paste the offerer's message here (or just their number)";
   document.getElementById("tpText").placeholder=seek
     ? "e.g. Girl looking for a single occupancy room in Andheri West, budget 15k, from 15th Nov"
@@ -1223,7 +1254,7 @@ async function tpRefetch(){
   if(!tpTouched) return;
   const my=++tpToken;
   const body=document.getElementById("abBody");
-  body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">Loading…</td></tr>`;
+  body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?12:11}" class="empty-state">Loading…</td></tr>`;
   const days=TP_DAYS, city=document.getElementById("tpCity").value, dir=(tpMode==="seekers"?"seek":"offer");
   const typeQ=dir==="seek"?"listing_type=in.(flatmate_wanted,flat_listing)":"listing_type=eq.flat_wanted";
   const cut=new Date(Date.now()-days*864e5).toISOString();
@@ -1254,11 +1285,11 @@ async function tpRefetch(){
     });
     tpPoolStat={fetched:pool.length, kept:tpPool.length, city:city, drop:drop};
     tpHydrated=new Set(); abLoggedBy={};
-    await tpSharesLoad();
+    await tpSentIndexLoad();
     tpBuildVocab();
   }catch(e){
     console.error("load failed",e);
-    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?12:11}" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
     return;
   }
   await tpApply();
@@ -1336,18 +1367,30 @@ async function tpApply(){
   const o=tpReadOffer(), sum=document.getElementById("tpSummary");
   const rows=[];
   tpPool.forEach(l=>{ const m=tpMatch(l,o); if(m){ l._m=m; rows.push(l); } });
-  abListings=rows;
-  const ids=new Set(rows.map(l=>String(l.id)));
+  // (2026-10-19) "Sending to" is an optional number typed at the top of this page. When it's a
+  // full 10-digit number, any listing already in this recipient's sent log (tpSentIndex, loaded
+  // fresh in tpRefetch -> tpSentIndexLoad) is hidden from the results here -- the owner's own
+  // ask was to never have to re-filter and re-match a lead by hand just to get its unmasked
+  // number again once it's already been sent to someone.
+  const sendTo=abDigits(document.getElementById("tpSendTo").value);
+  const already=sendTo.length===10 ? (tpSentIndex[sendTo]||new Set()) : null;
+  const kept=already ? rows.filter(l=>!already.has(String(l.id))) : rows;
+  abListings=kept;
+  const ids=new Set(kept.map(l=>String(l.id)));
   abSelected=new Set([...abSelected].filter(i=>ids.has(i)));
-  sum.textContent="Loading details for "+rows.length+" listing(s)…";
-  await tpHydrate(rows);
+  sum.textContent="Loading details for "+kept.length+" listing(s)…";
+  await tpHydrate(kept);
   if(my!==tpApplyToken) return;
-  if(rows.some(l=>l._approved)) await abReconcile(tpReactCut);
+  if(kept.some(l=>l._approved)) await abReconcile(tpReactCut);
   if(my!==tpApplyToken) return;
-  const live=rows.filter(l=>l._live).length;
-  sum.innerHTML=`<b>${rows.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} ${o.areas.length?"could fit":"in "+tpPoolStat.city+" (no filters yet)"} &mdash; <b>${live}</b> already live, <b>${rows.length-live}</b> not live yet. Searched ${tpPoolStat.kept} ${tpPoolStat.city} listing(s) created or refreshed in the last ${TP_DAYS} days (${tpPoolStat.fetched} fetched${tpPoolStat.drop?`; left out: ${tpPoolStat.drop.city} other-city, ${tpPoolStat.drop.dup} exact repeats, ${tpPoolStat.drop.phone} without a valid 10-digit number`:""}).`;
+  const live=kept.filter(l=>l._live).length;
+  const hiddenN=rows.length-kept.length;
+  const hiddenNote=already&&hiddenN>0?` <b>${hiddenN}</b> already sent to +91 ${sendTo} ${hiddenN===1?"is":"are"} hidden.`:"";
+  sum.innerHTML=`<b>${kept.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} ${o.areas.length?"could fit":"in "+tpPoolStat.city+" (no filters yet)"} &mdash; <b>${live}</b> already live, <b>${kept.length-live}</b> not live yet. Searched ${tpPoolStat.kept} ${tpPoolStat.city} listing(s) created or refreshed in the last ${TP_DAYS} days (${tpPoolStat.fetched} fetched${tpPoolStat.drop?`; left out: ${tpPoolStat.drop.city} other-city, ${tpPoolStat.drop.dup} exact repeats, ${tpPoolStat.drop.phone} without a valid 10-digit number`:""}).${hiddenNote}`;
   tpRender();
 }
+let tpSendToTimer=null;
+function tpSendToChanged(){ clearTimeout(tpSendToTimer); tpSendToTimer=setTimeout(tpApply,250); }
 
 // ---------- table ----------
 function tpSetSort(f){
@@ -1372,7 +1415,6 @@ function tpSortRows(rows){
     }
     else if(f==="date") c=t(a)-t(b);
     else if(f==="status") c=(a._live?1:0)-(b._live?1:0);
-    else if(f==="shared") c=tpLastShared(a)-tpLastShared(b);
     return c!==0 ? c*d : t(b)-t(a);     // equal on the sorted column -> latest posted first, whichever way it is sorted
   });
 }
@@ -1385,10 +1427,9 @@ function tpRender(){
   const body=document.getElementById("abBody");
   tpSorted=tpSortRows(abListings);
   const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
-  const hideSh=document.getElementById("tpHideShared").checked;
-  const rows=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
+  const rows=tpSorted.filter(l=>(!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?13:12}" class="empty-state">${!tpTouched?"Loading…":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?12:11}" class="empty-state">${!tpTouched?"Loading…":(abListings.length?"No seekers match that search.":"Nothing fits these details. Try other areas, or a different sharing type or gender (those are the only things that hide a listing; budget and move-in only reorder).")}</td></tr>`;
     abUpdateCount(); return;
   }
   const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
@@ -1399,10 +1440,7 @@ function tpRender(){
     const status=live
       ? `<span class="badge" style="background:rgba(220,53,69,.15);color:#ff5b6b;border:1px solid rgba(220,53,69,.45);font-weight:700" title="This listing is already live on the site">● Live</span>`
       : `<button class="btn btn-teal" onclick="abApprove('${escHtml(id)}',this)">Approve</button>`;
-    const sh=tpShares[id], shCell=sh&&sh.length
-      ? `<span class="badge b-ok" title="Shared ${escHtml(sh.map(x=>tpFmtDT(x.shared_at)+(x.client_note?" — "+x.client_note:"")).join("\n"))}">✓ Shared ${escHtml(tpFmtDT(sh[sh.length-1].shared_at))}${sh.length>1?" ×"+sh.length:""}</span> <button class="btn btn-ghost" style="padding:4px 8px" title="The client did not unmask this one — make it open again, as if it was never sent" onclick="tpReopen('${escHtml(id)}',this)">↩ Reopen</button>`
-      : `<span style="color:var(--ink3)">—</span>`;
-    return `<tr class="clickable-row" ${sh&&sh.length?'style="background:var(--green-bg)"':''} onclick="abOpenText('${escHtml(id)}')">
+    return `<tr class="clickable-row" onclick="abOpenText('${escHtml(id)}')">
       <td class="row-select" onclick="event.stopPropagation()"><input type="checkbox" class="chk" ${abSelected.has(id)?"checked":""} onclick="abToggle(event,'${escHtml(id)}')"></td>
       <td style="font-weight:600;white-space:nowrap;width:1%;padding-right:6px">+91 ${escHtml(abDigits(l.custom_contact_phone))}${hold}</td>
       <td>${escHtml(l.gender_preference||"—")}</td>
@@ -1412,7 +1450,6 @@ function tpRender(){
       <td style="white-space:nowrap">${escHtml(tpMoveinText(l))}</td>
       ${tpMode==="seekers"?`<td style="white-space:nowrap">${tpBrokerageCell(l)}</td>`:""}
       <td style="white-space:nowrap">${tpPostedFmt(l)}</td>
-      <td onclick="event.stopPropagation()" style="white-space:nowrap">${shCell}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-gold" onclick="abOpenBrokers('${escHtml(id)}')">Brokers (${n})</button></td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap">${status}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-ghost" onclick="tpEditListing('${escHtml(id)}')">✏️ Edit</button></td>
@@ -1422,8 +1459,7 @@ function tpRender(){
 }
 function tpToggleAll(on){
   const q=(document.getElementById("abSearchInput").value||"").toLowerCase().trim();
-  const hideSh=document.getElementById("tpHideShared").checked;
-  const vis=tpSorted.filter(l=>(!hideSh||!tpShares[String(l.id)]) && (!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
+  const vis=tpSorted.filter(l=>(!q || abDigits(l.custom_contact_phone).includes(q.replace(/\D/g,"")||"\u0000") || abReq(l).toLowerCase().includes(q) || abAreasText(l).toLowerCase().includes(q) || (l.gender_preference||"").toLowerCase().includes(q)));
   if(on) vis.forEach(l=>abSelected.add(String(l.id))); else vis.forEach(l=>abSelected.delete(String(l.id)));
   tpRender();
 }
@@ -1507,22 +1543,32 @@ function tpOpenSend(){
   document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1)).join("\n\n")+"\n\n"+foot;
   document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers masked · no names";
   document.getElementById("sendCopied").textContent="";
+  // (2026-10-19) Prefills from the "Sending to" box at the top of the search page, so the usual
+  // case -- you already typed who you're sending to before picking leads -- needs no retyping.
+  // Still fully editable here: this is also where you type it for the first time if you hadn't,
+  // or add further numbers the same message is going out to.
+  document.getElementById("sendTo").value=document.getElementById("tpSendTo").value||"";
   document.getElementById("sendModal").style.display="flex";
 }
+// (2026-10-19) Replaces the old single global "mark as shared" flag (which just meant "this
+// lead was sent to SOMEONE, ever" -- wrong once the same lead gets legitimately sent to several
+// different people). Saving now always requires the actual recipient number(s), so later the
+// owner can open any number in the Sent Log and get back every lead's real, unmasked number
+// without re-running a search and re-matching listings by hand.
 async function tpCopy(mark){
   const ta=document.getElementById("sendText"), msg=document.getElementById("sendCopied");
   let ok=true;
   try{ await navigator.clipboard.writeText(ta.value); }
   catch(e){ ta.focus(); ta.select(); try{ ok=document.execCommand("copy"); }catch(e2){ ok=false; } }
   if(!ok){ msg.textContent="Could not copy — press Ctrl+C"; return; }
-  if(!mark){ msg.textContent="Copied ✓ (not marked as shared)"; return; }
+  if(!mark){ msg.textContent="Copied ✓ (not saved to the sent log)"; return; }
+  const nums=[...new Set((document.getElementById("sendTo").value||"").split(/[,\n]/).map(s=>abDigits(s)).filter(s=>s.length===10))];
+  if(!nums.length){ msg.textContent="Copied ✓ — type at least one 10-digit number above to save this to your sent log."; return; }
   const ids=tpSendIds||[];
-  const note=(document.getElementById("tpText").value||"").replace(/\s+/g," ").trim().slice(0,70);
-  msg.textContent="Copied ✓ — marking as shared…";
-  const done=await tpSharesAdd(ids,note);
-  ids.forEach(i=>abSelected.delete(i));
+  msg.textContent="Copied ✓ — saving to the sent log…";
+  const done=await tpSentLogAdd(ids,nums);
   tpRender();
-  msg.textContent="Copied ✓ and marked "+done+" lead"+(done===1?"":"s")+" as shared.";
+  msg.textContent=`Copied ✓ — saved ${done} new lead${done===1?"":"s"} to the sent log for ${nums.length} number${nums.length===1?"":"s"} (duplicates, already logged for that number, were skipped).`;
 }
 
 // A listing posted through the site form (or by an older script) has no raw_whatsapp_text of its own.
@@ -1556,9 +1602,14 @@ function abOpenText(id){
   document.getElementById("msgModal").style.display="flex";
 }
 
-// ---------- shared marks (which leads were sent to a client) ----------
+// ---------- sent log (which leads were sent to which recipient number) ----------
+// (2026-10-19) Replaces the old "shared marks" block entirely. The old pratika_tp_shares table
+// is left alone in the database (untouched, unused) rather than dropped -- nothing here reads
+// or writes it any more. The new pratika_tp_sent_log table is keyed by the RECIPIENT's number,
+// not the lead's own number, so the same lead can correctly be sent to several different people
+// without them colliding, and the owner can look any recipient number back up later to get the
+// real, unmasked numbers of everyone already sent to them (see tpSentLogSearch below).
 let tpSendIds=[];
-function tpLastShared(l){ const a=tpShares[String(l.id)]; return a&&a.length?new Date(a[a.length-1].shared_at).getTime():0; }
 function tpFmtDT(iso){ const d=new Date(iso); if(isNaN(d)) return ""; return d.getDate()+" "+TP_MON_NAMES[d.getMonth()]+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); }
 function tpPostedFmt(l){
   const iso=abPostedIso(l), d=new Date(iso||l.created_at||0);
@@ -1566,44 +1617,84 @@ function tpPostedFmt(l){
   const t=d.getDate()+" "+TP_MON_NAMES[d.getMonth()]+" "+d.getFullYear()+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
   return iso?t:`<span title="No WhatsApp timestamp found for this number; showing when the listing was created or refreshed">${t} ~</span>`;
 }
-const TP_LS_KEY="fk_tp_shares";
-function tpLocalRead(){ try{ return JSON.parse(localStorage.getItem(TP_LS_KEY)||"[]"); }catch(e){ return []; } }
-function tpLocalWrite(a){ try{ localStorage.setItem(TP_LS_KEY,JSON.stringify(a)); }catch(e){} }
-async function tpSharesLoad(){
+const TP_SENT_LS_KEY="fk_tp_sent_log";
+function tpLocalSentRead(){ try{ return JSON.parse(localStorage.getItem(TP_SENT_LS_KEY)||"[]"); }catch(e){ return []; } }
+function tpLocalSentWrite(a){ try{ localStorage.setItem(TP_SENT_LS_KEY,JSON.stringify(a)); }catch(e){} }
+// Builds recipient_phone -> Set(listing_id) across EVERY recipient, loaded fresh whenever a mode
+// is (re)opened, so both the "Sending to" live filter in tpApply and tpSentLogAdd's own
+// duplicate check always work from the current picture. Local-storage rows (saved only when the
+// real table wasn't reachable, e.g. before the one-time SQL below has been run) are always
+// merged in too, the same defensive pattern used elsewhere in this codebase.
+async function tpSentIndexLoad(){
   let rows=null;
   try{
-    const call=()=>fetch(`${SUPA_URL}/rest/v1/pratika_tp_shares?select=id,listing_id,phone,mode,client_note,shared_at&order=shared_at.asc&limit=5000`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`}});
+    const call=()=>fetch(`${SUPA_URL}/rest/v1/pratika_tp_sent_log?select=listing_id,recipient_phone&limit=20000`,{headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`}});
     let res=await call();
     if(res.status===401 && await refreshSession()) res=await call();
     if(res.ok) rows=await res.json();
-  }catch(e){ console.error("shares read failed",e); }
-  tpSharesLocal=(rows===null);
-  if(tpSharesLocal) rows=tpLocalRead();
-  tpShares={};
-  rows.forEach(r=>{ (tpShares[String(r.listing_id)]=tpShares[String(r.listing_id)]||[]).push(r); });
-  document.getElementById("tpLocalNote").style.display=tpSharesLocal?"block":"none";
+  }catch(e){ console.error("sent log read failed",e); }
+  tpSentLocal=(rows===null);
+  rows=(rows||[]).concat(tpLocalSentRead());
+  tpSentIndex={};
+  rows.forEach(r=>{ const num=abDigits(r.recipient_phone); if(!num) return; (tpSentIndex[num]=tpSentIndex[num]||new Set()).add(String(r.listing_id)); });
+  document.getElementById("tpLocalNote").style.display=tpSentLocal?"block":"none";
 }
-async function tpSharesAdd(ids,note){
-  const now=new Date().toISOString(), rows=ids.map(id=>{ const l=abListings.find(x=>String(x.id)===id)||{}; return {listing_id:id,phone:abDigits(l.custom_contact_phone),mode:tpMode,client_note:note,shared_at:now}; });
-  if(!tpSharesLocal){
-    const ok=await abInsert("pratika_tp_shares",rows);
-    if(!ok) tpSharesLocal=true;
+// Logs every (lead, recipient) pair that isn't already in tpSentIndex. A pair already logged for
+// THAT recipient is silently skipped -- this is what makes "send more numbers the same message"
+// and "send more leads to a number already used" both just work by reopening Send again, with no
+// separate batch concept needed.
+async function tpSentLogAdd(ids,nums){
+  const now=new Date().toISOString(), rows=[];
+  ids.forEach(id=>{
+    const l=abListings.find(x=>String(x.id)===id)||tpPool.find(x=>String(x.id)===id)||{};
+    nums.forEach(num=>{
+      const have=tpSentIndex[num]||(tpSentIndex[num]=new Set());
+      if(have.has(id)) return;
+      rows.push({listing_id:id,recipient_phone:num,lead_phone:abDigits(l.custom_contact_phone),mode:tpMode,sent_at:now});
+    });
+  });
+  if(!rows.length) return 0;
+  if(!tpSentLocal){
+    const ok=await abInsert("pratika_tp_sent_log",rows);
+    if(!ok) tpSentLocal=true;
   }
-  if(tpSharesLocal){ tpLocalWrite(tpLocalRead().concat(rows)); document.getElementById("tpLocalNote").style.display="block"; }
-  rows.forEach(r=>{ (tpShares[r.listing_id]=tpShares[r.listing_id]||[]).push(r); });
+  if(tpSentLocal){
+    const withIds=rows.map(r=>Object.assign({id:"local-"+Date.now().toString(36)+Math.random().toString(36).slice(2,8)},r));
+    tpLocalSentWrite(tpLocalSentRead().concat(withIds));
+    document.getElementById("tpLocalNote").style.display="block";
+  }
+  rows.forEach(r=>{ (tpSentIndex[r.recipient_phone]=tpSentIndex[r.recipient_phone]||new Set()).add(String(r.listing_id)); });
   return rows.length;
 }
-async function tpReopen(id,btn){
-  if(!confirm("Make this lead open again, as if it was never sent? Use this when the client declined to unmask it.")) return;
-  btn.disabled=true;
-  if(!tpSharesLocal){
-    const call=()=>fetch(`${SUPA_URL}/rest/v1/pratika_tp_shares?listing_id=eq.${encodeURIComponent(id)}`,{method:"DELETE",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"return=minimal"}});
+// ---------- Sent Log page: type a number, see every lead's unmasked number sent to them ----------
+async function tpSentLogSearch(){
+  const num=abDigits(document.getElementById("tpSentLogNum").value);
+  const box=document.getElementById("tpSentLogResult");
+  if(num.length!==10){ box.innerHTML='<div class="empty-state">Enter a valid 10-digit number.</div>'; return; }
+  box.innerHTML='<div class="empty-state">Searching…</div>';
+  let rows=[];
+  try{ rows=await supaGetAll(`pratika_tp_sent_log?recipient_phone=eq.${num}&select=id,lead_phone,mode,sent_at&order=sent_at.desc`); }
+  catch(e){ console.error("sent log search failed",e); }
+  const local=tpLocalSentRead().filter(r=>abDigits(r.recipient_phone)===num).map(r=>({id:r.id,lead_phone:r.lead_phone,mode:r.mode,sent_at:r.sent_at}));
+  rows=rows.concat(local).sort((a,b)=>new Date(b.sent_at)-new Date(a.sent_at));
+  if(!rows.length){ box.innerHTML=`<div class="empty-state">Nothing sent to +91 ${num} yet.</div>`; return; }
+  box.innerHTML=`<div style="font-size:13px;color:var(--ink2);margin-bottom:8px">${rows.length} lead${rows.length===1?"":"s"} sent to +91 ${num}</div>`+
+    rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border2)">
+      <div><span style="font-weight:600">+91 ${escHtml(r.lead_phone||"—")}</span> <span style="font-size:12px;color:var(--ink3)">· ${escHtml(r.mode==="seekers"?"offer lead":"seeker lead")}</span></div>
+      <div style="font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:8px">${escHtml(tpFmtDT(r.sent_at))} <button class="btn btn-ghost" style="padding:3px 8px" onclick="tpSentLogRemove('${escHtml(String(r.id))}')">Remove</button></div>
+    </div>`).join("");
+}
+async function tpSentLogRemove(id){
+  if(!confirm("Remove this from the sent log? Use this if it was logged by mistake.")) return;
+  if(String(id).startsWith("local-")){
+    tpLocalSentWrite(tpLocalSentRead().filter(r=>r.id!==id));
+  }else{
+    const call=()=>fetch(`${SUPA_URL}/rest/v1/pratika_tp_sent_log?id=eq.${encodeURIComponent(id)}`,{method:"DELETE",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,Prefer:"return=minimal"}});
     let res=await call();
     if(res.status===401 && await refreshSession()) res=await call();
-    if(!res.ok){ alert("Could not reopen it ("+res.status+"). Nothing was changed."); btn.disabled=false; return; }
-  }else tpLocalWrite(tpLocalRead().filter(r=>String(r.listing_id)!==id));
-  delete tpShares[id];
-  tpRender();
+    if(!res.ok){ alert("Could not remove it ("+res.status+")."); return; }
+  }
+  tpSentLogSearch();
 }
 tryRestoreSession();
 
