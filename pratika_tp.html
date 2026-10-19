@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP28</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP29</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -173,7 +173,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP28</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP29</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -1199,6 +1199,10 @@ function tpChoose(mode){
   // Brokerage column: only for offer leads (Help Seekers). A seeker's lead has no 'brokerage' to speak of.
   const bth=document.querySelector('th[data-f="brokerage"]'); if(bth) bth.style.display=seek?"":"none";
   if(!seek && tpSortField==="brokerage"){ tpSortField="match"; tpSortDir=-1; }
+  // (2026-10-19) Help Seekers shows OFFER listings (a room/flat being offered) -- "Requirement"
+  // read like it was asking what the seeker needs, when the column is actually showing what's
+  // on offer. Help Offerers still shows seeker listings, where "Requirement" is correct as-is.
+  const reqth=document.querySelector('th[data-f="requirement"]'); if(reqth) reqth.textContent=seek?"Offering":"Requirement";
   document.getElementById("tpModeTitle").textContent=seek?"Help Seekers":"Help Offerers";
   document.getElementById("tpModeSub").textContent=seek
     ? "Pick the areas and details of the seeker (or paste their message). You will see every place (live or not live) that could suit them. Tick the ones to share, press Send, and they are marked as shared."
@@ -1475,7 +1479,11 @@ function tpLeadText(l,i){
     // shown when brokerage_confirmed===true -- silently omitted for the "No info" majority of
     // posts). Now always present, in the same 3-state wording as the Brokerage table column.
     lines.push(`Brokerage: ${tpBrokerageText(l)}`);
-    lines.push(`Requirement: ${req==="Undisclosed"?"Not specified":req}`);   // same text as the Requirement column / main portal
+    // (2026-10-19) This branch only ever runs for offer listings (flatmate_wanted/flat_listing),
+    // which only ever show up in Help Seekers mode -- "Requirement" read like it was asking what
+    // the seeker needs, when this is actually describing what's on offer. Relabeled to match the
+    // table column's "Offering" header in that mode.
+    lines.push(`Offering: ${req==="Undisclosed"?"Not specified":req}`);
     lines.push(`Areas: ${abAreasText(l)||"Not specified"}`);
     if(l.rent_amount) lines.push(`Rent: ${tpMoney(l.rent_amount)}/month`);
     lines.push(`Preferred gender: ${gtxt}`);
@@ -1539,7 +1547,9 @@ function abOpenText(id){
   document.getElementById("msgModalMeta").textContent=`From: ${grp||(raw?"Unknown group":"posted on the site, not from a WhatsApp group")}  ·  Posted: ${when?new Date(when).toLocaleString():"Unknown"}`;
   let txt=raw;
   if(!txt){
-    const rows=[["Gender",l.gender_preference],["Requirement",abReq(l)],["Areas",abAreasText(l)],["Budget / rent",l.rent_amount?tpMoney(l.rent_amount):""],["Move-in",(l.available_from||l.available_immediately)?tpMoveinText(l):""],["Brokerage",l.brokerage_preference],["Furnishing",l.furnishing]].filter(r=>r[1]&&r[1]!=="Undisclosed");
+    // (2026-10-19) Label matches the table column / tpLeadText: "Offering" for an offer listing
+    // (Help Seekers mode), "Requirement" for a seeker listing (Help Offerers mode).
+    const rows=[["Gender",l.gender_preference],[tpMode==="seekers"?"Offering":"Requirement",abReq(l)],["Areas",abAreasText(l)],["Budget / rent",l.rent_amount?tpMoney(l.rent_amount):""],["Move-in",(l.available_from||l.available_immediately)?tpMoveinText(l):""],["Brokerage",l.brokerage_preference],["Furnishing",l.furnishing]].filter(r=>r[1]&&r[1]!=="Undisclosed");
     txt="No original WhatsApp message is saved for this number — the listing was posted through the site form, or before messages were stored.\n\nDetails on the listing:\n"+rows.map(r=>r[0]+": "+r[1]).join("\n");
   }
   document.getElementById("msgModalText").textContent=txt;
