@@ -174,7 +174,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 19-Oct-TP29</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 20-Oct-TP30</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -248,6 +248,38 @@ textarea.filter-input { font-family:var(--font); }
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
       <div style="font-size:13px; color:var(--ink3)"><span class="ab-selected-count">0</span> selected</div>
       <button class="btn btn-gold ab-send-btn" onclick="tpOpenSend()" disabled>Send</button>
+    </div>
+
+    <!-- (2026-10-20) Suggested recipients: other people (same type the owner would otherwise have
+         manually spotted) whose own post matches these same filters -- so a lead found above can be
+         shared with several matching people, not just the one person manually spotted. Sorted by
+         latest posted. "Confirm sent" logs the ticked leads above x the ticked numbers below into the
+         same pratika_tp_sent_log table the Send modal already uses (tpSentLogAdd) -- no new table. -->
+    <div class="table-card" id="tpSugCard" style="margin-top:18px;padding:16px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;color:var(--gold);font-size:14px">💡 Who else could want these leads?</div>
+          <div style="font-size:12px;color:var(--ink3)" id="tpSugSub">Other <span id="tpSugKind">people</span> matching the same areas and details, latest posted first. Open "View message" to confirm they're genuinely looking before you share with them.</div>
+        </div>
+        <div style="font-size:13px;color:var(--ink3)"><span class="tp-sug-selected-count">0</span> selected</div>
+      </div>
+      <div class="table-card" style="padding:0">
+        <table>
+          <thead><tr>
+            <th class="row-select"><input type="checkbox" class="chk" id="tpSugSelectAll" onclick="tpSugToggleAll(this.checked)"></th>
+            <th>Number</th>
+            <th>Posted (latest)</th>
+            <th>Sent before</th>
+            <th>Message</th>
+          </tr></thead>
+          <tbody id="tpSugBody"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:12px;color:var(--ink3)">Tick the lead(s) above too, send them however you normally do, then tick the number(s) here and confirm.</div>
+        <button class="btn btn-gold" onclick="tpSugConfirmSent()">✅ Confirm sent to selected</button>
+      </div>
+      <div id="tpSugMsg" style="font-size:12px;color:var(--ink3);margin-top:6px"></div>
     </div>
   </div>
 
@@ -928,6 +960,11 @@ const TP_MON_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct",
 let tpPoolStat={fetched:0,kept:0,city:""}, tpPool=[], tpVocab=new Map(), tpHydrated=new Set(), tpTouched=false, tpToken=0, tpApplyToken=0, tpReactCut="";
 let tpSortField="match", tpSortDir=-1, tpSorted=[];   // best fit on top (latest posted first among equals)
 let tpMode=null, tpSentIndex={}, tpSentLocal=false;
+// (2026-10-20) Suggestions: a second pool, of the OPPOSITE listing type from the main leads
+// pool above (i.e. the same type the owner would otherwise have manually spotted in a WhatsApp
+// group), matched against the SAME filter criteria, sorted strictly by latest posted -- so a
+// lead can be shared with several matching people, not just the one the owner happened to spot.
+let tpSugPool=[], tpSugListings=[], tpSugSelected=new Set();
 const TP_DAYS=60;   // listings created or refreshed in the last 60 days are searched
 
 function abIsApproved(l){ return !!(l&&(l._approved||l._live)); }
@@ -1108,7 +1145,8 @@ function tpClear(){
   tpSetSharing([]); document.getElementById("tpGender").value="";
   document.getElementById("tpParseNote").textContent="The areas, sharing type, gender, move-in date and rent are read from the text by the auto-posting engine. Check them below and change anything that is wrong.";
   abListings=[]; abSelected=new Set(); document.getElementById("tpSummary").textContent="";
-  tpRender();
+  tpSugListings=[]; tpSugSelected=new Set();
+  tpRender(); tpRenderSug();
 }
 // Reads the pasted message with the AUTO-POSTING engine (through the helper running on this PC).
 // If the helper is not running, falls back to the page's own simpler reader.
@@ -1212,6 +1250,7 @@ async function tpFind(){
 // ---------- home / mode ----------
 function tpGoHome(){
   tpMode=null; tpTouched=false; tpToken++; tpApplyToken++;
+  tpSugPool=[]; tpSugListings=[]; tpSugSelected=new Set();
   document.getElementById("tpHome").style.display="block";
   document.getElementById("tpWork").style.display="none";
   document.getElementById("tpSentPage").style.display="none";
@@ -1225,6 +1264,7 @@ function tpOpenSentLog(){
 }
 function tpChoose(mode){
   tpMode=mode; tpTouched=false; tpToken++; tpApplyToken++;
+  tpSugPool=[]; tpSugListings=[]; tpSugSelected=new Set();
   document.getElementById("tpSendTo").value="";
   const seek=(mode==="seekers");
   // Brokerage column: only for offer leads (Help Seekers). A seeker's lead has no 'brokerage' to speak of.
@@ -1292,6 +1332,24 @@ async function tpRefetch(){
     body.innerHTML=`<tr><td colspan="${tpMode==='seekers'?12:11}" class="empty-state">Could not load listings (${escHtml(String((e&&e.message)||e).slice(0,300))}). Press Refresh to try again.</td></tr>`;
     return;
   }
+  // (2026-10-20) Suggestions pool: the OPPOSITE listing type from the leads just fetched above
+  // (e.g. other seekers, when the leads are offers), same city/window/rejected filter. Kept in a
+  // try/catch of its own so a failure here never breaks the main leads list -- Suggestions is an
+  // addition, not something the core "find leads" flow depends on.
+  try{
+    const sugDir=(dir==="seek"?"offer":"seek");
+    const sugTypeQ=sugDir==="seek"?"listing_type=in.(flatmate_wanted,flat_listing)":"listing_type=eq.flat_wanted";
+    const sugRows=await supaGetAll(`listings?select=${TP_COLS}&${sugTypeQ}&rejected=eq.false&created_at=gte.${encodeURIComponent(cut)}&order=created_at.desc`);
+    if(my!==tpToken) return;
+    const sseen=new Set(); tpSugPool=[];
+    sugRows.forEach(l=>{
+      if(abNorm(l.city||"mumbai")!==city) return;
+      const ph=abDigits(l.custom_contact_phone); if(ph.length!==10) return;
+      const key=[ph,abNorm(l.room_type),abNorm(abAreasText(l)),abNorm(l.flat_type),abNorm(l.listing_type)].join("|");
+      if(sseen.has(key)) return; sseen.add(key);
+      tpSugPool.push(l);
+    });
+  }catch(e){ console.error("suggestions load failed",e); tpSugPool=[]; }
   await tpApply();
 }
 async function abLoad(){ await tpRefetch(); }   // used by the shared Approve / Send-more code
@@ -1388,9 +1446,77 @@ async function tpApply(){
   const hiddenNote=already&&hiddenN>0?` <b>${hiddenN}</b> already sent to +91 ${sendTo} ${hiddenN===1?"is":"are"} hidden.`:"";
   sum.innerHTML=`<b>${kept.length}</b> ${o.dir==="seek"?"place(s)":"seeker(s)"} ${o.areas.length?"could fit":"in "+tpPoolStat.city+" (no filters yet)"} &mdash; <b>${live}</b> already live, <b>${kept.length-live}</b> not live yet. Searched ${tpPoolStat.kept} ${tpPoolStat.city} listing(s) created or refreshed in the last ${TP_DAYS} days (${tpPoolStat.fetched} fetched${tpPoolStat.drop?`; left out: ${tpPoolStat.drop.city} other-city, ${tpPoolStat.drop.dup} exact repeats, ${tpPoolStat.drop.phone} without a valid 10-digit number`:""}).${hiddenNote}`;
   tpRender();
+  tpApplySug();
 }
 let tpSendToTimer=null;
 function tpSendToChanged(){ clearTimeout(tpSendToTimer); tpSendToTimer=setTimeout(tpApply,250); }
+
+// ---------- suggestions: other matching people who could also want these leads ----------
+// (2026-10-20) Reuses tpMatch() with dir FLIPPED -- Suggestions are the opposite listing type
+// from the main leads, so the same hard filters (area / stated sharing / stated gender) that
+// decide whether a LEAD fits the owner's typed criteria also decide whether a SUGGESTED person
+// fits it. The score/reasons tpMatch also returns are discarded here on purpose: Suggestions are
+// always sorted strictly by latest posted (the owner's own ask), never by match quality.
+function tpApplySug(){
+  const o=tpReadOffer();
+  const o2=Object.assign({},o,{dir:(o.dir==="seek"?"offer":"seek")});
+  const rows=[];
+  tpSugPool.forEach(l=>{ if(tpMatch(l,o2)!==null) rows.push(l); });
+  const t=l=>new Date(abPostedIso(l)||l.created_at||0).getTime();
+  rows.sort((a,b)=>t(b)-t(a));
+  tpSugListings=rows;
+  const ids=new Set(tpSugListings.map(l=>String(l.id)));
+  tpSugSelected=new Set([...tpSugSelected].filter(i=>ids.has(i)));
+  tpRenderSug();
+}
+function tpRenderSug(){
+  const body=document.getElementById("tpSugBody");
+  if(!body) return;
+  const kindEl=document.getElementById("tpSugKind"); if(kindEl) kindEl.textContent=(tpMode==="seekers")?"seekers":"offers / places";
+  if(!tpSugListings.length){
+    body.innerHTML=`<tr><td colspan="5" class="empty-state">${!tpTouched?"Loading…":"No other "+((tpMode==="seekers")?"seekers":"offers")+" match these details right now."}</td></tr>`;
+    tpSugUpdateCount(); return;
+  }
+  body.innerHTML=tpSugListings.map(l=>{
+    const id=String(l.id), num=abDigits(l.custom_contact_phone);
+    const sentN=(tpSentIndex[num]&&tpSentIndex[num].size)||0;
+    return `<tr>
+      <td class="row-select"><input type="checkbox" class="chk" ${tpSugSelected.has(id)?"checked":""} onclick="tpSugToggle('${escHtml(id)}')"></td>
+      <td style="font-weight:600;white-space:nowrap">+91 ${escHtml(num)}</td>
+      <td style="white-space:nowrap">${tpPostedFmt(l)}</td>
+      <td>${sentN?`<span class="badge b-count">Sent ${sentN} lead${sentN===1?"":"s"} before</span>`:"—"}</td>
+      <td><button class="btn btn-ghost" onclick="abOpenText('${escHtml(id)}')">View message</button></td>
+    </tr>`;
+  }).join("");
+  tpSugUpdateCount();
+}
+function tpSugUpdateCount(){
+  document.querySelectorAll(".tp-sug-selected-count").forEach(el=>el.textContent=tpSugSelected.size);
+  const all=document.getElementById("tpSugSelectAll"); if(all) all.checked=tpSugListings.length>0 && tpSugSelected.size>=tpSugListings.length;
+}
+function tpSugToggle(id){
+  if(tpSugSelected.has(id)) tpSugSelected.delete(id); else tpSugSelected.add(id);
+  tpSugUpdateCount();
+}
+function tpSugToggleAll(on){
+  if(on) tpSugListings.forEach(l=>tpSugSelected.add(String(l.id))); else tpSugSelected.clear();
+  tpRenderSug();
+}
+// Logs every (ticked lead above) x (ticked number below) pair into pratika_tp_sent_log, reusing
+// tpSentLogAdd exactly as the Send modal's "Copy & save as sent" already does -- no new table,
+// no new logging path, just a second way to supply the (leads, numbers) pair to the same function.
+async function tpSugConfirmSent(){
+  const msg=document.getElementById("tpSugMsg");
+  const nums=[...tpSugSelected].map(id=>{ const l=tpSugListings.find(x=>String(x.id)===id); return l?abDigits(l.custom_contact_phone):""; }).filter(n=>n.length===10);
+  const ids=[...abSelected];
+  if(!ids.length){ msg.textContent="Tick at least one lead in the table above first — that is what you are confirming you sent."; return; }
+  if(!nums.length){ msg.textContent="Tick at least one number below first."; return; }
+  msg.textContent="Saving to the sent log…";
+  const done=await tpSentLogAdd(ids,nums);
+  tpSugSelected=new Set();
+  tpRenderSug(); tpRender();
+  msg.textContent=`Saved ${done} new lead${done===1?"":"s"} to the sent log for ${nums.length} number${nums.length===1?"":"s"} (duplicates, already logged for that number, were skipped).`;
+}
 
 // ---------- table ----------
 function tpSetSort(f){
@@ -1584,7 +1710,9 @@ async function tpLoadPortalInfo(rows){
   }
 }
 function abOpenText(id){
-  const l=abListings.find(x=>String(x.id)===id); if(!l) return;
+  // (2026-10-20) Also checked against tpSugListings -- the Suggestions panel's own "View
+  // message" button opens the same modal for a person who is NOT one of the main leads.
+  const l=abListings.find(x=>String(x.id)===id)||tpSugListings.find(x=>String(x.id)===id); if(!l) return;
   const k=abDigits(l.custom_contact_phone), pi=tpPortalInfo[k];
   const raw=l.raw_whatsapp_text||(pi&&pi.raw_whatsapp_text)||"";
   const grp=l.whatsapp_group_name||(pi&&pi.whatsapp_group_name)||"";
