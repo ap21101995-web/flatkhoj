@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 21-Oct-TP31</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 21-Oct-TP32</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -174,7 +174,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 21-Oct-TP31</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 21-Oct-TP32</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -583,9 +583,13 @@ async function abLoadPosted(listings){
   });
 }
 function abIsPaid(l){ return String(l.brokerage_preference||"").toLowerCase()==="yes"; }
-// (2026-10-21) An OFFER (flatmate_wanted / flat_listing) whose brokerage is CONFIRMED as applying is a broker's / paid
-// listing -- it must never go to other brokers as a lead (free or paid). Owner's rule; seekers (flat_wanted) are unaffected.
-function abBrokerageBlocked(l){ return !!l && (l.listing_type==="flatmate_wanted"||l.listing_type==="flat_listing") && l.has_brokerage===true && l.brokerage_confirmed===true; }
+// (2026-10-21) Owner's rule: an OFFER (flatmate_wanted / flat_listing) goes to brokers ONLY when its brokerage is confirmed
+// as "No brokerage". Blocked when brokerage is confirmed as applying (a broker's / paid listing) AND when it is still
+// "No info" (brokerage_confirmed not true) -- an unconfirmed offer must never go out as a free lead. Once you edit the
+// listing and confirm "No brokerage", it flows to brokers as normal. Seekers (flat_wanted) are unaffected.
+function abIsOffer(l){ return !!l && (l.listing_type==="flatmate_wanted"||l.listing_type==="flat_listing"); }
+function abBrokerageBlocked(l){ return abIsOffer(l) && !(l.brokerage_confirmed===true && l.has_brokerage===false); }
+function abBlockedWhy(l){ return (l&&l.brokerage_confirmed===true)?"brokerage applies on this listing":"brokerage is not confirmed yet on this listing (No info) -- edit it and confirm No brokerage to send it"; }
 function abIndexLeads(leads){
   const idx={};
   leads.forEach(r=>{
@@ -675,7 +679,7 @@ function abCompute(l){
       eligible.push({b,tagged,inPot,wa});
     }
   });
-  // (2026-10-21) brokerage applies on this offer -> no broker gets it (not by area, Potential Data, or by hand)
+  // (2026-10-21) offer with brokerage applying OR not yet confirmed -> no broker gets it (not by area, Potential Data, or by hand)
   if(abBrokerageBlocked(l)) return {eligible:[],received,blocked:true};
   // brokers added by hand for this lead (even if the area isn't tagged to them)
   abExtra[String(l.id)] && [...abExtra[String(l.id)]].forEach(bid=>{
@@ -727,7 +731,7 @@ function abRenderModal(){
   const ex=abExcluded[abModalListingId]||new Set();
   document.getElementById("abModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
   let html="";
-  if(abBrokerageBlocked(l)) html+=`<div class="empty-state">Brokerage applies on this listing, so it is not sent to any broker as a lead.</div>`;
+  if(abBrokerageBlocked(l)) html+=`<div class="empty-state">Not sent to any broker: ${escHtml(abBlockedWhy(l))}.</div>`;
   else if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data. Use \"Add another broker\" below."}</div>`;
   else{
     html+=`<div class="ab-sec">${abIsApproved(l)?"Not sent yet (click &times; to leave one out, then use the button below to send to the rest)":"Will receive (click &times; to leave one out)"}</div>`;
@@ -911,7 +915,7 @@ async function abApprove(id, btn){
   const wa=inc.filter(e=>e.wa), excel=inc.filter(e=>!e.wa);
   const skipQ=abIsPaid(l)?wa.filter(e=>abQuotaFull(e.b)):[];
   let msg=`Approve +91 ${abDigits(l.custom_contact_phone)} (${abReq(l)} · ${abAreasText(l)||"no area"}) and send it ONLY to:\n\n`;
-  msg+=wa.length?wa.map(e=>`• ${e.b.name}`).join("\n"):(abBrokerageBlocked(l)?"• nobody (brokerage applies on this listing, so it is not sent to brokers)":"• nobody (no WhatsApp-capable broker is included)");
+  msg+=wa.length?wa.map(e=>`• ${e.b.name}`).join("\n"):(abBrokerageBlocked(l)?`• nobody (${abBlockedWhy(l)})`:"• nobody (no WhatsApp-capable broker is included)");
   if(excel.length) msg+=`\n\nIncluded but Excel-only (no area tag / WhatsApp not active, so they will NOT get a WhatsApp — use Download Excel for them):\n`+excel.map(e=>`• ${e.b.name}`).join("\n");
   msg+=`\n\nMake sure you have already edited this listing on the main site. Continue?`;
   if(skipQ.length) msg+=`\n\nQuota is full for ${skipQ.map(e=>e.b.name).join(", ")} — a paid lead will NOT be sent to them.`;
