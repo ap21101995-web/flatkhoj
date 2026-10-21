@@ -1284,6 +1284,9 @@ async function abLoadPosted(listings){
   });
 }
 function abIsPaid(l){ return String(l.brokerage_preference||"").toLowerCase()==="yes"; }
+// (2026-10-21) An OFFER (flatmate_wanted / flat_listing) whose brokerage is CONFIRMED as applying is a broker's / paid
+// listing -- it must never go to other brokers as a lead (free or paid). Owner's rule; seekers (flat_wanted) are unaffected.
+function abBrokerageBlocked(l){ return !!l && (l.listing_type==="flatmate_wanted"||l.listing_type==="flat_listing") && l.has_brokerage===true && l.brokerage_confirmed===true; }
 function abIndexLeads(leads){
   const idx={};
   leads.forEach(r=>{
@@ -1343,7 +1346,9 @@ async function abRefreshEdited(){
   abEditBusy=true;
   try{
     const ids=[...abEdited];
-    const rows=await supaGetAll(`listings?select=${AB_LIST_COLS}&id=in.(${ids.map(encodeURIComponent).join(",")})`);
+    // (2026-10-21) Pratika_TP needs listing_type/has_brokerage/brokerage_confirmed back too (TP_COLS), or the
+    // brokerage rule above would silently stop applying to a row the moment it was edited.
+    const rows=await supaGetAll(`listings?select=${typeof TP_COLS!=="undefined"?TP_COLS:AB_LIST_COLS}&id=in.(${ids.map(encodeURIComponent).join(",")})`);
     let changed=false;
     rows.forEach(r=>{
       const i=abListings.findIndex(x=>String(x.id)===String(r.id)); if(i<0) return;
@@ -1407,6 +1412,8 @@ function abCompute(l){
       eligible.push({b,tagged,inPot,wa});
     }
   });
+  // (2026-10-21) brokerage applies on this offer -> no broker gets it (not by area, Potential Data, or by hand)
+  if(abBrokerageBlocked(l)) return {eligible:[],received,blocked:true};
   // brokers added by hand for this lead (even if the area isn't tagged to them)
   abExtra[String(l.id)] && [...abExtra[String(l.id)]].forEach(bid=>{
     const b=abBrokers.find(x=>String(x.id)===bid); if(!b||received.some(r=>r.b===b)||eligible.some(e=>e.b===b)) return;
@@ -1415,11 +1422,13 @@ function abCompute(l){
   return {eligible,received};
 }
 function abAddable(l){
+  if(abBrokerageBlocked(l)) return [];
   const {eligible,received}=abCompute(l), city=abNorm(l.city||"mumbai");
   return abBrokers.filter(b=>abNorm(b.city||"mumbai")===city && !eligible.some(e=>e.b===b) && !received.some(r=>r.b===b));
 }
 function abAddBroker(){
   const sel=document.getElementById("abAddSel"); if(!sel||!sel.value) return;
+  if(abBrokerageBlocked(abListings.find(x=>String(x.id)===abModalListingId))) return;
   (abExtra[abModalListingId]=abExtra[abModalListingId]||new Set()).add(sel.value);
   const ex=abExcluded[abModalListingId]; if(ex) ex.delete(sel.value);
   abRenderModal();
@@ -1525,7 +1534,8 @@ function abRenderModal(){
   const ex=abExcluded[abModalListingId]||new Set();
   document.getElementById("abModalSub").textContent=`+91 ${abDigits(l.custom_contact_phone)} · ${abReq(l)} · ${abAreasText(l)||"—"}`;
   let html="";
-  if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data. Use \"Add another broker\" below."}</div>`;
+  if(abBrokerageBlocked(l)) html+=`<div class="empty-state">Brokerage applies on this listing, so it is not sent to any broker as a lead.</div>`;
+  else if(!eligible.length) html+=`<div class="empty-state">${abIsApproved(l)?"This lead has been approved from here.":"No other broker has this area tagged or has this number in their Potential Data. Use \"Add another broker\" below."}</div>`;
   else{
     html+=`<div class="ab-sec">${abIsApproved(l)?"Not sent yet (click &times; to leave one out, then use the button below to send to the rest)":"Will receive (click &times; to leave one out)"}</div>`;
     html+=eligible.map(e=>{
@@ -1793,7 +1803,7 @@ async function abApprove(id, btn){
   const wa=inc.filter(e=>e.wa), excel=inc.filter(e=>!e.wa);
   const skipQ=abIsPaid(l)?wa.filter(e=>abQuotaFull(e.b)):[];
   let msg=`Approve +91 ${abDigits(l.custom_contact_phone)} (${abReq(l)} · ${abAreasText(l)||"no area"}) and send it ONLY to:\n\n`;
-  msg+=wa.length?wa.map(e=>`• ${e.b.name}`).join("\n"):"• nobody (no WhatsApp-capable broker is included)";
+  msg+=wa.length?wa.map(e=>`• ${e.b.name}`).join("\n"):(abBrokerageBlocked(l)?"• nobody (brokerage applies on this listing, so it is not sent to brokers)":"• nobody (no WhatsApp-capable broker is included)");
   if(excel.length) msg+=`\n\nIncluded but Excel-only (no area tag / WhatsApp not active, so they will NOT get a WhatsApp — use Download Excel for them):\n`+excel.map(e=>`• ${e.b.name}`).join("\n");
   msg+=`\n\nMake sure you have already edited this listing on the main site. Continue?`;
   if(skipQ.length) msg+=`\n\nQuota is full for ${skipQ.map(e=>e.b.name).join(", ")} — a paid lead will NOT be sent to them.`;
