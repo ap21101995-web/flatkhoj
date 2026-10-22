@@ -134,7 +134,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
     <div class="nav-item" onclick="go('unlocks',this)"><span>🔓</span> Contact Unlocks</div>
     <div class="nav-item" onclick="go('brokers',this)"><span>🏢</span> Brokers <span class="nav-badge" id="brokerbadge" style="display:none">0</span></div>
-    <div class="nav-item" onclick="go('tpclients',this)"><span>💰</span> Pratika_TP</div>
+    <div class="nav-item" onclick="go('tpclients',this)"><span>💰</span> Pratika_TP <span class="nav-badge" id="tpbadge" style="display:none">0</span></div>
     <div class="nav-item" onclick="go('guaranteedtenant',this)"><span>🛡️</span> Guaranteed Tenant <span class="nav-badge" id="gtbadge" style="display:none">0</span></div>
     <div class="nav-section">Moderation</div>
     <div class="nav-item" onclick="go('sold',this)"><span>🔴</span> Sold Reports <span class="nav-badge" id="soldbadge" style="display:none">0</span></div>
@@ -503,6 +503,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div class="stats-grid" style="margin-bottom:16px">
         <div class="stat-card"><div class="stat-label">Pratika_TP Revenue</div><div class="stat-value" id="tp-revenue">—</div><div class="stat-sub" id="tp-revenue-sub">Loading…</div></div>
         <div class="stat-card"><div class="stat-label">Clients</div><div class="stat-value" id="tp-clients">—</div><div class="stat-sub" id="tp-clients-sub">Loading…</div></div>
+        <div class="stat-card"><div class="stat-label">Pending (quota not filled)</div><div class="stat-value" id="tp-pending">—</div><div class="stat-sub" id="tp-pending-sub">Loading…</div></div>
       </div>
       <div class="table-card">
         <div class="table-header">
@@ -528,6 +529,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <div><label style="font-size:12px;font-weight:700;color:var(--ink3)">AMOUNT PAID (₹)</label><input class="filter-input" style="width:100%;margin-top:4px" type="number" id="tpc-amount" placeholder="e.g. 1299"></div>
             <div><label style="font-size:12px;font-weight:700;color:var(--ink3)">CONTACTS TO SHARE</label><input class="filter-input" style="width:100%;margin-top:4px" type="number" id="tpc-contacts" placeholder="e.g. 10"></div>
           </div>
+          <div><label style="font-size:12px;font-weight:700;color:var(--ink3)">CONTACTS SHARED SO FAR</label><input class="filter-input" style="width:100%;margin-top:4px" type="number" id="tpc-shared" placeholder="e.g. 3" value="0"></div>
           <div><label style="font-size:12px;font-weight:700;color:var(--ink3)">PAYMENT DATE</label><input class="filter-input" style="width:100%;margin-top:4px" type="date" id="tpc-date"></div>
           <div><label style="font-size:12px;font-weight:700;color:var(--ink3)">NOTES (optional)</label><input class="filter-input" style="width:100%;margin-top:4px" id="tpc-notes" placeholder="e.g. was a broker, moved here"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
@@ -604,22 +606,31 @@ async function loadTpClients(){
   const monthCut=new Date();monthCut.setDate(1);monthCut.setHours(0,0,0,0);
   const thisMonth=rows.filter(r=>r.payment_date&&new Date(r.payment_date)>=monthCut).reduce((t,r)=>t+(Number(r.amount)||0),0);
   const contactsTotal=rows.reduce((t,r)=>t+(Number(r.contacts_count)||0),0);
+  const sharedTotal=rows.reduce((t,r)=>t+(Number(r.contacts_shared)||0),0);
+  const pending=rows.filter(r=>(Number(r.contacts_shared)||0)<(Number(r.contacts_count)||0));
   document.getElementById("tp-revenue").textContent="₹"+total.toLocaleString("en-IN");
   document.getElementById("tp-revenue-sub").textContent="₹"+thisMonth.toLocaleString("en-IN")+" this month";
   document.getElementById("tp-clients").textContent=rows.length;
-  document.getElementById("tp-clients-sub").textContent=contactsTotal+" contact(s) shared in total";
+  document.getElementById("tp-clients-sub").textContent=sharedTotal+" of "+contactsTotal+" contact(s) shared so far";
+  document.getElementById("tp-pending").textContent=pending.length;
+  document.getElementById("tp-pending-sub").textContent=pending.reduce((t,r)=>t+((Number(r.contacts_count)||0)-(Number(r.contacts_shared)||0)),0)+" contact(s) still owed";
+  const badge=document.getElementById("tpbadge");
+  badge&&(badge.textContent=pending.length,badge.style.display=pending.length>0?"inline":"none");
   const tbl=document.getElementById("tpClientsTable");
   if(!rows.length){tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--ink3)">No Pratika_TP clients yet. Click "+ Add client" above.</td></tr>';return}
-  tbl.innerHTML="<tr><th>Name</th><th>Phone</th><th>Payment Date</th><th>Amount</th><th>Contacts</th><th>Notes</th><th></th></tr>"
-    +rows.map(r=>`<tr>
+  tbl.innerHTML="<tr><th>Name</th><th>Phone</th><th>Payment Date</th><th>Amount</th><th>Shared</th><th>Notes</th><th></th></tr>"
+    +rows.map(r=>{
+      const cnt=Number(r.contacts_count)||0,shr=Number(r.contacts_shared)||0,full=cnt>0&&shr>=cnt;
+      return `<tr>
       <td>${tpEsc(r.name)||"—"}</td>
       <td>${tpEsc(r.phone)||"—"}</td>
       <td>${r.payment_date?new Date(r.payment_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"—"}</td>
       <td>₹${Number(r.amount||0).toLocaleString("en-IN")}</td>
-      <td>${r.contacts_count||0}</td>
+      <td><span class="badge ${full?"b-ok":"b-warn"}">${shr} / ${cnt>0?cnt:"∞"} shared</span></td>
       <td style="max-width:220px">${tpEsc(r.notes)}</td>
       <td style="white-space:nowrap"><button class="btn btn-ghost" onclick="openTpClientModal(${JSON.stringify(String(r.id))})">Edit</button> <button class="btn btn-red" onclick="deleteTpClient(${JSON.stringify(String(r.id))})">Delete</button></td>
-    </tr>`).join("");
+    </tr>`;
+    }).join("");
   }catch(t){console.error("loadTpClients:",t)}
 }
 function openTpClientModal(id){
@@ -630,6 +641,7 @@ function openTpClientModal(id){
   document.getElementById("tpc-phone").value=r?(r.phone||""):"";
   document.getElementById("tpc-amount").value=r?r.amount:"";
   document.getElementById("tpc-contacts").value=r?r.contacts_count:"";
+  document.getElementById("tpc-shared").value=r?(r.contacts_shared||0):0;
   document.getElementById("tpc-date").value=r?String(r.payment_date||"").slice(0,10):new Date().toISOString().slice(0,10);
   document.getElementById("tpc-notes").value=r?(r.notes||""):"";
   document.getElementById("tpClientModal").style.display="flex";
@@ -641,16 +653,17 @@ async function saveTpClient(){
   const phone=document.getElementById("tpc-phone").value.trim();
   const amount=Number(document.getElementById("tpc-amount").value)||0;
   const contacts_count=Number(document.getElementById("tpc-contacts").value)||0;
+  const contacts_shared=Number(document.getElementById("tpc-shared").value)||0;
   const payment_date=document.getElementById("tpc-date").value;
   const notes=document.getElementById("tpc-notes").value.trim();
   if(!name||!phone||!amount||!payment_date){toast("Fill in name, phone, amount and payment date","err");return}
-  const body={name,phone,amount,contacts_count,payment_date,notes};
+  const body={name,phone,amount,contacts_count,contacts_shared,payment_date,notes};
   const h={apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json",Prefer:"return=minimal"};
   const r=id
     ?await fetch(`${SUPA_URL}/rest/v1/pratika_tp_clients?id=eq.${encodeURIComponent(id)}`,{method:"PATCH",headers:h,body:JSON.stringify(body)})
     :await fetch(`${SUPA_URL}/rest/v1/pratika_tp_clients`,{method:"POST",headers:h,body:JSON.stringify(body)});
   if(r.ok){toast(id?"Client updated":"Client added","ok");closeTpClientModal();loadTpClients()}
-  else toast("Save failed — the pratika_tp_clients table may not exist yet (see chat for the SQL)","err");
+  else toast("Save failed — check that the pratika_tp_clients table exists and RLS is off (see chat)","err");
 }
 async function deleteTpClient(id){
   if(!confirm("Remove this Pratika_TP client record? This cannot be undone."))return;
