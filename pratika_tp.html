@@ -1677,6 +1677,11 @@ function tpLeadText(l,i,masked){
     if(l.furnishing && l.furnishing!=="Undisclosed") lines.push(`Furnishing: ${l.furnishing}`);
   }
   lines.push(`Contact: ${masked?tpMask(l.custom_contact_phone):"+91 "+abDigits(l.custom_contact_phone)}`);
+  // (2026-10-22) Owner's own words: "add 'Powered by FlatKhoj.com'... this will be basically
+  // below the contact. so if i am sharing 10 leads, this powered by thing should come 10 times,
+  // after every lead." -- placed as its own line directly after Contact, inside this per-lead
+  // function, so it repeats once per lead block exactly as asked (not once for the whole message).
+  lines.push(`Powered by FlatKhoj.com`);
   return lines.join("\n");
 }
 // (2026-10-22) tpSendSel/tpSendMasked kept at module scope so the Masked/Unmasked toggle can
