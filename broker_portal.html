@@ -1794,9 +1794,13 @@ async function abSendMore(id, btn){
     if(res.status===401 && await refreshSession()) res=await call();
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.success){ alert(data.error||`Sending failed (${res.status}).`); btn.disabled=false; btn.textContent="Send again"; abBusy=false; return; }
-    const got=await abAwaitSends(id);
+    // (2026-10-23) Same background-wait fix as abApprove() below -- the resend call itself
+    // already succeeded; release abBusy and close the modal right away instead of holding the
+    // whole page's other Approve buttons / checkboxes / Send button hostage for the ~30s
+    // WhatsApp-send-logging wait. See abApprove() for the full explanation.
     abCloseModal();
-    alert(`Sent. ${got} broker(s) in total have now received it; new ones are ticked in their Potential Data.`);
+    abBusy=false; abUpdateCount();
+    abAwaitSends(id).catch(e=>console.error("abAwaitSends failed:",e));
   }catch(e){ console.error(e); alert("Sending failed — check the Brokers dialog before retrying."); btn.disabled=false; abBusy=false; }
 }
 
