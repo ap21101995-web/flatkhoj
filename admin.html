@@ -626,12 +626,22 @@ async function loadTpClients(){
       <td>${tpEsc(r.phone)||"—"}</td>
       <td>${r.payment_date?new Date(r.payment_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"—"}</td>
       <td>₹${Number(r.amount||0).toLocaleString("en-IN")}</td>
-      <td><span class="badge ${full?"b-ok":"b-warn"}">${shr} / ${cnt>0?cnt:"∞"} shared</span></td>
+      <td style="white-space:nowrap">
+        <input type="number" min="0" value="${shr}" style="width:56px;padding:4px 6px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:inherit"
+          onchange="tpUpdateShared('${r.id}',this.value)">
+        <span class="badge ${full?"b-ok":"b-warn"}" style="margin-left:6px">/ ${cnt>0?cnt:"∞"}</span>
+      </td>
       <td style="max-width:220px">${tpEsc(r.notes)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-ghost" onclick="openTpClientModal(${JSON.stringify(String(r.id))})">Edit</button> <button class="btn btn-red" onclick="deleteTpClient(${JSON.stringify(String(r.id))})">Delete</button></td>
+      <td style="white-space:nowrap"><button class="btn btn-ghost" onclick="openTpClientModal('${r.id}')">Edit</button> <button class="btn btn-red" onclick="deleteTpClient('${r.id}')">Delete</button></td>
     </tr>`;
     }).join("");
   }catch(t){console.error("loadTpClients:",t)}
+}
+async function tpUpdateShared(id,val){
+  const shared=Math.max(0,Number(val)||0);
+  (await supaPatch("pratika_tp_clients",`id=eq.${encodeURIComponent(id)}`,{contacts_shared:shared}))
+    ?(toast("Updated","ok"),loadTpClients())
+    :toast("Update failed","err");
 }
 function openTpClientModal(id){
   const r=id?(window._tpClients||[]).find(x=>String(x.id)===String(id)):null;

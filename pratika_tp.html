@@ -162,7 +162,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 21-Oct-TP32</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 22-Oct-TP33</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -174,7 +174,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 21-Oct-TP32</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 22-Oct-TP33</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -182,7 +182,8 @@ textarea.filter-input { font-family:var(--font); }
 
     <div class="table-card" style="padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <label class="lbl" style="margin:0" for="tpSendTo">Sending to (optional)</label>
-      <input class="filter-input" style="max-width:220px" id="tpSendTo" placeholder="Type their number…" oninput="tpSendToChanged()">
+      <select class="filter-input" style="max-width:200px" id="tpSendToClient" onchange="tpAddExistingClient(this.value,'tpSendTo');this.value=''"><option value="">+ Existing paid client…</option></select>
+      <input class="filter-input" style="max-width:220px" id="tpSendTo" placeholder="…or type a new number" oninput="tpSendToChanged()">
       <span style="font-size:12px;color:var(--ink3)">Leads already sent to this number are hidden below, so you never send the same lead twice.</span>
     </div>
 
@@ -337,9 +338,17 @@ textarea.filter-input { font-family:var(--font); }
     </div>
     <div class="modal-body" style="padding:16px 20px">
       <label class="lbl" for="sendTo">Sending to (number(s) — comma or new line separated)</label>
-      <input class="filter-input" id="sendTo" style="width:100%;margin:6px 0 12px" placeholder="e.g. 9876543210, 9123456789">
+      <div style="display:flex;gap:8px;margin:6px 0 12px">
+        <select class="filter-input" style="max-width:200px" id="sendToClient" onchange="tpAddExistingClient(this.value,'sendTo');this.value=''"><option value="">+ Existing paid client…</option></select>
+        <input class="filter-input" id="sendTo" style="flex:1" placeholder="e.g. 9876543210, 9123456789">
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+        <span class="lbl" style="margin:0">Numbers in message:</span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="radio" name="sendMask" id="sendMaskMasked" checked onchange="tpSetMasked(true)"> Masked</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="radio" name="sendMask" id="sendMaskUnmasked" onchange="tpSetMasked(false)"> Unmasked <span style="color:var(--red);font-size:11px">(full numbers — paid clients only)</span></label>
+      </div>
       <textarea id="sendText" class="filter-input" style="width:100%;height:42vh;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55"></textarea>
-      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Numbers in the message above are masked (first digit and last two digits only) and no names are included. You can edit the text before copying. The number(s) you type above are only used for your own sent log — they are never added to the message itself.</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Numbers in the message use the toggle above — Masked shows the first digit and last two digits only; Unmasked shows the complete number, for when a paid client needs full contact details. No names are included either way. You can edit the text before copying. The number(s) you type above are only used for your own sent log — they are never added to the message itself.</div>
     </div>
     <div class="modal-foot">
       <div style="font-size:13px;color:var(--ink2)" id="sendCopied"></div>
@@ -1280,6 +1289,7 @@ function tpChoose(mode){
   tpMode=mode; tpTouched=false; tpToken++; tpApplyToken++;
   tpSugPool=[]; tpSugListings=[]; tpSugSelected=new Set();
   document.getElementById("tpSendTo").value="";
+  tpLoadPaidClients();
   const seek=(mode==="seekers");
   // Brokerage column: only for offer leads (Help Seekers). A seeker's lead has no 'brokerage' to speak of.
   const bth=document.querySelector('th[data-f="brokerage"]'); if(bth) bth.style.display=seek?"":"none";
@@ -1633,7 +1643,8 @@ function tpBrokerageText(l){
   if(k==="applies") return "Brokerage applies";
   return "No info";
 }
-function tpLeadText(l,i){
+function tpLeadText(l,i,masked){
+  if(masked===undefined) masked=true;
   const g=l.gender_preference, req=abReq(l), lines=[`*Lead ${i}*`];
   // when the person actually wrote it in the WhatsApp group (real message time only - never the listing's creation time).
   // (2026-10-19) abPostedIso now always resolves to SOME time whenever this number has any
@@ -1665,14 +1676,17 @@ function tpLeadText(l,i){
     lines.push(`Preferred gender: ${gtxt}`);
     if(l.furnishing && l.furnishing!=="Undisclosed") lines.push(`Furnishing: ${l.furnishing}`);
   }
-  lines.push(`Contact: ${tpMask(l.custom_contact_phone)}`);
+  lines.push(`Contact: ${masked?tpMask(l.custom_contact_phone):"+91 "+abDigits(l.custom_contact_phone)}`);
   return lines.join("\n");
 }
-function tpOpenSend(){
-  const sel=tpSorted.filter(l=>abSelected.has(String(l.id)));
-  if(!sel.length) return;
-  tpSendIds=sel.map(l=>String(l.id));
-  const o=tpReadOffer(), n=sel.length;
+// (2026-10-22) tpSendSel/tpSendMasked kept at module scope so the Masked/Unmasked toggle can
+// rebuild the message text without re-reading selections from the table -- the owner may want
+// to flip the toggle back and forth before copying, especially once an existing paid client
+// (who should get full, unmasked numbers) is picked from the new dropdown above the field.
+let tpSendSel=[], tpSendMasked=true;
+function tpBuildSendText(){
+  const sel=tpSendSel, n=sel.length;
+  const o=tpReadOffer();
   const shMap={Single:"single occupancy",Double:"double occupancy",Triple:"triple occupancy",Hall:"hall",Entire:"entire flat"};
   const sh=o.sharing.map(x=>shMap[x]).join(" / ");
   const where=(o.areas.length?` in *${o.areas.join(", ")}*`:"")+(sh?` (${sh})`:"")+(o.movein?`, from ${tpFmtDate(o.movein)}`:"");
@@ -1680,8 +1694,41 @@ function tpOpenSend(){
     ? `Hi! Here ${n===1?"is 1 place":"are "+n+" places"} that could suit you${where}:`
     : `Hi! Here ${n===1?"is 1 person":"are "+n+" people"} looking for a place${where}:`;
   const foot=`Reply with the Lead number(s) you are interested in and I'll share the contact details.`;
-  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1)).join("\n\n")+"\n\n"+foot;
-  document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers masked · no names";
+  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1,tpSendMasked)).join("\n\n")+"\n\n"+foot;
+  document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers "+(tpSendMasked?"masked":"UNMASKED")+" · no names";
+}
+function tpSetMasked(masked){ tpSendMasked=masked; tpBuildSendText(); }
+// (2026-10-22) Picking "+ Existing paid client" from either dropdown fills/adds to the number
+// field next to it instead of the owner having to remember and retype a client's own number.
+// Appends rather than replaces, so several numbers (a mix of clients and/or typed ones) can
+// build up in the same field, same as typing them manually comma/newline-separated.
+function tpAddExistingClient(phone,inputId){
+  if(!phone) return;
+  const el=document.getElementById(inputId);
+  const existing=(el.value||"").split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  if(!existing.includes(phone)) existing.push(phone);
+  el.value=existing.join(", ");
+  if(inputId==="tpSendTo") tpSendToChanged();
+}
+let tpPaidClients=[];
+async function tpLoadPaidClients(){
+  try{ tpPaidClients=await supaGet("pratika_tp_clients?select=name,phone&order=name.asc")||[]; }
+  catch(e){ console.error("tpLoadPaidClients:",e); tpPaidClients=[]; }
+  const opts='<option value="">+ Existing paid client…</option>'+tpPaidClients.map(c=>{
+    const ph=abDigits(c.phone);
+    return `<option value="${escHtml(ph)}">${escHtml(c.name||ph)} (${escHtml(ph)})</option>`;
+  }).join("");
+  const a=document.getElementById("tpSendToClient"); if(a) a.innerHTML=opts;
+  const b=document.getElementById("sendToClient"); if(b) b.innerHTML=opts;
+}
+function tpOpenSend(){
+  const sel=tpSorted.filter(l=>abSelected.has(String(l.id)));
+  if(!sel.length) return;
+  tpSendIds=sel.map(l=>String(l.id));
+  tpSendSel=sel;
+  tpSendMasked=true;
+  const mEl=document.getElementById("sendMaskMasked"); if(mEl) mEl.checked=true;
+  tpBuildSendText();
   document.getElementById("sendCopied").textContent="";
   // (2026-10-19) Prefills from the "Sending to" box at the top of the search page, so the usual
   // case -- you already typed who you're sending to before picking leads -- needs no retyping.
