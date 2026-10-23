@@ -76,6 +76,15 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .msg-meta { padding:14px 20px 0; font-size:12px; color:var(--ink3); font-weight:600; }
 .msg-text { padding:12px 20px 20px; font-size:13px; line-height:1.6; white-space:pre-wrap; color:var(--ink2); }
 
+/* (2026-10-23) Owner's own words: "the original message actually appears behind this pop up box
+   of sending/suggestions. so i am unable to see the original message at all." -- msgModal (the
+   "View message" popup, abOpenText) is now opened from a button INSIDE the Send modal's own
+   Suggestions table, so both can be open at once. Both share .modal-backdrop's z-index:9999,
+   and msgModal happens to sit earlier in the HTML, so with equal z-index the later-in-DOM
+   sendModal painted on top of it. Giving msgModal a higher z-index of its own makes it always
+   win, regardless of which modal was opened first or which one is earlier in the markup. */
+#msgModal { z-index: 10000; }
+
 /* Original-message popup is shown on a white card (readability for long
    pasted WhatsApp text), so its header/body colors are overridden here
    rather than in the shared dark-theme modal rules above. */
@@ -162,7 +171,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP34</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP35</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -174,7 +183,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP34</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP35</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -342,6 +351,20 @@ textarea.filter-input { font-family:var(--font); }
         <select class="filter-input" style="max-width:200px" id="sendToClient" onchange="tpAddExistingClient(this.value,'sendTo');this.value=''"><option value="">+ Existing paid client…</option></select>
         <input class="filter-input" id="sendTo" style="flex:1" placeholder="e.g. 9876543210, 9123456789">
       </div>
+      <!-- (2026-10-23) Owner's own words: "i am unable to read the message that gets drafted. i
+           may want to edit it. so have an option to view message also. and within that obviously
+           the toggle to show masked/unmasked numbers." -- the message box + toggle used to sit
+           BELOW the Suggestions table, so they were easy to miss or needed scrolling past the
+           table first. Moved up here, right after "Sending to", so the drafted message is the
+           first thing visible when this modal opens; the Suggestions table moved into the
+           collapsed <details> below instead (still fully functional, just out of the way). -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+        <span class="lbl" style="margin:0">Numbers in message:</span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="radio" name="sendMask" id="sendMaskMasked" checked onchange="tpSetMasked(true)"> Masked</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="radio" name="sendMask" id="sendMaskUnmasked" onchange="tpSetMasked(false)"> Unmasked <span style="color:var(--red);font-size:11px">(full numbers — paid clients only)</span></label>
+      </div>
+      <textarea id="sendText" class="filter-input" style="width:100%;height:36vh;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55"></textarea>
+      <div style="font-size:12px;color:var(--ink3);margin:8px 0 14px">Numbers in the message use the toggle above — Masked shows the first digit and last two digits only; Unmasked shows the complete number, for when a paid client needs full contact details. No names are included either way. You can edit the text before copying. The number(s) you type above are only used for your own sent log — they are never added to the message itself.</div>
       <!-- (2026-10-23) Owner's own words: "the suggestions list i want to see when i click on
            send. there, I want to see all the numbers to whom i can send, along wth option to open
            their original message... i can then simply tick all the numbers to whom i want to send
@@ -349,30 +372,28 @@ textarea.filter-input { font-family:var(--font); }
            tpSugListings/tpSugSelected state, same abOpenText "View message" button) right here in
            the Send modal, so there's one place to pick leads, pick recipients, and get the message,
            instead of two disconnected panels. Ticking a box here (or in the panel below the table)
-           keeps both in sync and keeps "Sending to" above in sync too -- see tpSyncSendToFromSug(). -->
-      <div style="border:1px solid var(--border2);border-radius:10px;padding:10px 12px;margin-bottom:12px;max-height:220px;overflow:auto">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-weight:700;color:var(--gold);font-size:13px">💡 Who else could want these leads? (tick to add to "Sending to" above)</div>
-          <div style="font-size:12px;color:var(--ink3)"><span class="tp-sug-selected-count">0</span> selected</div>
+           keeps both in sync and keeps "Sending to" above in sync too -- see tpSyncSendToFromSug().
+           Collapsed by default (<details>, closed) so it no longer pushes the message box below
+           the fold -- opening "View message" from inside it now also renders correctly on top,
+           since #msgModal has its own higher z-index (see the CSS fix above). -->
+      <details style="border:1px solid var(--border2);border-radius:10px;padding:8px 12px">
+        <summary style="cursor:pointer;font-weight:700;color:var(--gold);font-size:13px;display:flex;align-items:center;justify-content:space-between">
+          <span>💡 Who else could want these leads? (tick to add to "Sending to" above)</span>
+          <span style="font-size:12px;color:var(--ink3);font-weight:400"><span class="tp-sug-selected-count">0</span> selected</span>
+        </summary>
+        <div style="max-height:220px;overflow:auto;margin-top:8px">
+          <table style="font-size:12.5px">
+            <thead><tr>
+              <th class="row-select"><input type="checkbox" class="chk tp-sug-select-all" onclick="tpSugToggleAll(this.checked)"></th>
+              <th>Number</th>
+              <th>Posted (latest)</th>
+              <th>Sent before</th>
+              <th>Message</th>
+            </tr></thead>
+            <tbody class="tp-sug-body"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
+          </table>
         </div>
-        <table style="font-size:12.5px">
-          <thead><tr>
-            <th class="row-select"><input type="checkbox" class="chk tp-sug-select-all" onclick="tpSugToggleAll(this.checked)"></th>
-            <th>Number</th>
-            <th>Posted (latest)</th>
-            <th>Sent before</th>
-            <th>Message</th>
-          </tr></thead>
-          <tbody class="tp-sug-body"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
-        </table>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
-        <span class="lbl" style="margin:0">Numbers in message:</span>
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="radio" name="sendMask" id="sendMaskMasked" checked onchange="tpSetMasked(true)"> Masked</label>
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="radio" name="sendMask" id="sendMaskUnmasked" onchange="tpSetMasked(false)"> Unmasked <span style="color:var(--red);font-size:11px">(full numbers — paid clients only)</span></label>
-      </div>
-      <textarea id="sendText" class="filter-input" style="width:100%;height:42vh;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55"></textarea>
-      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Numbers in the message use the toggle above — Masked shows the first digit and last two digits only; Unmasked shows the complete number, for when a paid client needs full contact details. No names are included either way. You can edit the text before copying. The number(s) you type above are only used for your own sent log — they are never added to the message itself.</div>
+      </details>
     </div>
     <div class="modal-foot">
       <div style="font-size:13px;color:var(--ink2)" id="sendCopied"></div>
@@ -1747,7 +1768,13 @@ function tpLeadText(l,i,masked){
 // rebuild the message text without re-reading selections from the table -- the owner may want
 // to flip the toggle back and forth before copying, especially once an existing paid client
 // (who should get full, unmasked numbers) is picked from the new dropdown above the field.
-let tpSendSel=[], tpSendMasked=true;
+// (2026-10-23) tpSendGeneric added alongside: true when the Send modal was opened from the Sent
+// Log's "Replicate" action (tpSentLogReplicate below) rather than from ticking rows in the live
+// filtered table -- in that case there is no current mode/area/sharing filter context to build
+// the header from (tpReadOffer() would read whatever filters happen to be on screen, which have
+// nothing to do with the replicated leads), so the Masked/Unmasked toggle must call the generic
+// composer instead of the normal one while this flag is set.
+let tpSendSel=[], tpSendMasked=true, tpSendGeneric=false;
 function tpBuildSendText(){
   const sel=tpSendSel, n=sel.length;
   const o=tpReadOffer();
@@ -1761,7 +1788,24 @@ function tpBuildSendText(){
   document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1,tpSendMasked)).join("\n\n")+"\n\n"+foot;
   document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers "+(tpSendMasked?"masked":"UNMASKED")+" · no names";
 }
-function tpSetMasked(masked){ tpSendMasked=masked; tpBuildSendText(); }
+// (2026-10-23) Same per-lead composition as tpBuildSendText() above (reuses tpLeadText(), so
+// every line of each lead block -- Searched at, Requirement/Offering, Contact, the "Powered by
+// FlatKhoj.com" line -- comes out identical), but works out the header's wording directly from
+// the SELECTED LEADS' own listing_type rather than from tpReadOffer() (which reads the currently
+// active filter boxes on the main search page -- irrelevant here, since the Sent Log's
+// "Replicate" action can resend leads that were never ticked from a live filtered search at all).
+function tpBuildSendTextGeneric(){
+  const sel=tpSendSel, n=sel.length;
+  const offers=sel.filter(l=>l.listing_type!=="flat_wanted").length;
+  const dir=offers>=(sel.length-offers)?"seek":"offer";
+  const head=dir==="seek"
+    ? `Hi! Here ${n===1?"is 1 place":"are "+n+" places"} that could suit you:`
+    : `Hi! Here ${n===1?"is 1 person":"are "+n+" people"} looking for a place:`;
+  const foot=`Reply with the Lead number(s) you are interested in and I'll share the contact details.`;
+  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1,tpSendMasked)).join("\n\n")+"\n\n"+foot;
+  document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers "+(tpSendMasked?"masked":"UNMASKED")+" · no names";
+}
+function tpSetMasked(masked){ tpSendMasked=masked; (tpSendGeneric?tpBuildSendTextGeneric:tpBuildSendText)(); }
 // (2026-10-22) Picking "+ Existing paid client" from either dropdown fills/adds to the number
 // field next to it instead of the owner having to remember and retype a client's own number.
 // Appends rather than replaces, so several numbers (a mix of clients and/or typed ones) can
@@ -1791,6 +1835,7 @@ function tpOpenSend(){
   tpSendIds=sel.map(l=>String(l.id));
   tpSendSel=sel;
   tpSendMasked=true;
+  tpSendGeneric=false;
   const mEl=document.getElementById("sendMaskMasked"); if(mEl) mEl.checked=true;
   tpBuildSendText();
   document.getElementById("sendCopied").textContent="";
@@ -1924,22 +1969,73 @@ async function tpSentLogAdd(ids,nums){
   return rows.length;
 }
 // ---------- Sent Log page: type a number, see every lead's unmasked number sent to them ----------
+// (2026-10-23) tpSentLogLastIds/tpSentLogLastNum hold the result of the most recent search, so
+// the "Replicate to another number" button below can reuse exactly those listing_ids without
+// the owner re-typing the number or re-running any filter.
+let tpSentLogLastIds=[], tpSentLogLastNum="";
 async function tpSentLogSearch(){
   const num=abDigits(document.getElementById("tpSentLogNum").value);
   const box=document.getElementById("tpSentLogResult");
   if(num.length!==10){ box.innerHTML='<div class="empty-state">Enter a valid 10-digit number.</div>'; return; }
   box.innerHTML='<div class="empty-state">Searching…</div>';
   let rows=[];
-  try{ rows=await supaGetAll(`pratika_tp_sent_log?recipient_phone=eq.${num}&select=id,lead_phone,mode,sent_at&order=sent_at.desc`); }
+  try{ rows=await supaGetAll(`pratika_tp_sent_log?recipient_phone=eq.${num}&select=id,listing_id,lead_phone,mode,sent_at&order=sent_at.desc`); }
   catch(e){ console.error("sent log search failed",e); }
-  const local=tpLocalSentRead().filter(r=>abDigits(r.recipient_phone)===num).map(r=>({id:r.id,lead_phone:r.lead_phone,mode:r.mode,sent_at:r.sent_at}));
+  const local=tpLocalSentRead().filter(r=>abDigits(r.recipient_phone)===num).map(r=>({id:r.id,listing_id:r.listing_id,lead_phone:r.lead_phone,mode:r.mode,sent_at:r.sent_at}));
   rows=rows.concat(local).sort((a,b)=>new Date(b.sent_at)-new Date(a.sent_at));
+  tpSentLogLastNum=num;
+  tpSentLogLastIds=[...new Set(rows.map(r=>String(r.listing_id)).filter(Boolean))];
   if(!rows.length){ box.innerHTML=`<div class="empty-state">Nothing sent to +91 ${num} yet.</div>`; return; }
+  // (2026-10-23) Owner's own words: "give me opportunity to actually later on add numbers to whom
+  // i have shared same message. once i open some number to check what leads i have sent to them,
+  // i should see option to replicate those to another number. i dont want to apply filters and
+  // again send to another folks, when i figure out new number later on." -- the replicate block
+  // below reuses tpSentLogLastIds (set just above) so it's exactly the same leads shown here,
+  // no re-search/re-filter involved. If any of these rows predate the listing_id column being
+  // added, that row simply isn't included in the replicate set (tpSentLogLastIds filters out
+  // empties) -- its own line above still shows/removes fine either way.
   box.innerHTML=`<div style="font-size:13px;color:var(--ink2);margin-bottom:8px">${rows.length} lead${rows.length===1?"":"s"} sent to +91 ${num}</div>`+
     rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border2)">
       <div><span style="font-weight:600">+91 ${escHtml(r.lead_phone||"—")}</span> <span style="font-size:12px;color:var(--ink3)">· ${escHtml(r.mode==="seekers"?"offer lead":"seeker lead")}</span></div>
       <div style="font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:8px">${escHtml(tpFmtDT(r.sent_at))} <button class="btn btn-ghost" style="padding:3px 8px" onclick="tpSentLogRemove('${escHtml(String(r.id))}')">Remove</button></div>
-    </div>`).join("");
+    </div>`).join("")+
+    (tpSentLogLastIds.length?`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border2)">
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:6px">Send the SAME message to someone else too, without re-searching or re-ticking anything:</div>
+      <div style="display:flex;gap:8px">
+        <input class="filter-input" style="flex:1" id="tpSentLogReplicateNum" placeholder="New number, e.g. 9876543210" onkeydown="if(event.key==='Enter')tpSentLogReplicate()">
+        <button class="btn btn-gold" id="tpSentLogReplicateBtn" onclick="tpSentLogReplicate()">Replicate &rarr;</button>
+      </div>
+    </div>`:"");
+}
+// (2026-10-23) Fetches the full listing rows for exactly the leads already logged against the
+// searched number (by listing_id, not by re-matching filters), builds the same per-lead message
+// text (tpBuildSendTextGeneric, since there's no live filter context for these), and opens the
+// normal Send modal pre-filled with the new number. "Copy & save as sent" there logs it for the
+// new number too, through the same tpSentLogAdd()/tpCopy() used everywhere else, so duplicates
+// for a number already covered are skipped the same way as every other Send flow in this file.
+async function tpSentLogReplicate(){
+  const ids=tpSentLogLastIds;
+  if(!ids.length) return;
+  const num=abDigits(document.getElementById("tpSentLogReplicateNum").value);
+  if(num.length!==10){ alert("Enter a valid 10-digit number to replicate to."); return; }
+  const btn=document.getElementById("tpSentLogReplicateBtn");
+  if(btn){ btn.disabled=true; btn.textContent="Loading…"; }
+  let rows=[];
+  try{ rows=await supaGetAll(`listings?select=${TP_COLS}&id=in.(${ids.map(encodeURIComponent).join(",")})`); }
+  catch(e){ console.error("tpSentLogReplicate fetch failed:",e); }
+  if(btn){ btn.disabled=false; btn.innerHTML="Replicate &rarr;"; }
+  if(!rows.length){ alert("Could not load those leads right now — try again in a moment."); return; }
+  const order=new Map(ids.map((id,i)=>[String(id),i]));
+  rows.sort((a,b)=>(order.get(String(a.id))??0)-(order.get(String(b.id))??0));
+  tpSendIds=rows.map(l=>String(l.id));
+  tpSendSel=rows;
+  tpSendMasked=true;
+  tpSendGeneric=true;
+  const mEl=document.getElementById("sendMaskMasked"); if(mEl) mEl.checked=true;
+  tpBuildSendTextGeneric();
+  document.getElementById("sendCopied").textContent="";
+  document.getElementById("sendTo").value=num;
+  document.getElementById("sendModal").style.display="flex";
 }
 async function tpSentLogRemove(id){
   if(!confirm("Remove this from the sent log? Use this if it was logged by mistake.")) return;
