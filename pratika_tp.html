@@ -171,7 +171,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP35</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP36</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -183,7 +183,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP35</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-TP36</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -576,7 +576,22 @@ function abAreaMatch(brokerAreas, listingAreas){
     return false;
   });
 }
-function abReq(l){ return l.room_type && l.room_type!=="Undisclosed" ? l.room_type : (l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "Undisclosed"); }
+// (2026-10-23) Owner's own words: "in the offerings column in pratika_tp portal, sometimes i
+// just see 'Entire Flat' instead of 1BHK or 2BHK or 3BHK, even when it has been correctly marked
+// and captured by the script." -- every whole-flat offer (flat_listing) gets room_type stamped
+// as the generic "Entire flat" label by the pipeline, regardless of its actual size; the real
+// size (1 BHK / 2 BHK / 3 BHK...) lives in flat_type instead. Since room_type was always checked
+// FIRST, "Entire flat" permanently hid a correctly-captured flat_type. Show the size instead
+// whenever it's known -- strictly more informative than the generic label -- and fall back to
+// "Entire flat" only when no size was captured. Every other room_type (Single/Double/Triple
+// occupancy, Hall, etc.) is untouched.
+function abReq(l){
+  if(l.room_type && l.room_type!=="Undisclosed"){
+    if(l.room_type==="Entire flat" && l.flat_type && l.flat_type!=="Undisclosed") return l.flat_type;
+    return l.room_type;
+  }
+  return l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "Undisclosed";
+}
 function abAreasText(l){ return abArr(l.areas).join(", "); }
 
 async function supaGetAll(path){
@@ -1664,7 +1679,17 @@ function tpRender(){
   }
   const lblStyle={Strong:"background:var(--green-bg);color:var(--green)",Good:"background:var(--teal-bg);color:var(--teal-light)",Possible:"background:var(--gold-bg);color:var(--gold)"};
   body.innerHTML=rows.map(l=>{
-    const id=String(l.id), n=abIncluded(l).length, live=!!l._live;
+    // (2026-10-23) Owner's own words: "that approving thing still taking time and I have to
+    // wait. make that happen in the background please." -- abApprove() already releases abBusy
+    // and marks l._approved=true the instant the server call succeeds, running the ~10x3s
+    // WhatsApp-send-settle wait (abAwaitSends) fully in the background -- but THIS status cell
+    // used to check only l._live, which abAwaitSends' own reload is what actually sets, up to
+    // ~30s later. So the row kept showing the "Approve" button again right after approving,
+    // making it look like nothing happened / like it was still stuck. abIsApproved(l) (already
+    // used by broker_portal.html's own render, which never had this problem) is true the moment
+    // abApprove() succeeds, so the row flips to "● Live" immediately; _live itself catches up
+    // silently once the background settle finishes, with no visible change at that point.
+    const id=String(l.id), n=abIncluded(l).length, live=abIsApproved(l);
     const hold=l.on_hold?` <span class="badge b-count">On hold</span>`:"";
     const m=l._m;
     const status=live
@@ -1784,8 +1809,14 @@ function tpBuildSendText(){
   const head=o.dir==="seek"
     ? `Hi! Here ${n===1?"is 1 place":"are "+n+" places"} that could suit you${where}:`
     : `Hi! Here ${n===1?"is 1 person":"are "+n+" people"} looking for a place${where}:`;
-  const foot=`Reply with the Lead number(s) you are interested in and I'll share the contact details.`;
-  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1,tpSendMasked)).join("\n\n")+"\n\n"+foot;
+  // (2026-10-23) Owner's own words: "when i unmask and copy, that time you dont have to include
+  // that in the end 'reply with .....'. i am already unmasking the numbers while sending." --
+  // the "Reply with the Lead number(s)..." footer only makes sense when numbers are MASKED (the
+  // recipient has no way to reach anyone except by replying with a lead number so the owner can
+  // share the real contact). Once numbers are unmasked, the recipient already has everything they
+  // need and can contact the lead directly -- the footer is pointless noise in that case.
+  const foot=tpSendMasked?`Reply with the Lead number(s) you are interested in and I'll share the contact details.`:``;
+  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1,tpSendMasked)).join("\n\n")+(foot?"\n\n"+foot:"");
   document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers "+(tpSendMasked?"masked":"UNMASKED")+" · no names";
 }
 // (2026-10-23) Same per-lead composition as tpBuildSendText() above (reuses tpLeadText(), so
@@ -1801,8 +1832,10 @@ function tpBuildSendTextGeneric(){
   const head=dir==="seek"
     ? `Hi! Here ${n===1?"is 1 place":"are "+n+" places"} that could suit you:`
     : `Hi! Here ${n===1?"is 1 person":"are "+n+" people"} looking for a place:`;
-  const foot=`Reply with the Lead number(s) you are interested in and I'll share the contact details.`;
-  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1,tpSendMasked)).join("\n\n")+"\n\n"+foot;
+  // (2026-10-23) Same reasoning as tpBuildSendText() above: the "Reply with the Lead number(s)"
+  // footer only applies when numbers are masked.
+  const foot=tpSendMasked?`Reply with the Lead number(s) you are interested in and I'll share the contact details.`:``;
+  document.getElementById("sendText").value=head+"\n\n"+sel.map((l,i)=>tpLeadText(l,i+1,tpSendMasked)).join("\n\n")+(foot?"\n\n"+foot:"");
   document.getElementById("sendModalSub").textContent=n+" lead"+(n===1?"":"s")+" · numbers "+(tpSendMasked?"masked":"UNMASKED")+" · no names";
 }
 function tpSetMasked(masked){ tpSendMasked=masked; (tpSendGeneric?tpBuildSendTextGeneric:tpBuildSendText)(); }

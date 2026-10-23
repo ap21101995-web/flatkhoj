@@ -140,7 +140,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 <div id="app" style="display:none">
   <div class="topbar">
-    <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 18-Oct-N2</span></div>
+    <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-N3</span></div>
     <div style="display:flex;gap:10px;align-items:center">
       <select id="bpCity" class="filter-input" style="width:auto;flex:none;font-weight:700" onchange="bpCityChanged()" title="Which city's brokers and leads to show"><option value="mumbai">Mumbai</option><option value="pune">Pune</option></select>
       <button class="btn btn-ghost" onclick="logout()">Sign out</button>
@@ -214,7 +214,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 18-Oct-N2 · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-N3 · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -1228,7 +1228,18 @@ function abAreaMatch(brokerAreas, listingAreas){
     return false;
   });
 }
-function abReq(l){ return l.room_type && l.room_type!=="Undisclosed" ? l.room_type : (l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "Undisclosed"); }
+// (2026-10-23) Same fix as pratika_tp.html's abReq() -- owner's own words: "in the offerings
+// column in pratika_tp portal, sometimes i just see 'Entire Flat' instead of 1BHK or 2BHK or
+// 3BHK, even when it has been correctly marked and captured by the script." abReq() is shared,
+// unchanged, between this file and pratika_tp.html, so broker_portal.html's own Requirement
+// column (and lead text/modal subtitles that reuse this function) had the identical bug.
+function abReq(l){
+  if(l.room_type && l.room_type!=="Undisclosed"){
+    if(l.room_type==="Entire flat" && l.flat_type && l.flat_type!=="Undisclosed") return l.flat_type;
+    return l.room_type;
+  }
+  return l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "Undisclosed";
+}
 function abAreasText(l){ return abArr(l.areas).join(", "); }
 
 async function supaGetAll(path){
