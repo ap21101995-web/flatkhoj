@@ -142,7 +142,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="topbar">
     <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 23-Oct-N3</span></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <select id="bpCity" class="filter-input" style="width:auto;flex:none;font-weight:700" onchange="bpCityChanged()" title="Which city's brokers and leads to show"><option value="mumbai">Mumbai</option><option value="pune">Pune</option></select>
+      <select id="bpCity" class="filter-input" style="width:auto;flex:none;font-weight:700" onchange="bpCityChanged()" title="Which city's brokers and leads to show"><option value="mumbai">Mumbai</option><option value="pune">Pune</option><option value="bengaluru">Bengaluru</option><option value="hyderabad">Hyderabad</option><option value="delhi">Delhi</option><option value="gurugram">Gurugram</option><option value="noida">Noida</option><option value="jaipur">Jaipur</option><option value="kolkata">Kolkata</option><option value="chennai">Chennai</option><option value="indore">Indore</option><option value="nashik">Nashik</option></select>
       <button class="btn btn-ghost" onclick="logout()">Sign out</button>
     </div>
   </div>
@@ -425,7 +425,7 @@ let allPortalBrokers=[];
 function bpCity(){ const e=document.getElementById("bpCity"); return e?e.value:"mumbai"; }
 function bpCityBrokers(list){ const c=bpCity(); return (list||[]).filter(b=>abNorm(b.city||"mumbai")===c); }
 function bpCityListings(list){ const c=bpCity(); return (list||[]).filter(l=>abNorm(l.city||"mumbai")===c); }
-try{ const _c=localStorage.getItem("fk_bp_city"); const _e=document.getElementById("bpCity"); if(_c&&_e&&(_c==="mumbai"||_c==="pune")) _e.value=_c; }catch(e){}
+try{ const _c=localStorage.getItem("fk_bp_city"); const _e=document.getElementById("bpCity"); const _BP_CITIES=["mumbai","pune","bengaluru","hyderabad","delhi","gurugram","noida","jaipur","kolkata","chennai","indore","nashik"]; if(_c&&_e&&_BP_CITIES.includes(_c)) _e.value=_c; }catch(e){}
 function bpCityChanged(){
   try{ localStorage.setItem("fk_bp_city",bpCity()); }catch(e){}
   if(document.getElementById("pg-allBrokers").style.display!=="none"){ abSelected=new Set(); abLoad(); }
