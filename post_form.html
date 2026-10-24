@@ -1887,6 +1887,7 @@ const KOL_AREAS = ['Action Area 1','Action Area 2','Action Area 3','Ballygunge',
 const CHN_AREAS = ['Adyar','Anna Nagar','Anna Nagar East','Anna Nagar West','Besant Nagar','Besant Nagar Beach Road','Gandhi Nagar Adyar','Indira Nagar Adyar','Mylapore','Mylapore Tank Road','Nungambakkam','Nungambakkam High Road','OMR','Panagal Park','Perungudi','Phoenix Mall Road','Pondy Bazaar','Porur','Porur Lake Road','Sholinganallur','T Nagar','Tambaram','Tambaram Sanatorium','Thoraipakkam','Velachery','Velachery Bypass Road'];
 const IND_AREAS = ['Bengali Square','Bengali Square Market','Bhawarkuan','Bhawarkuan Chouraha','C21 Mall Road','Khajrana','Khajrana Temple Road','LIG Colony','LIG Colony Main Road','Palasia','Palasia Square','Rajwada','Rajwada Market','Rau','Rau Circle','Scheme 54','Scheme 78','Scheme 78 Part 2','Sudama Nagar','Sudama Nagar Main Road','Vijay Nagar'];
 const NAS_AREAS = ['Cidco','Cidco Sector 1','Cidco Sector 2','College Road','Deolali','Deolali Camp','Dwarka Circle','Dwarka Nashik','Gangapur Road','Gangapur Road Phase 1','Indira Nagar','Indira Nagar Sector 1','Mumbai Naka','Mumbai Naka Flyover','Nashik Road','Nashik Road Station Area','Panchavati','Panchavati Karanja','Satpur','Satpur MIDC','Tapovan Road','Thatte Nagar'];
+const AHM_AREAS = ['Bodakdev','Bodakdev Judges Bungalow Road','Bopal','Bopal Ghuma Road','Bopal South Bopal Road','CG Road','CG Road Mithakhali','CG Road Panchvati','Chandkheda','Chandkheda GNLU Road','Chandkheda Vishala Circle','Ghatlodia','Ghatlodia Sola Road','Iskcon Cross Road','Maninagar','Maninagar Rambaug','Maninagar Station Road','Naranpura','Naranpura Police Chowki Road','Naranpura Vijay Cross Road','Navrangpura','Navrangpura Gujarat College Road','Navrangpura Law Garden','Paldi','Paldi Ellis Bridge Road','Paldi VS Hospital Road','Prahlad Nagar','Prahlad Nagar Garden Road','Prahlad Nagar Market','SG Highway','SG Highway Makarba','SG Highway Sarkhej','Satellite','Satellite Jodhpur Cross Road','Shyamal Cross Road','Thaltej','Thaltej Cross Road','Thaltej Shilaj Road','Vastral','Vastral Odhav Road','Vastrapur','Vastrapur Bus Stand','Vastrapur Lake Road'];
 
 function getPostCity() {
   return localStorage.getItem('fk_city') || 'mumbai';
@@ -1895,7 +1896,7 @@ function getPostCity() {
 const _FK_CITY_AREA_MAP = {
   pune: PUNE_AREAS, bengaluru: BLR_AREAS, hyderabad: HYD_AREAS, delhi: DEL_AREAS,
   gurugram: GGN_AREAS, noida: NOI_AREAS, jaipur: JAI_AREAS, kolkata: KOL_AREAS,
-  chennai: CHN_AREAS, indore: IND_AREAS, nashik: NAS_AREAS
+  chennai: CHN_AREAS, indore: IND_AREAS, nashik: NAS_AREAS, ahmedabad: AHM_AREAS
 };
 
 function getCurrentAreaList() {
@@ -1913,7 +1914,8 @@ const _FK_CITY_POPULAR_MAP = {
   kolkata: ['New Town','Ballygunge','Behala','Dum Dum','Gariahat','Jadavpur','Park Street','Rajarhat','Salt Lake','Tollygunge'],
   chennai: ['Anna Nagar','Besant Nagar','Adyar','Mylapore','Nungambakkam','T Nagar','OMR','Velachery','Porur','Tambaram'],
   indore: ['Bengali Square','Bhawarkuan','Vijay Nagar','Khajrana','LIG Colony','Palasia','Rajwada','Rau','Scheme 78','Sudama Nagar'],
-  nashik: ['Cidco','Deolali','Dwarka Nashik','Gangapur Road','Indira Nagar','Mumbai Naka','Nashik Road','Panchavati','Satpur','College Road']
+  nashik: ['Cidco','Deolali','Dwarka Nashik','Gangapur Road','Indira Nagar','Mumbai Naka','Nashik Road','Panchavati','Satpur','College Road'],
+  ahmedabad: ['Navrangpura','Satellite','Vastrapur','Bodakdev','Thaltej','SG Highway','Prahlad Nagar','CG Road','Maninagar','Paldi']
 };
 
 function getPopularAreas() {
