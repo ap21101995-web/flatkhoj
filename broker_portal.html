@@ -1835,6 +1835,7 @@ async function abApprove(id, btn){
     if(res.status===401 && await refreshSession()) res=await call();
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.success){ alert(data.error||`Approval failed (${res.status}). Nothing was changed.`); btn.disabled=false; btn.textContent=orig; return; }
+    if(data.notifyWarning) alert(data.notifyWarning);
 
     abRememberApproved(id);
     // (2026-10-18) Approval itself is already done on the server at this point -- mark it
