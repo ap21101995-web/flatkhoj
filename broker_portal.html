@@ -1778,16 +1778,13 @@ async function abDownloadSelected(){
   }
 }
 
-// Waits until the background WhatsApp sender stops logging into broker_leads, then reloads
-// (the reload ticks + counts via abReconcile). Returns how many brokers are logged.
+// (2026-10-28) This used to poll broker_leads for up to 30 seconds, because the actual
+// WhatsApp send used to happen out-of-band (via a database webhook) AFTER the Approve/Send
+// call had already returned -- so the count could sit unchanged for a while even on a
+// genuinely successful send, which is exactly what led to repeat clicks. portal-approve-listing
+// now calls notify-brokers directly and waits for it to finish before responding, so by the
+// time THIS function runs, every broker_leads row for this send already exists. Just reload.
 async function abAwaitSends(id){
-  let seen=-1, stable=0;
-  for(let k=0;k<10 && stable<2;k++){
-    await new Promise(r=>setTimeout(r,3000));
-    const logged=await supaGet(`broker_leads?listing_id=eq.${encodeURIComponent(id)}&select=broker_id`).catch(()=>[]);
-    if(logged.length>0 && logged.length===seen) stable++; else stable=0;
-    seen=logged.length;
-  }
   abBusy=false;
   await abLoad();
   return (abLoggedBy[id]||new Set()).size;
