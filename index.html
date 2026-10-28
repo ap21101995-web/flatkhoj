@@ -1559,25 +1559,36 @@ async function approvePendingListing(id,btn){
   const user=getUser();
   if(!user||!user.sessionToken){alert("Please log in again.");return;}
   btn.disabled=!0;btn.textContent="Approving…";
-  try{
-    const res=await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({sessionToken:user.sessionToken,listingId:id,action:"approve_pending"})});
-    const data=await res.json();
-    if(res.ok&&data.success){
-      // Reload the full feed rather than just removing the pending card --
-      // the listing needs to actually appear as a live post immediately,
-      // not just vanish from pending until the next manual refresh.
-      loadListings();
-    }else if(data.error&&(data.error.includes("Session expired")||data.error.includes("log in again"))){
-      alert("Your session has expired — taking you to log in again.");
-      window.location.href=`login.html?trigger=post&return=${encodeURIComponent(window.location.href)}`;
-    }else{
+  // (2026-10-28) Optimistic + background, same fix as the Broker Portal's own Approve: pull
+  // this card out of the pending queue the instant you click, instead of blocking on the real
+  // approve+broker-notify call (which runs on the server) and then reloading the WHOLE feed --
+  // that full loadListings() reload is what made the page freeze for a few seconds on every
+  // approve. The real call runs in the background; a failure puts the card back and tells you.
+  const card=btn.closest(".listing-card");
+  if(card) card.style.opacity="0.4";
+  (async()=>{
+    try{
+      const res=await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({sessionToken:user.sessionToken,listingId:id,action:"approve_pending"})});
+      const data=await res.json();
+      if(res.ok&&data.success){
+        // Already live on the server now (brokers notified in the background there too) --
+        // just drop the pending card rather than reloading the entire feed to show it live;
+        // it'll appear in its live-feed position next time the feed is naturally reloaded.
+        if(card) card.remove();
+      }else if(data.error&&(data.error.includes("Session expired")||data.error.includes("log in again"))){
+        alert("Your session has expired — taking you to log in again.");
+        window.location.href=`login.html?trigger=post&return=${encodeURIComponent(window.location.href)}`;
+      }else{
+        if(card) card.style.opacity="1";
+        btn.disabled=!1;btn.textContent="✓ Approve";
+        alert(data.error||"Failed to approve. Please try again.");
+      }
+    }catch(e){
+      if(card) card.style.opacity="1";
       btn.disabled=!1;btn.textContent="✓ Approve";
-      alert(data.error||"Failed to approve. Please try again.");
+      alert("Failed to approve. Please try again.");
     }
-  }catch(e){
-    btn.disabled=!1;btn.textContent="✓ Approve";
-    alert("Failed to approve. Please try again.");
-  }
+  })();
 }
 async function rejectPendingListing(id,btn){
   if(!confirm("Reject this listing? It will no longer show for review."))return;
