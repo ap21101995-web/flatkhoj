@@ -1109,7 +1109,12 @@ function tpFmtDate(iso){ if(!iso) return "—"; const d=new Date(iso+"T00:00:00"
 // churning "tomorrow" placeholder -- see auto_post_engine.py's movein_to_date docstring for
 // the full writeup). tpFmtDate's own "—" convention for a null/falsy date is kept as-is for
 // every OTHER null case (genuinely unstated), so this wraps it rather than changing it.
-function tpMoveinText(l){ return l && l.available_immediately ? "Immediately Available" : tpFmtDate(l && l.available_from); }
+// (2026-10-28) available_from now takes priority whenever it's set: post_form.html clears
+// available_immediately as soon as a real date is entered/edited there, but rows edited
+// BEFORE that fix still have both available_from set AND the old available_immediately=true
+// stuck in the DB. Checking available_from first here means those already-stale rows also
+// display the correct date immediately, without needing a DB backfill.
+function tpMoveinText(l){ return l && l.available_from ? tpFmtDate(l.available_from) : (l && l.available_immediately ? "Immediately Available" : tpFmtDate(l && l.available_from)); }
 function tpMoney(n){ return "₹"+Number(n).toLocaleString("en-IN"); }
 
 async function enterApp(){
