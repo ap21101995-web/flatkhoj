@@ -1778,38 +1778,41 @@ async function abDownloadSelected(){
   }
 }
 
-// (2026-10-28) This used to poll broker_leads for up to 30 seconds, because the actual
-// WhatsApp send used to happen out-of-band (via a database webhook) AFTER the Approve/Send
-// call had already returned -- so the count could sit unchanged for a while even on a
-// genuinely successful send, which is exactly what led to repeat clicks. portal-approve-listing
-// now calls notify-brokers directly and waits for it to finish before responding, so by the
-// time THIS function runs, every broker_leads row for this send already exists. Just reload.
-async function abAwaitSends(id){
-  abBusy=false;
-  await abLoad();
-  return (abLoggedBy[id]||new Set()).size;
-}
 // Send an ALREADY approved lead to extra brokers (WhatsApp)
 async function abSendMore(id, btn){
   const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
   const wa=abIncluded(l).filter(e=>e.wa);
   if(!wa.length) return;
   if(!confirm(`Send +91 ${abDigits(l.custom_contact_phone)} on WhatsApp to:\n\n`+wa.map(e=>"• "+e.b.name).join("\n")+"\n\nContinue?")) return;
-  abBusy=true; btn.disabled=true; btn.textContent="Sending…";
-  try{
-    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id)),resend:true})});
-    let res=await call();
-    if(res.status===401 && await refreshSession()) res=await call();
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok||!data.success){ alert(data.error||`Sending failed (${res.status}).`); btn.disabled=false; btn.textContent="Send again"; abBusy=false; return; }
-    // (2026-10-23) Same background-wait fix as abApprove() below -- the resend call itself
-    // already succeeded; release abBusy and close the modal right away instead of holding the
-    // whole page's other Approve buttons / checkboxes / Send button hostage for the ~30s
-    // WhatsApp-send-logging wait. See abApprove() for the full explanation.
-    abCloseModal();
-    abBusy=false; abUpdateCount();
-    abAwaitSends(id).catch(e=>console.error("abAwaitSends failed:",e));
-  }catch(e){ console.error(e); alert("Sending failed — check the Brokers dialog before retrying."); btn.disabled=false; abBusy=false; }
+
+  // (2026-10-28) Optimistic + background: the Brokers count drops by these brokers the
+  // instant you click, and the modal closes right away -- the actual send (a few seconds,
+  // one WhatsApp API call per broker on the server) runs in the background instead of
+  // freezing the page. If it turns out to have failed, these brokers go back into "pending"
+  // and you're told.
+  btn.disabled=true;
+  (abLoggedBy[id]=abLoggedBy[id]||new Set());
+  wa.forEach(e=>abLoggedBy[id].add(String(e.b.id)));
+  abCloseModal();
+
+  (async()=>{
+    try{
+      const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id)),resend:true})});
+      let res=await call();
+      if(res.status===401 && await refreshSession()) res=await call();
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||!data.success){
+        alert(`Sending +91 ${abDigits(l.custom_contact_phone)} failed: ${data.error||`status ${res.status}`}. Reloading to show the real state.`);
+        const log=abLoggedBy[id]; if(log) wa.forEach(e=>log.delete(String(e.b.id)));
+        await abLoad();
+      }
+    }catch(e){
+      console.error(e);
+      alert(`Sending +91 ${abDigits(l.custom_contact_phone)} failed — reloading to show the real state.`);
+      const log=abLoggedBy[id]; if(log) wa.forEach(e=>log.delete(String(e.b.id)));
+      await abLoad();
+    }
+  })();
 }
 
 // Marks the included-but-not-yet-logged brokers as sent WITHOUT sending a real WhatsApp
@@ -1820,17 +1823,30 @@ async function abMarkSent(id, btn){
   const inc=abIncluded(l).filter(e=>e.wa);
   if(!inc.length) return;
   if(!confirm(`Mark +91 ${abDigits(l.custom_contact_phone)} as already sent to:\n\n`+inc.map(e=>"• "+e.b.name).join("\n")+"\n\nNo WhatsApp message will be sent -- this only stops them from showing as still pending. Continue?")) return;
-  abBusy=true; btn.disabled=true; btn.textContent="Marking…";
-  try{
-    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:inc.map(e=>String(e.b.id)),resend:true,markOnly:true})});
-    let res=await call();
-    if(res.status===401 && await refreshSession()) res=await call();
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok||!data.success){ alert(data.error||`Marking failed (${res.status}).`); btn.disabled=false; btn.textContent="Mark as already sent (no WhatsApp)"; abBusy=false; return; }
-    abCloseModal();
-    abBusy=false; abUpdateCount();
-    await abLoad();
-  }catch(e){ console.error(e); alert("Marking failed — check the Brokers dialog before retrying."); btn.disabled=false; abBusy=false; }
+
+  btn.disabled=true;
+  (abLoggedBy[id]=abLoggedBy[id]||new Set());
+  inc.forEach(e=>abLoggedBy[id].add(String(e.b.id)));
+  abCloseModal();
+
+  (async()=>{
+    try{
+      const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:inc.map(e=>String(e.b.id)),resend:true,markOnly:true})});
+      let res=await call();
+      if(res.status===401 && await refreshSession()) res=await call();
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||!data.success){
+        alert(`Marking +91 ${abDigits(l.custom_contact_phone)} failed: ${data.error||`status ${res.status}`}. Reloading to show the real state.`);
+        const log=abLoggedBy[id]; if(log) inc.forEach(e=>log.delete(String(e.b.id)));
+        await abLoad();
+      }
+    }catch(e){
+      console.error(e);
+      alert(`Marking +91 ${abDigits(l.custom_contact_phone)} failed — reloading to show the real state.`);
+      const log=abLoggedBy[id]; if(log) inc.forEach(e=>log.delete(String(e.b.id)));
+      await abLoad();
+    }
+  })();
 }
 
 // ---------- Approve from here: ONLY the included brokers receive it ----------
@@ -1846,32 +1862,44 @@ async function abApprove(id, btn){
   if(skipQ.length) msg+=`\n\nQuota is full for ${skipQ.map(e=>e.b.name).join(", ")} — a paid lead will NOT be sent to them.`;
   if(!confirm(msg)) return;
 
-  abBusy=true; btn.disabled=true; const orig=btn.textContent; btn.textContent="Approving…";
-  try{
-    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id))})});
-    let res=await call();
-    if(res.status===401 && await refreshSession()) res=await call();
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok||!data.success){ alert(data.error||`Approval failed (${res.status}). Nothing was changed.`); btn.disabled=false; btn.textContent=orig; return; }
-    if(data.notifyWarning) alert(data.notifyWarning);
+  // (2026-10-28) Optimistic + background: the row flips to Approved and the Brokers count
+  // already reflects the brokers about to get a WhatsApp, the instant you click -- the page
+  // does not wait for the actual send (which runs one WhatsApp API call per broker on the
+  // server and can take a few seconds) before you're free to do anything else. The real
+  // approve+send call runs in the background; if it fails, the row is rolled back to pending
+  // and you're told, with a reload to show the real state.
+  btn.disabled=true;
+  abRememberApproved(id);
+  l._approved=true;
+  (abLoggedBy[id]=abLoggedBy[id]||new Set());
+  wa.forEach(e=>abLoggedBy[id].add(String(e.b.id)));
+  abRender();
 
-    abRememberApproved(id);
-    // (2026-10-18) Approval itself is already done on the server at this point -- mark it
-    // approved and re-render RIGHT NOW so the next listing is free to work on immediately.
-    // The wait for the WhatsApp sender to log its sends, and the table reload, happen fully
-    // in the background with NO popup at all -- if a send is missing, it'll just show up
-    // when you open "Brokers (n)" on that row or press Refresh; nothing interrupts you.
-    l._approved=true;
-    abRender();
-    abBusy=false; abUpdateCount();
-    abAwaitSends(id).catch(e=>console.error("abAwaitSends failed:",e));
-    return;
-  }catch(e){
-    console.error("Approve failed:",e);
-    alert("Approval failed — please check whether the listing is still pending before retrying.");
-    btn.disabled=false; btn.textContent=orig;
-    abBusy=false; abUpdateCount();
-  }
+  (async()=>{
+    try{
+      const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:wa.map(e=>String(e.b.id))})});
+      let res=await call();
+      if(res.status===401 && await refreshSession()) res=await call();
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||!data.success){
+        alert(`Approving +91 ${abDigits(l.custom_contact_phone)} failed: ${data.error||`status ${res.status}`}. Reloading to show the real state.`);
+        l._approved=false;
+        const log=abLoggedBy[id]; if(log) wa.forEach(e=>log.delete(String(e.b.id)));
+        await abLoad();
+        return;
+      }
+      if(data.notifyWarning) alert(data.notifyWarning);
+      // Success -- the optimistic state already matches what's now true on the server. Left
+      // as-is rather than forcing a reload; press Refresh any time for the exact server-confirmed
+      // numbers (e.g. if a quota-full broker ended up skipped).
+    }catch(e){
+      console.error("Approve failed:",e);
+      alert(`Approving +91 ${abDigits(l.custom_contact_phone)} failed — reloading to show the real state.`);
+      l._approved=false;
+      const log=abLoggedBy[id]; if(log) wa.forEach(e=>log.delete(String(e.b.id)));
+      await abLoad();
+    }
+  })();
 }
 </script>
 </body>
