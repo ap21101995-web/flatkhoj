@@ -1577,7 +1577,7 @@ function abRenderModal(){
   const act=document.getElementById("abModalAction");
   if(act){
     const w=eligible.filter(e=>!ex.has(String(e.b.id))&&e.wa).length;
-    act.innerHTML=abIsApproved(l)&&w?`<button class="btn btn-teal" id="abSendMoreBtn" onclick="abSendMore('${escHtml(abModalListingId)}',this)">Send WhatsApp to ${w} more</button>`:"";
+    act.innerHTML=abIsApproved(l)&&w?`<button class="btn btn-teal" id="abSendMoreBtn" onclick="abSendMore('${escHtml(abModalListingId)}',this)">Send WhatsApp to ${w} more</button> <button class="btn btn-ghost" id="abMarkSentBtn" onclick="abMarkSent('${escHtml(abModalListingId)}',this)" title="Already shared this lead with them some other way -- don't send WhatsApp again, just stop counting them as pending">Mark as already sent (no WhatsApp)</button>`:"";
   }
   const inc=eligible.filter(e=>!ex.has(String(e.b.id))).length;
   document.getElementById("abModalCount").textContent=`${inc} of ${eligible.length} included`;
@@ -1810,6 +1810,27 @@ async function abSendMore(id, btn){
     abBusy=false; abUpdateCount();
     abAwaitSends(id).catch(e=>console.error("abAwaitSends failed:",e));
   }catch(e){ console.error(e); alert("Sending failed — check the Brokers dialog before retrying."); btn.disabled=false; abBusy=false; }
+}
+
+// Marks the included-but-not-yet-logged brokers as sent WITHOUT sending a real WhatsApp
+// message -- for a lead already shared with them some other way (e.g. by hand, before this
+// fix existed) that shouldn't be messaged again, just stopped from showing as still pending.
+async function abMarkSent(id, btn){
+  const l=abListings.find(x=>String(x.id)===id); if(!l||abBusy) return;
+  const inc=abIncluded(l).filter(e=>e.wa);
+  if(!inc.length) return;
+  if(!confirm(`Mark +91 ${abDigits(l.custom_contact_phone)} as already sent to:\n\n`+inc.map(e=>"• "+e.b.name).join("\n")+"\n\nNo WhatsApp message will be sent -- this only stops them from showing as still pending. Continue?")) return;
+  abBusy=true; btn.disabled=true; btn.textContent="Marking…";
+  try{
+    const call=()=>fetch(`${SUPA_URL}/functions/v1/portal-approve-listing`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify({listingId:id,brokerIds:inc.map(e=>String(e.b.id)),resend:true,markOnly:true})});
+    let res=await call();
+    if(res.status===401 && await refreshSession()) res=await call();
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success){ alert(data.error||`Marking failed (${res.status}).`); btn.disabled=false; btn.textContent="Mark as already sent (no WhatsApp)"; abBusy=false; return; }
+    abCloseModal();
+    abBusy=false; abUpdateCount();
+    await abLoad();
+  }catch(e){ console.error(e); alert("Marking failed — check the Brokers dialog before retrying."); btn.disabled=false; abBusy=false; }
 }
 
 // ---------- Approve from here: ONLY the included brokers receive it ----------
