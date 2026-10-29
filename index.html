@@ -554,6 +554,7 @@ body {
 .home-area-tags { display:none; flex-wrap:wrap; gap:5px; padding:5px 16px 8px; }
 .home-area-tag { display:inline-flex; align-items:center; gap:5px; background:var(--teal-bg); border:1px solid var(--teal); border-radius:6px; padding:4px 10px; font-size:12px; color:var(--teal); font-weight:600; }
 .home-area-tag button { background:none; border:none; cursor:pointer; color:var(--teal); font-size:14px; line-height:1; padding:0; }
+#fkVersionBadge{display:none;position:fixed;bottom:8px;right:8px;background:rgba(20,20,20,0.82);color:#fff;font-size:10.5px;font-family:monospace;padding:3px 9px;border-radius:6px;z-index:99999;pointer-events:none;letter-spacing:0.2px}
 </style>
 
 <script type="application/ld+json">
@@ -637,6 +638,21 @@ const AREA_COORDS = window._AC || {};
 <script>if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});</script>
 </head>
 <body>
+<div id="fkVersionBadge">index.html · build 2026-10-29 12:28 IST</div>
+<script>
+// (2026-10-29) Owner-only file/date stamp, same pattern as listing_detail.html/post_form.html,
+// so you can tell at a glance whether a deploy of THIS file actually went live. Bump the
+// date/time in the badge text above whenever this file is next changed.
+(function(){
+  try {
+    var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
+    if (!u) return;
+    var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
+    var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222'||ph==='9960395782' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
+    if (isOwner) document.write('<style>#fkVersionBadge{display:block}</style>');
+  } catch(e) {}
+})();
+</script>
 
 <header class="topbar">
   
@@ -654,6 +670,18 @@ const AREA_COORDS = window._AC || {};
   </div>
   <div class="home-area-tags" id="homeAreaTagsRow"></div>
 </header>
+
+<!-- (2026-10-29) Nudges visitors who have a WhatsApp lead we haven't managed to post yet
+     (most leads don't make it onto the portal) to reach out to support directly instead of
+     waiting. Dismissible, and the dismissal is remembered per-browser via localStorage so it
+     doesn't nag returning visitors every time. -->
+<div id="supportNudgeBanner" style="display:none;background:#fff8e6;border-bottom:1px solid #e6a817;padding:9px 34px 9px 16px;position:relative;font-size:12.5px;line-height:1.5;color:#6b5400;text-align:center">
+  📣 Less than 2% of the leads we get land up as posts on FlatKhoj. Got a flat / flatmate requirement? <a href="support.html" onclick="nav('support.html',event)" style="color:#0f7b6c;font-weight:700;text-decoration:underline">Reach out to our support directly</a> — don't wait for a post.
+  <button onclick="document.getElementById('supportNudgeBanner').style.display='none';try{localStorage.setItem('fk_support_nudge_dismissed','1')}catch(e){}" aria-label="Dismiss" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);background:none;border:none;color:#6b5400;font-size:18px;cursor:pointer;line-height:1;padding:4px">&times;</button>
+</div>
+<script>
+try { if (!localStorage.getItem('fk_support_nudge_dismissed')) document.getElementById('supportNudgeBanner').style.display='block'; } catch(e) { document.getElementById('supportNudgeBanner').style.display='block'; }
+</script>
 
 <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Flats, Flatmates &amp; PG Listings — Connect Directly with Owners and Tenants</h1>
 
