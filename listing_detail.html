@@ -345,7 +345,7 @@ body {
 </style>
 </head>
 <body>
-<div id="fkVersionBadge">listing_detail.html · build 2026-10-29 10:12 IST</div>
+<div id="fkVersionBadge">listing_detail.html · build 2026-10-29 10:50 IST</div>
 <script>
 // Run immediately - hide owner controls for non-owners initially
 // showOwnerControls() will show it later if user is poster/claimed
@@ -974,17 +974,18 @@ function renderListing(){
   document.getElementById('listingLocation').textContent=areas+', Mumbai';
 
   // Price — label depends on type
+  // (2026-10-29) The label used to be left blank when rent_amount was missing, so "Not
+  // specified" showed as a big, unexplained headline with nothing saying what it referred
+  // to (reported as confusing on a seeker/flat_wanted post). Now the same "Budget/mo" or
+  // "/month" label always shows next to it, specified or not, so it's always clear this is
+  // the rent/budget field.
+  const pricePeriodText = listing.listing_type==='flat_wanted' ? 'Budget/mo' : '/month';
   if(listing.rent_amount){
     document.getElementById('listingPrice').textContent='₹'+listing.rent_amount.toLocaleString('en-IN');
-    if(listing.listing_type==='flat_wanted'){
-      document.getElementById('pricePeriod').textContent='Budget/mo';
-    } else {
-      document.getElementById('pricePeriod').textContent='/month';
-    }
   } else {
     document.getElementById('listingPrice').textContent='Not specified';
-    document.getElementById('pricePeriod').textContent='';
   }
+  document.getElementById('pricePeriod').textContent=pricePeriodText;
 
   // Deposit — only for flat listings and PG
   if(listing.deposit_amount && listing.listing_type !== 'flat_wanted'){
