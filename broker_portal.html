@@ -140,7 +140,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 <div id="app" style="display:none">
   <div class="topbar">
-    <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 29-Oct-N4</span></div>
+    <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-N5</span></div>
     <div style="display:flex;gap:10px;align-items:center">
       <select id="bpCity" class="filter-input" style="width:auto;flex:none;font-weight:700" onchange="bpCityChanged()" title="Which city's brokers and leads to show"><option value="mumbai">Mumbai</option><option value="pune">Pune</option><option value="bengaluru">Bengaluru</option><option value="hyderabad">Hyderabad</option><option value="delhi">Delhi</option><option value="gurugram">Gurugram</option><option value="noida">Noida</option><option value="jaipur">Jaipur</option><option value="kolkata">Kolkata</option><option value="chennai">Chennai</option><option value="indore">Indore</option><option value="nashik">Nashik</option><option value="ahmedabad">Ahmedabad</option></select>
       <button class="btn btn-ghost" onclick="logout()">Sign out</button>
@@ -214,7 +214,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 29-Oct-N4 · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-N5 · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -1252,6 +1252,27 @@ async function supaGetAll(path){
   }
   return out;
 }
+// (2026-10-30) A single `?col=in.(id1,id2,...)` request with hundreds of ids makes a URL
+// long enough that Supabase's gateway rejects it outright with a 400 -- and every caller
+// here wraps that in a .catch() that silently treats "the request failed" the same as
+// "nothing matched". That's exactly what made the Brokers(N) button on the main table
+// always show the full tagged count instead of excluding already-sent brokers: with ~700
+// pending+approved listings, the broker_leads "who already got this" lookup was one request
+// for all ~700 ids at once (a 27,000+ character URL), always 400'd, and the owner never saw
+// an error -- just a count that never went down. Split any id list this large into batches
+// small enough to stay well under typical gateway URL-length limits, and merge the results.
+async function supaGetAllChunkedIn(pathPrefix, field, ids, pathSuffix){
+  const CHUNK=40; // same batch size pratika_tp.html's own broker_leads chunking already uses safely in production
+  let out=[];
+  for(let i=0;i<ids.length;i+=CHUNK){
+    const slice=ids.slice(i,i+CHUNK);
+    if(!slice.length) continue;
+    const q=`${pathPrefix}${field}=in.(${slice.map(encodeURIComponent).join(",")})${pathSuffix||""}`;
+    const rows=await supaGetAll(q).catch(e=>{ console.error(`${pathPrefix} chunk read failed`,e); return []; });
+    out=out.concat(rows);
+  }
+  return out;
+}
 
 function openAllBrokers(){
   document.getElementById("pg-brokerList").style.display="none";
@@ -1330,7 +1351,7 @@ async function abLoad(){
   const apprIds=[...new Set(targets.map(t=>String(t.listing_id)).concat(abLocalApproved()))].filter(i=>!pendIds.has(i));
   let approved=[];
   if(apprIds.length){
-    approved=await supaGetAll(`listings?select=${AB_LIST_COLS}&id=in.(${apprIds.map(encodeURIComponent).join(",")})&pending_approval=eq.false&rejected=eq.false`).catch(e=>{ console.error(e); return []; });
+    approved=await supaGetAllChunkedIn(`listings?select=${AB_LIST_COLS}&`,"id",apprIds,"&pending_approval=eq.false&rejected=eq.false");
     approved.forEach(l=>{ l._approved=true; });
   }
   abBrokers=bpCityBrokers(brokers);
@@ -1339,7 +1360,7 @@ async function abLoad(){
   abLoggedBy={};
   const allIds=[...pendIds,...approved.map(l=>String(l.id))];
   if(allIds.length){
-    const logged=await supaGetAll(`broker_leads?select=listing_id,broker_id&listing_id=in.(${allIds.map(encodeURIComponent).join(",")})`).catch(e=>{ console.error("broker_leads read failed",e); return []; });
+    const logged=await supaGetAllChunkedIn("broker_leads?select=listing_id,broker_id&","listing_id",allIds);
     logged.forEach(r=>{ (abLoggedBy[String(r.listing_id)]=abLoggedBy[String(r.listing_id)]||new Set()).add(String(r.broker_id)); });
   }
   abListings=bpCityListings(pending.concat(approved)).filter(l=>abDigits(l.custom_contact_phone).length===10);
