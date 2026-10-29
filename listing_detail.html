@@ -341,12 +341,18 @@ body {
 }
 .report-option:last-child { border-bottom:none; }
 .report-option:active { color:var(--teal); }
+#fkVersionBadge{display:none;position:fixed;bottom:8px;right:8px;background:rgba(20,20,20,0.82);color:#fff;font-size:10.5px;font-family:monospace;padding:3px 9px;border-radius:6px;z-index:99999;pointer-events:none;letter-spacing:0.2px}
 </style>
 </head>
 <body>
+<div id="fkVersionBadge">listing_detail.html · build 2026-10-29 10:12 IST</div>
 <script>
 // Run immediately - hide owner controls for non-owners initially
 // showOwnerControls() will show it later if user is poster/claimed
+// (2026-10-29) Same isOwner check also reveals #fkVersionBadge -- a small file/date stamp
+// in the corner, visible ONLY to the owner, so you can tell at a glance whether a deploy
+// of THIS file actually went live (vs. a stale cached copy) without having to ask me.
+// Bump the date/time in the badge's text above whenever this file is next changed.
 (function(){
   try {
     var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
@@ -354,6 +360,7 @@ body {
     var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
     var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222'||ph==='9960395782' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
     if (!isOwner) { document.write('<style>#ownerControls{display:none}</style>'); }
+    else { document.write('<style>#fkVersionBadge{display:block}</style>'); }
     // If owner, leave visible (default in HTML)
   } catch(e) { document.write('<style>#ownerControls{display:none}</style>'); }
 })();
@@ -951,7 +958,19 @@ function renderListing(){
 
   // Type, title, location
   document.getElementById('listingTypePill').textContent=typeLabels[listing.listing_type]||listing.listing_type;
-  document.getElementById('listingTitle').textContent=listing.description?.slice(0,80)||'Listing in '+areas;
+  // (2026-10-28) Mirror index.html's renderListings() title logic exactly, so the main
+  // feed card and this detail page always show the SAME text for the SAME listing. The old
+  // version here fell back to the raw description (or a generic "Listing in <area>") for
+  // every type, which is why a seeker (flat_wanted) post showing "Looking for ..." on the
+  // feed card showed something completely different -- usually its raw description, or
+  // "Listing in <area>" when there was no description -- when opened. Per-type priority now
+  // matches the feed exactly: explicit title > per-type generated text > description > generic.
+  document.getElementById('listingTitle').textContent = listing.title ? listing.title
+    : listing.listing_type === 'flat_wanted' ? 'Looking for ' + (listing.room_type && listing.room_type !== 'Undisclosed' ? listing.room_type : 'a flat') + ' in ' + areas
+    : listing.listing_type === 'flatmate_wanted' ? 'Flatmate wanted in ' + areas
+    : listing.description ? listing.description.slice(0, 80)
+    : listing.listing_type === 'flat_listing' ? 'Full ' + (listing.flat_type && listing.flat_type !== 'Undisclosed' ? listing.flat_type : 'Flat') + ' available in ' + areas
+    : 'Listing in ' + areas;
   document.getElementById('listingLocation').textContent=areas+', Mumbai';
 
   // Price — label depends on type
@@ -986,7 +1005,13 @@ function renderListing(){
   const fields=[];
 
   if(listing.listing_type==='flat_wanted'){
-    if(listing.flat_type) fields.push(['Looking for',listing.flat_type]);
+    // (2026-10-28) Removed the old 'Looking for'/flat_type line that used to sit here --
+    // post_form.html never sets flat_type for a flat_wanted (seeker) listing; it sets
+    // room_type via getLookingForValue() instead (see the 'fw' block). A stale/legacy
+    // flat_type value on an older row was firing this alongside the correct room_type-based
+    // 'Looking for' row below, showing "Looking For" twice with two different answers. The
+    // room_type-based row below is the one that matches both the form and the feed card's
+    // own "Looking for ..." title text, so it's the one kept.
     if(listing.food_preference) fields.push(['Food',listing.food_preference==='No preference'||listing.food_preference==='No Veg/Non-Veg Preference'||listing.food_preference==='🍽️ No Veg/Non-Veg Preference'?'🍽️ No Preference':listing.food_preference==='Veg only'||listing.food_preference==='🥦 Veg'?'Veg':listing.food_preference==='Non-veg ok'||listing.food_preference==='🍗 Non-Veg'?'Non-Veg':listing.food_preference]);
     if(listing.gender_preference) fields.push(['Gender',listing.gender_preference]);
     if(listing.available_from || listing.available_immediately) fields.push(['Move-in date', formatDate(listing.available_from)]);

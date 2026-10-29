@@ -160,11 +160,28 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 .btn-back { padding:14px 20px; background:var(--bg2); color:var(--ink2); border:1.5px solid var(--border); border-radius:var(--radius); font-family:var(--font); font-size:14px; font-weight:600; cursor:pointer; }
 .btn-next { flex:1; padding:14px; background:var(--teal); color:white; border:none; border-radius:var(--radius); font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer; }
 .btn-next:active { background:#0a6358; }
+#fkVersionBadge{display:none;position:fixed;bottom:8px;right:8px;background:rgba(20,20,20,0.82);color:#fff;font-size:10.5px;font-family:monospace;padding:3px 9px;border-radius:6px;z-index:99999;pointer-events:none;letter-spacing:0.2px}
 </style>
 <link rel="preconnect" href="https://hbvdboxyppsmcuqgbpwp.supabase.co">
 <link rel="dns-prefetch" href="https://hbvdboxyppsmcuqgbpwp.supabase.co">
 </head>
 <body>
+<div id="fkVersionBadge">post_form.html · build 2026-10-29 10:12 IST</div>
+<script>
+// (2026-10-29) Owner-only file/date stamp in the corner, same pattern as listing_detail.html
+// and admin.html, so you can tell at a glance whether a deploy of THIS file actually went
+// live (vs. a stale cached copy). Bump the date/time in the badge text above whenever this
+// file is next changed. Hidden for everyone else by default (display:none in the CSS above).
+(function(){
+  try {
+    var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
+    if (!u) return;
+    var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
+    var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222'||ph==='9960395782' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
+    if (isOwner) document.write('<style>#fkVersionBadge{display:block}</style>');
+  } catch(e) {}
+})();
+</script>
 
 <header class="topbar">
   <button class="back-btn" onclick="prevStep()">
@@ -2327,6 +2344,16 @@ function collectFormData() {
     if (data.has_brokerage !== undefined) data.brokerage_confirmed = true;
     data.available_from = document.getElementById('pg-available')?.value || null;
   }
+
+  // (2026-10-28) The auto-posting pipeline sets available_immediately=true on a listing
+  // whenever it's ASSUMING "available right away" rather than reading a stated date (see
+  // pratika_tp.html's tpMoveinText() comment). Editing a specific move-in date here used to
+  // leave that stale flag untouched, so a listing edited to "1 Dec" still showed "Immediately
+  // Available" anywhere that checked the flag first (Pratika TP's own portal) even though
+  // available_from was correctly updated -- the main site's own listing_detail.html never hit
+  // this because it only reads available_from for the displayed text, never the flag. Whenever
+  // a real date is now typed in here, clear the flag so every page agrees on which is current.
+  if (data.available_from) data.available_immediately = false;
 
   return data;
 }
