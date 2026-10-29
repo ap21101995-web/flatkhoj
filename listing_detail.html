@@ -341,12 +341,18 @@ body {
 }
 .report-option:last-child { border-bottom:none; }
 .report-option:active { color:var(--teal); }
+#fkVersionBadge{display:none;position:fixed;bottom:8px;right:8px;background:rgba(20,20,20,0.82);color:#fff;font-size:10.5px;font-family:monospace;padding:3px 9px;border-radius:6px;z-index:99999;pointer-events:none;letter-spacing:0.2px}
 </style>
 </head>
 <body>
+<div id="fkVersionBadge">listing_detail.html · build 2026-10-29 10:12 IST</div>
 <script>
 // Run immediately - hide owner controls for non-owners initially
 // showOwnerControls() will show it later if user is poster/claimed
+// (2026-10-29) Same isOwner check also reveals #fkVersionBadge -- a small file/date stamp
+// in the corner, visible ONLY to the owner, so you can tell at a glance whether a deploy
+// of THIS file actually went live (vs. a stale cached copy) without having to ask me.
+// Bump the date/time in the badge's text above whenever this file is next changed.
 (function(){
   try {
     var u = JSON.parse(localStorage.getItem('fmh_user') || 'null');
@@ -354,6 +360,7 @@ body {
     var ph = String(u.phone||'').replace(/\D/g,'').slice(-10);
     var isOwner = ph==='9538584612' || ph==='8001517396' || ph==='9225248222'||ph==='9960395782' || ph==='9004325226' || u.isOwner===true || u.isOwner==='true';
     if (!isOwner) { document.write('<style>#ownerControls{display:none}</style>'); }
+    else { document.write('<style>#fkVersionBadge{display:block}</style>'); }
     // If owner, leave visible (default in HTML)
   } catch(e) { document.write('<style>#ownerControls{display:none}</style>'); }
 })();
