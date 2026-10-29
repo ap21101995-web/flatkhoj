@@ -345,7 +345,7 @@ body {
 </style>
 </head>
 <body>
-<div id="fkVersionBadge">listing_detail.html · build 2026-10-29 10:50 IST</div>
+<div id="fkVersionBadge">listing_detail.html · build 2026-10-29 10:52 IST</div>
 <script>
 // Run immediately - hide owner controls for non-owners initially
 // showOwnerControls() will show it later if user is poster/claimed
@@ -976,16 +976,16 @@ function renderListing(){
   // Price — label depends on type
   // (2026-10-29) The label used to be left blank when rent_amount was missing, so "Not
   // specified" showed as a big, unexplained headline with nothing saying what it referred
-  // to (reported as confusing on a seeker/flat_wanted post). Now the same "Budget/mo" or
-  // "/month" label always shows next to it, specified or not, so it's always clear this is
-  // the rent/budget field.
-  const pricePeriodText = listing.listing_type==='flat_wanted' ? 'Budget/mo' : '/month';
+  // to (reported as confusing on a seeker/flat_wanted post). Now the headline itself says
+  // what's unspecified -- "Budget Not Specified" for a seeker post, "Rent Not Specified"
+  // for everything else -- so it reads clearly on its own with no separate label needed.
   if(listing.rent_amount){
     document.getElementById('listingPrice').textContent='₹'+listing.rent_amount.toLocaleString('en-IN');
+    document.getElementById('pricePeriod').textContent=listing.listing_type==='flat_wanted' ? 'Budget/mo' : '/month';
   } else {
-    document.getElementById('listingPrice').textContent='Not specified';
+    document.getElementById('listingPrice').textContent=listing.listing_type==='flat_wanted' ? 'Budget Not Specified' : 'Rent Not Specified';
+    document.getElementById('pricePeriod').textContent='';
   }
-  document.getElementById('pricePeriod').textContent=pricePeriodText;
 
   // Deposit — only for flat listings and PG
   if(listing.deposit_amount && listing.listing_type !== 'flat_wanted'){
