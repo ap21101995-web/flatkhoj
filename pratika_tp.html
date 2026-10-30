@@ -171,7 +171,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 29-Oct-TP37</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-TP38</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -183,7 +183,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 29-Oct-TP37</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-TP38</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -1915,7 +1915,14 @@ function tpOpenSend(){
   // case -- you already typed who you're sending to before picking leads -- needs no retyping.
   // Still fully editable here: this is also where you type it for the first time if you hadn't,
   // or add further numbers the same message is going out to.
-  document.getElementById("sendTo").value=document.getElementById("tpSendTo").value||"";
+  // (2026-10-30) Real correction: "when i click on send, that number vanishes" -- this used to
+  // unconditionally OVERWRITE the modal's own "Sending to" box from the top-of-page box, even
+  // when the top box was empty. Opening Send a second time for the same person (e.g. a further
+  // batch of leads) then wiped out whatever had just been typed in the modal, since the top box
+  // doesn't track it. Now only replaces the modal's number when the top box actually HAS one --
+  // otherwise it leaves whatever is already in the modal's own box alone.
+  const _topSendTo=document.getElementById("tpSendTo").value;
+  if(_topSendTo) document.getElementById("sendTo").value=_topSendTo;
   // (2026-10-23) Merge in any suggestion numbers already ticked (in the standalone panel below the
   // table, or from a previous time this modal was open) -- without this, re-setting sendTo above
   // from the top-of-page box would silently wipe out ticks made in the Suggestions list.
@@ -1939,6 +1946,11 @@ async function tpCopy(mark){
   const ids=tpSendIds||[];
   msg.textContent="Copied ✓ — saving to the sent log…";
   const done=await tpSentLogAdd(ids,nums);
+  // (2026-10-30) Real correction: "i again have to insert the number there so save the leads
+  // shared with that number" -- after a successful save, write the number(s) just sent to BACK
+  // into the top-of-page "Sending to" box, so it's still there for the next batch of leads for
+  // the same person instead of needing to be retyped every time.
+  document.getElementById("tpSendTo").value=nums.join(", ");
   tpRender();
   msg.textContent=`Copied ✓ — saved ${done} new lead${done===1?"":"s"} to the sent log for ${nums.length} number${nums.length===1?"":"s"} (duplicates, already logged for that number, were skipped).`;
 }
