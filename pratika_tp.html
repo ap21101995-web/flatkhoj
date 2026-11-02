@@ -171,7 +171,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-TP39</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 02-Nov-TP40</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -183,7 +183,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-TP39</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 02-Nov-TP40</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -1095,6 +1095,11 @@ let tpMode=null, tpSentIndex={}, tpSentLocal=false;
 // group), matched against the SAME filter criteria, sorted strictly by latest posted -- so a
 // lead can be shared with several matching people, not just the one the owner happened to spot.
 let tpSugPool=[], tpSugListings=[], tpSugSelected=new Set();
+// (2026-11-02) Real correction: "number keeps vanishing from that pratika portal" -- tracks ONLY
+// the numbers tpSyncSendToFromSug() itself has added to "Sending to" via a ticked suggestion.
+// Needed so unticking removes just that number, never a number the owner typed by hand (or that
+// was already sitting there) which simply happens to match some OTHER, unticked suggestion's phone.
+let tpSugAddedNums=new Set();
 const TP_DAYS=60;   // listings created or refreshed in the last 60 days are searched
 
 function abIsApproved(l){ return !!(l&&(l._approved||l._live)); }
@@ -1654,11 +1659,23 @@ function tpSugToggleAll(on){
 // pool's own numbers is always preserved as-is. Ticking adds a number here; unticking removes it.
 function tpSyncSendToFromSug(){
   const el=document.getElementById("sendTo"); if(!el) return;
-  const sugNums=new Set(tpSugListings.map(l=>abDigits(l.custom_contact_phone)));
   const current=(el.value||"").split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
-  const kept=current.filter(n=>!sugNums.has(abDigits(n)));
   const ticked=[...tpSugSelected].map(id=>{ const l=tpSugListings.find(x=>String(x.id)===id); return l?abDigits(l.custom_contact_phone):""; }).filter(n=>n.length===10);
-  el.value=[...kept,...ticked].join(", ");
+  const tickedSet=new Set(ticked);
+  // (2026-11-02) Real correction: "number keeps vanishing from that pratika portal" -- this used to
+  // drop ANY number from the box that matched ANY current suggestion's phone, as soon as that
+  // suggestion wasn't ticked -- including a number the owner had just typed in by hand, whenever it
+  // happened to also belong to one of the (unticked) suggestion rows. Now it only ever removes a
+  // number that THIS function itself added earlier (tracked in tpSugAddedNums) and that has since
+  // been unticked -- a hand-typed number, or one already present before any ticking happened, is
+  // never touched, no matter which suggestions are or aren't ticked.
+  const kept=current.filter(n=>{
+    const d=abDigits(n);
+    return !(tpSugAddedNums.has(d) && !tickedSet.has(d));
+  });
+  const merged=[...new Set([...kept.map(n=>abDigits(n)), ...ticked])];
+  el.value=merged.join(", ");
+  tpSugAddedNums=tickedSet;
 }
 // Logs every (ticked lead above) x (ticked number below) pair into pratika_tp_sent_log, reusing
 // tpSentLogAdd exactly as the Send modal's "Copy & save as sent" already does -- no new table,
