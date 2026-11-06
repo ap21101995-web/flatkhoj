@@ -74,12 +74,8 @@ async function init(){
   if(!id){ showErr('Invalid link — missing broker ID. Please ask for a new payment link.'); return; }
 
   try{
-    // (2026-11-07) security: the brokers table is no longer readable with the public key; this broker's own card comes
-    // from broker_public(id) -- the id is private to this broker's payment link.
-    var r = await fetch(SUPA_URL+'/rest/v1/rpc/broker_public', {
-      method: 'POST',
-      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY, 'Content-Type': 'application/json'},
-      body: JSON.stringify({ p_id: id })
+    var r = await fetch(SUPA_URL+'/rest/v1/brokers?id=eq.'+id+'&select=id,name,phone,plan,billing_cycle,is_active,subscription_status,city', {
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY}
     });
     var d = await r.json();
     if(!d || !d.length){ showErr('Broker record not found. Please contact support on WhatsApp.'); return; }

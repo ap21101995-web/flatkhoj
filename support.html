@@ -178,10 +178,8 @@ window.onload = async function() {
   if (brokerId && !brokerPhone) {
     // Fallback: look up phone from broker_id if phone wasn't passed directly
     try {
-      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/broker_public`, {
-        method: 'POST',
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_id: brokerId })
+      const res = await fetch(`${SUPA_URL}/rest/v1/brokers?id=eq.${brokerId}&select=phone`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
       });
       const data = await res.json();
       brokerPhone = data[0]?.phone || null;
@@ -244,33 +242,17 @@ function goBack() {
   window.location.href = isBrokerMode ? 'broker.html' : 'index.html';
 }
 
-// (2026-11-07) security: support chats used to be readable and writable by anyone with the public site key (every
-// user's and broker's messages). They now go through database functions that only ever return / accept the caller's
-// OWN conversations: a logged-in user is identified by their session, a broker by the private broker_id in their link.
-async function sup(fn, args) {
-  const body = Object.assign({
-    p_session: (getUser() || {}).sessionToken || null,
-    p_broker_id: (isBrokerMode && window._brokerUser && window._brokerUser.userId) || null
-  }, args || {});
-  const r = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, {
-    method: 'POST',
-    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const d = await r.json().catch(() => null);
-  if (!r.ok) throw new Error((d && d.message) || 'Request failed');
-  return d;
-}
-
 // ── LOAD CONVERSATIONS ─────────────────────────────────────
 async function loadConversations(user) {
   const wrap = document.getElementById('convList');
   try {
-    if (isBrokerMode && !(window._brokerUser && window._brokerUser.userId)) {
-      wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink3)">Please open support from the link in your FlatKhoj broker messages.</div>';
-      return;
-    }
-    const convs = await sup('support_my_conversations');
+    const query = isBrokerMode
+      ? `support_conversations?user_phone=eq.${user.phone}&source=eq.broker&order=updated_at.desc`
+      : `support_conversations?user_id=eq.${user.userId}&order=updated_at.desc`;
+    const res = await fetch(`${SUPA_URL}/rest/v1/${query}`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const convs = await res.json();
 
     document.getElementById('newChatBtn').style.display = 'block';
 
@@ -287,14 +269,18 @@ async function loadConversations(user) {
     // Get last message for each conversation
     wrap.innerHTML = '';
     for (const conv of convs) {
-      const lastMsg = conv.last_message;
+      const msgRes = await fetch(`${SUPA_URL}/rest/v1/support_messages?conversation_id=eq.${conv.id}&order=created_at.desc&limit=1`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+      const msgs = await msgRes.json();
+      const lastMsg = msgs[0];
 
       const div = document.createElement('div');
       div.className = 'conv-card';
       div.onclick = () => showChat(conv.id, conv.subject);
       div.innerHTML = `
-        <div class="conv-subject">${escHtml(conv.subject || '')}</div>
-        <div class="conv-preview">${lastMsg ? (lastMsg.sender === 'admin' ? '← ' : 'You: ') + escHtml(lastMsg.message) : 'No messages yet'}</div>
+        <div class="conv-subject">${conv.subject}</div>
+        <div class="conv-preview">${lastMsg ? (lastMsg.sender === 'admin' ? '← ' : 'You: ') + lastMsg.message : 'No messages yet'}</div>
         <div class="conv-meta">
           <span class="conv-time">${timeAgo(conv.updated_at)}</span>
           <span class="conv-status ${conv.status}">${conv.status === 'resolved' ? '✓ Resolved' : '● Open'}</span>
@@ -323,7 +309,7 @@ function checkStartBtn() {
 
 async function startConversation() {
   const user = isBrokerMode ? window._brokerUser : getUser();
-  if (!user || (isBrokerMode && !user.userId)) {
+  if (!user || (isBrokerMode && !user.phone)) {
     alert('Could not identify your broker account. Please go back to the broker page and try again.');
     return;
   }
@@ -334,9 +320,32 @@ async function startConversation() {
   btn.textContent = 'Starting…'; btn.disabled = true;
 
   try {
-    // Create conversation + first message (one server call)
-    const convId = await sup('support_start', { p_subject: (isBrokerMode ? '[Broker] ' : '') + selectedTopic, p_message: msg });
+    // Create conversation
+    const convBody = {
+      user_phone: user.phone,
+      subject: (isBrokerMode ? '[Broker] ' : '') + selectedTopic,
+      status: 'open',
+      source: isBrokerMode ? 'broker' : 'user',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (user.userId) convBody.user_id = user.userId;
+
+    const convRes = await fetch(`${SUPA_URL}/rest/v1/support_conversations`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify(convBody)
+    });
+    const convData = await convRes.json();
+    const convId = convData[0]?.id;
     if (!convId) throw new Error('No conversation ID');
+
+    // Send first message
+    await fetch(`${SUPA_URL}/rest/v1/support_messages`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: convId, sender: 'user', message: msg, created_at: new Date().toISOString() })
+    });
 
     // Reset form
     selectedTopic = '';
@@ -357,7 +366,10 @@ async function startConversation() {
 async function loadMessages(convId) {
   const wrap = document.getElementById('chatMessages');
   try {
-    const msgs = await sup('support_conversation_messages', { p_conv: convId });
+    const res = await fetch(`${SUPA_URL}/rest/v1/support_messages?conversation_id=eq.${convId}&order=created_at.asc`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const msgs = await res.json();
     wrap.innerHTML = '';
 
     if (msgs.length === 0) {
@@ -397,7 +409,18 @@ async function sendMessage() {
   input.style.height = '';
 
   try {
-    await sup('support_send', { p_conv: currentConvId, p_message: msg });
+    await fetch(`${SUPA_URL}/rest/v1/support_messages`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: currentConvId, sender: 'user', message: msg, created_at: new Date().toISOString() })
+    });
+
+    // Update conversation timestamp
+    await fetch(`${SUPA_URL}/rest/v1/support_conversations?id=eq.${currentConvId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updated_at: new Date().toISOString() })
+    });
 
     // Append optimistically
     appendMessage({ sender: 'user', message: msg, created_at: new Date().toISOString() });
