@@ -171,7 +171,7 @@ textarea.filter-input { font-family:var(--font); }
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 02-Nov-TP40</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 06-Nov-TP41</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -183,7 +183,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 02-Nov-TP40</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 06-Nov-TP41</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -585,10 +585,34 @@ function abAreaMatch(brokerAreas, listingAreas){
 // whenever it's known -- strictly more informative than the generic label -- and fall back to
 // "Entire flat" only when no size was captured. Every other room_type (Single/Double/Triple
 // occupancy, Hall, etc.) is untouched.
+// (2026-11-06) Owner: club the different wordings of one room kind into one label -- Double occupancy / Double
+// Sharing / Twin occupancy all show as "Double Sharing", Hall / Hall occupancy as "Hall Sharing", etc. Same rule as
+// find-it-yourself.html (keep the two copies identical).
+const SMALL_WORDS=new Set(["a","an","and","or","of","in","for","the","to","on","at","with","from"]);
+function tc(v){ return String(v==null?"":v).replace(/[A-Za-z][^\s\-\/(),&]*/g,(w,i)=>(i>0&&SMALL_WORDS.has(w.toLowerCase()))?w.toLowerCase():w[0].toUpperCase()+w.slice(1)); }
+function bhkName(s){ const m=String(s||"").match(/(\d(?:\.5)?)\s*(bhk|rk)\b/i); return m ? m[1]+" "+m[2].toUpperCase() : ""; }
+function clubRoom(t){
+  const order=["Single Room","Double Sharing","Triple Sharing","Hall Sharing"], out=[];
+  String(t||"").split(/[,\/]|\bor\b/i).map(x=>x.trim()).filter(Boolean).forEach(p=>{
+    const q=p.toLowerCase(); let lab="";
+    if(q==="undisclosed") return;
+    if(/\bentire\b/.test(q)) lab=bhkName(q) ? "Entire "+bhkName(q) : "Entire Flat";
+    else if(/\bsingle\b|private room|\b1\s*-?\s*sharing\b/.test(q)) lab="Single Room";
+    else if(/\bdouble\b|\btwin\b|\b2\s*-?\s*sharing\b/.test(q)) lab="Double Sharing";
+    else if(/\btriple\b|\b3\s*-?\s*sharing\b/.test(q)) lab="Triple Sharing";
+    else if(/\bhall\b/.test(q)) lab="Hall Sharing";
+    else if(/\bany\b|flexible/.test(q)) lab="Any Room";
+    else if(bhkName(q)) lab="Entire "+bhkName(q);
+    else lab=tc(p);
+    if(!out.includes(lab)) out.push(lab);
+  });
+  const rank=x=>{ const i=order.indexOf(x); if(i>=0) return i; if(/^Entire/.test(x)) return 10+(parseFloat((x.match(/\d+(\.\d+)?/)||[0])[0])||0)+(/RK/.test(x)?-0.5:0); return x==="Any Room"?50:40; };
+  return out.sort((a,b)=>rank(a)-rank(b)).join(", ");
+}
 function abReq(l){
   if(l.room_type && l.room_type!=="Undisclosed"){
     if(l.room_type==="Entire flat" && l.flat_type && l.flat_type!=="Undisclosed") return l.flat_type;
-    return l.room_type;
+    return clubRoom(l.room_type)||l.room_type;
   }
   return l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "Undisclosed";
 }

@@ -108,8 +108,8 @@ select.inp option:disabled { color:#bbb; }
 .mc { font-size:12px; font-weight:600; color:var(--ink2); background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:5px 9px; }
 .mc b { color:var(--ink3); font-weight:700; }
 .info { margin-top:12px; display:grid; gap:8px; border-top:1px dashed var(--border); padding-top:12px; }
-.ln { display:grid; grid-template-columns:78px 1fr; gap:8px; font-size:13px; line-height:1.45; }
-.ln > b { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink3); padding-top:2px; }
+.ln { display:grid; grid-template-columns:78px 1fr; gap:8px; font-size:13px; line-height:1.45; align-items:center; }
+.ln > b { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink3); }
 .ask { display:block; color:var(--gold); background:var(--gold-bg); border-radius:8px; padding:6px 9px; font-weight:600; font-size:12.5px; }
 .unlock-btn { width:100%; margin-top:14px; padding:13px; font-size:15px; }
 /* original-message popup: a dark, chat-style box that stands apart from the light page */
@@ -164,7 +164,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY05</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY06</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -605,42 +605,66 @@ function apply(){
 }
 
 // ---------- rendering ----------
+// Key words on the cards start with capitals ("No Brokerage", "Not Stated", "Semi-Furnished"); small joining words stay small.
+const SMALL_WORDS=new Set(["a","an","and","or","of","in","for","the","to","on","at","with","from"]);
+function tc(v){ return String(v==null?"":v).replace(/[A-Za-z][^\s\-\/(),&]*/g,(w,i)=>(i>0&&SMALL_WORDS.has(w.toLowerCase()))?w.toLowerCase():w[0].toUpperCase()+w.slice(1)); }
+// One label per kind of room, however the post or the script worded it (Double occupancy / Double Sharing / Twin
+// occupancy are all "Double Sharing"; "Hall" and "Hall occupancy" are one "Hall Sharing"...). Same rule as Pratika_TP.
+function clubRoom(t){
+  const order=["Single Room","Double Sharing","Triple Sharing","Hall Sharing"], out=[];
+  String(t||"").split(/[,\/]|\bor\b/i).map(x=>x.trim()).filter(Boolean).forEach(p=>{
+    const q=p.toLowerCase(); let lab="";
+    if(q==="undisclosed") return;
+    if(/\bentire\b/.test(q)) lab=bhkName(q) ? "Entire "+bhkName(q) : "Entire Flat";
+    else if(/\bsingle\b|private room|\b1\s*-?\s*sharing\b/.test(q)) lab="Single Room";
+    else if(/\bdouble\b|\btwin\b|\b2\s*-?\s*sharing\b/.test(q)) lab="Double Sharing";
+    else if(/\btriple\b|\b3\s*-?\s*sharing\b/.test(q)) lab="Triple Sharing";
+    else if(/\bhall\b/.test(q)) lab="Hall Sharing";
+    else if(/\bany\b|flexible/.test(q)) lab="Any Room";
+    else if(bhkName(q)) lab="Entire "+bhkName(q);
+    else lab=tc(p);
+    if(!out.includes(lab)) out.push(lab);
+  });
+  const rank=x=>{ const i=order.indexOf(x); if(i>=0) return i; if(/^Entire/.test(x)) return 10+(parseFloat((x.match(/\d+(\.\d+)?/)||[0])[0])||0)+(/RK/.test(x)?-0.5:0); return x==="Any Room"?50:40; };
+  return out.sort((a,b)=>rank(a)-rank(b)).join(", ");
+}
 function brokerageHtml(l){
   const s=brokerageState(l);
-  if(l.listing_type==="flat_wanted") return s==="no" ? "Wants no brokerage" : `<span class="ask">${NO_INFO_BROKERAGE}</span>`;
-  if(s==="no") return "No brokerage";
-  if(s==="yes") return "Brokerage applicable";
+  if(l.listing_type==="flat_wanted") return s==="no" ? "Wants No Brokerage" : `<span class="ask">${NO_INFO_BROKERAGE}</span>`;
+  if(s==="no") return "No Brokerage";
+  if(s==="yes") return "Brokerage Applicable";
   return `<span class="ask">${NO_INFO_BROKERAGE}</span>`;
 }
 function genderHtml(l){
   if(!genderKnown(l)) return `<span class="ask">${NO_INFO_GENDER}</span>`;
-  return norm(l.gender_preference)==="any" ? "Anyone (male or female)" : esc(l.gender_preference);
+  return ["any","any gender","anyone"].includes(norm(l.gender_preference)) ? "Anyone (Male or Female)" : esc(tc(l.gender_preference));
 }
 function movein(l){
   if(l.available_immediately) return "Immediately";
   if(l.available_from) return new Date(l.available_from).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});
-  return "Not stated";
+  return "Not Stated";
 }
 const known=v=>v && v!=="Undisclosed" ? v : "";
 function kindLabel(l){
-  if(l.listing_type==="flat_listing") return "Entire flat for rent";
-  if(l.listing_type==="flatmate_wanted") return "Room in a shared flat";
-  return "Looking for a place";
+  if(l.listing_type==="flat_listing") return "Entire Flat for Rent";
+  if(l.listing_type==="flatmate_wanted") return "Room in a Shared Flat";
+  return "Looking for a Place";
 }
 function headline(l){
-  if(l.listing_type==="flat_listing") return known(l.flat_type) ? "Entire "+l.flat_type : "Entire flat";
+  if(l.listing_type==="flat_listing") return known(l.flat_type) ? "Entire "+l.flat_type : "Entire Flat";
   if(l.listing_type==="flatmate_wanted"){
-    const r=known(l.room_type)||"Room available";
+    const r=clubRoom(l.room_type)||"Room Available";
     return known(l.flat_type) ? `${r} · in a ${l.flat_type}` : r;
   }
-  return known(l.room_type) ? "Wants: "+l.room_type : "Wants a flat, room or PG";
+  const w=clubRoom(l.room_type);
+  return w ? "Wants: "+w : "Wants a Flat, Room or PG";
 }
 const ICON_CHAT=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 20.5l1.5-4.6A8.4 8.4 0 0 1 3 11.5 8.6 8.6 0 0 1 12 3a8.6 8.6 0 0 1 9 8.5z"/><path d="M8 10h8M8 14h5"/></svg>`;
 const ICON_PIN=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`;
 function origLabel(l){ return l.listing_type==="flat_wanted" ? "View Original Message of the Occupancy Hunter" : "View Original Message from Occupancy Provider"; }
 function updateBox(l){
   const parts=[];
-  if(brokerageState(l)==="unknown") parts.push(`<div class="ur"><select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No brokerage</option><option value="yes">Brokerage applicable</option></select>
+  if(brokerageState(l)==="unknown") parts.push(`<div class="ur"><select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No Brokerage</option><option value="yes">Brokerage Applicable</option></select>
      <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${esc(l.id)}','brokerage')">Save</button></div>`);
   if(!genderKnown(l)) parts.push(`<div class="ur"><select class="inp" id="ug_${esc(l.id)}"><option value="">Gender?</option><option value="Female">Female</option><option value="Male">Male</option><option value="Any">Anyone</option></select>
      <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${esc(l.id)}','gender')">Save</button></div>`);
@@ -662,17 +686,17 @@ function card(l){
   const rent=money(l.rent_amount);
   const price=rent
     ? `<div class="price">${isSeeker?`<small>Budget </small>`:""}${esc(rent)} <small>/ month</small></div>`
-    : `<div class="price na">${isSeeker?"Budget not stated":"Rent not stated"}</div>`;
-  const chips=[`<span class="mc"><b>Move-in</b> ${esc(movein(l))}</span>`];
-  if(!isSeeker && known(l.furnishing)) chips.push(`<span class="mc">${esc(l.furnishing)}</span>`);
+    : `<div class="price na">${isSeeker?"Budget Not Stated":"Rent Not Stated"}</div>`;
+  const chips=[`<span class="mc"><b>Move-In</b> ${esc(movein(l))}</span>`];
+  if(!isSeeker && known(l.furnishing)) chips.push(`<span class="mc">${esc(tc(l.furnishing))}</span>`);
   if(!isSeeker && l.deposit_amount) chips.push(`<span class="mc"><b>Deposit</b> ${esc(money(l.deposit_amount))}</span>`);
-  if(l.food_preference && !/no veg\/non-veg/i.test(l.food_preference)) chips.push(`<span class="mc">${esc(l.food_preference)}</span>`);
+  if(l.food_preference && !/no veg\/non-veg/i.test(l.food_preference)) chips.push(`<span class="mc">${esc(tc(l.food_preference))}</span>`);
   return `<div class="res" id="r_${esc(l.id)}">
     <button class="orig-btn" onclick="openMsg('${esc(l.id)}')">${ICON_CHAT}<span>${esc(origLabel(l))}</span></button>
     <div class="res-body">
       <div class="res-row"><span class="kind">${esc(kindLabel(l))}</span><span class="when">${esc(ago(l.posted_at))}</span></div>
       <div class="head">${esc(headline(l))}</div>
-      <div class="where">${ICON_PIN}<span>${esc(arr(l.areas).join(", ")||"Area not stated")}</span></div>
+      <div class="where">${ICON_PIN}<span>${esc(arr(l.areas).join(", ")||"Area Not Stated")}</span></div>
       ${price}
       <div class="mchips">${chips.join("")}</div>
       <div class="info">
