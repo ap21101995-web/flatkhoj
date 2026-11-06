@@ -2720,7 +2720,7 @@ async function submitListing() {
 
     // Post directly to Supabase
     const cleanFormData = sanitizeForDB(formData);
-    const res = await fetch(`${SUPA_URL}/rest/v1/listings`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/listings?select=id`, {
       method: 'POST',
       headers: {
         'apikey': SUPA_KEY,
