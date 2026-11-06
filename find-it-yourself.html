@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<!-- FlatKhoj "Find it yourself" -- client-facing self-search portal (2026-11-06). Data, prices and unlocks are all
+     served by the "fiy" Supabase Edge Function; this page never reads the listings table directly, so a WhatsApp
+     group name or a poster's number never reaches the browser before that contact is paid for. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find it yourself — FlatKhoj</title>
+<meta name="description" content="Search every flat, room, PG and flatmate requirement FlatKhoj has found, filter it your way, and contact the poster directly.">
+<link rel="canonical" href="https://flatkhoj.com/find-it-yourself.html">
+<link rel="icon" href="icon-main-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#fff; --bg2:#f7f7f5; --bg3:#f0efec;
+  --ink:#141414; --ink2:#444; --ink3:#888;
+  --border:#e8e8e4;
+  --teal:#0f7b6c; --teal-bg:#e8f5f3;
+  --red:#d93025; --red-bg:#fce8e6;
+  --gold:#b7860b; --gold-bg:#fef6e4;
+  --radius:12px; --font:'Plus Jakarta Sans',sans-serif;
+}
+body { font-family:var(--font); background:var(--bg2); color:var(--ink); min-height:100vh; }
+a { color:var(--teal); }
+.topbar { background:var(--bg); border-bottom:1px solid var(--border); padding:0 18px; min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:10px; position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+.brand { font-size:17px; font-weight:800; text-decoration:none; color:var(--ink); }
+.brand span { color:var(--teal); }
+.brand small { font-size:11px; font-weight:600; color:var(--ink3); margin-left:6px; }
+.acct { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink2); flex-wrap:wrap; }
+.btn { padding:9px 16px; border-radius:8px; border:none; cursor:pointer; font-family:var(--font); font-size:13px; font-weight:700; }
+.btn-solid { background:var(--teal); color:#fff; }
+.btn-solid:disabled { background:var(--bg3); color:var(--ink3); cursor:not-allowed; }
+.btn-ghost { background:var(--bg); color:var(--ink2); border:1px solid var(--border); }
+.btn-gold { background:var(--gold-bg); color:var(--gold); border:1px solid #f3dca6; }
+.page { max-width:1040px; margin:0 auto; padding:20px 16px 60px; }
+.hero h1 { font-size:24px; font-weight:800; }
+.hero p { font-size:14px; color:var(--ink2); margin-top:6px; line-height:1.5; }
+.card { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-top:16px; }
+.pricing { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+.plan { border:1px solid var(--border); border-radius:10px; padding:14px; }
+.plan h3 { font-size:15px; }
+.plan .price { font-size:22px; font-weight:800; margin:6px 0 2px; }
+.plan .price small { font-size:12px; font-weight:600; color:var(--ink3); }
+.plan p { font-size:12.5px; color:var(--ink2); line-height:1.5; }
+.plan.best { border-color:var(--teal); background:var(--teal-bg); }
+.passline { font-size:13px; margin-top:10px; color:var(--ink2); }
+.passline b { color:var(--teal); }
+.modes { display:flex; gap:8px; flex-wrap:wrap; }
+.mode { padding:10px 14px; border:1px solid var(--border); border-radius:999px; background:var(--bg); cursor:pointer; font-weight:700; font-size:13px; color:var(--ink2); }
+.mode.on { background:var(--teal); color:#fff; border-color:var(--teal); }
+.filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px; }
+.lbl { font-size:12px; color:var(--ink2); margin-bottom:6px; font-weight:700; display:block; }
+.inp { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-family:var(--font); font-size:13.5px; color:var(--ink); outline:none; }
+.inp:focus { border-color:var(--teal); }
+.checks { display:flex; flex-wrap:wrap; gap:6px 12px; font-size:13px; }
+.checks label { display:flex; align-items:center; gap:5px; cursor:pointer; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+.chip { background:var(--teal-bg); color:var(--teal); border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700; }
+.chip b { cursor:pointer; margin-left:6px; }
+.dd { position:absolute; left:0; right:0; top:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; max-height:220px; overflow:auto; z-index:4; display:none; box-shadow:0 6px 20px rgba(0,0,0,.08); }
+.dd div { padding:8px 12px; font-size:13px; cursor:pointer; }
+.dd div.on, .dd div:hover { background:var(--teal-bg); }
+.summary { font-size:13px; color:var(--ink2); margin:16px 2px 4px; }
+.res { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-top:10px; }
+.res-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start; }
+.res-title { font-size:15px; font-weight:800; }
+.res-sub { font-size:12px; color:var(--ink3); margin-top:3px; }
+.tag { display:inline-block; font-size:11px; font-weight:700; border-radius:999px; padding:3px 9px; margin-right:6px; }
+.tag-strong { background:var(--teal-bg); color:var(--teal); }
+.tag-good { background:var(--gold-bg); color:var(--gold); }
+.tag-possible { background:var(--bg3); color:var(--ink2); }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px 16px; margin-top:12px; font-size:13px; }
+.grid dt { font-size:11px; color:var(--ink3); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.grid dd { color:var(--ink); margin-top:2px; line-height:1.4; }
+.ask { color:var(--gold); font-weight:600; }
+.reasons { font-size:12px; color:var(--ink3); margin-top:10px; }
+details.post { margin-top:12px; border-top:1px dashed var(--border); padding-top:10px; }
+details.post summary { cursor:pointer; font-size:13px; font-weight:700; color:var(--ink2); }
+details.post pre { white-space:pre-wrap; word-wrap:break-word; font-family:var(--font); font-size:13px; line-height:1.55; color:var(--ink2); margin-top:8px; background:var(--bg2); border-radius:8px; padding:10px 12px; }
+.unlock { margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.contact { background:var(--teal-bg); border-radius:10px; padding:12px 14px; margin-top:12px; font-size:14px; }
+.contact .num { font-size:18px; font-weight:800; letter-spacing:.02em; }
+.contact .acts { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.upd { margin-top:10px; font-size:13px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.upd select { width:auto; }
+.empty { text-align:center; color:var(--ink3); padding:40px 10px; font-size:14px; }
+.more { display:block; margin:16px auto 0; }
+#loginWrap { position:fixed; inset:0; background:rgba(20,20,20,.45); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
+.login { background:var(--bg); border-radius:16px; padding:28px 24px; width:100%; max-width:380px; }
+.login h2 { font-size:20px; font-weight:800; }
+.login p { font-size:13px; color:var(--ink2); margin:6px 0 18px; line-height:1.5; }
+.otp { display:flex; gap:8px; justify-content:space-between; margin-bottom:14px; }
+.otp input { width:44px; height:50px; text-align:center; font-size:20px; font-weight:800; border:1px solid var(--border); border-radius:8px; font-family:var(--font); }
+.err { font-size:13px; color:var(--red); margin-top:10px; min-height:18px; }
+.toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:12px 18px; border-radius:10px; font-size:13.5px; z-index:60; display:none; max-width:92vw; text-align:center; }
+.foot { font-size:12px; color:var(--ink3); text-align:center; margin-top:30px; line-height:1.6; }
+@media (max-width:560px){ .hero h1{font-size:20px} .otp input{width:40px;height:46px} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself <small>build 06-Nov-FIY01</small></a>
+  <div class="acct" id="acct"></div>
+</div>
+
+<div class="page">
+  <div class="hero">
+    <h1>Find it yourself</h1>
+    <p>Every flat, room, PG and flatmate requirement FlatKhoj has found in WhatsApp groups over the last 30 days — filter it your way,
+       read the original post, and contact the person directly. No middlemen, no waiting.</p>
+  </div>
+
+  <div class="card">
+    <div class="pricing">
+      <div class="plan">
+        <h3>Pay per contact</h3>
+        <div class="price">₹79 <small>/ contact</small></div>
+        <p>Unlock only the people you want to call. Once unlocked, a contact stays visible in your account.</p>
+      </div>
+      <div class="plan best">
+        <h3>30-day pass</h3>
+        <div class="price">₹199 <small>once</small> + ₹19 <small>/ contact</small></div>
+        <p>For exactly 30 days from purchase, every contact costs just ₹19. Best if you plan to call more than 2 people.</p>
+        <button class="btn btn-solid" style="margin-top:10px" id="buyPassBtn" onclick="buyPass()">Get the 30-day pass · ₹199</button>
+      </div>
+    </div>
+    <div class="passline" id="passLine"></div>
+  </div>
+
+  <div class="card">
+    <div class="modes">
+      <button class="mode on" id="modePlace" onclick="setMode('place')">I need a place (flat / room / PG)</button>
+      <button class="mode" id="modePeople" onclick="setMode('people')">I need a flatmate / tenant</button>
+    </div>
+    <div class="filters">
+      <div><label class="lbl">City</label>
+        <select class="inp" id="fCity" onchange="reload()">
+          <option value="mumbai">Mumbai</option><option value="pune">Pune</option><option value="bengaluru">Bengaluru</option>
+          <option value="hyderabad">Hyderabad</option><option value="delhi">Delhi</option><option value="gurugram">Gurugram</option>
+          <option value="noida">Noida</option><option value="jaipur">Jaipur</option><option value="kolkata">Kolkata</option>
+          <option value="chennai">Chennai</option><option value="indore">Indore</option><option value="nashik">Nashik</option>
+          <option value="ahmedabad">Ahmedabad</option></select></div>
+      <div style="grid-column:span 2;min-width:0"><label class="lbl">Areas (type, then pick or press Enter — add as many as you like)</label>
+        <div class="chips" id="chips"></div>
+        <div style="position:relative"><input class="inp" id="areaIn" placeholder="e.g. Andheri West, Powai, Baner…" autocomplete="off"
+             oninput="areaSuggest()" onfocus="areaSuggest()" onblur="setTimeout(areaHide,150)" onkeydown="areaKey(event)">
+          <div class="dd" id="areaDd"></div></div></div>
+      <div><label class="lbl" id="sharingLbl">Sharing / room</label>
+        <div class="checks" id="fSharing">
+          <label><input type="checkbox" value="Single" onchange="apply()"> Single</label>
+          <label><input type="checkbox" value="Double" onchange="apply()"> Double</label>
+          <label><input type="checkbox" value="Triple" onchange="apply()"> Triple</label>
+          <label><input type="checkbox" value="Hall" onchange="apply()"> Hall</label>
+          <label><input type="checkbox" value="Entire" onchange="apply()"> Entire flat</label></div></div>
+      <div><label class="lbl">Gender</label>
+        <select class="inp" id="fGender" onchange="apply()"><option value="">Any</option><option value="Female">Female</option><option value="Male">Male</option></select></div>
+      <div><label class="lbl">Move-in date</label><input class="inp" type="date" id="fMovein" onchange="apply()"></div>
+      <div><label class="lbl" id="rentLbl">My budget (₹ / month)</label><input class="inp" type="number" id="fRent" placeholder="e.g. 15000" onchange="apply()"></div>
+      <div><label class="lbl">Brokerage</label>
+        <select class="inp" id="fBroker" onchange="apply()">
+          <option value="">Show all</option>
+          <option value="nobroker">No brokerage + not yet known</option>
+          <option value="confirmed">Only confirmed no brokerage</option></select></div>
+      <div><label class="lbl">Sort by</label>
+        <select class="inp" id="fSort" onchange="apply()"><option value="match">Best match first</option><option value="latest">Latest first</option></select></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="clearFilters()">Clear filters</button>
+      <button class="btn btn-ghost" onclick="reload()">Refresh</button>
+      <label class="checks" style="align-items:center"><label><input type="checkbox" id="fMine" onchange="apply()"> Show only contacts I unlocked</label></label>
+    </div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+  <div id="results"></div>
+  <button class="btn btn-ghost more" id="moreBtn" style="display:none" onclick="showMore()">Show more</button>
+
+  <div class="foot">
+    Posts are shown exactly as they were written, with phone numbers, links and the WhatsApp group hidden.<br>
+    Details like brokerage and gender come from the post itself — when the post did not say, please ask the person and update it here, so the next person knows.<br>
+    Payments are processed securely by Cashfree. <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a>
+  </div>
+</div>
+
+<div id="loginWrap" style="display:none">
+  <div class="login">
+    <div id="lg1">
+      <h2>Log in to Find it yourself</h2>
+      <p>Enter your mobile number. We'll send you a one-time password — the same login as the main FlatKhoj site.</p>
+      <label class="lbl">Mobile number</label>
+      <input class="inp" id="lgPhone" type="tel" maxlength="10" placeholder="10-digit mobile number" onkeydown="if(event.key==='Enter')sendOtp()">
+      <button class="btn btn-solid" style="width:100%;margin-top:14px;padding:12px" id="lgSend" onclick="sendOtp()">Send OTP →</button>
+      <div class="err" id="lgErr1"></div>
+    </div>
+    <div id="lg2" style="display:none">
+      <h2>Enter the OTP</h2>
+      <p>Sent to <b id="lgTo"></b>. <a href="#" onclick="lgBack();return false">Change number</a></p>
+      <div class="otp" id="otpBoxes"></div>
+      <button class="btn btn-solid" style="width:100%;padding:12px" id="lgVerify" onclick="verifyOtp()">Verify & continue →</button>
+      <div class="err" id="lgErr2"></div>
+      <p style="margin:12px 0 0"><a href="#" id="lgResend" onclick="sendOtp(true);return false">Resend OTP</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL = 'https://hbvdboxyppsmcuqgbpwp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidmRib3h5cHBzbWN1cWdicHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNTIxMzUsImV4cCI6MjA4OTcyODEzNX0.h0qTsmhwSUBREHfHUx-Wxdkk12Tg58qnVwwkb-AHui4';
+const CASHFREE_ENV = 'production';
+const PAGE = 100;   // results shown per "page"
+
+const NO_INFO_BROKERAGE = "No information on brokerage yet; please confirm with them and do not forget to update here";
+const NO_INFO_GENDER = "No information on gender preference yet; please confirm with them and do not forget to update here";
+
+// Same area groups Pratika_TP and the notify-brokers function use, so a search here finds what they would.
+const AREA_GROUPS={"Andheri":["Andheri East","Andheri West"],"Andheri West":["Andheri West","DN Nagar","D N Nagar Metro","Four Bungalows","Seven Bungalows","Gilbert Hill","Lokhandwala","Lokhandwala Complex","Lokhandwala Market","Oshiwara","Lower Oshiwara","Upper Oshiwara","Oshiwara Colony","Oshiwara Market","Oshiwara Depot Area","Amboli","Amboli Naka","JP Road","JP Nagar","New Link Road","MHADA Colony Andheri","Kanchpada","Laxmi Nagar Andheri","Versova","Versova Beach","Versova Village","Yari Road","JVPD Scheme","Andheri Station West","Andheri Link Road","Veera Desai Road","Veera Desai Industrial Estate","Andheri Station","SV Road Andheri","Azad Nagar Andheri","Parsi Colony Andheri","Infinity Mall Area","Azad Nagar","Aram Nagar","Bharat Nagar Andheri","Nehru Nagar Andheri","Shitladevi Chawl"],"Andheri East":["Marol","Marol Naka","Marol Pipeline","Marol Military Road","Marol Maroshi Road","Marol Naka Junction","MIDC Andheri","JB Nagar","JB Nagar Andheri","JB Nagar Metro","Chakala","Chakala Junction","Chakala Metro","Kondivita","Kondivita Village","Gundavali","SEEPZ","SEEPZ Gate","JVLR","WEH","WEH Andheri","Airport Road","Andheri Kurla Road","Saki Naka","Saki Naka Junction","Saki Vihar","Saki Vihar Road","Sakinaka","Sakinaka Junction","Mogra Naka","Mogra Village","Andheri East Station","Andheri Station East","Manish Nagar","Chandivali Studio Road","Sher E Punjab","Andheri East","Mahakali Caves Road"],"Bandra":["Bandra West","Bandra East"],"Bandra West":["Pali Hill","Carter Road","Bandstand","Mount Mary","Land End","Linking Road Bandra","Turner Road Bandra","Hill Road Bandra","Chapel Road","Waroda Road","Ranwar","Perry Road","Reclamation","Bandra Reclamation","National Library Road","Waterfield Road"],"Bandra East":["BKC","Vakola","Kalina","Kalanagar","Khernagar","Sonapur Lane"],"Santacruz":[],"Vile Parle":[],"Vile Parle West":["Irla","Irla Market","Nehru Road Vile Parle","Navpada Vile Parle"],"Goregaon":["Goregaon West","Goregaon East"],"Goregaon West":["Mindspace","Motilal Nagar","Milind Nagar","Rahul Nagar","Ram Mandir Road","Shreyas Colony","Bhatwadi","Siddharth Nagar Goregaon"],"Goregaon East":["Film City","Aarey Colony","Dindoshi","Dindoshi Village","NESCO","Saidham Nagar","Oberoi Garden City","Yashodham","Yashodham Complex","Mahananda Dairy Area"],"Malad":["Malad West","Malad East"],"Malad West":["Marve","Bangur Nagar","Malvani","Chincholi Bunder","Orlem","Liberty Garden","Evershine Nagar"],"Malad East":["Kurar","Kurar Village","MHADA Colony"],"Kandivali":["Kandivali West","Kandivali East"],"Kandivali West":["Poisar","Lokhandwala Kandivali","Akurli Road","Akurli Naka","Charkop Sector 1","Charkop Sector 2","Charkop Sector 3","Charkop Sector 4","Charkop Sector 5","Charkop Sector 6","Charkop Sector 7","Charkop Sector 8","MHB Colony","Parekh Nagar","Mahavir Nagar Kandivali","Shankar Lane","Vijay Park","Dahanukarwadi"],"Kandivali East":["Thakur Village","Thakur Complex","Thakur Nagar","Shankar Nagar"],"Borivali":["Borivali West","Borivali East"],"Borivali West":["IC Colony","Eksar","Shimpoli","Chandavarkar Road","Rajendra Nagar Borivali","Mandapeshwar","Suresh Nagar","Sadguru Nagar","Nutan Nagar","Chadha Colony","Vazira Naka"],"Borivali East":["Kulupwadi","Kulupwadi Road","Pushpak Nagar","Vinayak Nagar"],"Dahisar":[],"Jogeshwari":[],"Kurla":[],"Ghatkopar":["Ghatkopar West","Ghatkopar East"],"Ghatkopar West":["Asalpha","Ghatkopar Pant Nagar","Vikrant Circle","Natwar Parekh Colony","Vidyavihar","Vidyavihar West"],"Ghatkopar East":["Pant Nagar","Rajawadi","Ramabai Colony","Garodia Nagar","Vidyavihar East"],"Vikhroli":[],"Powai":["Hiranandani Gardens","IIT Powai","Chandivali","Powai Lake","Central Avenue Powai","Powai Hiranandani","Powai Galleria","Powai Plaza","NITIE Area","IIT Bombay Area","Nirvana Park","Raheja Vihar","Adi Shankaracharya Marg"],"Kanjurmarg":["Kanjurmarg West","Kanjurmarg East","Kanjurmarg Station"],"Mulund":[],"Bhandup":[],"Chembur":[],"Dadar":[],"Mahim":["Lady Jamshedji Road","Tulsi Pipe Road","Dharavi Cross Road","Shitala Devi","Shitaladevi Mandir","Shitala Devi Temple Road"],"Matunga":[],"Sion":[],"Parel":["Lalbaug","Currey Road","Curry Road","Elphinstone Road","Bhoiwada"],"Lower Parel":["Delisle Road","Senapati Bapat Marg","NM Joshi Marg","Kamala Mills","Phoenix Mills Area"],"Wadala":[],"Worli":["Worli Sea Face","Worli Village","Worli Naka","Worli Koliwada","Annie Besant Road"],"Khar":[],"Juhu":["Juhu Beach","Juhu Scheme","Juhu Tara Road","Airport Road Juhu","Bhakti Vedanta Marg"],"Thane":[],"Mira Road":["Mira Road East","Beverly Park","Bhavani Nagar","Poonam Garden","Poonam Sagar","Gaurav Woods","Kashimira","Penkarpada","Navghar"],"Vashi":["Vashi Sector 1","Vashi Sector 2","Vashi Sector 3","Vashi Sector 4","Vashi Sector 5","Vashi Sector 6","Vashi Sector 7","Vashi Sector 8","Vashi Sector 9","Vashi Sector 10","Sanpada","Turbhe","CIDCO"],"Nerul":["Nerul Sector 1","Nerul Sector 2","Nerul Sector 4","Nerul Sector 6","Juinagar","Seawoods"],"Kharghar":["Kharghar Sector 1","Kharghar Sector 2","Kharghar Sector 3","Kharghar Sector 4","Kharghar Sector 5","Kharghar Sector 6","Kharghar Sector 7","Kharghar Sector 8","Kharghar Sector 9","Kharghar Sector 10","Kharghar Sector 11","Kharghar Sector 12"],"Belapur":["CBD Belapur","Parsik Hill"],"Airoli":["Airoli Sector 1","Airoli Sector 2","Airoli Sector 3","Airoli Sector 4","Airoli Sector 5","Airoli Sector 6","Airoli Sector 7","Airoli Sector 8"],"Colaba":["Cuffe Parade","Colaba Causeway","Gateway of India","Navy Nagar","Sassoon Dock","Cusrow Baug","Merewether Road","Walton Road","Wodehouse Road","Arthur Bunder Road","Regal Cinema Area","Colaba Market"],"Fort":["Ballard Estate","CSMT","Azad Maidan","Cooperage","Cross Maidan","Carnac Bunder","Crawford Market"],"Marine Lines":["Charni Road","Chowpatty","Girgaon","Gamdevi","Marine Drive"],"Grant Road":["Nana Chowk","Laburnum Road","Gamdevi","Tardeo"],"Byculla":["Reay Road","Chinchpokli","Nagpada","Agripada","Clare Road","Sandhurst Road","Mazgaon","Nesbit Road","Dockyard Road"],"Mahalaxmi":["Haji Ali","Peddar Road","Warden Road","Kemps Corner","Bhulabhai Desai Road","Mahalaxmi Racecourse"],"Malabar Hill":["Walkeshwar","Banganga","Ridge Road","Teen Batti","Napeansea Road","Altamount Road","Carmichael Road","Nepean Sea Road","Cumballa Hill","August Kranti Marg"],"Kalbadevi":["Zaveri Bazaar","Bhendi Bazaar","Bhuleshwar","Crawford Market","Null Bazaar","Dongri","Mandvi","Pydhonie","VP Road","Abdul Rehman Street","Princess Street","Vadgadi","Lohar Chawl"],"Dharavi":["60 Feet Road Dharavi","90 Feet Road Dharavi","Dharavi 90 Feet Road","Dharavi Main Road","Dharavi Cross Road"],"Vasai":[],"Nalasopara":[],"Virar":[],"Dombivli":[],"Kalyan":[],"Govandi":[],"Mankhurd":["Mankhurd Station"],"Mumbra":["Mumbra Station","Kausa"],"Chembur East":["Deonar","Trombay","Govandi","Mankhurd","Chembur Camp","RCF Colony","BPCL Colony","Nehru Nagar Chembur","Kamgar Nagar Chembur","Sindhi Camp Chembur","Deonar Colony"],"Shivajinagar":["FC Road","Ganeshkhind Road","University Road","Senapati Bapat Road","Law College Road","Prabhat Road","Deccan Gymkhana"],"Deccan":["Appa Balwant Chowk","Tilak Road","Sadashiv Peth","Narayan Peth","Kasba Peth","Budhwar Peth","Mangalwar Peth"],"Koregaon Park":["North Main Road KP","Lane 1 KP","Lane 5 KP","Lane 6 KP","Mundhwa Road","Aga Khan Palace Area","Boat Club Road Pune"],"Kalyani Nagar":["Viman Nagar","Dhole Patil Road","Airport Road Pune","Weikfield IT Area","Wadgaon Sheri","Nagar Road Pune"],"Pune Camp":["East Street","MG Road Pune","Bund Garden Road","Sangamvadi","Raikar Mala","Ghorpadi","Wanowrie Road"],"Hadapsar":["Magarpatta City","Fursungi","Manjari","Ramtekdi","Hadapsar MIDC","Phursungi","Amanora"],"Kharadi":["EON IT Park Area","Wagholi","Sasane Nagar","Kesnand Road","Lonikand"],"Kondhwa":["Kondhwa Khurd","Undri","Pisoli","Ambegaon Budruk","Mohammadwadi","Katraj South"],"Bibwewadi":["Katraj","Dhankawadi","Anand Nagar Pune","Sinhagad Road","Ambegaon Pathar"],"Wanowrie":["Fatima Nagar","Ramwadi","Salisbury Park","Lullanagar","NIBM Road"],"Baner":["Balewadi","Sus Road","Pashan","Baner Road","Sus Village"],"Aundh":["Aundh Road","Parihar Chowk","ITI Road Aundh","Vivek Colony Aundh"],"Wakad":["Hinjewadi","Pimple Saudagar","Pimple Nilakh","Thergaon","Rahatani"],"Kothrud":["Karve Road","Warje","Bavdhan","Ideal Colony","Erandwane","Market Yard"],"Hinjewadi":["Hinjewadi Phase 1","Hinjewadi Phase 2","Hinjewadi Phase 3","Marunji","Maan","Mann"],"Pimpri Chinchwad":["Pimpri","Chinchwad","Akurdi","Nigdi","Pradhikaran","Bhosari","Moshi","Chikhali"],"Vishrantwadi":["Lohegaon","Dhanori","Alandi Road","Yerwada","Vishrantwadi Road"],"Mundhwa":["Keshavnagar","Ghorpadi East","Koregaon Park Annexe","Yewalewadi"],"Shivaji Nagar":["Model Colony","Bhamburda","Navi Peth","Apte Road"],"Peth Area":["Kasba Peth","Somwar Peth","Raviwar Peth","Guruwar Peth","Shanwar Peth","Ganjve Peth"],"Viman Nagar":["Clover Park","Phoenix Mall Pune Area","Sakore Nagar","Tulja Bhavani Nagar"],"Chinchwad":["Old Chinchwad","Akurdi Station Area","Kalewadi","Ravet","Punawale"]};
+
+// ---------- small helpers ----------
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function norm(s){ return String(s==null?"":s).trim().replace(/\s+/g," ").toLowerCase(); }
+function arr(v){
+  if(Array.isArray(v)) return v.filter(Boolean).map(String);
+  if(typeof v==="string" && v.trim()){
+    const t=v.trim();
+    if(t.startsWith("{")||t.startsWith("[")){
+      try{ const j=JSON.parse(t.startsWith("{")?"["+t.slice(1,-1)+"]":t); if(Array.isArray(j)) return j.map(String); }catch(e){}
+      return t.replace(/^[\[{]|[\]}]$/g,"").split(",").map(x=>x.replace(/^"|"$/g,"").trim()).filter(Boolean);
+    }
+    return t.split(",").map(x=>x.trim()).filter(Boolean);
+  }
+  return [];
+}
+function expand(area,out,depth){ depth=depth||0; const k=String(area||"").trim(); if(!k) return; const n=k.toLowerCase(); if(out.has(n)) return; out.add(n); if(depth>=3) return; (AREA_GROUPS[k]||[]).forEach(x=>expand(x,out,depth+1)); }
+function expandSides(area,out){ expand(area,out); const k=String(area||"").trim(); if(k && !/\s(east|west)$/i.test(k)){ expand(k+" East",out); expand(k+" West",out); } }
+function areaMatch(wanted, listingAreas){
+  const la=new Set(); arr(listingAreas).forEach(a=>expandSides(a,la)); if(!la.size) return false;
+  return wanted.some(b=>{ const bs=new Set(); expandSides(b,bs); for(const x of la) if(bs.has(x)) return true; return false; });
+}
+function reqText(l){
+  if(l.room_type && l.room_type!=="Undisclosed"){
+    if(l.room_type==="Entire flat" && l.flat_type && l.flat_type!=="Undisclosed") return "Entire "+l.flat_type;
+    return l.room_type;
+  }
+  return l.flat_type && l.flat_type!=="Undisclosed" ? l.flat_type : "";
+}
+function money(n){ return n ? "₹"+Number(n).toLocaleString("en-IN") : ""; }
+function ago(iso){
+  const t=Date.parse(iso||""); if(!t) return "";
+  const m=Math.round((Date.now()-t)/60000);
+  if(m<60) return m<=1?"just now":m+" min ago";
+  const h=Math.round(m/60); if(h<24) return h+" hour"+(h>1?"s":"")+" ago";
+  const d=Math.round(h/24); return d+" day"+(d>1?"s":"")+" ago";
+}
+function toast(msg,ms){ const t=document.getElementById("toast"); t.textContent=msg; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",ms||3500); }
+
+// ---------- login (same OTP backend and same saved login as the main FlatKhoj site) ----------
+function getUser(){ try{ return JSON.parse(localStorage.getItem("fmh_user")); }catch(e){ return null; } }
+function saveUser(u){ try{ localStorage.setItem("fmh_user",JSON.stringify(u)); }catch(e){} }
+let lgPhone="";
+function showLogin(){ document.getElementById("loginWrap").style.display="flex"; lgBack(); setTimeout(()=>document.getElementById("lgPhone").focus(),100); }
+function lgBack(){ document.getElementById("lg1").style.display="block"; document.getElementById("lg2").style.display="none"; }
+function buildOtpBoxes(){
+  const w=document.getElementById("otpBoxes"); w.innerHTML="";
+  for(let i=0;i<6;i++){
+    const b=document.createElement("input"); b.inputMode="numeric"; b.maxLength=1; b.id="o"+i;
+    b.oninput=()=>{ b.value=b.value.replace(/\D/g,""); if(b.value&&i<5) document.getElementById("o"+(i+1)).focus(); if(i===5&&b.value) verifyOtp(); };
+    b.onkeydown=(e)=>{ if(e.key==="Backspace"&&!b.value&&i>0) document.getElementById("o"+(i-1)).focus(); if(e.key==="Enter") verifyOtp(); };
+    b.onpaste=(e)=>{ const t=(e.clipboardData.getData("text")||"").replace(/\D/g,"").slice(0,6); if(t.length===6){ e.preventDefault(); t.split("").forEach((c,j)=>document.getElementById("o"+j).value=c); verifyOtp(); } };
+    w.appendChild(b);
+  }
+}
+async function sendOtp(resend){
+  const p=document.getElementById("lgPhone").value.replace(/\D/g,"");
+  const err=document.getElementById("lgErr1"); err.textContent="";
+  if(p.length!==10 || !/^[6-9]/.test(p)){ err.textContent="Please enter a valid 10-digit Indian mobile number."; return; }
+  lgPhone=p;
+  const btn=document.getElementById("lgSend"); btn.disabled=true; btn.textContent="Sending…";
+  try{
+    const r=await fetch(`${SUPA_URL}/functions/v1/otp`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPA_KEY}`},body:JSON.stringify({action:"send",phone:p})});
+    const d=await r.json();
+    if(!d.success){ (resend?document.getElementById("lgErr2"):err).textContent=d.error||"Could not send the OTP. Please try again."; return; }
+    document.getElementById("lgTo").textContent="+91 "+p.replace(/(\d{5})(\d{5})/,"$1 $2");
+    document.getElementById("lg1").style.display="none"; document.getElementById("lg2").style.display="block";
+    buildOtpBoxes(); setTimeout(()=>document.getElementById("o0").focus(),100);
+    if(resend) toast("A new OTP has been sent.");
+  }catch(e){ err.textContent="Network error. Please check your connection and try again."; }
+  finally{ btn.disabled=false; btn.textContent="Send OTP →"; }
+}
+async function verifyOtp(){
+  let otp=""; for(let i=0;i<6;i++) otp+=(document.getElementById("o"+i)||{}).value||"";
+  const err=document.getElementById("lgErr2"); err.textContent="";
+  if(otp.length<6){ err.textContent="Enter the 6-digit OTP."; return; }
+  const btn=document.getElementById("lgVerify"); btn.disabled=true; btn.textContent="Verifying…";
+  try{
+    const r=await fetch(`${SUPA_URL}/functions/v1/otp`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPA_KEY}`},body:JSON.stringify({action:"verify",phone:lgPhone,otp})});
+    const d=await r.json();
+    if(!d.success){ err.textContent=d.error||"Wrong OTP. Please try again."; return; }
+    saveUser({phone:lgPhone,name:"",coins:d.coinsBalance,userId:d.userId,sessionToken:d.sessionToken,joinedAt:Date.now()});
+    document.getElementById("loginWrap").style.display="none";
+    await start();
+  }catch(e){ err.textContent="Network error. Please try again."; }
+  finally{ btn.disabled=false; btn.textContent="Verify & continue →"; }
+}
+function logout(){ try{ localStorage.removeItem("fmh_user"); }catch(e){} location.reload(); }
+
+// ---------- server calls ----------
+async function fiy(action, extra){
+  const u=getUser();
+  if(!u||!u.sessionToken){ showLogin(); throw new Error("login"); }
+  const r=await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
+    body:JSON.stringify(Object.assign({action,sessionToken:u.sessionToken},extra||{}))});
+  const d=await r.json().catch(()=>({success:false,error:"Unexpected server response."}));
+  if(r.status===401){ showLogin(); throw new Error("login"); }
+  if(!d.success) throw new Error(d.error||"Something went wrong.");
+  return d;
+}
+
+// ---------- state ----------
+let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, areasPicked=[], vocab=[], phones={};
+
+function renderAccount(){
+  const u=getUser(), a=document.getElementById("acct");
+  if(!u){ a.innerHTML=`<button class="btn btn-solid" onclick="showLogin()">Log in</button>`; return; }
+  a.innerHTML=`<span>+91 ${esc(String(u.phone||"").replace(/(\d{5})(\d{5})/,"$1 $2"))}</span><button class="btn btn-ghost" onclick="logout()">Log out</button>`;
+}
+function renderPass(){
+  const el=document.getElementById("passLine"), btn=document.getElementById("buyPassBtn");
+  if(passExpires){
+    const d=new Date(passExpires);
+    el.innerHTML=`Your 30-day pass is <b>active</b> until <b>${esc(d.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}))} ${esc(d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}))}</b> — every contact costs <b>₹${contactPrice}</b> until then.`;
+    btn.textContent="Extend by another 30 days · ₹199";
+  }else{
+    el.innerHTML=`No pass active — each contact costs <b>₹${contactPrice}</b>.`;
+    btn.textContent="Get the 30-day pass · ₹199";
+  }
+}
+
+function setMode(m){
+  mode=m;
+  document.getElementById("modePlace").classList.toggle("on",m==="place");
+  document.getElementById("modePeople").classList.toggle("on",m==="people");
+  document.getElementById("rentLbl").textContent=m==="place"?"My budget (₹ / month)":"My rent (₹ / month)";
+  document.getElementById("sharingLbl").textContent=m==="place"?"Sharing / room":"What they want";
+  reload();
+}
+
+async function reload(){
+  const res=document.getElementById("results"), sum=document.getElementById("summary");
+  res.innerHTML=`<div class="empty">Loading…</div>`; sum.textContent="";
+  try{
+    const d=await fiy("search",{city:document.getElementById("fCity").value,mode});
+    pool=d.listings||[]; passExpires=d.passExpires; contactPrice=d.contactPrice; renderPass();
+    const v=new Set(); pool.forEach(l=>arr(l.areas).forEach(a=>v.add(a)));
+    Object.keys(AREA_GROUPS).forEach(k=>v.add(k));
+    vocab=[...v].sort((a,b)=>a.localeCompare(b));
+    shown=PAGE; apply();
+  }catch(e){ if(e.message!=="login") res.innerHTML=`<div class="empty">${esc(e.message)}</div>`; }
+}
+
+// ---------- matching (same rules as Pratika_TP: only clear facts hide a listing; soft ones only rank it) ----------
+function readFilters(){
+  return {
+    areas: areasPicked.slice(),
+    sharing: [...document.querySelectorAll("#fSharing input:checked")].map(x=>x.value),
+    gender: document.getElementById("fGender").value,
+    movein: document.getElementById("fMovein").value,
+    rent: Number(document.getElementById("fRent").value)||0,
+    broker: document.getElementById("fBroker").value,
+    mine: document.getElementById("fMine").checked,
+  };
+}
+function brokerageState(l){
+  if(l.listing_type==="flat_wanted") return l.brokerage_preference==="prefno" ? "no" : "unknown";
+  if(l.brokerage_confirmed===true) return l.has_brokerage ? "yes" : "no";
+  return "unknown";
+}
+function genderKnown(l){ const g=norm(l.gender_preference); return g && !["undisclosed","no preference","none"].includes(g); }
+function match(l,o){
+  const reasons=[]; let score=0;
+  if(o.mine && !l.unlocked) return null;
+  const bs=brokerageState(l);
+  if(o.broker==="nobroker" && bs==="yes") return null;
+  if(o.broker==="confirmed" && bs!=="no") return null;
+  if(o.areas.length){
+    if(!areaMatch(o.areas,l.areas)) return null;
+    const exact=arr(l.areas).some(a=>o.areas.some(b=>norm(a)===norm(b)));
+    score+=exact?3:2; reasons.push(exact?"Area matches exactly":"Area matches");
+  }
+  const req=((mode==="place"?String(l.room_type||""):reqText(l))+(mode==="place"&&l.listing_type==="flat_listing"?" entire":"")).toLowerCase();
+  const tk={single:/\bsingle\b/.test(req),double:/\bdouble\b|\btwin\b/.test(req),triple:/\btriple\b/.test(req),hall:/\bhall\b/.test(req),entire:/\bentire\b|\bbhk\b|\brk\b/.test(req),any:/\bany\b/.test(req)};
+  const stated=Object.values(tk).some(Boolean);
+  if(o.sharing.length){
+    const hit=o.sharing.find(k=>tk[k.toLowerCase()]);
+    if(hit){ score+=2; reasons.push((mode==="place"?"Offers ":"Wants ")+hit.toLowerCase()); }
+    else if(tk.any){ score+=1; reasons.push("Open to any"); }
+    else if(!stated) reasons.push("Room type not stated");
+    else return null;
+  }
+  const g=norm(l.gender_preference);
+  if(o.gender){
+    if(g===o.gender.toLowerCase()){ score+=1; reasons.push("Gender matches"); }
+    else if(!g||["undisclosed","any","no preference","anyone","none","coed","co-ed"].includes(g)) reasons.push("Gender not stated");
+    else return null;
+  }
+  if(o.movein){
+    if(l.available_immediately){ score+=1; reasons.push("Available immediately"); }
+    else if(l.available_from){
+      const diff=(Date.parse(l.available_from)-Date.parse(o.movein))/864e5;
+      if(Math.abs(diff)<=5){ score+=1; reasons.push("Move-in date fits"); } else reasons.push(diff<0?"Available earlier":"Available a bit later");
+    }else reasons.push("Move-in date not stated");
+  }
+  if(o.rent){
+    const r=Number(l.rent_amount)||0;
+    if(r){
+      if(mode==="place"){ if(r<=o.rent*1.05){ score+=2; reasons.push("Within your budget"); } else { score+=0.5*(o.rent/r); reasons.push("Above your budget"); } }
+      else { if(r>=o.rent*0.95){ score+=2; reasons.push("Their budget fits"); } else { score+=0.5*(r/o.rent); reasons.push("Their budget is lower"); } }
+    }else reasons.push(mode==="place"?"Rent not stated":"Budget not stated");
+  }
+  if(bs==="no"){ score+=0.5; reasons.push("No brokerage"); }
+  return {score,reasons,label:score>=6?"Strong match":(score>=4?"Good match":"Possible")};
+}
+let matched=[];
+function apply(){
+  const o=readFilters();
+  matched=[];
+  pool.forEach(l=>{ const m=match(l,o); if(m){ l._m=m; matched.push(l); } });
+  const t=l=>Date.parse(l.posted_at||0)||0;
+  if(document.getElementById("fSort").value==="latest") matched.sort((a,b)=>t(b)-t(a));
+  else matched.sort((a,b)=>(b._m.score-a._m.score)||(t(b)-t(a)));
+  const city=document.getElementById("fCity").selectedOptions[0].text;
+  document.getElementById("summary").innerHTML = pool.length
+    ? `<b>${matched.length}</b> ${mode==="place"?"place(s)":"people"} found in ${esc(city)} from the last 30 days${o.areas.length?" for "+esc(o.areas.join(", ")):""}.`
+    : `No ${mode==="place"?"places":"requirements"} found in ${esc(city)} in the last 30 days yet.`;
+  render();
+}
+
+// ---------- rendering ----------
+function brokerageHtml(l){
+  const s=brokerageState(l);
+  if(l.listing_type==="flat_wanted") return s==="no" ? "Wants no brokerage" : `<span class="ask">${NO_INFO_BROKERAGE}</span>`;
+  if(s==="no") return "No brokerage";
+  if(s==="yes") return "Brokerage applies";
+  return `<span class="ask">${NO_INFO_BROKERAGE}</span>`;
+}
+function genderHtml(l){
+  if(!genderKnown(l)) return `<span class="ask">${NO_INFO_GENDER}</span>`;
+  const g=String(l.gender_preference);
+  return norm(g)==="any" ? "Anyone (male or female)" : esc(g);
+}
+function movein(l){
+  if(l.available_immediately) return "Immediately";
+  if(l.available_from){ const d=new Date(l.available_from); return d.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}); }
+  return "Not stated";
+}
+function title(l){
+  const where=arr(l.areas).join(", ")||"Area not stated";
+  if(l.listing_type==="flat_listing") return `${reqText(l)||"Flat"} for rent · ${where}`;
+  if(l.listing_type==="flatmate_wanted") return `${l.room_type&&l.room_type!=="Undisclosed"?l.room_type:"Room"} available · ${where}`;
+  return `Looking for ${reqText(l)||"a place"} · ${where}`;
+}
+function updateBox(l){
+  const parts=[];
+  if(brokerageState(l)==="unknown") parts.push(`<select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No brokerage</option><option value="yes">Brokerage applies</option></select>
+     <button class="btn btn-ghost" onclick="saveUpdate('${esc(l.id)}','brokerage')">Save brokerage</button>`);
+  if(!genderKnown(l)) parts.push(`<select class="inp" id="ug_${esc(l.id)}"><option value="">Gender?</option><option value="Female">Female</option><option value="Male">Male</option><option value="Any">Anyone</option></select>
+     <button class="btn btn-ghost" onclick="saveUpdate('${esc(l.id)}','gender')">Save gender</button>`);
+  if(!parts.length) return "";
+  return `<div class="upd"><b>After you talk to them, update this for the next person:</b> ${parts.join(" ")}</div>`;
+}
+function card(l){
+  const m=l._m||{reasons:[],label:"Possible"};
+  const cls=m.label==="Strong match"?"tag-strong":(m.label==="Good match"?"tag-good":"tag-possible");
+  const rentLbl=l.listing_type==="flat_wanted"?"Budget":"Rent";
+  const extra=l.listing_type==="flat_wanted" ? "" :
+    `<div><dt>Flat</dt><dd>${esc(l.flat_type&&l.flat_type!=="Undisclosed"?l.flat_type:"Not stated")}</dd></div>
+     <div><dt>Furnishing</dt><dd>${esc(l.furnishing&&l.furnishing!=="Undisclosed"?l.furnishing:"Not stated")}</dd></div>`;
+  const ph=phones[String(l.id)];
+  const contact = l.unlocked
+    ? (ph ? `<div class="contact">Contact: <span class="num">+91 ${esc(ph.replace(/(\d{5})(\d{5})/,"$1 $2"))}</span>
+              <div class="acts"><a class="btn btn-solid" href="tel:+91${esc(ph)}">Call</a>
+              <a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/91${esc(ph)}?text=${encodeURIComponent("Hi, I saw your post about "+arr(l.areas).join(", ")+" on FlatKhoj. Is it still available?")}">WhatsApp</a></div>
+              ${updateBox(l)}</div>`
+          : `<div class="unlock"><button class="btn btn-solid" onclick="showContact('${esc(l.id)}')">Show contact (already unlocked)</button></div>`)
+    : `<div class="unlock"><button class="btn btn-solid" onclick="unlock('${esc(l.id)}')">Unlock contact · ₹${contactPrice}</button>
+        <span style="font-size:12px;color:var(--ink3)">${passExpires?"30-day pass price":"or get the 30-day pass above to pay ₹19 per contact"}</span></div>`;
+  return `<div class="res" id="r_${esc(l.id)}">
+    <div class="res-head"><div><div class="res-title">${esc(title(l))}</div>
+      <div class="res-sub">Posted ${esc(ago(l.posted_at))}</div></div>
+      <div><span class="tag ${cls}">${esc(m.label)}</span></div></div>
+    <dl class="grid">
+      <div><dt>${rentLbl}</dt><dd>${esc(money(l.rent_amount)||"Not stated")}</dd></div>
+      <div><dt>${l.listing_type==="flat_wanted"?"Wants":"Room"}</dt><dd>${esc(reqText(l)||"Not stated")}</dd></div>
+      <div><dt>Move-in</dt><dd>${esc(movein(l))}</dd></div>
+      ${extra}
+      <div><dt>Food</dt><dd>${esc(l.food_preference&&!/no veg\/non-veg/i.test(l.food_preference)?l.food_preference:"No preference stated")}</dd></div>
+      <div style="grid-column:1/-1"><dt>Gender</dt><dd>${genderHtml(l)}</dd></div>
+      <div style="grid-column:1/-1"><dt>Brokerage</dt><dd>${brokerageHtml(l)}</dd></div>
+    </dl>
+    ${m.reasons.length?`<div class="reasons">${esc(m.reasons.join(" · "))}</div>`:""}
+    <details class="post"><summary>Read the original post</summary><pre>${esc(l.text||"")}</pre></details>
+    ${contact}
+  </div>`;
+}
+function render(){
+  const res=document.getElementById("results");
+  if(!matched.length){ res.innerHTML=pool.length?`<div class="empty">Nothing matches all of these filters. Try fewer areas or clear a filter.</div>`:""; document.getElementById("moreBtn").style.display="none"; return; }
+  res.innerHTML=matched.slice(0,shown).map(card).join("");
+  document.getElementById("moreBtn").style.display=matched.length>shown?"block":"none";
+}
+function showMore(){ shown+=PAGE; render(); }
+function clearFilters(){
+  areasPicked=[]; renderChips();
+  document.querySelectorAll("#fSharing input").forEach(x=>x.checked=false);
+  ["fGender","fMovein","fRent","fBroker"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("fSort").value="match"; document.getElementById("fMine").checked=false;
+  apply();
+}
+
+// ---------- area picker ----------
+let ddIdx=-1;
+function renderChips(){ document.getElementById("chips").innerHTML=areasPicked.map((a,i)=>`<span class="chip">${esc(a)}<b onclick="dropArea(${i})">×</b></span>`).join(""); }
+function addArea(a){ a=String(a||"").trim(); if(!a) return; if(!areasPicked.some(x=>norm(x)===norm(a))) areasPicked.push(a); renderChips(); document.getElementById("areaIn").value=""; areaHide(); apply(); }
+function dropArea(i){ areasPicked.splice(i,1); renderChips(); apply(); }
+function areaSuggest(){
+  const q=norm(document.getElementById("areaIn").value), dd=document.getElementById("areaDd");
+  if(!q){ dd.style.display="none"; return; }
+  const hits=vocab.filter(v=>norm(v).includes(q)).sort((a,b)=>(norm(a).startsWith(q)?0:1)-(norm(b).startsWith(q)?0:1)).slice(0,12);
+  ddIdx=-1;
+  dd.innerHTML=hits.map((h,i)=>`<div data-i="${i}" onmousedown="addArea(this.textContent)">${esc(h)}</div>`).join("");
+  dd.style.display=hits.length?"block":"none";
+}
+function areaHide(){ document.getElementById("areaDd").style.display="none"; }
+function areaKey(e){
+  const dd=document.getElementById("areaDd"), items=[...dd.querySelectorAll("div")];
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){ e.preventDefault(); if(!items.length) return; ddIdx=(ddIdx+(e.key==="ArrowDown"?1:-1)+items.length)%items.length; items.forEach((x,i)=>x.classList.toggle("on",i===ddIdx)); }
+  else if(e.key==="Enter"){ e.preventDefault(); addArea(ddIdx>=0&&items[ddIdx]?items[ddIdx].textContent:document.getElementById("areaIn").value); }
+  else if(e.key==="Escape") areaHide();
+}
+
+// ---------- unlocking, payments, updates ----------
+async function showContact(id){
+  try{ const d=await fiy("contact",{listingId:id}); phones[String(id)]=d.phone; render(); }
+  catch(e){ if(e.message!=="login") toast(e.message); }
+}
+function openCheckout(sessionId){
+  const go=()=>{ const cf=Cashfree({mode:CASHFREE_ENV}); cf.checkout({paymentSessionId:sessionId,redirectTarget:"_self"}); };
+  if(window.Cashfree) return go();
+  const s=document.createElement("script"); s.src="https://sdk.cashfree.com/js/v3/cashfree.js"; s.onload=go;
+  s.onerror=()=>toast("Could not load the payment page. Please check your connection."); document.head.appendChild(s);
+}
+async function unlock(id){
+  try{
+    const d=await fiy("order",{kind:"contact",listingId:id});
+    if(d.alreadyUnlocked){ await showContact(id); return; }
+    localStorage.setItem("fiy_last_listing",String(id));
+    openCheckout(d.payment_session_id);
+  }catch(e){ if(e.message!=="login") toast(e.message); }
+}
+async function buyPass(){
+  try{ const d=await fiy("order",{kind:"pass"}); openCheckout(d.payment_session_id); }
+  catch(e){ if(e.message!=="login") toast(e.message); }
+}
+async function confirmReturn(orderId){
+  toast("Confirming your payment…",15000);
+  for(let i=0;i<8;i++){
+    try{
+      const d=await fiy("confirm",{orderId});
+      if(d.paid){
+        history.replaceState(null,"",location.pathname);
+        if(d.kind==="pass"){ toast("Your 30-day pass is active. Every contact is now ₹19."); }
+        else{
+          toast("Contact unlocked.");
+          try{ const c=await fiy("contact",{listingId:d.listingId}); phones[String(d.listingId)]=c.phone; }catch(e){}
+          localStorage.setItem("fiy_scroll_to",String(d.listingId));
+        }
+        return;
+      }
+      if(["EXPIRED","TERMINATED","FAILED"].includes(d.cashfreeStatus)){ toast("The payment did not go through. You have not been charged for this contact."); history.replaceState(null,"",location.pathname); return; }
+    }catch(e){ if(e.message==="login") return; }
+    await new Promise(r=>setTimeout(r,2000));
+  }
+  toast("Your payment is still being confirmed. If money was deducted, it will show here within a few minutes — just refresh.",8000);
+  history.replaceState(null,"",location.pathname);
+}
+async function saveUpdate(id,field){
+  const sel=document.getElementById((field==="gender"?"ug_":"ub_")+id); const v=sel&&sel.value;
+  if(!v){ toast("Choose an option first."); return; }
+  try{
+    await fiy("update",{listingId:id,field,value:v});
+    const l=pool.find(x=>String(x.id)===String(id));
+    if(l){
+      if(field==="gender") l.gender_preference=v;
+      else if(l.listing_type==="flat_wanted") l.brokerage_preference=(v==="no"?"prefno":"yes");
+      else { l.brokerage_confirmed=true; l.has_brokerage=(v==="yes"); }
+    }
+    toast("Thank you — saved for everyone searching after you."); render();
+  }catch(e){ if(e.message!=="login") toast(e.message); }
+}
+
+// ---------- start ----------
+async function start(){
+  renderAccount();
+  const u=getUser();
+  if(!u||!u.sessionToken){ showLogin(); return; }
+  const params=new URLSearchParams(location.search);
+  const ord=params.get("fiy_order");
+  try{
+    const st=await fiy("status");
+    passExpires=st.passExpires; contactPrice=st.contactPrice; renderPass();
+  }catch(e){ return; }
+  if(ord) await confirmReturn(ord);
+  await reload();
+  // after a contact payment, bring the user back to that listing
+  const back=localStorage.getItem("fiy_scroll_to");
+  if(back){
+    localStorage.removeItem("fiy_scroll_to");
+    if(!phones[back]){ try{ const c=await fiy("contact",{listingId:back}); phones[back]=c.phone; }catch(e){} }
+    let idx=matched.findIndex(l=>String(l.id)===back);
+    if(idx<0){ const l=pool.find(x=>String(x.id)===back); if(l){ l._m=l._m||{score:0,reasons:[],label:"Possible"}; matched.unshift(l); idx=0; } }
+    if(idx>=shown) shown=idx+1;
+    render();
+    const el=document.getElementById("r_"+back); if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+  }
+}
+start();
+</script>
+</body>
+</html>
