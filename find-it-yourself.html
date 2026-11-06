@@ -164,7 +164,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY04</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY05</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -233,7 +233,7 @@ select.inp option:disabled { color:#bbb; }
 <div class="sheet" id="loginSheet">
   <div class="grab"></div>
   <div id="lg1">
-    <h2>Log in</h2>
+    <h2 id="lgTitle">Log in</h2>
     <p>Enter your mobile number — we'll send a one-time password. Same login as the main FlatKhoj site.</p>
     <input class="inp" id="lgPhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" onkeydown="if(event.key==='Enter')sendOtp()">
     <button class="btn btn-solid" style="width:100%;margin-top:12px;padding:14px" id="lgSend" onclick="sendOtp()">Send OTP →</button>
@@ -329,7 +329,8 @@ function closeSheets(){ document.getElementById("backdrop").classList.remove("sh
 function getUser(){ try{ return JSON.parse(localStorage.getItem("fmh_user")); }catch(e){ return null; } }
 function saveUser(u){ try{ localStorage.setItem("fmh_user",JSON.stringify(u)); }catch(e){} }
 let lgPhone="", afterLogin=null;
-function showLogin(then){ afterLogin=then||null; lgBack(); openSheet("loginSheet"); setTimeout(()=>document.getElementById("lgPhone").focus(),250); }
+function showLogin(then){ afterLogin=then||null; lgBack();
+  document.getElementById("lgTitle").textContent=then?"Log in to unlock this contact":"Log in"; openSheet("loginSheet"); setTimeout(()=>document.getElementById("lgPhone").focus(),250); }
 function lgBack(){ document.getElementById("lg1").style.display="block"; document.getElementById("lg2").style.display="none"; }
 function buildOtpBoxes(){
   const w=document.getElementById("otpBoxes"); w.innerHTML="";
@@ -380,9 +381,10 @@ function logout(){ try{ localStorage.removeItem("fmh_user"); }catch(e){} locatio
 // ---------- server calls ----------
 async function fiy(action, extra){
   const u=getUser();
-  if(!u||!u.sessionToken){ showLogin(); throw new Error("login"); }
+  // browsing needs no login; only unlocking / paying / numbers do
+  if((!u||!u.sessionToken) && action!=="search"){ showLogin(); throw new Error("login"); }
   const r=await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
-    body:JSON.stringify(Object.assign({action,sessionToken:u.sessionToken},extra||{}))});
+    body:JSON.stringify(Object.assign({action,sessionToken:(u&&u.sessionToken)||""},extra||{}))});
   const d=await r.json().catch(()=>({success:false,error:"Unexpected server response."}));
   if(r.status===401){ try{ localStorage.removeItem("fmh_user"); }catch(e){} renderAccount(); showLogin(); throw new Error("login"); }
   if(!d.success) throw new Error(d.error||"Something went wrong.");
@@ -719,6 +721,8 @@ async function showContact(id){
 function unlock(id){
   const u=getUser();
   if(!u||!u.sessionToken){ showLogin(()=>unlock(id)); return; }
+  const l=pool.find(x=>String(x.id)===String(id));
+  if(l && l.unlocked){ showContact(id); return; }   // already bought earlier on this account
   payFor=String(id);
   const box=document.getElementById("payOptions");
   if(passExpires){
@@ -802,11 +806,7 @@ async function start(fromLogin){
   if(!document.getElementById("fBroker").options.length) setupMode();
   renderAccount(); renderPicked();
   const u=getUser();
-  if(!u||!u.sessionToken){
-    document.getElementById("results").innerHTML=`<div class="empty">Log in with your mobile number to see the listings.<br><br><button class="btn btn-solid" onclick="showLogin()">Log in</button></div>`;
-    if(!fromLogin) showLogin();
-    return;
-  }
+  if(!u||!u.sessionToken){ await reload(); return; }   // browse freely; login is asked for only on "Unlock contact"
   const ord=new URLSearchParams(location.search).get("fiy_order");
   try{ const st=await fiy("status"); passExpires=st.passExpires; contactPrice=st.contactPrice; renderAccount(); }catch(e){ return; }
   if(ord) await confirmReturn(ord);
