@@ -3004,7 +3004,7 @@ window.addEventListener('load', async function() {
     document.getElementById('topbarTitle').textContent = 'Edit Listing';
 
     try {
-      const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${editId}&select=*`, {
+      const res = await fetch(`${SUPA_URL}/rest/v1/listings?id=eq.${editId}&select=id,user_id,listing_type,areas,city,rent_amount,deposit_amount,flat_type,room_type,furnishing,amenities,food_preference,gender_preference,tenant_type,pets_allowed,has_brokerage,brokerage_amount,is_free_contact,free_contact_coins_paid,title,description,raw_input,photos,available_from,stay_duration,is_active,is_urgent,is_verified,expires_at,view_count,unlock_count,created_at,updated_at,poster_name,brokerage_preference,claimed_by_user_id,claimed_at,situation,occupation,posting_plan,meals_included,curfew,visitors_allowed,posted_by_owner,is_sold,sold_reported_by,sold_at,pending_approval,rejected,brokerage_confirmed,on_hold,whatsapp_posted_at,available_immediately,contact_masked,is_whatsapp_post`, {
         headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
       });
       const [listing] = await res.json();
@@ -3021,15 +3021,20 @@ window.addEventListener('load', async function() {
       // field was silently left blank for every real-user posting
       // instead of showing the poster's actual number. Fetch it the
       // same way here, purely for display/edit purposes.
-      if (!listing.custom_contact_phone && listing.user_id) {
-        try {
-          const uRes = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${listing.user_id}&select=phone`, {
-            headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-          });
-          const [posterUser] = await uRes.json();
-          if (posterUser && posterUser.phone) listing.custom_contact_phone = posterUser.phone;
-        } catch (e) { /* non-fatal -- edit still works without this */ }
-      }
+      // (2026-11-06) the number and original WhatsApp text are no longer readable with the public key: the server
+      // (listing-actions get_private) returns them only to this listing's own poster or the owner account.
+      try {
+        const _u = (typeof getUser === 'function' ? getUser() : JSON.parse(localStorage.getItem('fmh_user') || 'null')) || {};
+        const pRes = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
+          method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionToken: _u.sessionToken, listingId: editId, action: 'get_private' })
+        });
+        const p = await pRes.json();
+        if (p && p.success) {
+          listing.custom_contact_phone = p.customContactPhone || p.phone || null;
+          listing.raw_whatsapp_text = p.rawText || null;
+        }
+      } catch (e) { /* non-fatal -- edit still works without this */ }
 
       // Store listing data globally for pre-fill when user hits Next
       window._editListingId = editId;

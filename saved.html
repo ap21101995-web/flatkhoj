@@ -80,7 +80,7 @@ window.onload = async function() {
 
   const wrap = document.getElementById('savedWrap');
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${user.userId}&order=created_at.desc&select=*,listings(*)`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/saved_listings?user_id=eq.${user.userId}&order=created_at.desc&select=*,listings(id,user_id,listing_type,areas,city,rent_amount,deposit_amount,flat_type,room_type,furnishing,amenities,food_preference,gender_preference,tenant_type,pets_allowed,has_brokerage,brokerage_amount,is_free_contact,free_contact_coins_paid,title,description,raw_input,photos,available_from,stay_duration,is_active,is_urgent,is_verified,expires_at,view_count,unlock_count,created_at,updated_at,poster_name,brokerage_preference,claimed_by_user_id,claimed_at,situation,occupation,posting_plan,meals_included,curfew,visitors_allowed,posted_by_owner,is_sold,sold_reported_by,sold_at,pending_approval,rejected,brokerage_confirmed,on_hold,whatsapp_posted_at,available_immediately,contact_masked,is_whatsapp_post)`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     });
     const saved = await res.json();

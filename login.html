@@ -586,74 +586,29 @@ async function generateRandomSessionToken(userId) {
 
 async function verifyOwnerPassword() {
   const pwd = document.getElementById('ownerPasswordInput').value;
-  const OWNER_PASSWORD = 'Owner_Aditya_2026';
-  const PRATIKA_PASSWORD = '9004325226';
+  // (2026-11-06) The password is checked on the server (session-login), which also creates the session -- the passwords
+  // are no longer in this page, and the public key can no longer write login sessions itself.
+  const loginPhone = phoneNumber === '9004325226' ? '9004325226' : '9538584612';
+  const loginName = loginPhone === '9004325226' ? 'Pratika' : 'Aditya';
 
-  const isAditya = pwd === OWNER_PASSWORD;
-  const isPratika = pwd === PRATIKA_PASSWORD;
-
-  if (!isAditya && !isPratika) {
-    document.getElementById('ownerErrorText').textContent = 'Incorrect password. Please try again.';
-    document.getElementById('ownerError').classList.add('show');
-    return;
-  }
-
-  const loginPhone = isPratika ? '9004325226' : '9538584612';
-  const loginName = isPratika ? 'Pratika' : 'Aditya';
-
-  // Password correct — create/get account in Supabase
   try {
-    const SUPA_URL = SUPABASE_URL;
-    const SUPA_KEY = SUPABASE_ANON_KEY;
-
-    // Check if user exists
-    const res = await fetch(`${SUPA_URL}/rest/v1/users?phone=eq.${loginPhone}&select=id,coins`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    const lr = await fetch(`${SUPABASE_URL}/functions/v1/session-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ action: 'owner', phone: loginPhone, password: pwd })
     });
-    const existing = await res.json();
-
-    let userId, coins;
-
-    if (existing && existing.length > 0) {
-      userId = existing[0].id;
-      coins = existing[0].coins || 0;
-    } else {
-      // Create account with 0 starting coins
-      const createRes = await fetch(`${SUPA_URL}/rest/v1/users`, {
-        method: 'POST',
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-        body: JSON.stringify({ phone: loginPhone, coins: 0, created_at: new Date().toISOString() })
-      });
-      const newUser = await createRes.json();
-      userId = newUser[0]?.id;
-      coins = 0;
+    const ld = await lr.json();
+    if (!ld.success) {
+      document.getElementById('ownerErrorText').textContent = ld.error || 'Incorrect password. Please try again.';
+      document.getElementById('ownerError').classList.add('show');
+      return;
     }
-
-    // Generate a real random session token (not a predictable timestamp) and
-    // register it in user_sessions -- the same way the real OTP login flow
-    // already does. Without this, any server-side function that verifies a
-    // session (like listing-actions) would never find this login registered
-    // anywhere, and every action would fail with "session invalid".
-    const sessionToken = await generateRandomSessionToken(userId);
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/user_sessions`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          token_hash: await hashTokenClient(sessionToken),
-          created_at: new Date().toISOString(),
-          last_active: new Date().toISOString()
-        })
-      });
-    } catch (e) { console.error('Failed to register owner session:', e); }
-
     const user = {
       phone: loginPhone,
       name: loginName,
-      coins: coins,
-      userId: userId,
-      sessionToken: sessionToken,
+      coins: ld.coins || 0,
+      userId: ld.userId,
+      sessionToken: ld.sessionToken,
       joinedAt: Date.now(),
       isOwner: true
     };
@@ -693,42 +648,17 @@ async function verifyOtp() {
     }
     btn.classList.remove('loading');
     try {
-      // Upsert test user — creates if not exists, leaves coins untouched if exists
-      await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+      // (2026-11-06) the test account's session is created on the server too (session-login)
+      const tr = await fetch(`${SUPABASE_URL}/functions/v1/session-login`, {
         method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal,resolution=ignore-duplicates'
-        },
-        body: JSON.stringify({ phone: '1111111100', coins: 0, created_at: new Date().toISOString() })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action: 'test', otp })
       });
-
-      // Now fetch the user (always exists at this point)
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/users?phone=eq.1111111100&select=id,coins`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-      });
-      const data = await res.json();
-
-      if (!data || data.length === 0) throw new Error('User not found after upsert');
-
-      const userId = data[0].id;
-      const coins = data[0].coins ?? 0;
-
-      const sessionToken = await generateRandomSessionToken(userId);
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/user_sessions`, {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: userId,
-            token_hash: await hashTokenClient(sessionToken),
-            created_at: new Date().toISOString(),
-            last_active: new Date().toISOString()
-          })
-        });
-      } catch (e) { console.error('Failed to register test session:', e); }
+      const td = await tr.json();
+      if (!td.success) throw new Error(td.error || 'Test login failed');
+      const userId = td.userId;
+      const coins = td.coins ?? 0;
+      const sessionToken = td.sessionToken;
 
       const user = {
         phone: '1111111100',

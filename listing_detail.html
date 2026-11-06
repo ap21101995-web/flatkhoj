@@ -788,7 +788,7 @@ window.onload=async function(){
   const listingId=params.get('id');
   if(!listingId){nav('index.html');return;}
   try{
-    const listings=await supaGet(`listings?id=eq.${listingId}&select=*`);
+    const listings=await supaGet(`listings?id=eq.${listingId}&select=id,user_id,listing_type,areas,city,rent_amount,deposit_amount,flat_type,room_type,furnishing,amenities,food_preference,gender_preference,tenant_type,pets_allowed,has_brokerage,brokerage_amount,is_free_contact,free_contact_coins_paid,title,description,raw_input,photos,available_from,stay_duration,is_active,is_urgent,is_verified,expires_at,view_count,unlock_count,created_at,updated_at,poster_name,brokerage_preference,claimed_by_user_id,claimed_at,situation,occupation,posting_plan,meals_included,curfew,visitors_allowed,posted_by_owner,is_sold,sold_reported_by,sold_at,pending_approval,rejected,brokerage_confirmed,on_hold,whatsapp_posted_at,available_immediately,contact_masked,is_whatsapp_post`);
     if(!listings||listings.length===0){nav('index.html');return;}
     listing=listings[0];
 
@@ -803,18 +803,8 @@ window.onload=async function(){
       // Get poster phone and unlock status simultaneously
       const tasks = [];
 
-      // Phone fetch — only fall back to user phone if NOT posted by owner on behalf of someone
-      if (listing.custom_contact_phone) {
-        posterPhone = listing.custom_contact_phone;
-      } else if (listing.posted_by_owner !== true) {
-        // Regular user's own listing — use their login phone
-        tasks.push(
-          supaGet(`users?id=eq.${listing.user_id}&select=phone`)
-            .then(users => { if(users&&users.length>0) posterPhone=users[0].phone; })
-            .catch(()=>{})
-        );
-      }
-      // If posted_by_owner=true but no custom_contact_phone — don't reveal owner's number
+      // (2026-11-06) The number is no longer readable with the public key; it is fetched from the server
+      // (listing-actions get_contact) only once this user has actually unlocked it -- see fkLoadContact().
 
       // Unlock status — check localStorage first (instant), verify DB silently
       if (user) {
@@ -1195,7 +1185,21 @@ async function confirmUnlock(){
   }catch(err){btn.textContent='Spend ' + UNLOCK_COST + ' coins & unlock →';btn.disabled=false;alert('Failed to unlock. Please try again.');}
 }
 
-function revealContact(){
+// (2026-11-06) the poster's number comes from the server, which checks the unlock (or own listing / free contact)
+async function fkLoadContact(){
+  const u=getUser(); if(!u||!listing) return null;
+  if(posterPhone) return posterPhone;
+  try{
+    const r=await fetch(`${SUPA_URL}/functions/v1/listing-actions`,{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+      body:JSON.stringify({sessionToken:u.sessionToken,listingId:listing.id,action:'get_contact'})});
+    const d=await r.json();
+    if(d&&d.success&&d.phone) posterPhone=d.phone;
+  }catch(e){}
+  return posterPhone;
+}
+
+async function revealContact(){
+  if(!posterPhone) await fkLoadContact();
   if(!posterPhone){alert('Contact not available. Please try again.');return;}
   
   // Save to localStorage so homepage shows unlocked state
@@ -1239,6 +1243,7 @@ function showAlreadyUnlocked(){
   document.getElementById('unlockStep1').style.display='none';
   document.getElementById('unlockStep2').style.display='block';
   if(posterPhone)document.querySelector('.contact-number').textContent='+91 '+posterPhone.replace(/(\d{5})(\d{5})/,'$1 $2');
+  else fkLoadContact().then(p=>{ if(p) document.querySelector('.contact-number').textContent='+91 '+p.replace(/(\d{5})(\d{5})/,'$1 $2'); });
 }
 
 async function reportAsSold() {
