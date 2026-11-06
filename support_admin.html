@@ -97,10 +97,13 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 // Admin check
 function getUser() { try { return JSON.parse(localStorage.getItem('fmh_user')); } catch(e) { return null; } }
+// (2026-11-07) security: this page used to read and answer every support chat with the public site key, behind a
+// check done only in the browser (anyone could edit localStorage). Chats are now readable only with the owner's
+// STAFF login -- the one admin.html signs in with (kept in this browser tab's sessionStorage).
+const ADMIN_TOKEN = sessionStorage.getItem('fk_admin_session') || '';
 window.onload = function() {
-  const user = getUser();
-  if (!user || (!user.isOwner && user.phone !== '9538584612')) {
-    document.body.innerHTML = '<div style="padding:40px;text-align:center;font-size:16px;color:#888">Access denied</div>';
+  if (!ADMIN_TOKEN) {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;font-size:16px;color:#888">Please sign in on <a href="admin.html">admin.html</a> first (Support is also on the admin page), then open this page again in the same tab.</div>';
     return;
   }
   loadConversations('open');
@@ -123,7 +126,7 @@ async function loadConversations(status) {
   wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink3)">Loading…</div>';
   try {
     const res = await fetch(`${SUPA_URL}/rest/v1/support_conversations?status=eq.${status}&order=updated_at.desc`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${ADMIN_TOKEN}` }
     });
     const convs = await res.json();
     if (!Array.isArray(convs) || convs.length === 0) {
@@ -132,7 +135,7 @@ async function loadConversations(status) {
     wrap.innerHTML = '';
     for (const conv of convs) {
       const msgRes = await fetch(`${SUPA_URL}/rest/v1/support_messages?conversation_id=eq.${conv.id}&order=created_at.desc&limit=1`, {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${ADMIN_TOKEN}` }
       });
       const msgs = await msgRes.json();
       const lastMsg = msgs[0];
@@ -179,7 +182,7 @@ async function loadMessages(convId) {
   const wrap = document.getElementById('chatMessages');
   try {
     const res = await fetch(`${SUPA_URL}/rest/v1/support_messages?conversation_id=eq.${convId}&order=created_at.asc`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${ADMIN_TOKEN}` }
     });
     const msgs = await res.json();
     const wasAtBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 60;
@@ -205,12 +208,12 @@ async function sendReply() {
   try {
     await fetch(`${SUPA_URL}/rest/v1/support_messages`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversation_id: currentConvId, sender: 'admin', message: msg, created_at: new Date().toISOString() })
     });
     await fetch(`${SUPA_URL}/rest/v1/support_conversations?id=eq.${currentConvId}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ updated_at: new Date().toISOString() })
     });
     loadMessages(currentConvId);
@@ -222,7 +225,7 @@ async function toggleResolve() {
   try {
     await fetch(`${SUPA_URL}/rest/v1/support_conversations?id=eq.${currentConvId}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
     });
     currentStatus = newStatus;

@@ -675,7 +675,7 @@ async function verifyOtp() {
         await fetch(`${SUPABASE_URL}/functions/v1/auto-claim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ phone: '1111111100', userId: userId })
+          body: JSON.stringify({ sessionToken: sessionToken })
         });
       } catch(e) {}
 
@@ -730,7 +730,7 @@ async function verifyOtp() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           },
-          body: JSON.stringify({ phone: phoneNumber, userId: data.userId })
+          body: JSON.stringify({ sessionToken: data.sessionToken })
         });
       } catch(e) { console.log('Auto-claim error (non-fatal):', e); }
 

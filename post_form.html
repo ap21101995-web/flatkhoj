@@ -166,7 +166,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <link rel="dns-prefetch" href="https://hbvdboxyppsmcuqgbpwp.supabase.co">
 </head>
 <body>
-<div id="fkVersionBadge">post_form.html · build 2026-11-06 23:45 IST</div>
+<div id="fkVersionBadge">post_form.html · build 2026-11-07 SEC1</div>
 <script>
 // (2026-10-29) Owner-only file/date stamp in the corner, same pattern as listing_detail.html
 // and admin.html, so you can tell at a glance whether a deploy of THIS file actually went
@@ -2668,29 +2668,9 @@ async function submitListing() {
         // the listing directly above, and the edit action would strip it
         // from a generic update payload anyway.
       } else {
-        // Creating a brand NEW listing — the row doesn't exist yet, so there's
-        // no listing to tie the flag to server-side. Deduct coins safely,
-        // then fold the flag into the INSERT payload below (safe, since
-        // it's their own new row being created, not an existing one).
-        const deductRes = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
-          method: 'POST',
-          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionToken: user.sessionToken, action: 'deduct_coins_for_new_listing' })
-        });
-        const deductResult = await deductRes.json();
-        if (!deductRes.ok) {
-          btn.textContent = '🚀 Post Listing — It\'s Free!';
-          btn.disabled = false;
-          if (deductRes.status === 402) {
-            window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
-          } else {
-            alert('Failed to deduct coins. Please try again.');
-          }
-          return;
-        }
-        user.coins = deductResult.newCoins;
-        localStorage.setItem('fmh_user', JSON.stringify(user));
-        formData.is_free_contact = true;
+        // (2026-11-06) Creating a brand NEW listing -- the server's create_listing action takes the 500 coins and
+        // sets the free-contact flag in the same step that creates the post (nothing for the browser to set).
+        window._wantFreeContact = true;
       }
     } else {
       // Standard — but if listing was already free, keep it free (can't downgrade)
@@ -2719,27 +2699,33 @@ async function submitListing() {
       formData.posted_by_owner = true;
     }
 
-    // Post directly to Supabase
+    // (2026-11-06) security: the post is created by the server (listing-actions create_listing) -- it checks the
+    // login, the plan's posting limits, owner-only fields and the free-contact coins. The browser can no longer write
+    // rows into the listings table directly.
     const cleanFormData = sanitizeForDB(formData);
-    const res = await fetch(`${SUPA_URL}/rest/v1/listings?select=id`, {
+    const res = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
       method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${SUPA_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify(cleanFormData)
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionToken: user.sessionToken, action: 'create_listing', listing: cleanFormData, freeContact: window._wantFreeContact === true })
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('Post error:', err);
-      throw new Error(err);
+    const created = await res.json().catch(() => ({}));
+    if (!res.ok || !created.success) {
+      if (res.status === 402) {
+        window.location.href = 'coins.html?return_to=' + encodeURIComponent(window.location.href) + '&context=upgrade';
+        return;
+      }
+      if (res.status === 429) {
+        btn.textContent = "🚀 Post Listing — It's Free!";
+        btn.disabled = false;
+        showLimitBlocked((created.error || 'You have reached your posting limit.'), user.coins, 'free');
+        return;
+      }
+      console.error('Post error:', created.error);
+      throw new Error(res.status === 401 ? 'Session expired. Please log in again.' : (created.error || 'Post failed'));
     }
-
-    const inserted = await res.json();
-    const newId = inserted?.[0]?.id;
+    window._wantFreeContact = false;
+    if (typeof created.newCoins === 'number') { user.coins = created.newCoins; localStorage.setItem('fmh_user', JSON.stringify(user)); }
+    const newId = created.id;
 
     // Clear saved state
     localStorage.removeItem('fk_post_state');
@@ -2875,12 +2861,7 @@ async function checkPostingLimits() {
     let plan = userData[0]?.posting_plan || 'free';
     const planExpires = userData[0]?.posting_plan_expires;
     if (plan !== 'free' && planExpires && new Date(planExpires) < new Date()) {
-      plan = 'free';
-      fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-        method: 'PATCH',
-        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ posting_plan: 'free', posting_plan_expires: null })
-      });
+      plan = 'free';   // (2026-11-06) an expired plan simply counts as free; the server applies the same rule
     }
     const limit = LIMITS[plan] || LIMITS.free;
 

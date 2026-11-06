@@ -299,28 +299,22 @@ async function upgradePlan(plan, coinCost) {
     const details = PLAN_DETAILS[plan];
     if (!confirm(`Upgrade to ${details.name} for ${coinCost} coins?\n\n• ${details.daily} posts per day\n• ${details.monthly} posts per month\n• Valid for 30 days`)) return;
 
-    // Deduct coins
-    const newCoins = currentCoins - coinCost;
-    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        coins: newCoins,
-        posting_plan: plan,
-        posting_plan_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      })
-    });
-
-    // Log transaction
-    await fetch(`${SUPA_URL}/rest/v1/coin_transactions`, {
+    // (2026-11-06) security: the server checks the coins, takes them and switches the plan on, all in one step --
+    // this page used to do it in the browser (the plan was granted even though the coins were never taken).
+    const up = await fetch(`${SUPA_URL}/functions/v1/listing-actions`, {
       method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: user.userId, type: 'plan_upgrade', amount: -coinCost,
-        balance_after: newCoins, description: `Upgraded to ${details.name}`,
-        created_at: new Date().toISOString()
-      })
+      body: JSON.stringify({ sessionToken: user.sessionToken, action: 'upgrade_plan', plan })
     });
+    const upRes = await up.json().catch(() => ({}));
+    if (!up.ok || !upRes.success) {
+      if (up.status === 401) { window.location.href = 'login.html?trigger=post'; return; }
+      if (up.status === 402 && confirm((upRes.error || 'Not enough coins.') + ' Go to Buy Coins page?')) { window.location.href = 'coins.html'; }
+      else if (up.status !== 402) alert(upRes.error || 'Something went wrong. Please try again.');
+      return;
+    }
+    const newCoins = upRes.newCoins;
+    user.posting_plan = plan;
 
     // Update local storage
     user.coins = newCoins;

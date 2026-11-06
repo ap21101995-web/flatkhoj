@@ -515,7 +515,7 @@ async function moderatePhoto(base64Data, mediaType) {
     const res = await fetch(`${SUPA_URL}/functions/v1/moderate-photo`, {
       method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64: base64Data, mediaType })
+      body: JSON.stringify({ sessionToken: (getUser() || {}).sessionToken, imageBase64: base64Data, mediaType })
     });
     // A server-side failure in the moderation service itself (500,
     // timeout, etc.) is not the same as "this photo was rejected" --

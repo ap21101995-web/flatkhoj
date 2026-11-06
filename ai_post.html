@@ -298,6 +298,8 @@ async function processScreenshotWithClaude(base64Image, mediaType) {
 
   try {
     // Route through Supabase Edge Function (secure — API key stays on server)
+    // (2026-11-06) the AI reader is for logged-in users only (it costs per use)
+    if (!(getUser() || {}).sessionToken) { window.location.href = 'login.html?return=' + encodeURIComponent('ai_post.html'); return; }
     const response = await fetch(`${SUPA_URL}/functions/v1/ai-extract`, {
       method: 'POST',
       headers: {
@@ -306,6 +308,7 @@ async function processScreenshotWithClaude(base64Image, mediaType) {
         'Authorization': `Bearer ${SUPA_KEY}`
       },
       body: JSON.stringify({
+        sessionToken: (getUser() || {}).sessionToken,
         type: 'screenshot',
         imageBase64: base64Image,
         mediaType: mediaType
@@ -434,6 +437,8 @@ async function processVoiceWithClaude(transcript) {
   document.getElementById('bottomBar').style.display = 'none';
 
   try {
+    // (2026-11-06) the AI reader is for logged-in users only (it costs per use)
+    if (!(getUser() || {}).sessionToken) { window.location.href = 'login.html?return=' + encodeURIComponent('ai_post.html'); return; }
     const response = await fetch(`${SUPA_URL}/functions/v1/ai-extract`, {
       method: 'POST',
       headers: {
@@ -442,6 +447,7 @@ async function processVoiceWithClaude(transcript) {
         'Authorization': `Bearer ${SUPA_KEY}`
       },
       body: JSON.stringify({
+        sessionToken: (getUser() || {}).sessionToken,
         type: 'voice',
         transcript: transcript
       })

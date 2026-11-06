@@ -411,18 +411,24 @@ window.onload = async function() {
   if (params.get('plan_success')) {
     const plan = params.get('plan_success');
     const orderId = params.get('order_id');
-    // Activate the plan in user record
-    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ posting_plan: plan, posting_plan_expires: expires })
-    });
-    user.posting_plan = plan;
-    localStorage.setItem('fmh_user', JSON.stringify(user));
-    // Show success
-    document.getElementById('successCoins').textContent = '✅ ' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan';
-    document.getElementById('successSub').textContent = `Your ${plan} posting plan is now active for 30 days.`;
+    // (2026-11-06) security: this page used to switch the plan on by itself whenever ?plan_success= was in the
+    // address -- anyone could type it and get a paid plan free. The plan is now switched on ONLY by the payment
+    // webhook, after Cashfree confirms the money; this page just waits for that and shows the result.
+    let active = false;
+    for (let i = 0; i < 12 && !active; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        const r = await fetch(`${SUPA_URL}/rest/v1/users?id=eq.${user.userId}&select=posting_plan,posting_plan_expires`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+        }).then(x => x.json());
+        if (r[0] && r[0].posting_plan === plan && r[0].posting_plan_expires && new Date(r[0].posting_plan_expires) > new Date()) active = true;
+      } catch (e) {}
+    }
+    if (active) { user.posting_plan = plan; localStorage.setItem('fmh_user', JSON.stringify(user)); }
+    document.getElementById('successCoins').textContent = active ? ('✅ ' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan') : '⏳ Payment received';
+    document.getElementById('successSub').textContent = active
+      ? `Your ${plan} posting plan is now active.`
+      : 'We are confirming your payment with the bank. Your plan will switch on within a few minutes -- no need to pay again.';
     document.getElementById('successReturnBtn').textContent = 'Start posting →';
     document.getElementById('successReturnBtn').onclick = () => nav('post_form.html');
     document.getElementById('successOverlay').classList.add('show');
