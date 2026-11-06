@@ -164,7 +164,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY03</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY04</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -206,6 +206,9 @@ select.inp option:disabled { color:#bbb; }
 
     <div class="field"><label class="lbl" for="fBroker" id="brokerLbl">Brokerage</label>
       <select class="inp" id="fBroker" onchange="apply()"></select></div>
+
+    <div class="field"><label class="lbl" for="fGender" id="genderLbl">Gender</label>
+      <select class="inp" id="fGender" onchange="apply()"></select></div>
 
     <div class="toolbar">
       <label class="mine"><input type="checkbox" id="fMine" onchange="apply()"> Only contacts I unlocked</label>
@@ -405,6 +408,9 @@ function setupMode(){
   document.getElementById("sharingLbl").innerHTML=p?"Sharing / room":"Available"+REQ;
   document.getElementById("areaLbl").innerHTML=p?"Areas — add as many as you like":"Area"+REQ;
   document.getElementById("brokerLbl").innerHTML=p?"Brokerage":"Brokerage"+REQ;
+  document.getElementById("genderLbl").innerHTML=p?"Gender":"Gender"+REQ;
+  document.getElementById("fGender").innerHTML=(p?"":`<option value="" disabled selected>Choose…</option>`)
+    +`<option value="all">All Allowed</option><option value="female">Female &amp; No Gender Info Yet</option><option value="male">Male &amp; No Gender Info Yet</option>`;
   document.getElementById("bhkHint").textContent=p?"Which size? (pick any, or none for all sizes)":"Which size?";
   document.getElementById("fBroker").innerHTML=p
     ? `<option value="">All</option><option value="nobroker">No Brokerage &amp; No Brokerage Info Yet</option>`
@@ -505,6 +511,7 @@ function readFilters(){
     sharing: [...document.querySelectorAll("#fSharing .opt.on")].map(x=>x.dataset.v),
     bhk: [...document.querySelectorAll("#fBhk .opt.on")].map(x=>x.dataset.v),
     broker: document.getElementById("fBroker").value,
+    gender: document.getElementById("fGender").value,
     mine: document.getElementById("fMine").checked,
   };
 }
@@ -544,10 +551,22 @@ function sharingOk(k,o){
     return false;
   });
 }
-// Only the area, the sharing / room type (and flat size) and -- when chosen -- brokerage narrow the results.
-// Budget, rent, move-in and gender never hide anything; they are just shown on each card.
+// Only the area, the sharing / room type (and flat size), gender and -- when chosen -- brokerage narrow the results.
+// Budget, rent and move-in never hide anything; they are just shown on each card.
+// Gender: "Female & No Gender Info Yet" keeps female, open-to-anyone and not-yet-known posts (it drops only male ones);
+// "Male & ..." is the mirror image; "All Allowed" keeps everything.
+function genderClass(l){
+  const g=norm(l.gender_preference);
+  if(g==="female") return "female";
+  if(g==="male") return "male";
+  if(["any","any gender","anyone","coed","co-ed","both"].includes(g)) return "any";
+  return "unknown";
+}
 function passes(l,o){
   if(o.mine && !l.unlocked) return false;
+  const gc=genderClass(l);
+  if(o.gender==="female" && gc==="male") return false;
+  if(o.gender==="male" && gc==="female") return false;
   const bs=brokerageState(l);
   if(mode==="place" && o.broker==="nobroker" && bs==="yes") return false;
   if(mode==="people" && o.broker==="broker" && bs==="no") return false;   // they asked for no brokerage
@@ -560,6 +579,7 @@ function missingPeople(o){
   if(!o.sharing.length) miss.push("Available");
   else if(o.sharing[0]==="entire" && !o.bhk.length) miss.push("flat size");
   if(!o.broker) miss.push("Brokerage");
+  if(!o.gender) miss.push("Gender");
   return miss;
 }
 const posted=l=>Date.parse(l.posted_at||0)||0;
