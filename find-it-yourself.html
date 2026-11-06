@@ -1,17 +1,23 @@
 <!DOCTYPE html>
-<!-- FlatKhoj "Find it yourself" -- client-facing self-search portal (2026-11-06, v2 mobile-first). Data, prices and
+<!-- FlatKhoj "Find it yourself" -- client-facing self-search portal (2026-11-06, v3: newest first, strict filters, original-message popup, installable app). Data, prices and
      unlocks are all served by the "fiy" Supabase Edge Function; this page never reads the listings table directly, so a
      WhatsApp group name or a poster's number never reaches the browser before that contact is paid for. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0f7b6c">
+<meta name="theme-color" content="#6d28d9">
 <title>Find it yourself — FlatKhoj</title>
 <meta name="description" content="Search every flat, room, PG and flatmate requirement FlatKhoj has found, filter it your way, and contact the poster directly.">
 <link rel="canonical" href="https://flatkhoj.com/find-it-yourself.html">
-<link rel="icon" href="icon-main-192.png">
-<link rel="apple-touch-icon" href="apple-touch-main.png">
+<link rel="manifest" href="/manifest-fiy.json">
+<link rel="icon" href="/icon-fiy-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-fiy.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Find it yourself">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});</script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -19,23 +25,24 @@
   --bg:#fff; --bg2:#f6f6f3; --bg3:#eeede9;
   --ink:#141414; --ink2:#444; --ink3:#888;
   --border:#e6e6e1;
-  --teal:#0f7b6c; --teal-bg:#e8f5f3;
+  --pri:#6d28d9; --pri-bg:#f1ebfd;
+  --wa:#075e54; --wa2:#128c7e;
   --red:#d93025; --gold:#a8790a; --gold-bg:#fef6e4;
   --radius:14px; --font:'Plus Jakarta Sans',sans-serif;
 }
 html,body { background:var(--bg2); }
 body { font-family:var(--font); color:var(--ink); min-height:100vh; padding-bottom:env(safe-area-inset-bottom); }
-a { color:var(--teal); }
+a { color:var(--pri); }
 button { font-family:var(--font); }
 .topbar { position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--border);
   padding:calc(10px + env(safe-area-inset-top)) 14px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .brand { font-size:16px; font-weight:800; color:var(--ink); text-decoration:none; line-height:1.15; }
-.brand span { color:var(--teal); }
+.brand span { color:var(--pri); }
 .brand small { display:block; font-size:10px; font-weight:600; color:var(--ink3); }
 .acct { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink2); }
-.pill { font-size:11px; font-weight:700; padding:4px 9px; border-radius:999px; background:var(--teal-bg); color:var(--teal); white-space:nowrap; }
+.pill { font-size:11px; font-weight:700; padding:4px 9px; border-radius:999px; background:var(--pri-bg); color:var(--pri); white-space:nowrap; }
 .btn { border:none; cursor:pointer; font-weight:700; border-radius:10px; font-size:14px; padding:11px 16px; }
-.btn-solid { background:var(--teal); color:#fff; }
+.btn-solid { background:var(--pri); color:#fff; }
 .btn-solid:disabled { opacity:.5; }
 .btn-ghost { background:var(--bg); color:var(--ink2); border:1px solid var(--border); }
 .btn-sm { font-size:12.5px; padding:8px 12px; }
@@ -44,7 +51,7 @@ button { font-family:var(--font); }
 .hero p { font-size:13.5px; color:var(--ink2); margin-top:4px; line-height:1.5; }
 .seg { display:grid; grid-template-columns:1fr 1fr; background:var(--bg3); border-radius:12px; padding:4px; margin-top:14px; gap:4px; }
 .seg button { border:none; background:transparent; border-radius:9px; padding:11px 6px; font-size:13px; font-weight:700; color:var(--ink2); cursor:pointer; line-height:1.25; }
-.seg button.on { background:var(--bg); color:var(--teal); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.seg button.on { background:var(--bg); color:var(--pri); box-shadow:0 1px 3px rgba(0,0,0,.08); }
 .panel { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-top:12px; }
 .field { margin-bottom:14px; }
 .field:last-child { margin-bottom:0; }
@@ -53,46 +60,76 @@ button { font-family:var(--font); }
 select.inp { background-image:linear-gradient(45deg,transparent 50%,#888 50%),linear-gradient(135deg,#888 50%,transparent 50%);
   background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%; background-size:5px 5px; background-repeat:no-repeat; padding-right:34px; }
 select.inp option:disabled { color:#bbb; }
-.inp:focus { border-color:var(--teal); }
+.inp:focus { border-color:var(--pri); }
 .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .chips { display:flex; flex-wrap:wrap; gap:8px; }
 .opt { border:1px solid var(--border); background:var(--bg); border-radius:999px; padding:9px 14px; font-size:13.5px; font-weight:600; color:var(--ink2); cursor:pointer; }
-.opt.on { background:var(--teal); border-color:var(--teal); color:#fff; }
+.opt.on { background:var(--pri); border-color:var(--pri); color:#fff; }
 .picked { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .picked:empty { display:none; }
-.tagx { background:var(--teal-bg); color:var(--teal); border-radius:999px; padding:6px 6px 6px 12px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:4px; }
-.tagx button { border:none; background:transparent; color:var(--teal); font-size:16px; line-height:1; padding:0 6px; cursor:pointer; }
+.tagx { background:var(--pri-bg); color:var(--pri); border-radius:999px; padding:6px 6px 6px 12px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:4px; }
+.tagx button { border:none; background:transparent; color:var(--pri); font-size:16px; line-height:1; padding:0 6px; cursor:pointer; }
 .ac { position:relative; }
 .dd { position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--bg); border:1px solid var(--border); border-radius:12px;
   max-height:min(320px,50vh); overflow-y:auto; -webkit-overflow-scrolling:touch; z-index:15; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; }
 .dd.show { display:block; }
 .dd .it { padding:12px 14px; font-size:14.5px; cursor:pointer; border-bottom:1px solid var(--bg2); }
 .dd .it:last-child { border-bottom:none; }
-.dd .it.on, .dd .it:active { background:var(--teal-bg); }
+.dd .it.on, .dd .it:active { background:var(--pri-bg); }
 .dd .hd { padding:8px 14px 4px; font-size:11px; font-weight:800; color:var(--ink3); text-transform:uppercase; letter-spacing:.04em; }
 .dd .none { padding:14px; font-size:13.5px; color:var(--ink3); }
 .toolbar { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap; }
 .mine { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink2); }
-.mine input { width:18px; height:18px; accent-color:var(--teal); }
+.mine input { width:18px; height:18px; accent-color:var(--pri); }
+.sub { display:none; margin-top:10px; padding:10px; background:var(--bg2); border-radius:12px; }
+.sub.show { display:block; }
+.sub .hint { font-size:11.5px; font-weight:700; color:var(--ink3); margin-bottom:8px; }
+.opt.sm { padding:7px 12px; font-size:13px; }
+.req { color:var(--red); }
+.need { background:var(--pri-bg); color:var(--pri); border-radius:var(--radius); padding:18px 16px; margin-top:12px; font-size:14px; line-height:1.55; text-align:center; font-weight:600; }
 .summary { font-size:13px; color:var(--ink2); margin:16px 2px 6px; line-height:1.5; }
-.res { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-top:10px; }
-.res-top { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
-.res-title { font-size:15.5px; font-weight:800; line-height:1.3; }
-.res-sub { font-size:12px; color:var(--ink3); margin-top:3px; }
-.tag { font-size:11px; font-weight:800; border-radius:999px; padding:4px 9px; white-space:nowrap; }
-.t-strong { background:var(--teal-bg); color:var(--teal); } .t-good { background:var(--gold-bg); color:var(--gold); } .t-possible { background:var(--bg3); color:var(--ink2); }
-.facts { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-top:12px; }
-.facts .wide { grid-column:1/-1; }
-.facts dt { font-size:10.5px; color:var(--ink3); font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
-.facts dd { font-size:13.5px; margin-top:2px; line-height:1.4; word-break:break-word; }
-.ask { color:var(--gold); font-weight:600; }
-.reasons { font-size:12px; color:var(--ink3); margin-top:10px; }
-details.post { margin-top:12px; border-top:1px dashed var(--border); padding-top:10px; }
-details.post summary { cursor:pointer; font-size:13.5px; font-weight:700; color:var(--ink2); list-style:none; }
-details.post summary::before { content:"▸ "; } details.post[open] summary::before { content:"▾ "; }
-details.post pre { white-space:pre-wrap; word-wrap:break-word; font-family:var(--font); font-size:13.5px; line-height:1.55; color:var(--ink2); margin-top:8px; background:var(--bg2); border-radius:10px; padding:10px 12px; }
-.unlock-btn { width:100%; margin-top:12px; padding:13px; font-size:15px; }
-.contact { background:var(--teal-bg); border-radius:12px; padding:12px; margin-top:12px; }
+/* result cards */
+.res { background:var(--bg); border:1px solid var(--border); border-radius:18px; margin-top:14px; overflow:hidden; box-shadow:0 3px 14px rgba(40,20,90,.07); }
+.orig-btn { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; border:none; cursor:pointer; text-align:center;
+  background:linear-gradient(135deg,var(--wa),var(--wa2)); color:#fff; font-weight:800; font-size:13.5px; line-height:1.3; padding:13px 14px; }
+.orig-btn svg { flex:none; }
+.orig-btn:active { filter:brightness(.92); }
+.res-body { padding:14px 15px 15px; }
+.res-row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.kind { font-size:11px; font-weight:800; padding:4px 10px; border-radius:999px; background:var(--pri-bg); color:var(--pri); white-space:nowrap; }
+.when { font-size:11.5px; color:var(--ink3); font-weight:600; white-space:nowrap; }
+.head { font-size:17px; font-weight:800; margin-top:10px; line-height:1.3; }
+.where { display:flex; gap:6px; align-items:flex-start; font-size:14px; font-weight:600; color:var(--ink2); margin-top:5px; line-height:1.4; }
+.where svg { flex:none; margin-top:2px; }
+.price { font-size:21px; font-weight:800; margin-top:10px; color:var(--ink); }
+.price small { font-size:12.5px; font-weight:600; color:var(--ink3); }
+.price.na { font-size:14px; color:var(--ink3); font-weight:600; }
+.mchips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.mc { font-size:12px; font-weight:600; color:var(--ink2); background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:5px 9px; }
+.mc b { color:var(--ink3); font-weight:700; }
+.info { margin-top:12px; display:grid; gap:8px; border-top:1px dashed var(--border); padding-top:12px; }
+.ln { display:grid; grid-template-columns:78px 1fr; gap:8px; font-size:13px; line-height:1.45; }
+.ln > b { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink3); padding-top:2px; }
+.ask { display:block; color:var(--gold); background:var(--gold-bg); border-radius:8px; padding:6px 9px; font-weight:600; font-size:12.5px; }
+.unlock-btn { width:100%; margin-top:14px; padding:13px; font-size:15px; }
+/* original-message popup: a dark, chat-style box that stands apart from the light page */
+.msgm { position:fixed; inset:0; z-index:50; display:none; align-items:flex-end; justify-content:center; background:rgba(12,8,28,.62); }
+.msgm.show { display:flex; }
+.msg-box { width:100%; max-width:560px; max-height:90vh; display:flex; flex-direction:column; background:#0b141a; color:#e9edef; border-radius:20px 20px 0 0; overflow:hidden; box-shadow:0 -10px 40px rgba(0,0,0,.4); }
+.msg-head { background:#202c33; padding:14px 14px 12px 16px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.msg-head b { font-size:15px; line-height:1.3; display:block; }
+.msg-head small { display:block; font-size:11.5px; color:#8696a0; margin-top:3px; font-weight:500; }
+.msg-x { border:none; background:rgba(255,255,255,.08); color:#d1d7db; width:34px; height:34px; border-radius:50%; font-size:20px; line-height:1; cursor:pointer; flex:none; }
+.msg-scroll { overflow-y:auto; -webkit-overflow-scrolling:touch; padding:18px 14px; background-color:#0b141a;
+  background-image:radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px); background-size:18px 18px; flex:1; }
+.bubble { background:#005c4b; color:#e9edef; border-radius:4px 14px 14px 14px; padding:10px 12px 22px; font-size:14.5px; line-height:1.55;
+  white-space:pre-wrap; word-wrap:break-word; position:relative; box-shadow:0 1px 1px rgba(0,0,0,.3); }
+.bubble time { position:absolute; right:10px; bottom:5px; font-size:10.5px; color:#9fd3c7; }
+.msg-note { font-size:11.5px; color:#8696a0; text-align:center; margin-top:14px; line-height:1.5; }
+.msg-foot { background:#202c33; padding:12px 14px calc(12px + env(safe-area-inset-bottom)); }
+.msg-foot .btn { width:100%; padding:13px; font-size:15px; }
+@media (min-width:700px){ .msgm{align-items:center} .msg-box{border-radius:20px} }
+.contact { background:var(--pri-bg); border-radius:12px; padding:12px; margin-top:12px; }
 .contact .num { font-size:19px; font-weight:800; }
 .contact .acts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
 .contact .acts a { text-align:center; text-decoration:none; }
@@ -112,34 +149,33 @@ details.post pre { white-space:pre-wrap; word-wrap:break-word; font-family:var(-
 .sheet h2 { font-size:19px; font-weight:800; }
 .sheet p { font-size:13.5px; color:var(--ink2); margin:6px 0 16px; line-height:1.5; }
 .plan { display:block; width:100%; text-align:left; border:1.5px solid var(--border); border-radius:14px; padding:14px; background:var(--bg); margin-bottom:10px; cursor:pointer; }
-.plan.best { border-color:var(--teal); background:var(--teal-bg); }
+.plan.best { border-color:var(--pri); background:var(--pri-bg); }
 .plan .pt { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:15px; font-weight:800; color:var(--ink); }
-.plan .pr { font-size:18px; font-weight:800; color:var(--teal); white-space:nowrap; }
+.plan .pr { font-size:18px; font-weight:800; color:var(--pri); white-space:nowrap; }
 .plan .pd { font-size:12.5px; color:var(--ink2); margin-top:5px; line-height:1.45; font-weight:500; }
-.plan .badge { display:inline-block; font-size:10.5px; font-weight:800; background:var(--teal); color:#fff; border-radius:999px; padding:3px 8px; margin-bottom:6px; }
+.plan .badge { display:inline-block; font-size:10.5px; font-weight:800; background:var(--pri); color:#fff; border-radius:999px; padding:3px 8px; margin-bottom:6px; }
 .otp { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:14px; }
 .otp input { width:100%; height:52px; text-align:center; font-size:22px; font-weight:800; border:1px solid var(--border); border-radius:10px; font-family:var(--font); }
 .err { font-size:13px; color:var(--red); margin-top:10px; min-height:18px; }
 .toast { position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:#fff; padding:12px 16px; border-radius:12px; font-size:13.5px; z-index:60; display:none; width:max-content; max-width:92vw; text-align:center; line-height:1.4; }
-@media (min-width:700px){ .wrap{padding-top:20px} .hero h1{font-size:24px} .facts{grid-template-columns:repeat(3,1fr)} }
+@media (min-width:700px){ .wrap{padding-top:20px} .hero h1{font-size:24px} }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY02</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 06-Nov-FIY03</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
 <div class="wrap">
   <div class="hero">
     <h1>Find it yourself</h1>
-    <p>Every flat, room, PG and flatmate requirement posted in WhatsApp groups in the last 30 days — filter it your way, read the original post and contact the person directly.</p>
   </div>
 
   <div class="seg">
-    <button id="modePlace" class="on" onclick="setMode('place')">I need a place<br><span style="font-weight:600;font-size:11.5px">flat · room · PG</span></button>
-    <button id="modePeople" onclick="setMode('people')">I need a flatmate<br><span style="font-weight:600;font-size:11.5px">or a tenant</span></button>
+    <button id="modePlace" class="on" onclick="setMode('place')">I need a place<br><span style="font-weight:600;font-size:11.5px">Flat, Room, PG</span></button>
+    <button id="modePeople" onclick="setMode('people')">I need a Flatmate<br><span style="font-weight:600;font-size:11.5px">or a Tenant</span></button>
   </div>
 
   <div class="panel">
@@ -164,23 +200,12 @@ details.post pre { white-space:pre-wrap; word-wrap:break-word; font-family:var(-
       <div class="chips" id="fSharing">
         <button class="opt" data-v="single" onclick="toggleOpt(this)">Single</button>
         <button class="opt" data-v="shared" onclick="toggleOpt(this)">Double / Triple / Hall</button>
-        <button class="opt" data-v="entire" onclick="toggleOpt(this)">Entire flat</button>
-      </div></div>
+        <button class="opt" data-v="entire" onclick="toggleOpt(this)">Entire Flat</button>
+      </div>
+      <div class="sub" id="bhkBox"><div class="hint" id="bhkHint">Which size?</div><div class="chips" id="fBhk"></div></div></div>
 
-    <div class="row2">
-      <div class="field"><label class="lbl" for="fGender">Gender</label>
-        <select class="inp" id="fGender" onchange="apply()"><option value="">Any</option><option value="Female">Female</option><option value="Male">Male</option></select></div>
-      <div class="field"><label class="lbl" for="fBroker">Brokerage</label>
-        <select class="inp" id="fBroker" onchange="apply()">
-          <option value="">All</option>
-          <option value="nobroker">No brokerage &amp; no brokerage info yet</option>
-          <option value="broker">Brokerage applicable</option></select></div>
-    </div>
-
-    <div class="row2" id="peopleOnly" style="display:none">
-      <div class="field"><label class="lbl" for="fRent">Rent (₹ / month)</label><input class="inp" type="number" inputmode="numeric" id="fRent" placeholder="e.g. 15000" onchange="apply()"></div>
-      <div class="field"><label class="lbl" for="fMovein">Move-in date</label><input class="inp" type="date" id="fMovein" onchange="apply()"></div>
-    </div>
+    <div class="field"><label class="lbl" for="fBroker" id="brokerLbl">Brokerage</label>
+      <select class="inp" id="fBroker" onchange="apply()"></select></div>
 
     <div class="toolbar">
       <label class="mine"><input type="checkbox" id="fMine" onchange="apply()"> Only contacts I unlocked</label>
@@ -228,6 +253,17 @@ details.post pre { white-space:pre-wrap; word-wrap:break-word; font-family:var(-
   <p id="payIntro">See the number and call or WhatsApp them directly. Once unlocked, it stays in your account.</p>
   <div id="payOptions"></div>
   <button class="btn btn-ghost" style="width:100%;margin-top:4px" onclick="closeSheets()">Not now</button>
+</div>
+
+<!-- original message popup -->
+<div class="msgm" id="msgModal" onclick="if(event.target===this)closeMsg()">
+  <div class="msg-box" role="dialog" aria-modal="true" aria-labelledby="msgTitle">
+    <div class="msg-head"><div><b id="msgTitle">Original message</b><small id="msgSub"></small></div>
+      <button class="msg-x" aria-label="Close" onclick="closeMsg()">×</button></div>
+    <div class="msg-scroll"><div class="bubble" id="msgText"></div>
+      <div class="msg-note">Shown exactly as it was posted. Phone numbers, links and the group name are hidden.</div></div>
+    <div class="msg-foot" id="msgFoot"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -360,15 +396,28 @@ function renderAccount(){
   a.innerHTML=`${pass}<button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button>`;
 }
 
+const BHKS=["1 RK","1 BHK","1.5 BHK","2 BHK","2.5 BHK","3 BHK"];
+const REQ=' <span class="req">*</span>';
+function setupMode(){
+  const p=mode==="place";
+  document.getElementById("modePlace").classList.toggle("on",p);
+  document.getElementById("modePeople").classList.toggle("on",!p);
+  document.getElementById("sharingLbl").innerHTML=p?"Sharing / room":"Available"+REQ;
+  document.getElementById("areaLbl").innerHTML=p?"Areas — add as many as you like":"Area"+REQ;
+  document.getElementById("brokerLbl").innerHTML=p?"Brokerage":"Brokerage"+REQ;
+  document.getElementById("bhkHint").textContent=p?"Which size? (pick any, or none for all sizes)":"Which size?";
+  document.getElementById("fBroker").innerHTML=p
+    ? `<option value="">All</option><option value="nobroker">No Brokerage &amp; No Brokerage Info Yet</option>`
+    : `<option value="" disabled selected>Choose…</option><option value="broker">Brokerage Applicable</option><option value="nobroker">No Brokerage</option>`;
+  document.getElementById("fBhk").innerHTML=BHKS.map(b=>`<button class="opt sm" data-v="${b}" onclick="toggleBhk(this)">${b}</button>`).join("");
+  document.querySelectorAll("#fSharing .opt").forEach(x=>x.classList.remove("on"));
+  document.getElementById("bhkBox").classList.remove("show");
+}
 function setMode(m){
+  if(m===mode) return;
   mode=m;
-  document.getElementById("modePlace").classList.toggle("on",m==="place");
-  document.getElementById("modePeople").classList.toggle("on",m==="people");
-  document.getElementById("sharingLbl").textContent=m==="place"?"Sharing / room":"Available";
-  document.getElementById("areaLbl").textContent=m==="place"?"Areas — add as many as you like":"Area";
-  document.getElementById("peopleOnly").style.display=m==="people"?"grid":"none";
   if(m==="people" && picked.length>1) picked=picked.slice(0,1);
-  renderPicked();
+  setupMode(); renderPicked();
   reload();
 }
 
@@ -434,22 +483,34 @@ document.getElementById("areaDd").addEventListener("pointerdown",e=>{
 document.addEventListener("pointerdown",e=>{ if(!e.target.closest(".ac")) areaHide(); });
 
 // ---------- filters ----------
-function toggleOpt(b){ b.classList.toggle("on"); apply(); }
+// In "I need a place" several sharing types / sizes can be picked; someone offering a place picks exactly one of each.
+function toggleOpt(b){
+  const on=!b.classList.contains("on");
+  if(mode==="people") document.querySelectorAll("#fSharing .opt").forEach(x=>x.classList.remove("on"));
+  b.classList.toggle("on",on);
+  const entire=!!document.querySelector('#fSharing .opt.on[data-v="entire"]');
+  document.getElementById("bhkBox").classList.toggle("show",entire);
+  if(!entire) document.querySelectorAll("#fBhk .opt").forEach(x=>x.classList.remove("on"));
+  apply();
+}
+function toggleBhk(b){
+  const on=!b.classList.contains("on");
+  if(mode==="people") document.querySelectorAll("#fBhk .opt").forEach(x=>x.classList.remove("on"));
+  b.classList.toggle("on",on);
+  apply();
+}
 function readFilters(){
   return {
     areas: picked.slice(),
     sharing: [...document.querySelectorAll("#fSharing .opt.on")].map(x=>x.dataset.v),
-    gender: document.getElementById("fGender").value,
+    bhk: [...document.querySelectorAll("#fBhk .opt.on")].map(x=>x.dataset.v),
     broker: document.getElementById("fBroker").value,
     mine: document.getElementById("fMine").checked,
-    rent: mode==="people" ? (Number(document.getElementById("fRent").value)||0) : 0,
-    movein: mode==="people" ? document.getElementById("fMovein").value : "",
   };
 }
 function clearFilters(){
   picked=[]; renderPicked();
-  document.querySelectorAll("#fSharing .opt").forEach(x=>x.classList.remove("on"));
-  ["fGender","fBroker","fRent","fMovein"].forEach(id=>document.getElementById(id).value="");
+  setupMode();
   document.getElementById("fMine").checked=false;
   apply();
 }
@@ -459,55 +520,64 @@ function brokerageState(l){
   return "unknown";
 }
 function genderKnown(l){ const g=norm(l.gender_preference); return g && !["undisclosed","no preference","none"].includes(g); }
-// Same idea as Pratika_TP: only clear facts hide a listing; everything else just ranks it.
-function match(l,o){
-  const reasons=[]; let score=0;
-  if(o.mine && !l.unlocked) return null;
-  const bs=brokerageState(l);
-  if(o.broker==="nobroker" && bs==="yes") return null;
-  if(o.broker==="broker" && bs!=="yes") return null;
-  if(o.areas.length){
-    if(!areaMatch(o.areas,l.areas)) return null;
-    const exact=arr(l.areas).some(a=>o.areas.some(b=>norm(a)===norm(b)));
-    score+=exact?3:2; reasons.push(exact?"Area matches exactly":"Area matches");
-  }
-  const req=((mode==="place"?String(l.room_type||""):reqText(l))+(l.listing_type==="flat_listing"?" entire":"")).toLowerCase();
-  const tk={single:/\bsingle\b/.test(req), shared:/\bdouble\b|\btwin\b|\btriple\b|\bhall\b/.test(req), entire:/\bentire\b|\bbhk\b|\brk\b/.test(req), any:/\bany\b/.test(req)};
-  const stated=tk.single||tk.shared||tk.entire||tk.any;
-  if(o.sharing.length){
-    const hit=o.sharing.find(k=>tk[k]);
-    if(hit){ score+=2; reasons.push({single:"Single room",shared:"Shared room",entire:"Entire flat"}[hit]); }
-    else if(tk.any){ score+=1; reasons.push("Open to any"); }
-    else if(!stated) reasons.push("Room type not stated");
-    else return null;
-  }
-  const g=norm(l.gender_preference);
-  if(o.gender){
-    if(g===o.gender.toLowerCase()){ score+=1; reasons.push("Gender matches"); }
-    else if(!g||["undisclosed","any","no preference","anyone","none","coed","co-ed"].includes(g)) reasons.push("Gender not stated");
-    else return null;
-  }
-  if(o.movein){
-    if(l.available_immediately){ score+=1; reasons.push("Available immediately"); }
-    else if(l.available_from){ const diff=(Date.parse(l.available_from)-Date.parse(o.movein))/864e5; if(Math.abs(diff)<=5){ score+=1; reasons.push("Move-in date fits"); } else reasons.push(diff<0?"Earlier date":"A bit later"); }
-    else reasons.push("Move-in date not stated");
-  }
-  if(o.rent){
-    const r=Number(l.rent_amount)||0;
-    if(r){ if(r>=o.rent*0.95){ score+=2; reasons.push("Their budget fits"); } else { score+=0.5*(r/o.rent); reasons.push("Their budget is lower"); } }
-    else reasons.push("Budget not stated");
-  }
-  if(bs==="no"){ score+=0.5; reasons.push("No brokerage"); }
-  return {score,reasons,label:score>=6?"Strong match":(score>=4?"Good match":"Possible")};
+// What a post offers / asks for: single room, shared (double/triple/hall), any room, or an entire flat of which sizes.
+function bhkName(s){ const m=String(s||"").match(/(\d(?:\.5)?)\s*(bhk|rk)\b/i); return m ? m[1]+" "+m[2].toUpperCase() : ""; }
+function kinds(l){
+  const k={single:false,shared:false,any:false,entire:false,bhk:new Set()};
+  String(l.room_type||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>{
+    if(/\bentire\b/.test(p)){ k.entire=true; const b=bhkName(p); if(b) k.bhk.add(b); }
+    else if(/\bsingle\b/.test(p)) k.single=true;
+    else if(/\bdouble\b|\btwin\b|\btriple\b|\bhall\b/.test(p)) k.shared=true;
+    else if(/\bany\b|flexible/.test(p)) k.any=true;
+  });
+  if(l.listing_type==="flat_listing" && !k.single && !k.shared) k.entire=true;
+  // for a whole flat, the flat size is in flat_type; for a room in a shared flat, flat_type is only the flat it sits in
+  if(k.entire && !k.bhk.size && l.listing_type!=="flat_wanted"){ const b=bhkName(l.flat_type); if(b) k.bhk.add(b); }
+  return k;
 }
+function sharingOk(k,o){
+  if(!o.sharing.length) return true;
+  return o.sharing.some(s=>{
+    if(s==="single") return k.single||k.any;
+    if(s==="shared") return k.shared||k.any;
+    if(s==="entire") return k.entire && (!o.bhk.length || o.bhk.some(b=>k.bhk.has(b)));
+    return false;
+  });
+}
+// Only the area, the sharing / room type (and flat size) and -- when chosen -- brokerage narrow the results.
+// Budget, rent, move-in and gender never hide anything; they are just shown on each card.
+function passes(l,o){
+  if(o.mine && !l.unlocked) return false;
+  const bs=brokerageState(l);
+  if(mode==="place" && o.broker==="nobroker" && bs==="yes") return false;
+  if(mode==="people" && o.broker==="broker" && bs==="no") return false;   // they asked for no brokerage
+  if(o.areas.length && !areaMatch(o.areas,l.areas)) return false;
+  return sharingOk(kinds(l),o);
+}
+function missingPeople(o){
+  const miss=[];
+  if(!o.areas.length) miss.push("Area");
+  if(!o.sharing.length) miss.push("Available");
+  else if(o.sharing[0]==="entire" && !o.bhk.length) miss.push("flat size");
+  if(!o.broker) miss.push("Brokerage");
+  return miss;
+}
+const posted=l=>Date.parse(l.posted_at||0)||0;
 function apply(){
   const o=readFilters();
-  matched=[];
-  pool.forEach(l=>{ const m=match(l,o); if(m){ l._m=m; matched.push(l); } });
-  const t=l=>Date.parse(l.posted_at||0)||0;
-  matched.sort((a,b)=>(b._m.score-a._m.score)||(t(b)-t(a)));
-  document.getElementById("summary").innerHTML = pool.length
-    ? `<b>${matched.length}</b> ${mode==="place"?"place"+(matched.length===1?"":"s"):"requirement"+(matched.length===1?"":"s")} in Mumbai from the last 30 days${o.areas.length?" · "+esc(o.areas.join(", ")):""}`
+  const sum=document.getElementById("summary");
+  if(mode==="people" && pool.length){
+    const miss=missingPeople(o);
+    if(miss.length){
+      matched=[]; sum.innerHTML="";
+      document.getElementById("results").innerHTML=`<div class="need">Tell us what you have to offer and we'll show everyone looking for exactly that.<br>Still to fill in: <b>${esc(miss.join(", "))}</b></div>`;
+      document.getElementById("moreBtn").style.display="none";
+      return;
+    }
+  }
+  matched=pool.filter(l=>passes(l,o)).sort((a,b)=>posted(b)-posted(a));
+  sum.innerHTML = pool.length
+    ? `<b>${matched.length}</b> ${mode==="place"?"place"+(matched.length===1?"":"s"):"people looking"} in Mumbai from the last 30 days${o.areas.length?" · "+esc(o.areas.join(", ")):""} · newest first`
     : "";
   render();
 }
@@ -529,12 +599,23 @@ function movein(l){
   if(l.available_from) return new Date(l.available_from).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});
   return "Not stated";
 }
-function title(l){
-  const where=arr(l.areas).join(", ")||"Area not stated";
-  if(l.listing_type==="flat_listing") return `${reqText(l)||"Flat"} for rent · ${where}`;
-  if(l.listing_type==="flatmate_wanted") return `${l.room_type&&l.room_type!=="Undisclosed"?l.room_type:"Room"} available · ${where}`;
-  return `Looking for ${reqText(l)||"a place"} · ${where}`;
+const known=v=>v && v!=="Undisclosed" ? v : "";
+function kindLabel(l){
+  if(l.listing_type==="flat_listing") return "Entire flat for rent";
+  if(l.listing_type==="flatmate_wanted") return "Room in a shared flat";
+  return "Looking for a place";
 }
+function headline(l){
+  if(l.listing_type==="flat_listing") return known(l.flat_type) ? "Entire "+l.flat_type : "Entire flat";
+  if(l.listing_type==="flatmate_wanted"){
+    const r=known(l.room_type)||"Room available";
+    return known(l.flat_type) ? `${r} · in a ${l.flat_type}` : r;
+  }
+  return known(l.room_type) ? "Wants: "+l.room_type : "Wants a flat, room or PG";
+}
+const ICON_CHAT=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 20.5l1.5-4.6A8.4 8.4 0 0 1 3 11.5 8.6 8.6 0 0 1 12 3a8.6 8.6 0 0 1 9 8.5z"/><path d="M8 10h8M8 14h5"/></svg>`;
+const ICON_PIN=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`;
+function origLabel(l){ return l.listing_type==="flat_wanted" ? "View Original Message of the Occupancy Hunter" : "View Original Message from Occupancy Provider"; }
 function updateBox(l){
   const parts=[];
   if(brokerageState(l)==="unknown") parts.push(`<div class="ur"><select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No brokerage</option><option value="yes">Brokerage applicable</option></select>
@@ -543,41 +624,61 @@ function updateBox(l){
      <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${esc(l.id)}','gender')">Save</button></div>`);
   return parts.length ? `<div class="upd"><b>After you talk to them, update this for the next person:</b>${parts.join("")}</div>` : "";
 }
-function card(l){
-  const m=l._m||{reasons:[],label:"Possible"};
-  const cls=m.label==="Strong match"?"t-strong":(m.label==="Good match"?"t-good":"t-possible");
-  const isSeeker=l.listing_type==="flat_wanted";
+function contactHtml(l){
   const ph=phones[String(l.id)];
-  let contact;
   if(l.unlocked && ph){
     const msg=encodeURIComponent("Hi, I saw your post about "+(arr(l.areas).join(", ")||"the flat")+" on FlatKhoj. Is it still available?");
-    contact=`<div class="contact">Contact: <span class="num">+91 ${esc(ph.replace(/(\d{5})(\d{5})/,"$1 $2"))}</span>
+    return `<div class="contact">Contact: <span class="num">+91 ${esc(ph.replace(/(\d{5})(\d{5})/,"$1 $2"))}</span>
       <div class="acts"><a class="btn btn-solid" href="tel:+91${esc(ph)}">Call</a><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/91${esc(ph)}?text=${msg}">WhatsApp</a></div>
       ${updateBox(l)}</div>`;
-  }else if(l.unlocked){
-    contact=`<button class="btn btn-solid unlock-btn" onclick="showContact('${esc(l.id)}')">Show contact</button>`;
-  }else{
-    contact=`<button class="btn btn-solid unlock-btn" onclick="unlock('${esc(l.id)}')">Unlock contact</button>`;
   }
-  const extra=isSeeker?"":`<div><dt>Flat</dt><dd>${esc(l.flat_type&&l.flat_type!=="Undisclosed"?l.flat_type:"Not stated")}</dd></div>
-    <div><dt>Furnishing</dt><dd>${esc(l.furnishing&&l.furnishing!=="Undisclosed"?l.furnishing:"Not stated")}</dd></div>`;
+  if(l.unlocked) return `<button class="btn btn-solid unlock-btn" onclick="showContact('${esc(l.id)}')">Show contact</button>`;
+  return `<button class="btn btn-solid unlock-btn" onclick="unlock('${esc(l.id)}')">Unlock contact</button>`;
+}
+function card(l){
+  const isSeeker=l.listing_type==="flat_wanted";
+  const rent=money(l.rent_amount);
+  const price=rent
+    ? `<div class="price">${isSeeker?`<small>Budget </small>`:""}${esc(rent)} <small>/ month</small></div>`
+    : `<div class="price na">${isSeeker?"Budget not stated":"Rent not stated"}</div>`;
+  const chips=[`<span class="mc"><b>Move-in</b> ${esc(movein(l))}</span>`];
+  if(!isSeeker && known(l.furnishing)) chips.push(`<span class="mc">${esc(l.furnishing)}</span>`);
+  if(!isSeeker && l.deposit_amount) chips.push(`<span class="mc"><b>Deposit</b> ${esc(money(l.deposit_amount))}</span>`);
+  if(l.food_preference && !/no veg\/non-veg/i.test(l.food_preference)) chips.push(`<span class="mc">${esc(l.food_preference)}</span>`);
   return `<div class="res" id="r_${esc(l.id)}">
-    <div class="res-top"><div><div class="res-title">${esc(title(l))}</div><div class="res-sub">Posted ${esc(ago(l.posted_at))}</div></div>
-      <span class="tag ${cls}">${esc(m.label)}</span></div>
-    <dl class="facts">
-      <div><dt>${isSeeker?"Budget":"Rent"}</dt><dd>${esc(money(l.rent_amount)||"Not stated")}</dd></div>
-      <div><dt>${isSeeker?"Wants":"Room"}</dt><dd>${esc(reqText(l)||"Not stated")}</dd></div>
-      <div><dt>Move-in</dt><dd>${esc(movein(l))}</dd></div>
-      ${extra}
-      <div><dt>Food</dt><dd>${esc(l.food_preference&&!/no veg\/non-veg/i.test(l.food_preference)?l.food_preference:"No preference stated")}</dd></div>
-      <div class="wide"><dt>Gender</dt><dd>${genderHtml(l)}</dd></div>
-      <div class="wide"><dt>Brokerage</dt><dd>${brokerageHtml(l)}</dd></div>
-    </dl>
-    ${m.reasons.length?`<div class="reasons">${esc(m.reasons.join(" · "))}</div>`:""}
-    <details class="post"><summary>Read the original post</summary><pre>${esc(l.text||"")}</pre></details>
-    ${contact}
+    <button class="orig-btn" onclick="openMsg('${esc(l.id)}')">${ICON_CHAT}<span>${esc(origLabel(l))}</span></button>
+    <div class="res-body">
+      <div class="res-row"><span class="kind">${esc(kindLabel(l))}</span><span class="when">${esc(ago(l.posted_at))}</span></div>
+      <div class="head">${esc(headline(l))}</div>
+      <div class="where">${ICON_PIN}<span>${esc(arr(l.areas).join(", ")||"Area not stated")}</span></div>
+      ${price}
+      <div class="mchips">${chips.join("")}</div>
+      <div class="info">
+        <div class="ln"><b>Gender</b><span>${genderHtml(l)}</span></div>
+        <div class="ln"><b>Brokerage</b><span>${brokerageHtml(l)}</span></div>
+      </div>
+      ${contactHtml(l)}
+    </div>
   </div>`;
 }
+// ---------- original-message popup ----------
+let msgFor=null;
+function openMsg(id){
+  const l=pool.find(x=>String(x.id)===String(id)); if(!l) return;
+  msgFor=String(id);
+  const seeker=l.listing_type==="flat_wanted";
+  document.getElementById("msgTitle").textContent=seeker?"Original Message of the Occupancy Hunter":"Original Message from Occupancy Provider";
+  document.getElementById("msgSub").textContent=`${arr(l.areas).join(", ")||"Mumbai"} · posted ${ago(l.posted_at)}`;
+  document.getElementById("msgText").innerHTML=esc(l.text||"(The original message is not available.)")+(l.posted_at?`<time>${esc(fmtDate(l.posted_at))}</time>`:"");
+  document.getElementById("msgFoot").innerHTML = l.unlocked
+    ? `<button class="btn btn-solid" onclick="closeMsg();${phones[msgFor]?"":`showContact('${esc(l.id)}');`}document.getElementById('r_${esc(l.id)}').scrollIntoView({behavior:'smooth',block:'center'})">Show their contact</button>`
+    : `<button class="btn btn-solid" onclick="closeMsg();unlock('${esc(l.id)}')">Unlock contact</button>`;
+  document.getElementById("msgModal").classList.add("show");
+  document.body.style.overflow="hidden";
+  document.querySelector("#msgModal .msg-scroll").scrollTop=0;
+}
+function closeMsg(){ document.getElementById("msgModal").classList.remove("show"); document.body.style.overflow=""; msgFor=null; }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && msgFor) closeMsg(); });
 function render(){
   const res=document.getElementById("results");
   if(!matched.length){
@@ -678,6 +779,7 @@ async function saveUpdate(id,field){
 
 // ---------- start ----------
 async function start(fromLogin){
+  if(!document.getElementById("fBroker").options.length) setupMode();
   renderAccount(); renderPicked();
   const u=getUser();
   if(!u||!u.sessionToken){
@@ -694,7 +796,7 @@ async function start(fromLogin){
     localStorage.removeItem("fiy_scroll_to");
     if(!phones[back]){ try{ const c=await fiy("contact",{listingId:back}); phones[back]=c.phone; }catch(e){} }
     let idx=matched.findIndex(l=>String(l.id)===back);
-    if(idx<0){ const l=pool.find(x=>String(x.id)===back); if(l){ l._m=l._m||{score:0,reasons:[],label:"Possible"}; matched.unshift(l); idx=0; } }
+    if(idx<0){ const l=pool.find(x=>String(x.id)===back); if(l){ matched.unshift(l); idx=0; } }
     if(idx>=shown) shown=idx+1;
     render();
     const el=document.getElementById("r_"+back); if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
