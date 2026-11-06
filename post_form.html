@@ -166,7 +166,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <link rel="dns-prefetch" href="https://hbvdboxyppsmcuqgbpwp.supabase.co">
 </head>
 <body>
-<div id="fkVersionBadge">post_form.html · build 2026-10-29 12:28 IST</div>
+<div id="fkVersionBadge">post_form.html · build 2026-11-06 23:45 IST</div>
 <script>
 // (2026-10-29) Owner-only file/date stamp in the corner, same pattern as listing_detail.html
 // and admin.html, so you can tell at a glance whether a deploy of THIS file actually went
@@ -331,6 +331,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
           <div id="fw-lf-options" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:2px solid var(--teal);border-radius:12px;z-index:200;overflow:hidden;margin-top:4px;box-shadow:0 8px 30px rgba(0,0,0,0.15)">
             <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Single occupancy" onchange="updateLFLabel()"> Single occupancy</label>
             <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Double occupancy" onchange="updateLFLabel()"> Double occupancy</label>
+            <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Hall occupancy" onchange="updateLFLabel()"> Hall occupancy</label>
             <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Entire 1 RK" onchange="updateLFLabel()"> Entire 1 RK</label>
             <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Entire 1 BHK" onchange="updateLFLabel()"> Entire 1 BHK</label>
             <label class="fw-lf-opt" onclick="event.stopPropagation()"><input type="checkbox" value="Entire 2 BHK" onchange="updateLFLabel()"> Entire 2 BHK</label>
@@ -425,7 +426,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       <div class="field-row">
         <div class="field"><div class="field-label">Flat Type <span class="req">*</span></div><select class="select" id="fm-flat-type" onchange="showOtherInput(this,'fm-other-type')"><option value="">Select…</option><option>1 BHK</option><option>2 BHK</option><option>3 BHK</option><option>Other</option></select><input class="input" id="fm-other-type" type="text" placeholder="e.g. 1.5 BHK, 1 RK, Studio" style="display:none;margin-top:8px"></div>
       </div>
-      <div class="field"><div class="field-label">Room Available For Flatmate <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-rm')">Single Room</div><div class="pill" onclick="sp(this,'fm-rm')">Double Sharing</div><div class="pill" onclick="sp(this,'fm-rm')">Triple Sharing</div></div></div>
+      <div class="field"><div class="field-label">Room Available For Flatmate <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'fm-rm')">Single Room</div><div class="pill" onclick="sp(this,'fm-rm')">Double Sharing</div><div class="pill" onclick="sp(this,'fm-rm')">Triple Sharing</div><div class="pill" onclick="sp(this,'fm-rm')">Hall Sharing</div></div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Rent per person <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="12000" min="2000"></div></div>
         <div class="field"><div class="field-label">Available from <span class="req">*</span></div><input class="input" type="date" id="fm-available"></div>
@@ -462,7 +463,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
       </div>
       <div class="area-selected-tag" id="tag-pg-area"><span id="tagval-pg-area"></span><button onclick="clearArea('pg-area')">×</button></div></div>
       <div class="field"><div class="field-label">PG Is For <span class="req">*</span></div><div class="pill-wrap"><div class="pill" onclick="sp(this,'pg-for')">Boys Only</div><div class="pill" onclick="sp(this,'pg-for')">Girls Only</div><div class="pill" onclick="sp(this,'pg-for')">Both Boys & Girls</div></div></div>
-      <div class="field"><div class="field-label">Room Types Available <span class="req">*</span></div><div class="pill-wrap" id="pg-room-types"><div class="pill" onclick="mp(this)">Single Room</div><div class="pill" onclick="mp(this)">Double Sharing</div><div class="pill" onclick="mp(this)">Triple Sharing</div></div></div>
+      <div class="field"><div class="field-label">Room Types Available <span class="req">*</span></div><div class="pill-wrap" id="pg-room-types"><div class="pill" onclick="mp(this)">Single Room</div><div class="pill" onclick="mp(this)">Double Sharing</div><div class="pill" onclick="mp(this)">Triple Sharing</div><div class="pill" onclick="mp(this)">Hall Sharing</div></div></div>
       <div class="field-row">
         <div class="field"><div class="field-label">Rent Starts From <span class="req">*</span></div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="6000" min="2000"></div></div>
         <div class="field"><div class="field-label">Security Deposit</div><div class="input-row"><span class="input-prefix">₹</span><input type="number" placeholder="Optional — e.g. 10000"></div></div>
@@ -3759,6 +3760,9 @@ function prefillEditForm(listing, t) {
       "Single occupancy": "Single Room",
       "Double occupancy": "Double Sharing",
       "Triple occupancy": "Triple Sharing",
+      // (2026-11-06) owner: Hall sharing is offered while posting AND editing, like Pratika_TP / Find it yourself
+      "Hall occupancy": "Hall Sharing",
+      "Hall": "Hall Sharing",
     };
     fillPill('#f-fm', 'fm-rm', fmRoomTypeMap[listing.room_type] || listing.room_type);
     fillPill('#f-fm', 'fm-furn', listing.furnishing);
@@ -3785,7 +3789,9 @@ function prefillEditForm(listing, t) {
     fillPill('#f-pg', 'pg-vis', listing.visitors_allowed);
     // Room types (pg)
     if (listing.room_type) {
-      const types = listing.room_type.split(',').map(s => s.trim());
+      const pgMap = { "single occupancy": "Single Room", "double occupancy": "Double Sharing", "triple occupancy": "Triple Sharing",
+                      "hall occupancy": "Hall Sharing", "hall": "Hall Sharing" };
+      const types = listing.room_type.split(',').map(s => s.trim()).map(s => pgMap[s.toLowerCase()] || s);
       document.querySelectorAll('#pg-room-types .pill').forEach(p => {
         if (types.includes(p.textContent.trim())) p.classList.add('sel');
       });
