@@ -166,6 +166,12 @@ select.inp option:disabled { color:#bbb; }
 .plan .pt { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:15px; font-weight:800; color:var(--ink); }
 .plan .pr { font-size:18px; font-weight:800; color:var(--pri); white-space:nowrap; }
 .plan .pd { font-size:12.5px; color:var(--ink2); margin-top:5px; line-height:1.45; font-weight:500; }
+.plan:disabled { cursor:wait; }
+.plan.dim { opacity:.45; }
+.plan.busy { border-color:var(--pri); box-shadow:0 0 0 3px var(--pri-bg); }
+.pay-wait { display:flex; align-items:center; gap:10px; margin:4px 2px 8px; font-size:13.5px; font-weight:700; color:var(--pri); }
+.pay-wait .spin { flex:none; width:18px; height:18px; border:3px solid var(--pri-bg); border-top-color:var(--pri); border-radius:50%; animation:paySpin .8s linear infinite; }
+@keyframes paySpin { to { transform:rotate(360deg); } }
 .plan .badge { display:inline-block; font-size:10.5px; font-weight:800; background:var(--pri); color:#fff; border-radius:999px; padding:3px 8px; margin-bottom:6px; }
 .otp { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:14px; }
 .otp input { width:100%; height:52px; text-align:center; font-size:22px; font-weight:800; border:1px solid var(--border); border-radius:10px; font-family:var(--font); }
@@ -177,7 +183,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY15</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY16</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -851,38 +857,61 @@ function unlock(id){
   const box=document.getElementById("payOptions");
   if(passExpires){
     document.getElementById("payIntro").textContent=`Your 30-day pass is active until ${fmtDate(passExpires)}, so this contact is just ₹19.`;
-    box.innerHTML=`<button class="plan best" onclick="payContact()"><div class="pt">Unlock this contact <span class="pr">₹19</span></div>
+    box.innerHTML=`<button class="plan best" onclick="payContact(this)"><div class="pt">Unlock this contact <span class="pr">₹19</span></div>
       <div class="pd">Pass price — you'll see the number straight after paying.</div></button>`;
   }else{
     document.getElementById("payIntro").textContent="See the number and call or WhatsApp them directly. Once unlocked, it stays in your account.";
-    box.innerHTML=`<button class="plan" onclick="payContact()"><div class="pt">Just this contact <span class="pr">₹79</span></div>
+    box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Just this contact <span class="pr">₹79</span></div>
         <div class="pd">One-time payment for this one person's number.</div></button>
-      <button class="plan best" onclick="payPass()"><span class="badge">Best value · 1st contact FREE</span><div class="pt">30-day pass <span class="pr">₹199</span></div>
+      <button class="plan best" onclick="payPass(this)"><span class="badge">Best value · 1st contact FREE</span><div class="pt">30-day pass <span class="pr">₹199</span></div>
         <div class="pd"><b>This contact is free with the pass.</b> After that, every contact for the next 30 days is just ₹19.</div></button>`;
   }
   openSheet("paySheet");
+  loadCashfree();   // start fetching the payment page's script now, so the jump to Cashfree is quicker
 }
-function openCheckout(sessionId){
-  const go=()=>{ const cf=Cashfree({mode:CASHFREE_ENV}); cf.checkout({paymentSessionId:sessionId,redirectTarget:"_self"}); };
-  if(window.Cashfree) return go();
-  const s=document.createElement("script"); s.src="https://sdk.cashfree.com/js/v3/cashfree.js"; s.onload=go;
-  s.onerror=()=>toast("Could not load the payment page. Please check your connection."); document.head.appendChild(s);
+// (08-Nov, owner) the jump to Cashfree takes a few seconds -- show it is working straight away (and stop repeat taps,
+// which were creating several orders per second)
+let _cfLoad=null, _paying=false;
+window.addEventListener("pageshow",e=>{ if(e.persisted) payBusy(null,false); });   // came back from Cashfree with Back
+function loadCashfree(){
+  if(window.Cashfree) return Promise.resolve();
+  if(_cfLoad) return _cfLoad;
+  _cfLoad=new Promise((ok,bad)=>{ const s=document.createElement("script"); s.src="https://sdk.cashfree.com/js/v3/cashfree.js";
+    s.onload=ok; s.onerror=()=>{ _cfLoad=null; bad(new Error("Could not load the payment page. Please check your connection.")); }; document.head.appendChild(s); });
+  return _cfLoad;
 }
-async function payContact(){
-  const id=payFor; if(!id) return;
+function payBusy(btn,on){
+  _paying=on;
+  document.querySelectorAll("#payOptions .plan").forEach(b=>{ b.disabled=on; b.classList.toggle("dim",on && b!==btn); });
+  if(btn) btn.classList.toggle("busy",on);
+  let w=document.getElementById("payWait");
+  if(on){ if(!w){ w=document.createElement("div"); w.id="payWait"; w.className="pay-wait"; document.getElementById("payOptions").after(w); }
+    w.innerHTML='<span class="spin"></span><span>Opening secure payment page… please wait, this can take a few seconds.</span>'; }
+  else if(w) w.remove();
+}
+async function openCheckout(sessionId){
+  await loadCashfree();
+  const cf=Cashfree({mode:CASHFREE_ENV}); cf.checkout({paymentSessionId:sessionId,redirectTarget:"_self"});
+  setTimeout(()=>payBusy(null,false),15000);   // if the browser stays on this page (e.g. pop-up blocked), let them try again
+}
+async function payContact(btn){
+  const id=payFor; if(!id || _paying) return;
+  payBusy(btn,true);
   try{
     const d=await fiy("order",{kind:"contact",listingId:id});
-    if(d.alreadyUnlocked){ closeSheets(); await showContact(id); return; }
+    if(d.alreadyUnlocked){ payBusy(btn,false); closeSheets(); await showContact(id); return; }
     localStorage.setItem("fiy_scroll_to",id);
-    openCheckout(d.payment_session_id);
-  }catch(e){ if(e.message!=="login") toast(e.message); }
+    await openCheckout(d.payment_session_id);
+  }catch(e){ payBusy(btn,false); if(e.message!=="login") toast(e.message); }
 }
-async function payPass(){
+async function payPass(btn){
+  if(_paying) return;
+  payBusy(btn,true);
   try{
     const d=await fiy("order",{kind:"pass",listingId:payFor||undefined});   // this contact comes free with the pass
     if(payFor) localStorage.setItem("fiy_scroll_to",payFor);
-    openCheckout(d.payment_session_id);
-  }catch(e){ if(e.message!=="login") toast(e.message); }
+    await openCheckout(d.payment_session_id);
+  }catch(e){ payBusy(btn,false); if(e.message!=="login") toast(e.message); }
 }
 async function confirmReturn(orderId){
   toast("Confirming your payment…",20000);
