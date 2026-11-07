@@ -184,7 +184,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY21</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY22</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -413,8 +413,11 @@ function openSheet(id){ document.getElementById("backdrop").classList.add("show"
 function closeSheets(){ document.getElementById("backdrop").classList.remove("show"); document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("show")); }
 
 // ---------- login (same OTP backend and saved login as the main site) ----------
-function getUser(){ try{ return JSON.parse(localStorage.getItem("fmh_user")); }catch(e){ return null; } }
-function saveUser(u){ try{ localStorage.setItem("fmh_user",JSON.stringify(u)); }catch(e){} }
+// (08-Nov, owner) the test number 1111111111 lives only in this tab (sessionStorage): closing the tab logs it out
+const TEST_PHONE="1111111111";
+function getUser(){ try{ return JSON.parse(sessionStorage.getItem("fmh_user_test")) || JSON.parse(localStorage.getItem("fmh_user")); }catch(e){ return null; } }
+function saveUser(u){ try{ if(u && u.phone===TEST_PHONE) sessionStorage.setItem("fmh_user_test",JSON.stringify(u)); else localStorage.setItem("fmh_user",JSON.stringify(u)); }catch(e){} }
+function forgetUser(){ try{ if(sessionStorage.getItem("fmh_user_test")){ sessionStorage.removeItem("fmh_user_test"); return; } }catch(e){} try{ localStorage.removeItem("fmh_user"); }catch(e){} }
 let lgPhone="", afterLogin=null;
 function showLogin(then){ afterLogin=then||null; lgBack();
   document.getElementById("lgTitle").textContent=then?"Log in to unlock this contact":"Log in"; openSheet("loginSheet"); setTimeout(()=>document.getElementById("lgPhone").focus(),250); }
@@ -432,7 +435,7 @@ function buildOtpBoxes(){
 async function sendOtp(resend){
   const p=document.getElementById("lgPhone").value.replace(/\D/g,"");
   const err=document.getElementById("lgErr1"); err.textContent="";
-  if(p.length!==10 || !/^[6-9]/.test(p)){ err.textContent="Please enter a valid 10-digit Indian mobile number."; return; }
+  if(p.length!==10 || (!/^[6-9]/.test(p) && p!==TEST_PHONE)){ err.textContent="Please enter a valid 10-digit Indian mobile number."; return; }
   lgPhone=p;
   const btn=document.getElementById("lgSend"); btn.disabled=true; btn.textContent="Sending…";
   try{
@@ -463,7 +466,7 @@ async function verifyOtp(){
   }catch(e){ err.textContent="Network error. Please try again."; }
   finally{ btn.disabled=false; btn.textContent="Verify & continue →"; }
 }
-function logout(){ try{ localStorage.removeItem("fmh_user"); }catch(e){} location.reload(); }
+function logout(){ forgetUser(); location.reload(); }
 
 // ---------- server calls ----------
 async function fiy(action, extra){
@@ -473,7 +476,7 @@ async function fiy(action, extra){
   const r=await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
     body:JSON.stringify(Object.assign({action,sessionToken:(u&&u.sessionToken)||""},extra||{}))});
   const d=await r.json().catch(()=>({success:false,error:"Unexpected server response."}));
-  if(r.status===401){ try{ localStorage.removeItem("fmh_user"); }catch(e){} renderAccount(); showLogin(); throw new Error("login"); }
+  if(r.status===401){ forgetUser(); renderAccount(); showLogin(); throw new Error("login"); }
   if(!d.success) throw new Error(d.error||"Something went wrong.");
   return d;
 }
