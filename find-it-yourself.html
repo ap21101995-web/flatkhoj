@@ -176,7 +176,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 07-Nov-FIY12</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY13</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -425,7 +425,10 @@ async function fiy(action, extra){
 }
 
 // ---------- state ----------
-let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked=[], vocab=[], phones={}, matched=[];
+let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked=[], phones={}, matched=[];
+// (08-Nov, owner: "the areas sometimes don't pop up / say no such area") the area list is fixed (main localities) and is
+// ready immediately -- it used to stay EMPTY until all the listings had downloaded.
+let vocab=TIERS.slice().sort((a,b)=>a.localeCompare(b));
 
 function renderAccount(){
   const u=getUser(), a=document.getElementById("acct");
@@ -476,8 +479,14 @@ async function reload(){
 // ---------- area picker (tap = list, typing = suggestions) ----------
 let ddIdx=-1, ddItems=[];
 function areaOpen(){ areaFilter(); }
+const _aw=x=>norm(x).replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim();
+const AREA_CHILDREN=Object.keys(TIER_CHILD).map(k=>[_aw(k),k,TIER_CHILD[k]]);
+function areaWordsMatch(q,name){
+  const qs=q.split(" ").filter(Boolean), ws=_aw(name).split(" ");
+  return qs.every(t=>ws.some(w=>w.startsWith(t) || (t==="e"&&w==="east") || (t==="w"&&w==="west")));
+}
 function areaFilter(){
-  const q=norm(document.getElementById("areaIn").value), dd=document.getElementById("areaDd");
+  const q=_aw(document.getElementById("areaIn").value), dd=document.getElementById("areaDd");
   const taken=new Set(picked.map(norm));
   let html="";
   if(!q){
@@ -487,9 +496,17 @@ function areaFilter(){
     html=(pop.length?`<div class="hd">Popular</div>`+pop.map((a,i)=>`<div class="it" data-i="${i}">${esc(a)}</div>`).join(""):"")
         +(rest.length?`<div class="hd">All areas</div>`+rest.map((a,i)=>`<div class="it" data-i="${pop.length+i}">${esc(a)}</div>`).join(""):"");
   }else{
-    ddItems=vocab.filter(a=>!taken.has(norm(a)) && norm(a).includes(q))
-      .sort((a,b)=>(norm(a).startsWith(q)?0:1)-(norm(b).startsWith(q)?0:1)||a.localeCompare(b)).slice(0,40);
-    html=ddItems.length?ddItems.map((a,i)=>`<div class="it" data-i="${i}">${esc(a)}</div>`).join(""):`<div class="none">No area called “${esc(q)}”. Try a nearby area or a shorter spelling.</div>`;
+    const direct=vocab.filter(a=>!taken.has(norm(a)) && areaWordsMatch(q,a))
+      .sort((x,y)=>(_aw(x).startsWith(q)?0:1)-(_aw(y).startsWith(q)?0:1)||x.localeCompare(y));
+    // a neighbourhood name -> the main locality it is part of ("Marol" -> Andheri East)
+    const via=new Map();
+    AREA_CHILDREN.forEach(([w,child,tiers])=>{
+      if(direct.length || !areaWordsMatch(q,w)) return;   // only when no main locality matched by name
+      tiers.forEach(t=>{ const real=vocab.find(v=>norm(v)===norm(t)); if(real && !taken.has(norm(real)) && !direct.includes(real) && !via.has(real)) via.set(real,child); });
+    });
+    ddItems=[...direct,...via.keys()].slice(0,40);
+    html=ddItems.length?ddItems.map((a,i)=>`<div class="it" data-i="${i}">${esc(a)}${via.has(a)?` <small style="color:var(--ink3)">· includes ${esc(via.get(a))}</small>`:""}</div>`).join("")
+      :`<div class="none">No area called “${esc(document.getElementById("areaIn").value.trim())}”. Try a nearby area or a shorter spelling.</div>`;
   }
   ddIdx=-1; dd.innerHTML=html; dd.classList.add("show"); dd.scrollTop=0;
 }
@@ -500,9 +517,16 @@ function addArea(a){
   if(mode==="people") picked=[real];
   else if(!picked.some(x=>norm(x)===norm(real))) picked.push(real);
   const inp=document.getElementById("areaIn"); inp.value=""; areaHide(); inp.blur();
-  renderPicked(); apply();
+  renderPicked(); applySoon();
 }
-function dropArea(i){ picked.splice(i,1); renderPicked(); apply(); }
+function dropArea(i){ picked.splice(i,1); renderPicked(); applySoon(); }
+// let the browser draw the picked area first, then filter the ~2,000 posts
+let _applyT=null;
+function applySoon(){
+  clearTimeout(_applyT);
+  const sum=document.getElementById("summary"); if(sum) sum.textContent="Updating…";
+  _applyT=setTimeout(()=>requestAnimationFrame(apply),0);
+}
 function renderPicked(){
   document.getElementById("picked").innerHTML=picked.map((a,i)=>`<span class="tagx">${esc(a)}<button aria-label="Remove ${esc(a)}" onclick="dropArea(${i})">×</button></span>`).join("");
   document.getElementById("areaIn").placeholder = mode==="people" ? (picked.length?"Tap to change the area":"Tap to choose the area, or type…") : (picked.length?"Add another area…":"Tap to choose an area, or type…");
@@ -514,8 +538,11 @@ function areaKey(e){
   else if(e.key==="Escape"){ areaHide(); e.target.blur(); }
 }
 // tap/click on a suggestion (pointerdown fires before the input loses focus, on phones and desktops alike)
-document.getElementById("areaDd").addEventListener("pointerdown",e=>{
-  const it=e.target.closest(".it"); if(!it) return; e.preventDefault(); addArea(ddItems[+it.dataset.i]);
+// pointerdown only keeps the box focused (so the list stays open); the area is picked on the tap itself (click), which
+// the browser does not fire when the finger moved to scroll the list
+document.getElementById("areaDd").addEventListener("pointerdown",e=>{ if(e.target.closest(".it")) e.preventDefault(); });
+document.getElementById("areaDd").addEventListener("click",e=>{
+  const it=e.target.closest(".it"); if(!it) return; addArea(ddItems[+it.dataset.i]);
 });
 document.addEventListener("pointerdown",e=>{ if(!e.target.closest(".ac")) areaHide(); });
 
