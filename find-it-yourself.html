@@ -184,7 +184,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY19</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY20</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -518,17 +518,41 @@ function setMode(m){
   reload();
 }
 
+// (08-Nov, owner: "toggling place / flatmate shows the wrong listings, or none") each toggle started a new download and
+// whichever answer came back LAST won -- a slow "place" answer could land while on "flatmate". Also, while loading, any
+// filter tap re-filtered the OLD list under the NEW mode ("nothing matches"). Now: only the newest request may fill the
+// page, nothing is filtered while loading, and each city+mode list is kept for 5 minutes so toggling back is instant.
+let _reqSeq=0, _loading=false;
+const _cache={}, CACHE_MS=5*60*1000;
+function fetchPool(city,m){
+  const k=city+"|"+m, c=_cache[k];
+  if(c && Date.now()-c.t<CACHE_MS) return c.p;
+  const p=fiy("search",{city,mode:m}).catch(e=>{ delete _cache[k]; throw e; });
+  _cache[k]={t:Date.now(),p};
+  return p;
+}
+function clearPoolCache(){ for(const k in _cache) delete _cache[k]; }
 async function reload(){
   const res=document.getElementById("results"), sum=document.getElementById("summary");
-  res.innerHTML=`<div class="empty">Loading…</div>`; sum.textContent="";
+  const seq=++_reqSeq, m=mode;
+  clearTimeout(_applyT);
+  pool=[]; matched=[]; _loading=true;
+  res.innerHTML=`<div class="empty">Loading…</div>`; sum.textContent=""; document.getElementById("moreBtn").style.display="none";
   try{
     const city=document.getElementById("fCity").value;
     if(CITY_DATA[city] && CITY_DATA[city].name!==CITY_NAME){ useCity(city); picked=[]; renderPicked(); }
-    const d=await fiy("search",{city,mode});
+    const d=await fetchPool(city,m);
+    if(seq!==_reqSeq || m!==mode) return;   // the user has since toggled / changed city: a newer request owns the page
     pool=d.listings||[]; passExpires=d.passExpires; contactPrice=d.contactPrice; renderAccount();
     vocab=AREA_LIST.slice();
-    shown=PAGE; apply();
-  }catch(e){ if(e.message!=="login") res.innerHTML=`<div class="empty">${esc(e.message)}</div>`; else res.innerHTML=`<div class="empty">Log in to see the listings.<br><br><button class="btn btn-solid" onclick="showLogin()">Log in</button></div>`; }
+    _loading=false; shown=PAGE; apply();
+    fetchPool(city,m==="place"?"people":"place").catch(()=>{});   // get the other side ready so the toggle is instant
+  }catch(e){
+    if(seq!==_reqSeq) return;
+    _loading=false;
+    if(e.message!=="login") res.innerHTML=`<div class="empty">Could not load the listings (${esc(e.message)}).<br><br><button class="btn btn-solid" onclick="reload()">Try again</button></div>`;
+    else res.innerHTML=`<div class="empty">Log in to see the listings.<br><br><button class="btn btn-solid" onclick="showLogin()">Log in</button></div>`;
+  }
 }
 
 // ---------- area picker (tap = list, typing = suggestions) ----------
@@ -707,6 +731,7 @@ function missingPeople(o){
 }
 const posted=l=>Date.parse(l.posted_at||0)||0;
 function apply(){
+  if(_loading) return;   // the right list is still on its way; reload() filters it as soon as it lands
   const o=readFilters();
   const sum=document.getElementById("summary");
   if(mode==="people" && pool.length){
@@ -988,6 +1013,7 @@ async function saveUpdate(id,field){
 
 // ---------- start ----------
 async function start(fromLogin){
+  clearPoolCache();   // logged in / out: "unlocked" marks on the posts differ per account
   if(!document.getElementById("fBroker").options.length) setupMode();
   renderAccount(); renderPicked();
   const u=getUser();
