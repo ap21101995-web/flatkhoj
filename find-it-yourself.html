@@ -165,6 +165,7 @@ select.inp option:disabled { color:#bbb; }
 .plan.best { border-color:var(--pri); background:var(--pri-bg); }
 .plan .pt { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:15px; font-weight:800; color:var(--ink); }
 .plan .pr { font-size:18px; font-weight:800; color:var(--pri); white-space:nowrap; }
+.plan .pr small { font-size:12px; font-weight:700; margin-left:1px; }
 .plan .pd { font-size:12.5px; color:var(--ink2); margin-top:5px; line-height:1.45; font-weight:500; }
 .plan:disabled { cursor:wait; }
 .plan.dim { opacity:.45; }
@@ -183,7 +184,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY16</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY17</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -863,8 +864,8 @@ function unlock(id){
     document.getElementById("payIntro").textContent="See the number and call or WhatsApp them directly. Once unlocked, it stays in your account.";
     box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Just this contact <span class="pr">₹79</span></div>
         <div class="pd">One-time payment for this one person's number.</div></button>
-      <button class="plan best" onclick="payPass(this)"><span class="badge">Best value · 1st contact FREE</span><div class="pt">30-day pass <span class="pr">₹199</span></div>
-        <div class="pd"><b>This contact is free with the pass.</b> After that, every contact for the next 30 days is just ₹19.</div></button>`;
+      <button class="plan best" onclick="payPass(this)"><span class="badge">Best value · 1st contact FREE</span><div class="pt">30-day pass <span class="pr">₹19<small>/contact</small></span></div>
+        <div class="pd"><b>This contact is free.</b> Pay ₹199 once for the 30-day pass, then every contact is just ₹19 for 30 days.</div></button>`;
   }
   openSheet("paySheet");
   loadCashfree();   // start fetching the payment page's script now, so the jump to Cashfree is quicker
