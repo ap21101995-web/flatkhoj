@@ -184,7 +184,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY20</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY21</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -244,7 +244,7 @@ select.inp option:disabled { color:#bbb; }
   <div class="foot">
     Posts are shown as written, with phone numbers, links and the WhatsApp group hidden.<br>
     When a post doesn't say whether brokerage applies or who it's for, please ask and update it here for the next person.<br>
-    Payments are processed securely by Cashfree · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a>
+    <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a>
   </div>
 </div>
 
@@ -277,6 +277,7 @@ select.inp option:disabled { color:#bbb; }
   <p id="payIntro">See the number and call or WhatsApp them directly. Once unlocked, it stays in your account.</p>
   <div id="payOptions"></div>
   <button class="btn btn-ghost" style="width:100%;margin-top:4px" onclick="closeSheets()">Not now</button>
+  <p style="font-size:11.5px;color:var(--ink3);text-align:center;margin:8px 0 0">Payments are processed securely by Cashfree</p>
 </div>
 
 <!-- original message popup -->
@@ -479,6 +480,16 @@ async function fiy(action, extra){
 
 // ---------- state ----------
 let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked=[], phones={}, matched=[];
+// (08-Nov, owner) every account's first contact is free (login needed); a Rs 499 pass gives up to 100 free contacts
+let freeFirst=false, freeLeft=0, freeLeftExpires=null;
+function setPlan(d){
+  if(!d) return;
+  if("passExpires" in d) passExpires=d.passExpires;
+  if("contactPrice" in d) contactPrice=d.contactPrice;
+  if("freeFirst" in d) freeFirst=!!d.freeFirst;
+  if("freeLeft" in d){ freeLeft=Number(d.freeLeft)||0; freeLeftExpires=d.freeLeftExpires||null; }
+  renderAccount();
+}
 // (08-Nov, owner: "the areas sometimes don't pop up / say no such area") the area list is fixed (main localities) and is
 // ready immediately -- it used to stay EMPTY until all the listings had downloaded.
 let vocab=AREA_LIST.slice();
@@ -486,7 +497,9 @@ let vocab=AREA_LIST.slice();
 function renderAccount(){
   const u=getUser(), a=document.getElementById("acct");
   if(!u){ a.innerHTML=`<button class="btn btn-solid btn-sm" onclick="showLogin()">Log in</button>`; return; }
-  const pass=passExpires?`<span class="pill" title="Your 30-day pass">Pass till ${esc(new Date(passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`:"";
+  const pass=freeLeft>0
+    ? `<span class="pill" title="Your 30-day pass">${freeLeft} free contact${freeLeft===1?"":"s"} left · till ${esc(new Date(freeLeftExpires||passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`
+    : passExpires?`<span class="pill" title="Your 30-day pass">Pass till ${esc(new Date(passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`:"";
   a.innerHTML=`${pass}<button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button>`;
 }
 
@@ -543,7 +556,7 @@ async function reload(){
     if(CITY_DATA[city] && CITY_DATA[city].name!==CITY_NAME){ useCity(city); picked=[]; renderPicked(); }
     const d=await fetchPool(city,m);
     if(seq!==_reqSeq || m!==mode) return;   // the user has since toggled / changed city: a newer request owns the page
-    pool=d.listings||[]; passExpires=d.passExpires; contactPrice=d.contactPrice; renderAccount();
+    pool=d.listings||[]; if(getUser()) setPlan(d); else renderAccount();
     vocab=AREA_LIST.slice();
     _loading=false; shown=PAGE; apply();
     fetchPool(city,m==="place"?"people":"place").catch(()=>{});   // get the other side ready so the toggle is instant
@@ -908,18 +921,36 @@ function unlock(id){
   if(!u||!u.sessionToken){ showLogin(()=>unlock(id)); return; }
   const l=pool.find(x=>String(x.id)===String(id));
   if(l && l.unlocked){ showContact(id); return; }   // already bought earlier on this account
+  if(freeFirst || freeLeft>0){ claimFree(id,l); return; }
+  showPayOptions(id);
+}
+let _claiming=false;
+async function claimFree(id,l){
+  if(_claiming) return; _claiming=true;
+  try{
+    const d=await fiy("claim",{listingId:id}); setPlan(d);
+    if(!d.unlocked){ showPayOptions(id); return; }
+    pool.forEach(x=>{ if(String(x.id)===String(id)) x.unlocked=true; });
+    await showContact(id);
+    toast(d.how==="pass499" ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass` : "Contact unlocked");
+  }catch(e){ if(e.message!=="login") toast(e.message); }
+  finally{ _claiming=false; }
+}
+function showPayOptions(id){
   payFor=String(id);
   const box=document.getElementById("payOptions");
+  const big=`<button class="plan best" onclick="payPass(this,'pass499')"><span class="badge">Best value</span><div class="pt">100 contacts <span class="pr">Free</span></div>
+      <div class="pd">Pay ₹499 once for a 30-day pass: up to 100 contacts free for 30 days, this one included.</div></button>`;
   if(passExpires){
     document.getElementById("payIntro").textContent=`Your 30-day pass is active until ${fmtDate(passExpires)}, so this contact is just ₹19.`;
-    box.innerHTML=`<button class="plan best" onclick="payContact(this)"><div class="pt">Unlock this contact <span class="pr">₹19</span></div>
-      <div class="pd">Pass price — you'll see the number straight after paying.</div></button>`;
+    box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Unlock this contact <span class="pr">₹19</span></div>
+      <div class="pd">Pass price — you'll see the number straight after paying.</div></button>`+big;
   }else{
-    document.getElementById("payIntro").textContent="See the number and call or WhatsApp them directly. Once unlocked, it stays in your account.";
+    document.getElementById("payIntro").textContent="You've used your free contact. See this number and call or WhatsApp them directly — once unlocked, it stays in your account.";
     box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Just this contact <span class="pr">₹79</span></div>
-        <div class="pd">One-time payment for this one person's number.</div></button>
-      <button class="plan best" onclick="payPass(this)"><span class="badge">Best value · 1st contact FREE</span><div class="pt">30-day pass <span class="pr">₹19<small>/contact</small></span></div>
-        <div class="pd"><b>This contact is free.</b> Pay ₹199 once for the 30-day pass, then every contact is just ₹19 for 30 days.</div></button>`;
+        <div class="pd">One-time payment for this one contact.</div></button>
+      <button class="plan" onclick="payPass(this,'pass')"><div class="pt">Every contact <span class="pr">₹19<small>/contact</small></span></div>
+        <div class="pd">Pay ₹199 once for a 30-day pass, then every contact is just ₹19 for 30 days.</div></button>`+big;
   }
   openSheet("paySheet");
   loadCashfree();   // start fetching the payment page's script now, so the jump to Cashfree is quicker
@@ -959,11 +990,12 @@ async function payContact(btn){
     await openCheckout(d.payment_session_id);
   }catch(e){ payBusy(btn,false); if(e.message!=="login") toast(e.message); }
 }
-async function payPass(btn){
+async function payPass(btn,kind){
   if(_paying) return;
   payBusy(btn,true);
   try{
-    const d=await fiy("order",{kind:"pass",listingId:payFor||undefined});   // this contact comes free with the pass
+    // Rs 499: this contact is the first of its 100. Rs 199: no free contact; they come back to this post to pay Rs 19.
+    const d=await fiy("order",{kind:kind==="pass499"?"pass499":"pass",listingId:(kind==="pass499"&&payFor)||undefined});
     if(payFor) localStorage.setItem("fiy_scroll_to",payFor);
     await openCheckout(d.payment_session_id);
   }catch(e){ payBusy(btn,false); if(e.message!=="login") toast(e.message); }
@@ -975,8 +1007,15 @@ async function confirmReturn(orderId){
       const d=await fiy("confirm",{orderId});
       if(d.paid){
         history.replaceState(null,"",location.pathname);
-        if(d.kind==="pass"){
-          const st=await fiy("status"); passExpires=st.passExpires; contactPrice=st.contactPrice; renderAccount();
+        if(d.kind==="pass499"){
+          const st=await fiy("status"); setPlan(st);
+          if(d.listingId){
+            toast(`Your 30-day pass is active — this contact is unlocked and ${freeLeft} more are free.`,6000);
+            try{ const c=await fiy("contact",{listingId:d.listingId}); phones[String(d.listingId)]=c.phone; }catch(e){}
+            localStorage.setItem("fiy_scroll_to",String(d.listingId));
+          }else toast(`Your 30-day pass is active — ${freeLeft} contacts are free for 30 days.`,5000);
+        }else if(d.kind==="pass"){
+          const st=await fiy("status"); setPlan(st);
           if(d.listingId){
             toast("Your 30-day pass is active — this contact was free, and every other one is now ₹19.",6000);
             try{ const c=await fiy("contact",{listingId:d.listingId}); phones[String(d.listingId)]=c.phone; }catch(e){}
@@ -1019,7 +1058,7 @@ async function start(fromLogin){
   const u=getUser();
   if(!u||!u.sessionToken){ await reload(); return; }   // browse freely; login is asked for only on "Unlock contact"
   const ord=new URLSearchParams(location.search).get("fiy_order");
-  try{ const st=await fiy("status"); passExpires=st.passExpires; contactPrice=st.contactPrice; renderAccount(); }catch(e){ return; }
+  try{ const st=await fiy("status"); setPlan(st); }catch(e){ return; }
   if(ord) await confirmReturn(ord);
   await reload();
   const back=localStorage.getItem("fiy_scroll_to");

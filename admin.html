@@ -121,7 +121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
-      <div class="sidebar-sub">Admin Panel · build 08-Nov-AD29</div>
+      <div class="sidebar-sub">Admin Panel · build 08-Nov-AD30</div>
     </div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
@@ -676,7 +676,7 @@ async function loadTpClients(){
 }
 // ---------- FIY (Find it yourself) clients -- (2026-11-06) ----------
 // Money = paid fiy_orders (Rs 79 contact, Rs 19 contact with pass, Rs 199 pass). Each unlock row carries what was paid
-// for that contact (0 = the free first contact that comes with the Rs 199 pass).
+// for that contact (0 = free: every account's first contact (order_id FREE_...), or one of a Rs 499 pass's 100).
 let _fiy={byUser:{},users:{},listings:{}};
 const fiyRs=n=>"₹"+(Number(n)||0).toLocaleString("en-IN");
 const fiyDate=d=>d?new Date(d).toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"}):"—";
@@ -707,7 +707,7 @@ async function loadFiyClients(){
     document.getElementById("fiy-clients").textContent=rows.filter(r=>r.paid>0).length;
     document.getElementById("fiy-clients-sub").textContent="logged-in users who paid at least once";
     document.getElementById("fiy-unlocks").textContent=(unlocks||[]).length;
-    document.getElementById("fiy-unlocks-sub").textContent=(unlocks||[]).filter(x=>!Number(x.amount)).length+" free with a pass";
+    document.getElementById("fiy-unlocks-sub").textContent=(unlocks||[]).filter(x=>!Number(x.amount)).length+" free (first contact or pass)";
     document.getElementById("fiy-passes").textContent=new Set(active.map(p=>p.user_id)).size;
     document.getElementById("fiy-passes-sub").textContent=(passes||[]).length+" pass(es) bought in total";
     if(!rows.length){tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--ink3)">No paid Find-it-yourself clients yet.</td></tr>';return}
@@ -730,8 +730,8 @@ function openFiyClient(id){
     const amt=Number(x.amount)||0;
     rows.push({t:x.created_at,html:`<tr><td style="white-space:nowrap">${fiyDate(x.created_at)}</td><td>${tpEsc(what)||"—"}<div style="font-size:12px;color:var(--ink3)">${tpEsc(areas)||"Area not stated"}${l.rent_amount?" · "+fiyRs(l.rent_amount):""}</div></td>
       <td style="white-space:nowrap">${tpEsc(l.custom_contact_phone)||"—"}${l.poster_name?`<div style="font-size:12px;color:var(--ink3)">${tpEsc(l.poster_name)}</div>`:""}</td>
-      <td style="white-space:nowrap">${amt?fiyRs(amt):'<span class="badge b-ok">Free with pass</span>'}</td></tr>`})});
-  r.orders.filter(o=>o.kind==="pass").forEach(o=>rows.push({t:o.paid_at||o.created_at,html:`<tr style="background:var(--bg3)"><td style="white-space:nowrap">${fiyDate(o.paid_at||o.created_at)}</td><td colspan="2"><b>30-day pass bought</b><div style="font-size:12px;color:var(--ink3)">${tpEsc(o.order_id)}</div></td><td style="white-space:nowrap"><b>${fiyRs(o.amount)}</b></td></tr>`}));
+      <td style="white-space:nowrap">${amt?fiyRs(amt):'<span class="badge b-ok">${String(x.order_id).startsWith("FREE_")?"Free first contact":"Free with pass"}</span>'}</td></tr>`})});
+  r.orders.filter(o=>o.kind==="pass"||o.kind==="pass499").forEach(o=>rows.push({t:o.paid_at||o.created_at,html:`<tr style="background:var(--bg3)"><td style="white-space:nowrap">${fiyDate(o.paid_at||o.created_at)}</td><td colspan="2"><b>30-day pass bought${Number(o.amount)===499||o.kind==="pass499"?" (100 free contacts)":""}</b><div style="font-size:12px;color:var(--ink3)">${tpEsc(o.order_id)}</div></td><td style="white-space:nowrap"><b>${fiyRs(o.amount)}</b></td></tr>`}));
   rows.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
   document.getElementById("fiyModalTable").innerHTML="<tr><th>When</th><th>Posting</th><th>Contact</th><th>Amount paid</th></tr>"+(rows.map(x=>x.html).join("")||'<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--ink3)">No unlocks yet.</td></tr>')
     +`<tr><td colspan="3" style="text-align:right;font-weight:800">Total paid</td><td style="font-weight:800">${fiyRs(r.paid)}</td></tr>`;
