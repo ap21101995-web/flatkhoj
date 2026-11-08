@@ -52,6 +52,25 @@ button { font-family:var(--font); }
 .seg { display:grid; grid-template-columns:1fr 1fr; background:var(--bg3); border-radius:12px; padding:4px; margin-top:14px; gap:4px; }
 .seg button { border:none; background:transparent; border-radius:9px; padding:11px 6px; font-size:13px; font-weight:700; color:var(--ink2); cursor:pointer; line-height:1.25; }
 .seg button.on { background:var(--bg); color:var(--pri); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+/* (08-Nov, owner) make it obvious one of the two must be chosen: chosen one shaded, the other greyed out */
+.seg { margin-top:6px; }
+.seg button { color:#a3a3a3; transition:background .2s,color .2s; }
+.seg button.on { background:var(--pri); color:#fff; box-shadow:0 3px 10px rgba(109,40,217,.30); }
+.pick { display:flex; align-items:center; gap:8px; margin-top:12px; padding:0 12%; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--pri); }
+.pick .ar { flex:1; height:14px; position:relative; }
+.pick .ar::before { content:""; position:absolute; left:6px; right:6px; top:6px; height:2px; border-radius:2px;
+  background:linear-gradient(90deg,var(--pri) 0%,#f5c542 45%,#fff6c9 50%,#f5c542 55%,var(--pri) 100%); background-size:250% 100%; animation:pickShine 2.2s linear infinite; }
+.pick .ar::after { content:""; position:absolute; top:2px; width:8px; height:8px; border:solid var(--pri); border-width:0 0 2px 2px; }
+.pick .ar.l::after { left:2px; transform:rotate(45deg); }
+.pick .ar.r::after { right:2px; transform:rotate(-135deg); }
+.pick .tx { background:linear-gradient(90deg,var(--pri) 0%,#e0a800 45%,#ffe58a 50%,#e0a800 55%,var(--pri) 100%); background-size:250% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent; animation:pickShine 2.2s linear infinite; white-space:nowrap; }
+@keyframes pickShine { 0% { background-position:100% 0; } 100% { background-position:-150% 0; } }
+/* (08-Nov, owner) a glittering nudge on the pay sheet, in a colour of its own */
+.nudge { display:inline-block; margin:2px 0 12px; padding:6px 12px; border-radius:999px; font-size:12.5px; font-weight:800; color:#5a3a00;
+  background:linear-gradient(100deg,#ffd54a 0%,#ffb300 40%,#fff3b0 50%,#ffb300 60%,#ffd54a 100%); background-size:250% 100%;
+  box-shadow:0 2px 8px rgba(255,170,0,.35); animation:pickShine 2.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .pick .ar::before, .pick .tx, .nudge { animation:none; } }
 .panel { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-top:12px; }
 .field { margin-bottom:14px; }
 .field:last-child { margin-bottom:0; }
@@ -184,7 +203,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY23</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY24</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -193,6 +212,7 @@ select.inp option:disabled { color:#bbb; }
     <h1>Find it yourself</h1>
   </div>
 
+  <div class="pick" aria-hidden="true"><span class="ar l"></span><span class="tx">Choose one</span><span class="ar r"></span></div>
   <div class="seg">
     <button id="modePlace" class="on" onclick="setMode('place')">I need a place<br><span style="font-weight:600;font-size:11.5px">Flat, Room, PG</span></button>
     <button id="modePeople" onclick="setMode('people')">I need a Flatmate<br><span style="font-weight:600;font-size:11.5px">or a Tenant</span></button>
@@ -274,6 +294,7 @@ select.inp option:disabled { color:#bbb; }
 <div class="sheet" id="paySheet">
   <div class="grab"></div>
   <h2>Unlock this contact</h2>
+  <div id="payNudge"></div>
   <p id="payIntro">See the number and call or WhatsApp them directly. Once unlocked, it stays in your account.</p>
   <div id="payOptions"></div>
   <button class="btn btn-ghost" style="width:100%;margin-top:4px" onclick="closeSheets()">Not now</button>
@@ -941,6 +962,10 @@ async function claimFree(id,l){
 function showPayOptions(id){
   payFor=String(id);
   const box=document.getElementById("payOptions");
+  // (08-Nov, owner) a short push: seekers save on brokerage; people offering a place stop paying the empty room's rent
+  const lt=((pool.find(x=>String(x.id)===payFor)||{}).listing_type)||"";
+  const wantsPlace=lt ? lt!=="flat_wanted" : mode==="place";
+  document.getElementById("payNudge").innerHTML=`<span class="nudge">${wantsPlace?"✨ Golden chance to skip brokerage":"⏳ Pay a few bucks, not the empty room's rent"}</span>`;
   const big=`<button class="plan best" onclick="payPass(this,'pass499')"><span class="badge">Best value</span><div class="pt">100 contacts <span class="pr">Free</span></div>
       <div class="pd">Pay ₹499 once for a 30-day pass: up to 100 contacts free for 30 days, this one included.</div></button>`;
   if(passExpires){
