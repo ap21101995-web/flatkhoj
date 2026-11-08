@@ -184,7 +184,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY22</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 08-Nov-FIY23</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -224,7 +224,7 @@ select.inp option:disabled { color:#bbb; }
       </div>
       <div class="sub" id="bhkBox"><div class="hint" id="bhkHint">Which size?</div><div class="chips" id="fBhk"></div></div></div>
 
-    <div class="field"><label class="lbl" for="fBroker" id="brokerLbl">Brokerage</label>
+    <div class="field" id="brokerField"><label class="lbl" for="fBroker" id="brokerLbl">Brokerage</label>
       <select class="inp" id="fBroker" onchange="apply()"></select></div>
 
     <div class="field"><label class="lbl" for="fGender" id="genderLbl">Gender</label>
@@ -514,14 +514,15 @@ function setupMode(){
   document.getElementById("modePeople").classList.toggle("on",!p);
   document.getElementById("sharingLbl").innerHTML=p?'Sharing / Room <span class="lbl-note">(can choose multiple)</span>':"Available"+REQ;
   document.getElementById("areaLbl").innerHTML=p?"Areas — add as many as you like":"Area"+REQ;
-  document.getElementById("brokerLbl").innerHTML=p?"Brokerage":"Brokerage"+REQ;
+  // (08-Nov, owner) no brokerage question when offering a place (I need a flatmate / tenant): one less thing to answer
+  document.getElementById("brokerField").style.display=p?"":"none";
   document.getElementById("genderLbl").innerHTML=p?"Gender":"Gender"+REQ;
   document.getElementById("fGender").innerHTML=(p?"":`<option value="" disabled selected>Choose…</option>`)
     +`<option value="all">All Allowed</option><option value="female">Female &amp; No Gender Info Yet</option><option value="male">Male &amp; No Gender Info Yet</option>`;
   document.getElementById("bhkHint").textContent=p?"Which size? (pick any, or none for all sizes)":"Which size?";
   document.getElementById("fBroker").innerHTML=p
     ? `<option value="">All</option><option value="nobroker">No Brokerage &amp; No Brokerage Info Yet</option>`
-    : `<option value="" disabled selected>Choose…</option><option value="broker">Brokerage Applicable</option><option value="nobroker">No Brokerage</option>`;
+    : `<option value="">All</option>`;
   document.getElementById("fBhk").innerHTML=BHKS.map(b=>`<button class="opt sm" data-v="${b}" onclick="toggleBhk(this)">${b}</button>`).join("");
   document.querySelectorAll("#fSharing .opt").forEach(x=>x.classList.remove("on"));
   document.getElementById("bhkBox").classList.remove("show");
@@ -726,7 +727,6 @@ function passes(l,o){
   if(o.gender==="male" && gc==="female") return false;
   const bs=brokerageState(l);
   if(mode==="place" && o.broker==="nobroker" && bs==="yes") return false;
-  if(mode==="people" && o.broker==="broker" && bs==="no") return false;   // they asked for no brokerage
   l._near=null;
   if(o.areas.length && !areaMatch(o.areas,l.areas)){
     if(!o.nearby) return false;
@@ -741,7 +741,6 @@ function missingPeople(o){
   if(!o.areas.length) miss.push("Area");
   if(!o.sharing.length) miss.push("Available");
   else if(o.sharing[0]==="entire" && !o.bhk.length) miss.push("flat size");
-  if(!o.broker) miss.push("Brokerage");
   if(!o.gender) miss.push("Gender");
   return miss;
 }
