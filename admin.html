@@ -121,7 +121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
-      <div class="sidebar-sub">Admin Panel · build 08-Nov-AD32</div>
+      <div class="sidebar-sub">Admin Panel · build 08-Nov-AD33</div>
     </div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
@@ -697,13 +697,13 @@ async function loadFiyClients(){
       supaGet("fiy_passes?select=user_id,order_id,amount,starts_at,expires_at&order=expires_at.desc")]);
     [orders,unlocks,passes]=await Promise.all([fiyNoTest(orders),fiyNoTest(unlocks),fiyNoTest(passes)]);
     const by={};const u=id=>by[id]||(by[id]={id,paid:0,orders:[],unlocks:[],passes:[],last:null});
-    (orders||[]).forEach(o=>{const c=u(o.user_id);c.paid+=Number(o.amount)||0;c.orders.push(o);const t=o.paid_at||o.created_at;if(!c.last||t>c.last)c.last=t});
-    (unlocks||[]).forEach(x=>{const c=u(x.user_id);c.unlocks.push(x);if(!c.last||x.created_at>c.last)c.last=x.created_at});
+    (orders||[]).forEach(o=>{const c=u(o.user_id);c.paid+=Number(o.amount)||0;c.orders.push(o);const t=o.paid_at||o.created_at;if(!c.last||fiyT(t)>fiyT(c.last))c.last=t});
+    (unlocks||[]).forEach(x=>{const c=u(x.user_id);c.unlocks.push(x);if(!c.last||fiyT(x.created_at)>fiyT(c.last))c.last=x.created_at});
     (passes||[]).forEach(x=>u(x.user_id).passes.push(x));
     const uids=Object.keys(by), lids=[...new Set((unlocks||[]).map(x=>x.listing_id))];
     const [us,ls]=await Promise.all([fiyChunks("users","id,name,phone",uids),fiyChunks("listings","id,listing_type,areas,room_type,flat_type,rent_amount,custom_contact_phone,poster_name,created_at",lids)]);
     _fiy={byUser:by,users:Object.fromEntries(us.map(x=>[x.id,x])),listings:Object.fromEntries(ls.map(x=>[String(x.id),x]))};
-    const now=new Date().toISOString(), rows=Object.values(by).sort((a,b)=>b.paid-a.paid||String(b.last).localeCompare(String(a.last)));
+    const now=new Date().toISOString(), rows=Object.values(by).sort((a,b)=>fiyT(b.last)-fiyT(a.last));   // (08-Nov, owner) latest activity at the top
     const total=rows.reduce((t,r)=>t+r.paid,0), m=new Date();m.setDate(1);m.setHours(0,0,0,0);
     const month=(orders||[]).filter(o=>new Date(o.paid_at||o.created_at)>=m).reduce((t,o)=>t+(Number(o.amount)||0),0);
     const active=(passes||[]).filter(p=>p.expires_at>now);
@@ -725,6 +725,7 @@ async function loadFiyClients(){
         <td>${fiyDate(r.last)}</td></tr>`}).join("");
   }catch(t){console.error("loadFiyClients:",t);tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--red)">Could not load FIY clients.</td></tr>'}
 }
+const fiyT=t=>Date.parse(t||0)||0;
 function openFiyClient(id){
   const r=_fiy.byUser[id];if(!r)return;const usr=_fiy.users[id]||{};
   document.getElementById("fiyModalTitle").textContent=(usr.name||"Client")+(usr.phone?" · "+usr.phone:"");
@@ -738,7 +739,7 @@ function openFiyClient(id){
       <td style="white-space:nowrap">${tpEsc(l.custom_contact_phone)||"—"}${l.poster_name?`<div style="font-size:12px;color:var(--ink3)">${tpEsc(l.poster_name)}</div>`:""}</td>
       <td style="white-space:nowrap">${amt?fiyRs(amt):'<span class="badge b-ok">'+(String(x.order_id).startsWith("FREE_")?"Free Contact":"Free with pass")+'</span>'}</td></tr>`})});
   r.orders.filter(o=>o.kind==="pass"||o.kind==="pass499").forEach(o=>rows.push({t:o.paid_at||o.created_at,html:`<tr style="background:var(--bg3)"><td style="white-space:nowrap">${fiyDate(o.paid_at||o.created_at)}</td><td colspan="2"><b>30-day pass bought${Number(o.amount)===499||o.kind==="pass499"?" (100 free contacts)":""}</b><div style="font-size:12px;color:var(--ink3)">${tpEsc(o.order_id)}</div></td><td style="white-space:nowrap"><b>${fiyRs(o.amount)}</b></td></tr>`}));
-  rows.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
+  rows.sort((a,b)=>fiyT(b.t)-fiyT(a.t));   // latest unlock at the top
   document.getElementById("fiyModalTable").innerHTML="<tr><th>When</th><th>Posting</th><th>Contact</th><th>Amount paid</th></tr>"+(rows.map(x=>x.html).join("")||'<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--ink3)">No unlocks yet.</td></tr>')
     +`<tr><td colspan="3" style="text-align:right;font-weight:800">Total paid</td><td style="font-weight:800">${fiyRs(r.paid)}</td></tr>`;
   document.getElementById("fiyModal").style.display="flex";
