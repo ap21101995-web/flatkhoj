@@ -167,7 +167,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <link rel="dns-prefetch" href="https://hbvdboxyppsmcuqgbpwp.supabase.co">
 </head>
 <body>
-<div id="fkVersionBadge">post_form.html · build 2026-11-09 NC1</div>
+<div id="fkVersionBadge">post_form.html · build 2026-11-09 NC2</div>
 <script>
 // (2026-10-29) Owner-only file/date stamp in the corner, same pattern as listing_detail.html
 // and admin.html, so you can tell at a glance whether a deploy of THIS file actually went
@@ -2802,6 +2802,7 @@ async function upgradeInline(plan, coinCost) {
 
 // Strict version — returns true if allowed, false if blocked. Used before auto-submit.
 async function checkPostingLimitsStrict() {
+  return true;   // (2026-11-09, owner) "there shouldn't be any posting limit" -- old check kept below for revival
   const user = getUser();
   if (!user) return false;
   const ph = String(user.phone||'').replace(/\D/g,'').slice(-10);
@@ -2845,6 +2846,7 @@ async function checkPostingLimitsStrict() {
 }
 
 async function checkPostingLimits() {
+  return;        // (2026-11-09, owner) no posting limits
   // Never apply posting limits in edit mode
   if (new URLSearchParams(window.location.search).get('edit')) return;
   const user = getUser();
