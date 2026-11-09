@@ -234,7 +234,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY38</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY39</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1076,7 +1076,7 @@ function showPayOptions(id){
   const lt=((pool.find(x=>String(x.id)===payFor)||{}).listing_type)||"";
   const wantsPlace=lt ? lt!=="flat_wanted" : mode==="place";
   document.getElementById("payNudge").innerHTML=`<span class="nudge">${wantsPlace?"✨ Golden chance to skip brokerage<small>No-brokerage places are very hard to find here</small>":"⏳ Every empty day = Rent from your pocket<small>Pay a few bucks here instead, it's far cheaper</small>"}</span>`;
-  const big=`<button class="plan best" onclick="payPass(this,'pass499')"><span class="badge">Best value</span><div class="pt">100 Contacts <span class="pr">Free</span></div>
+  const big=`<button class="plan best" onclick="payPass(this,'pass499')"><span class="badge">Best value</span><div class="pt">100 Contacts Free <span class="pr">Free</span></div>
       <div class="pd">Pay ₹499 once for a 30-day pass: up to 100 contacts free for 30 days, this one included.</div></button>`;
   if(passExpires){
     document.getElementById("payIntro").textContent=`Your 30-day pass is active until ${fmtDate(passExpires)}, so this contact is just ₹19.`;
@@ -1085,10 +1085,11 @@ function showPayOptions(id){
       <div class="pd">Your 30-day pass price (active till ${fmtDate(passExpires)}) — you'll see the number straight after paying.</div></button>`;
   }else{
     document.getElementById("payIntro").textContent="You've used your free contact. See this number and call or WhatsApp them directly — once unlocked, it stays in your account.";
-    box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Just this Contact <span class="pr">₹79</span></div>
-        <div class="pd">One-time payment for this one contact.</div></button>
-      <button class="plan" onclick="payPass(this,'pass')"><div class="pt">Every Contact <span class="pr">₹19<small>/Contact</small></span></div>
-        <div class="pd">Pay ₹199 once for a 30-day pass, then every contact is just ₹19 for 30 days.</div></button>`+big;
+    // (09-Nov, owner) order: 100 contacts (Rs 499) on top, Rs 19 pass in the middle, Rs 79 single contact at the bottom
+    box.innerHTML=big+`<button class="plan" onclick="payPass(this,'pass')"><div class="pt">Every Contact <span class="pr">₹19</span></div>
+        <div class="pd">Pay ₹199 once for a 30-day pass, then every contact is just ₹19 for 30 days.</div></button>
+      <button class="plan" onclick="payContact(this)"><div class="pt">Just this Contact <span class="pr">₹79</span></div>
+        <div class="pd">One-time payment for this one contact.</div></button>`;
   }
   openSheet("paySheet");
   loadCashfree();   // start fetching the payment page's script now, so the jump to Cashfree is quicker
