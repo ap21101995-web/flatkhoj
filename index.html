@@ -230,7 +230,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY32</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY33</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -917,7 +917,8 @@ function onUpdPick(id,field){
 const UPD_LABEL={gender:{Female:"Female",Male:"Male",Any:"Anyone"},brokerage:{no:"No Brokerage",yes:"Brokerage Applicable"}};
 function updRow(l,field,select){
   const u=myUpdate(l,field);
-  if(u && u.status==="pending") return `<div class="ur"><div class="updnote wait">⏳ Your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}) is under approval.${u.against?" This lead will be free for you once it is approved.":""}</div></div>`;
+  if(u && u.status==="pending") return `<div class="ur"><div class="updnote wait">⏳ Your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}) is under approval.${u.against&&u.credit>0?" This lead will be free for you.":""}</div></div>`;
+  if(u && u.status==="expired") return `<div class="ur"><div class="updnote no">Thanks for your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}).${u.against&&u.credit>0?" This lead is now free for you — a free contact was added to your account.":""}</div></div>`;
   if(u && u.status==="rejected") return `<div class="ur"><div class="updnote no">Your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}) was not approved.</div></div>`;
   if(u && u.status==="approved") return "";
   const id=esc(l.id), p=field==="gender"?"g":"b";
@@ -1138,7 +1139,7 @@ async function saveUpdate(id,field){
     // nothing changes for other people until the owner approves -- this user just sees "under approval"
     const l=pool.find(x=>String(x.id)===String(id));
     if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,credit:d.credit||0}]); }
-    toast(d.against ? "Thanks! Sent for approval — this lead will be free for you once it's approved." : "Thanks! Sent for approval.",5000);
+    toast(d.against&&d.credit ? "Thanks! Sent for approval — this lead will be free for you." : "Thanks! Sent for approval.",5000);
     render();
   }catch(e){ if(e.message!=="login") toast(e.message); }
 }
