@@ -121,7 +121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
-      <div class="sidebar-sub">Admin Panel · build 09-Nov-AD37</div>
+      <div class="sidebar-sub">Admin Panel · build 09-Nov-AD38</div>
     </div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
@@ -576,9 +576,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="page" id="pg-fiyupdates">
       <div class="stats-grid" style="margin-bottom:16px">
         <div class="stat-card"><div class="stat-label">Waiting for you</div><div class="stat-value" id="fu-pending">—</div><div class="stat-sub">not decided in 24 h = listing stays as it was</div></div>
-        <div class="stat-card"><div class="stat-label">Would earn a free contact</div><div class="stat-value" id="fu-free">—</div><div class="stat-sub">of the waiting ones</div></div>
+        <div class="stat-card"><div class="stat-label">Listings that would earn a free contact</div><div class="stat-value" id="fu-free">—</div><div class="stat-sub">of the waiting ones</div></div>
         <div class="stat-card"><div class="stat-label">Approved by you</div><div class="stat-value" id="fu-approved">—</div><div class="stat-sub" id="fu-approved-sub">—</div></div>
-        <div class="stat-card"><div class="stat-label">Free contacts given</div><div class="stat-value" id="fu-credits">—</div><div class="stat-sub">for answers against the user's filter</div></div>
+        <div class="stat-card"><div class="stat-label">Free contacts given</div><div class="stat-value" id="fu-credits">—</div><div class="stat-sub">one per corrected listing</div></div>
       </div>
       <div class="table-card">
         <div class="table-header">
@@ -782,11 +782,11 @@ async function loadFiyUpdates(){
     const uids=[...new Set(rows.map(r=>r.user_id))], lids=[...new Set(rows.map(r=>r.listing_id))];
     const [us,ls,cr]=await Promise.all([fiyChunks("users","id,name,phone",uids),
       fiyChunks("listings","id,listing_type,areas,gender_preference,has_brokerage,brokerage_confirmed,brokerage_preference,custom_contact_phone",lids),
-      supaGet("fiy_credits?select=delta,reason&reason=eq.update_against_filter")]);
+      supaGet("fiy_credits?select=delta,reason,user_id,listing_id&reason=eq.update_against_filter")]);
     const U=Object.fromEntries(us.map(x=>[x.id,x])), L=Object.fromEntries(ls.map(x=>[String(x.id),x]));
     const pend=rows.filter(r=>r.status==="pending").sort((a,b)=>fiyT(a.created_at)-fiyT(b.created_at)), done=rows.filter(r=>r.status!=="pending");
     document.getElementById("fu-pending").textContent=pend.length;
-    document.getElementById("fu-free").textContent=pend.filter(r=>r.against&&r.credit>0).length;
+    
     const ap=done.filter(r=>r.status==="approved");
     document.getElementById("fu-approved").textContent=ap.length;
     document.getElementById("fu-approved-sub").textContent=done.filter(r=>r.status==="rejected").length+" rejected · "+done.filter(r=>r.status==="expired").length+" not decided in 24h";
@@ -794,8 +794,18 @@ async function loadFiyUpdates(){
     fiyUpdBadge(pend.length);
     const who=r=>{const u=U[r.user_id]||{};return `${tpEsc(u.phone||"?")}${u.name?`<div style="font-size:12px;color:var(--ink3)">${tpEsc(u.name)}</div>`:""}`};
     const chg=r=>`<b>${r.field==="gender"?"Gender":"Brokerage"}</b>: ${fuNow(L[String(r.listing_id)],r)} → <b>${tpEsc(FU_VAL[r.field][r.new_value]||r.new_value)}</b>`;
-    const free=r=>r.against?(r.credit>0?'<span class="badge b-warn">Gets a free contact</span>':'<span class="badge">Against filter (contact was free)</span>'):'<span style="color:var(--ink3)">—</span>';
+    // (09-Nov, owner) one free contact per LISTING (both uncertain fields must be edited); given only once decided
+    const grp={}; rows.forEach(x=>{(grp[x.user_id+"|"+x.listing_id]=grp[x.user_id+"|"+x.listing_id]||[]).push(x)});
+    const earned=new Set((cr||[]).map(x=>x.user_id+"|"+x.listing_id));
+    const free=r=>{ const g=grp[r.user_id+"|"+r.listing_id]||[r], need=String((g.find(x=>x.needs)||{}).needs||r.field).split(",").filter(Boolean);
+      if(earned.has(r.user_id+"|"+r.listing_id)) return '<span class="badge b-ok">Free contact given</span>';
+      if(!g.some(x=>x.against)||!g.some(x=>x.paid)) return '<span style="color:var(--ink3)">—</span>';
+      if(g.some(x=>x.status==="rejected")) return '<span class="badge">No (an edit was rejected)</span>';
+      const miss=need.filter(f=>!g.some(x=>x.field===f));
+      if(miss.length) return `<span class="badge">Waiting for the user to edit ${tpEsc(miss.join(" & "))}</span>`;
+      return '<span class="badge b-warn">1 free contact for this listing, once decided</span>'; };
     const left=r=>{const h=Math.max(0,24-(Date.now()-fiyT(r.created_at))/36e5);return h<1?Math.round(h*60)+" min":Math.floor(h)+" h"};
+    document.getElementById("fu-free").textContent=new Set(pend.filter(r=>/once decided/.test(free(r))).map(r=>r.user_id+"|"+r.listing_id)).size;
     P.innerHTML=pend.length?"<tr><th>Sent</th><th>User</th><th>Listing</th><th>Change</th><th>User was filtering for</th><th>Free contact</th><th></th></tr>"+pend.map(r=>`<tr>
       <td style="white-space:nowrap">${fiyDate(r.created_at)}<div style="font-size:12px;color:var(--ink3)">${left(r)} left to decide</div></td>
       <td>${who(r)}</td><td>${fuListing(L[String(r.listing_id)])}</td><td>${chg(r)}</td>
@@ -805,7 +815,7 @@ async function loadFiyUpdates(){
       :'<tr><td style="text-align:center;padding:24px;color:var(--ink3)">Nothing waiting. 🎉</td></tr>';
     D.innerHTML=done.length?"<tr><th>Decided</th><th>User</th><th>Listing</th><th>Change</th><th>Result</th></tr>"+done.slice(0,150).map(r=>`<tr>
       <td style="white-space:nowrap">${fiyDate(r.decided_at||r.created_at)}</td><td>${who(r)}</td><td>${fuListing(L[String(r.listing_id)])}</td><td>${chg(r)}</td>
-      <td>${r.status==="approved"?`<span class="badge b-ok">Approved</span>${r.against&&r.credit>0?' <span class="badge b-warn">+1 free contact</span>':""}${r.applied?"":' <div style="font-size:12px;color:var(--ink3)">listing was already confirmed — not changed</div>'}`:r.status==="expired"?`<span class="badge">Not decided in 24h — kept as it was</span>${r.against&&r.credit>0?' <span class="badge b-warn">+1 free contact</span>':""}`:'<span class="badge">Rejected</span>'}</td></tr>`).join("")
+      <td>${free(r)} ${r.status==="approved"?`<span class="badge b-ok">Approved</span>${r.applied?"":' <div style="font-size:12px;color:var(--ink3)">listing was already confirmed — not changed</div>'}`:r.status==="expired"?`<span class="badge">Not decided in 24h — kept as it was</span>`:'<span class="badge">Rejected</span>'}</td></tr>`).join("")
       :'<tr><td style="text-align:center;padding:24px;color:var(--ink3)">Nothing decided yet.</td></tr>';
   }catch(t){console.error("loadFiyUpdates:",t);P.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--red)">Could not load FIY updates.</td></tr>'}
 }

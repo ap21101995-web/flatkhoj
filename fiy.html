@@ -231,7 +231,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY33</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY34</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -360,6 +360,7 @@ const PAGE = 60;
 const NO_INFO_BROKERAGE = "No information on brokerage yet; please confirm with them";
 const NO_INFO_GENDER = "No information on gender preference yet; please confirm with them";
 // (07-Nov, owner) a SEEKER has a gender of their own, not a "preference"
+const FREEHINT='<span class="freehint">✨ This lead can be free for you if you update it correctly</span>';
 const NO_INFO_SEEKER_GENDER = "No information on gender yet; please confirm with them";
 // (08-Nov, owner) popular list uses the whole area (East + West together) wherever the area has both sides
 let POPULAR = ["Andheri","Bandra","Powai","Goregaon","Jogeshwari","Malad","Kandivali","Borivali","Lower Parel","Worli","Dadar","Chembur","Ghatkopar","Santacruz","Vile Parle","Thane","Vashi"];
@@ -543,7 +544,9 @@ async function fiy(action, extra){
 // ---------- state ----------
 let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked=[], phones={}, matched=[];
 // (08-Nov, owner) every account's first contact is free (login needed); a Rs 499 pass gives up to 100 free contacts
-let freeFirst=false, freeLeft=0, freeLeftExpires=null, credits=0;
+let freeFirst=false, freeLeft=0, freeLeftExpires=null, credits=0, pendingCredits=0, _planLoaded=false;
+// (09-Nov, owner) nothing about earning free contacts is shown until the user has used their first free contact
+const creditTalk=()=>{ const u=getUser(); return !!(u && u.sessionToken && _planLoaded && !freeFirst); };
 function setPlan(d){
   if(!d) return;
   if("passExpires" in d) passExpires=d.passExpires;
@@ -551,6 +554,8 @@ function setPlan(d){
   if("freeFirst" in d) freeFirst=!!d.freeFirst;
   if("freeLeft" in d){ freeLeft=Number(d.freeLeft)||0; freeLeftExpires=d.freeLeftExpires||null; }
   if("credits" in d) credits=Number(d.credits)||0;
+  if("pendingCredits" in d) pendingCredits=Number(d.pendingCredits)||0;
+  if("freeFirst" in d) _planLoaded=true;
   renderAccount();
 }
 // (08-Nov, owner: "the areas sometimes don't pop up / say no such area") the area list is fixed (main localities) and is
@@ -563,7 +568,8 @@ function renderAccount(){
   const pass=freeLeft>0
     ? `<span class="pill" title="Your 30-day pass">${freeLeft} free contact${freeLeft===1?"":"s"} left · till ${esc(new Date(freeLeftExpires||passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`
     : passExpires?`<span class="pill" title="Your 30-day pass">Pass till ${esc(new Date(passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`:"";
-  const cr=credits>0 ? `<span class="pill" title="Earned by correcting listings">${credits} free contact${credits===1?"":"s"}</span>` : "";
+  const cr=(credits>0 ? `<span class="pill" title="Earned by correcting listings — used on your next unlock">${credits} free contact${credits===1?"":"s"}</span>` : "")
+    +(pendingCredits>0 && creditTalk() ? `<span class="pill" title="You will get these once your edits are approved">🎁 ${pendingCredits} after approval</span>` : "");
   a.innerHTML=`${cr}${pass}<button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button>`;
 }
 
@@ -867,10 +873,10 @@ function brokerageHtml(l){
   }
   if(s==="no") return "No Brokerage";
   if(s==="yes") return "Brokerage Applicable";
-  return `<span class="ask">${NO_INFO_BROKERAGE}<span class="freehint">✨ This lead can be free for you if you update it correctly</span></span>`;
+  return `<span class="ask">${NO_INFO_BROKERAGE}${creditTalk()?FREEHINT:""}</span>`;
 }
 function genderHtml(l){
-  if(!genderKnown(l)) return `<span class="ask">${l.listing_type==="flat_wanted" ? NO_INFO_SEEKER_GENDER : NO_INFO_GENDER}<span class="freehint">✨ This lead can be free for you if you update it correctly</span></span>`;
+  if(!genderKnown(l)) return `<span class="ask">${l.listing_type==="flat_wanted" ? NO_INFO_SEEKER_GENDER : NO_INFO_GENDER}${creditTalk()?FREEHINT:""}</span>`;
   if(l.listing_type==="flat_wanted" && ["any","any gender","anyone"].includes(norm(l.gender_preference))) return "Male or Female";
   return ["any","any gender","anyone"].includes(norm(l.gender_preference)) ? "Anyone (Male or Female)" : esc(tc(l.gender_preference));
 }
@@ -905,10 +911,32 @@ function isAgainst(l,field,v){
   if(l.listing_type==="flat_wanted") return false;
   return w.broker==="nobroker" && v==="yes";
 }
+const FIELD_NAME={gender:"gender",brokerage:"brokerage"};
 function myUpdate(l,field){ return (l.myUpdates||[]).filter(u=>u.field===field).slice(-1)[0]; }
+// the fields this user has to fill in for this listing (fixed at their first edit; before that, what is uncertain now)
+function neededFields(l){
+  const first=(l.myUpdates||[]).find(u=>u.needs);
+  if(first) return String(first.needs).split(",").filter(Boolean);
+  const f=[]; if(brokerageState(l)==="unknown") f.push("brokerage"); if(!genderKnown(l)) f.push("gender"); return f;
+}
+// can this listing earn a free contact? (only paid unlocks, only after the first free contact, at least one answer
+// against the filter, every uncertain field edited, nothing rejected) -> none | incomplete | potential | done
+function creditState(l, extra){
+  if(!creditTalk() || !l.paid) return "none";
+  const ups=(l.myUpdates||[]).concat(extra?[extra]:[]);
+  if(ups.some(u=>u.status==="rejected")) return "none";
+  if(!ups.some(u=>u.against)) return "none";
+  const need=neededFields(l);
+  if(need.some(f=>!ups.some(u=>u.field===f))) return "incomplete";
+  return ups.some(u=>u.status==="pending") ? "potential" : "done";
+}
+function otherField(l,field){ return neededFields(l).find(f=>f!==field); }
 function updNoteFor(l,field,v){
-  if(!v) return "";
-  return isAgainst(l,field,v) ? `<div class="updnote free">🎉 This lead will be free for you, as it was against your choice.</div>` : "";
+  if(!v || !creditTalk() || !l.paid) return "";
+  const st=creditState(l,{field,new_value:v,status:"pending",against:isAgainst(l,field,v)});
+  if(st==="potential") return `<div class="updnote free">🎁 Once approved, you'll get a free contact — use it to unlock your next lead for free.</div>`;
+  if(st==="incomplete"){ const o=otherField(l,field); return `<div class="updnote free">🎁 Update the ${FIELD_NAME[o]||o} too — once both are approved, you'll get a free contact for your next lead.</div>`; }
+  return "";
 }
 function onUpdPick(id,field){
   const l=pool.find(x=>String(x.id)===String(id)); if(!l) return;
@@ -917,21 +945,27 @@ function onUpdPick(id,field){
 }
 const UPD_LABEL={gender:{Female:"Female",Male:"Male",Any:"Anyone"},brokerage:{no:"No Brokerage",yes:"Brokerage Applicable"}};
 function updRow(l,field,select){
-  const u=myUpdate(l,field);
-  if(u && u.status==="pending") return `<div class="ur"><div class="updnote wait">⏳ Your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}) is under approval.${u.against&&u.credit>0?" This lead will be free for you.":""}</div></div>`;
-  if(u && u.status==="expired") return `<div class="ur"><div class="updnote no">Thanks for your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}).${u.against&&u.credit>0?" This lead is now free for you — a free contact was added to your account.":""}</div></div>`;
-  if(u && u.status==="rejected") return `<div class="ur"><div class="updnote no">Your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}) was not approved.</div></div>`;
-  if(u && u.status==="approved") return "";
+  const u=myUpdate(l,field), lab=u?esc(UPD_LABEL[field][u.new_value]||u.new_value):"";
+  if(u && u.status==="pending") return `<div class="ur"><div class="updnote wait">⏳ Your update (${lab}) is under approval.</div></div>`;
+  if(u && u.status==="rejected") return `<div class="ur"><div class="updnote no">Your update (${lab}) was not approved.</div></div>`;
+  if(u) return "";   // approved, or not reviewed in time -- nothing more to do here
   const id=esc(l.id), p=field==="gender"?"g":"b";
   return `<div class="ur">${select.replace("<select ",`<select onchange="onUpdPick('${id}','${field}')" `)}
      <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${id}','${field}')">Save</button><div id="n${p}_${id}" style="grid-column:1 / -1"></div></div>`;
 }
+function creditLine(l){
+  const st=creditState(l);
+  if(st==="potential") return `<div class="updnote free" style="margin-top:8px">🎁 Once approved, you'll get a free contact for your next lead.</div>`;
+  if(st==="done") return `<div class="updnote free" style="margin-top:8px">🎁 Thanks! A free contact for this lead was added to your account.</div>`;
+  if(st==="incomplete"){ const o=neededFields(l).find(f=>!myUpdate(l,f)); return o?`<div class="updnote free" style="margin-top:8px">🎁 Update the ${FIELD_NAME[o]||o} too to earn a free contact.</div>`:""; }
+  return "";
+}
 function updateBox(l){
   const parts=[];
-  if(brokerageState(l)==="unknown") parts.push(updRow(l,"brokerage",`<select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No Brokerage</option><option value="yes">Brokerage Applicable</option></select>`));
-  if(!genderKnown(l)) parts.push(updRow(l,"gender",`<select class="inp" id="ug_${esc(l.id)}"><option value="">Gender?</option><option value="Female">Female</option><option value="Male">Male</option><option value="Any">Anyone</option></select>`));
-  const real=parts.filter(Boolean);
-  return real.length ? `<div class="upd"><b>After you talk to them, update this for the next person:</b>${real.join("")}</div>` : "";
+  if(brokerageState(l)==="unknown" || myUpdate(l,"brokerage")) parts.push(updRow(l,"brokerage",`<select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No Brokerage</option><option value="yes">Brokerage Applicable</option></select>`));
+  if(!genderKnown(l) || myUpdate(l,"gender")) parts.push(updRow(l,"gender",`<select class="inp" id="ug_${esc(l.id)}"><option value="">Gender?</option><option value="Female">Female</option><option value="Male">Male</option><option value="Any">Anyone</option></select>`));
+  const real=parts.filter(Boolean), cl=creditLine(l);
+  return real.length||cl ? `<div class="upd">${real.length?"<b>After you talk to them, update this for the next person:</b>":""}${real.join("")}${cl}</div>` : "";
 }
 function contactHtml(l){
   const ph=phones[String(l.id)];
@@ -1022,7 +1056,7 @@ async function claimFree(id,l){
   try{
     const d=await fiy("claim",{listingId:id,wanted:currentWanted()}); setPlan(d);
     if(!d.unlocked){ showPayOptions(id); return; }
-    pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; } });
+    pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; if(x.paid===undefined) x.paid=(d.how==="pass499"||d.how==="credit"); } });
     await showContact(id);
     toast(d.how==="pass499" ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass`
         : d.how==="credit" ? `Contact unlocked with a free contact you earned${credits?` · ${credits} left`:""}` : "Contact unlocked");
@@ -1137,10 +1171,15 @@ async function saveUpdate(id,field){
   if(!v){ toast("Choose an option first."); return; }
   try{
     const d=await fiy("update",{listingId:id,field,value:v});
-    // nothing changes for other people until the owner approves -- this user just sees "under approval"
+    // nothing changes for other people until the owner approves; the free contact comes only after approval
     const l=pool.find(x=>String(x.id)===String(id));
-    if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,credit:d.credit||0}]); }
-    toast(d.against&&d.credit ? "Thanks! Sent for approval — this lead will be free for you." : "Thanks! Sent for approval.",5000);
+    if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,needs:(d.needs||[]).join(",")}]); }
+    if(typeof d.pendingCredits==="number") pendingCredits=d.pendingCredits;
+    renderAccount();
+    const st=l?creditState(l):"none";
+    if(st==="potential") toast(`Thanks! Sent for approval. Once approved, you'll get a free contact${pendingCredits>1?` — ${pendingCredits} free contacts waiting for approval`:""}.`,6000);
+    else if(st==="incomplete"){ const o=neededFields(l).find(f=>!myUpdate(l,f)); toast(`Thanks! Sent for approval. Update the ${FIELD_NAME[o]||o} too to earn a free contact.`,6000); }
+    else toast("Thanks! Sent for approval.",4000);
     render();
   }catch(e){ if(e.message!=="login") toast(e.message); }
 }
