@@ -640,7 +640,7 @@ const AREA_COORDS = window._AC || {};
 <script>if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});</script>
 </head>
 <body>
-<div id="fkVersionBadge">index.html · build 2026-11-09 NC1</div>
+<div id="fkVersionBadge">index.html · build 2026-11-09 NC2</div>
 <script>
 // (2026-10-29) Owner-only file/date stamp, same pattern as listing_detail.html/post_form.html,
 // so you can tell at a glance whether a deploy of THIS file actually went live. Bump the
@@ -1356,6 +1356,14 @@ if (getUser()?.isOwner) {
   // Restore the last-searched number so the owner doesn't have to
   // retype it after navigating away (e.g. to approve a listing or add
   // photos) and coming back.
+  // (2026-11-09, owner) admin FIY_Updates links here as main?phone=<poster>&listing=<id>: search that number, that listing first
+  const _q = new URLSearchParams(window.location.search);
+  const _qp = (_q.get('phone') || '').replace(/\D/g, '').slice(-10);
+  if (_qp.length === 10) {
+    localStorage.setItem('fk_owner_phone_filter', _qp);
+    if (_q.get('listing')) sessionStorage.setItem('fk_owner_focus_listing', _q.get('listing'));
+    window.history.replaceState({}, '', window.location.pathname);
+  }
   const savedPhone = localStorage.getItem('fk_owner_phone_filter');
   if (savedPhone) {
     const input = document.getElementById('ownerPhoneFilterInput');
@@ -1448,10 +1456,17 @@ async function applyOwnerPhoneFilter() {
       if (statsEl) statsEl.innerHTML = `No postings found for ${phone}`;
       return;
     }
+    const _focus = sessionStorage.getItem('fk_owner_focus_listing');
+    if (_focus) { const k = results.findIndex(x => String(x.id) === _focus); if (k > 0) results.unshift(results.splice(k, 1)[0]); }
     allListings = [...results];
     currentOffset = results.length;
     _fetchedListings = results;
     renderListings(results);
+    if (_focus) {
+      sessionStorage.removeItem('fk_owner_focus_listing');
+      const fc = document.querySelector(`[data-listing-id="${_focus}"]`);
+      if (fc) { fc.style.outline = '3px solid #e6a23c'; fc.style.borderRadius = '14px'; setTimeout(() => fc.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); }
+    }
     // Add a permanent-delete option to each card -- only here, in this
     // owner cleanup context, not woven into the shared card renderer
     // used by the normal feed, since a delete button scattered across

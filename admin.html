@@ -121,7 +121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
-      <div class="sidebar-sub">Admin Panel · build 09-Nov-AD38</div>
+      <div class="sidebar-sub">Admin Panel · build 09-Nov-AD39</div>
     </div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
@@ -793,7 +793,10 @@ async function loadFiyUpdates(){
     document.getElementById("fu-credits").textContent=(cr||[]).reduce((t,x)=>t+(Number(x.delta)||0),0);
     fiyUpdBadge(pend.length);
     const who=r=>{const u=U[r.user_id]||{};return `${tpEsc(u.phone||"?")}${u.name?`<div style="font-size:12px;color:var(--ink3)">${tpEsc(u.name)}</div>`:""}`};
-    const chg=r=>`<b>${r.field==="gender"?"Gender":"Brokerage"}</b>: ${fuNow(L[String(r.listing_id)],r)} → <b>${tpEsc(FU_VAL[r.field][r.new_value]||r.new_value)}</b>`;
+    // (09-Nov, owner) each edit opens the poster's postings on the main site (their number already searched, this one first)
+    const fuLink=r=>{const l=L[String(r.listing_id)]||{},ph=String(l.custom_contact_phone||"").replace(/\D/g,"").slice(-10);return ph.length===10?`main?phone=${ph}&listing=${encodeURIComponent(r.listing_id)}`:""};
+    const chg=r=>{const t=`<b>${r.field==="gender"?"Gender":"Brokerage"}</b>: ${fuNow(L[String(r.listing_id)],r)} → <b>${tpEsc(FU_VAL[r.field][r.new_value]||r.new_value)}</b>`,h=fuLink(r);
+      return h?`<a href="${h}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-color:var(--teal-light)" title="Open this poster's postings on the main site">${t} ↗</a>`:t};
     // (09-Nov, owner) one free contact per LISTING (both uncertain fields must be edited); given only once decided
     const grp={}; rows.forEach(x=>{(grp[x.user_id+"|"+x.listing_id]=grp[x.user_id+"|"+x.listing_id]||[]).push(x)});
     const earned=new Set((cr||[]).map(x=>x.user_id+"|"+x.listing_id));
