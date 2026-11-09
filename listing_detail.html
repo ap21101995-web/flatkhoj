@@ -251,6 +251,8 @@ body {
   background:var(--bg); border-top:1px solid var(--border);
   padding:12px 16px; display:flex; gap:10px; align-items:center;
 }
+/* (2026-11-09) coins retired: no balance, no coin price, no "pay coins to make your contact free" */
+#coinBalanceBar, #unlockCostPill, #boostSection { display:none !important; }
 .coin-balance {
   font-size:12px; color:var(--ink3); text-align:center;
   flex-shrink:0;
@@ -346,7 +348,7 @@ body {
 </style>
 </head>
 <body>
-<div id="fkVersionBadge">listing_detail.html · build 2026-11-09 TS1</div>
+<div id="fkVersionBadge">listing_detail.html · build 2026-11-09 NC1</div>
 <script>
 // Run immediately - hide owner controls for non-owners initially
 // showOwnerControls() will show it later if user is poster/claimed
@@ -588,7 +590,7 @@ function nav(url, e) {
     <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;font-size:12px;color:var(--ink3);text-align:center">
       Found this place is already taken? 
       <button onclick="reportAsSold()" style="background:none;border:none;color:var(--red);font-weight:700;cursor:pointer;font-size:12px;font-family:var(--font);padding:0;text-decoration:underline">Mark as Sold/Taken</button>
-      — your coins will be refunded once admin verifies.
+      — we'll check it and take it down.
     </div>
   </div>
 </div>
@@ -766,6 +768,9 @@ let listing=null, posterPhone=null;
 function getUser(){try{return JSON.parse(localStorage.getItem('fmh_user'));}catch(e){return null;}}
 
 function handleUnlockBtn(){
+  // (2026-11-09, owner) coins retired: a contact is unlocked with the Find-it-yourself options (first free, then Rs 79 / passes)
+  const _lid = new URLSearchParams(window.location.search).get('id');
+  if (!(typeof listing !== 'undefined' && listing && listing.is_free_contact)) { location.href = './?unlock=' + encodeURIComponent(_lid); return; }
   const user = getUser();
   const lid = new URLSearchParams(window.location.search).get('id');
   if(!user){
@@ -852,7 +857,7 @@ window.onload=async function(){
         listing.claimed_by_user_id === userCheck.userId
       );
       if (!isOwnAfterClaim) {
-        setTimeout(() => openSheet('unlock'), 600);
+        setTimeout(() => handleUnlockBtn(), 600);
       }
       // If it's their own listing, the bottom bar is already hidden — nothing to do
     }

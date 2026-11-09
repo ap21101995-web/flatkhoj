@@ -240,7 +240,7 @@ body {
     <div class="user-avatar" id="userInitials">R</div>
     <div class="logged-in-name" id="userName">Rahul</div>
     <div class="logged-in-phone" id="userPhone">+91 98200 00000</div>
-    <div class="coin-balance-pill">🪙 Buy coins to get started</div>
+    <div class="coin-balance-pill" style="display:none">🪙 Buy coins to get started</div><!-- (2026-11-09) coins retired -->
     <button class="continue-btn" onclick="goBack()" style="margin-bottom:12px">Continue →</button>
     <button class="logout-btn" onclick="logout()">Sign out</button>
   </div>
@@ -681,7 +681,7 @@ async function verifyOtp() {
       } catch(e) {}
 
       document.getElementById('welcomeTitle').textContent = 'Welcome, Test User! 🧪';
-      document.getElementById('welcomeSub').textContent = `Signed in with ${coins} coins available.`;
+      document.getElementById('welcomeSub').textContent = `You're signed in.`;
       document.getElementById('coinsAwarded').style.display = 'none';
       const cb = document.getElementById('continueBtn');
       if (triggerContext === 'unlock') cb.textContent = 'Continue to unlock contact →';
@@ -737,8 +737,8 @@ async function verifyOtp() {
 
       if (data.isNewUser) {
         document.getElementById('welcomeTitle').textContent = 'Welcome to FlatKhoj! 🎉';
-        document.getElementById('welcomeSub').innerHTML = "You're signed in. Buy coins to start unlocking contacts.";
-        document.getElementById('coinsAwarded').style.display = 'inline-block';
+        document.getElementById('welcomeSub').innerHTML = "You're signed in.";   /* (2026-11-09) coins retired */
+        document.getElementById('coinsAwarded').style.display = 'none';
       } else {
         document.getElementById('welcomeTitle').textContent = 'Welcome back!';
         document.getElementById('welcomeSub').textContent = "You're signed in successfully. Pick up where you left off.";

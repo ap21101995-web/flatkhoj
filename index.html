@@ -224,7 +224,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 09-Nov-FIY28</small></a>
+  <a class="brand" href="index.html">Flat<span>Khoj</span> · Find it yourself<small>build 09-Nov-FIY29</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -528,7 +528,7 @@ function logout(){ forgetUser(); location.reload(); }
 async function fiy(action, extra){
   const u=getUser();
   // browsing needs no login; only unlocking / paying / numbers do
-  if((!u||!u.sessionToken) && action!=="search"){ showLogin(); throw new Error("login"); }
+  if((!u||!u.sessionToken) && action!=="search" && action!=="one"){ showLogin(); throw new Error("login"); }
   const r=await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
     body:JSON.stringify(Object.assign({action,sessionToken:(u&&u.sessionToken)||""},extra||{}))});
   const d=await r.json().catch(()=>({success:false,error:"Unexpected server response."}));
@@ -1122,17 +1122,42 @@ function prefillFromUrl(){
   if(c && [...sel.options].some(o=>o.value===c && !o.disabled)) sel.value=c;
   if(a){ const real=vocab.find(v=>norm(v)===norm(a)); if(real && !picked.some(x=>norm(x)===norm(real))) picked.push(real); }
 }
+// (09-Nov, owner: coins retired) the main site's "Unlock contact" sends people here as /?unlock=<listing id>:
+// that listing is shown first and the FIY unlock / payment options open for it.
+let _wanted=null;
+async function loadWanted(){
+  const id=new URLSearchParams(location.search).get("unlock");
+  if(!id) return;
+  try{ history.replaceState({},"",location.pathname); }catch(e){}
+  try{
+    const d=await fiy("one",{listingId:id}); _wanted=d.listing;
+    const m=_wanted.listing_type==="flat_wanted" ? "people" : "place";
+    if(m!==mode){ mode=m; setupMode(); renderPicked(); }
+  }catch(e){ if(e.message!=="login") toast(e.message); }
+}
+function showWanted(){
+  if(!_wanted) return;
+  const l=_wanted, id=String(l.id); _wanted=null;
+  const have=pool.find(x=>String(x.id)===id);
+  if(have) Object.assign(have,l); else pool.unshift(l);
+  matched=[pool.find(x=>String(x.id)===id), ...matched.filter(x=>String(x.id)!==id)];
+  shown=Math.max(shown,1); render();
+  const el=document.getElementById("r_"+id); if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(()=>unlock(id),400);
+}
 async function start(fromLogin){
   prefillFromUrl();
+  if(!fromLogin) await loadWanted();
   clearPoolCache();   // logged in / out: "unlocked" marks on the posts differ per account
   if(!document.getElementById("fBroker").options.length) setupMode();
   renderAccount(); renderPicked();
   const u=getUser();
-  if(!u||!u.sessionToken){ await reload(); return; }   // browse freely; login is asked for only on "Unlock contact"
+  if(!u||!u.sessionToken){ await reload(); showWanted(); return; }   // browse freely; login is asked for only on "Unlock contact"
   const ord=new URLSearchParams(location.search).get("fiy_order");
   try{ const st=await fiy("status"); setPlan(st); }catch(e){ return; }
   if(ord) await confirmReturn(ord);
   await reload();
+  showWanted();
   const back=localStorage.getItem("fiy_scroll_to");
   if(back){
     localStorage.removeItem("fiy_scroll_to");
