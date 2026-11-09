@@ -235,7 +235,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY36</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY37</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1081,8 +1081,9 @@ function showPayOptions(id){
       <div class="pd">Pay ₹499 once for a 30-day pass: up to 100 contacts free for 30 days, this one included.</div></button>`;
   if(passExpires){
     document.getElementById("payIntro").textContent=`Your 30-day pass is active until ${fmtDate(passExpires)}, so this contact is just ₹19.`;
-    box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Unlock this contact <span class="pr">₹19</span></div>
-      <div class="pd">Pass price — you'll see the number straight after paying.</div></button>`+big;
+    // (09-Nov, owner) with the Rs 199 pass active: ONLY the Rs 19 option (plus the yellow badge), nothing else to choose
+    box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Unlock this Contact <span class="pr">₹19</span></div>
+      <div class="pd">Your 30-day pass price (active till ${fmtDate(passExpires)}) — you'll see the number straight after paying.</div></button>`;
   }else{
     document.getElementById("payIntro").textContent="You've used your free contact. See this number and call or WhatsApp them directly — once unlocked, it stays in your account.";
     box.innerHTML=`<button class="plan" onclick="payContact(this)"><div class="pt">Just this Contact <span class="pr">₹79</span></div>
