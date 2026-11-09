@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script src="fk-session.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Sign In — FlatKhoj Mumbai</title>
 <meta name="description" content="Sign in to FlatKhoj to post listings, unlock contacts and find your ideal flat or flatmate in Mumbai.">
@@ -459,7 +460,7 @@ function logout() {
 function onPhoneInput(input) {
   input.value = input.value.replace(/[^0-9]/g, '');
   const val = input.value;
-  const isValid = (val.length === 10 && /^[6-9]/.test(val)) || val === '1111111100';
+  const isValid = (val.length === 10 && /^[6-9]/.test(val)) || val === '1111111100' || val === '1111111111';
   const btn = document.getElementById('sendOtpBtn');
   btn.disabled = !isValid;
   document.getElementById('phoneError').classList.remove('show');
@@ -476,7 +477,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 async function sendOtp() {
   const phone = document.getElementById('phoneInput').value.trim();
-  const isTestUser = phone === '1111111100';
+  const isTestUser = phone === '1111111100' || phone === '1111111111';
   if (!isTestUser && (phone.length !== 10 || !/^[6-9]/.test(phone))) {
     document.getElementById('phoneErrorText').textContent = 'Please enter a valid 10-digit Indian mobile number';
     document.getElementById('phoneError').classList.add('show');
