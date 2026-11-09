@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- FlatKhoj Pratika_TP — matches seekers to an offered flat / replacement (2026-10-11) -->
+<!-- FlatKhoj PTP — matches seekers to an offered flat / replacement (2026-10-11) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pratika_TP — FlatKhoj</title>
+<title>PTP — FlatKhoj</title>
 <meta name="robots" content="noindex,nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -144,7 +144,7 @@ textarea.filter-input { font-family:var(--font); }
 <meta name="theme-color" content="#1f9d55">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Pratika TP">
+<meta name="apple-mobile-web-app-title" content="PTP">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="/apple-touch-tp.png">
 <link rel="icon" type="image/png" href="/icon-tp-192.png">
@@ -154,7 +154,7 @@ textarea.filter-input { font-family:var(--font); }
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">Flat<span>Khoj</span></div>
-    <div class="login-sub">Pratika_TP</div>
+    <div class="login-sub">PTP</div>
     <label class="lbl">Email</label>
     <input class="linput" type="email" id="emailInput" placeholder="Your owner email" onkeydown="if(event.key==='Enter')doLogin()">
     <label class="lbl">Password</label>
@@ -166,12 +166,12 @@ textarea.filter-input { font-family:var(--font); }
 
 <div id="app" style="display:none">
   <div class="topbar">
-    <div class="topbar-title">Flat<span>Khoj</span> — Pratika_TP</div>
+    <div class="topbar-title">Flat<span>Khoj</span> — PTP</div>
     <button class="btn btn-ghost" onclick="logout()">Sign out</button>
   </div>
 
   <div id="tpHome" class="page" style="max-width:980px">
-    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">Pratika_TP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 06-Nov-TP41</span></div>
+    <div style="text-align:center;margin:34px 0 8px"><div class="ptitle" style="color:var(--gold);font-size:30px">PTP <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Nov-TP42</span></div>
       <div class="psub" style="margin-top:6px">Who are you helping today?</div></div>
     <div class="tp-big">
       <button class="tp-bigbtn" onclick="tpChoose('seekers')"><span class="tp-big-ico">🔎</span><span class="tp-big-t">Help Seekers</span><span class="tp-big-s">Paste a seeker's requirement &rarr; see the places (offerers) that could suit them</span></button>
@@ -183,7 +183,7 @@ textarea.filter-input { font-family:var(--font); }
   <div class="page" id="tpWork" style="max-width:1300px;display:none">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">Pratika_TP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 06-Nov-TP41</span></div>
+        <div class="ptitle" style="color:var(--gold)"><span id="tpModeTitle">PTP</span> <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 09-Nov-TP42</span></div>
         <div class="psub" id="tpModeSub"></div>
       </div>
       <button class="btn btn-ghost" onclick="tpGoHome()">&larr; Home</button>
@@ -706,7 +706,7 @@ async function abRefreshEdited(){
   abEditBusy=true;
   try{
     const ids=[...abEdited];
-    // (2026-10-21) Pratika_TP needs listing_type/has_brokerage/brokerage_confirmed back too (TP_COLS), or the
+    // (2026-10-21) PTP needs listing_type/has_brokerage/brokerage_confirmed back too (TP_COLS), or the
     // brokerage rule above would silently stop applying to a row the moment it was edited.
     const rows=await supaGetAll(`listings?select=${typeof TP_COLS!=="undefined"?TP_COLS:AB_LIST_COLS}&id=in.(${ids.map(encodeURIComponent).join(",")})`);
     let changed=false;

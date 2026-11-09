@@ -151,6 +151,12 @@ select.inp option:disabled { color:#bbb; }
 .ln { display:grid; grid-template-columns:78px 1fr; gap:8px; font-size:13px; line-height:1.45; align-items:center; }
 .ln > b { font-size:12px; color:var(--ink3); }   /* (08-Nov, owner) 'Gender', 'Brokerage Preference' -- capital first letters only */
 .ask { display:block; color:var(--gold); background:var(--gold-bg); border-radius:8px; padding:6px 9px; font-weight:600; font-size:12.5px; }
+/* (09-Nov, owner) correcting an uncertain listing can earn a free contact */
+.ask .freehint { display:block; margin-top:4px; font-weight:800; color:#8a5a00; }
+.updnote { grid-column:1 / -1; font-size:12.5px; font-weight:700; border-radius:8px; padding:7px 9px; }
+.updnote.free { color:#0b6b3a; background:#e3f6ea; }
+.updnote.wait { color:#8a5a00; background:var(--gold-bg); }
+.updnote.no { color:var(--ink3); background:var(--bg2); }
 .unlock-btn { width:100%; margin-top:14px; padding:13px; font-size:15px; }
 .near-tag { display:inline-flex; align-items:center; gap:5px; margin-top:8px; font-size:12px; font-weight:700; color:#0f7b6c; background:#e6f6f3; border-radius:999px; padding:4px 10px; }
 .unlock-btn .ub-hint { display:block; margin-top:3px; font-size:11.5px; font-weight:500; opacity:.88; line-height:1.3; }
@@ -225,7 +231,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY31</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY32</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -537,13 +543,14 @@ async function fiy(action, extra){
 // ---------- state ----------
 let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked=[], phones={}, matched=[];
 // (08-Nov, owner) every account's first contact is free (login needed); a Rs 499 pass gives up to 100 free contacts
-let freeFirst=false, freeLeft=0, freeLeftExpires=null;
+let freeFirst=false, freeLeft=0, freeLeftExpires=null, credits=0;
 function setPlan(d){
   if(!d) return;
   if("passExpires" in d) passExpires=d.passExpires;
   if("contactPrice" in d) contactPrice=d.contactPrice;
   if("freeFirst" in d) freeFirst=!!d.freeFirst;
   if("freeLeft" in d){ freeLeft=Number(d.freeLeft)||0; freeLeftExpires=d.freeLeftExpires||null; }
+  if("credits" in d) credits=Number(d.credits)||0;
   renderAccount();
 }
 // (08-Nov, owner: "the areas sometimes don't pop up / say no such area") the area list is fixed (main localities) and is
@@ -556,7 +563,8 @@ function renderAccount(){
   const pass=freeLeft>0
     ? `<span class="pill" title="Your 30-day pass">${freeLeft} free contact${freeLeft===1?"":"s"} left · till ${esc(new Date(freeLeftExpires||passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`
     : passExpires?`<span class="pill" title="Your 30-day pass">Pass till ${esc(new Date(passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`:"";
-  a.innerHTML=`${pass}<button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button>`;
+  const cr=credits>0 ? `<span class="pill" title="Earned by correcting listings">${credits} free contact${credits===1?"":"s"}</span>` : "";
+  a.innerHTML=`${cr}${pass}<button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button>`;
 }
 
 const BHKS=["1 RK","1 BHK","1.5 BHK","2 BHK","2.5 BHK","3 BHK"];
@@ -859,10 +867,10 @@ function brokerageHtml(l){
   }
   if(s==="no") return "No Brokerage";
   if(s==="yes") return "Brokerage Applicable";
-  return `<span class="ask">${NO_INFO_BROKERAGE}</span>`;
+  return `<span class="ask">${NO_INFO_BROKERAGE}<span class="freehint">✨ This lead can be free for you if you update it correctly</span></span>`;
 }
 function genderHtml(l){
-  if(!genderKnown(l)) return `<span class="ask">${l.listing_type==="flat_wanted" ? NO_INFO_SEEKER_GENDER : NO_INFO_GENDER}</span>`;
+  if(!genderKnown(l)) return `<span class="ask">${l.listing_type==="flat_wanted" ? NO_INFO_SEEKER_GENDER : NO_INFO_GENDER}<span class="freehint">✨ This lead can be free for you if you update it correctly</span></span>`;
   if(l.listing_type==="flat_wanted" && ["any","any gender","anyone"].includes(norm(l.gender_preference))) return "Male or Female";
   return ["any","any gender","anyone"].includes(norm(l.gender_preference)) ? "Anyone (Male or Female)" : esc(tc(l.gender_preference));
 }
@@ -889,13 +897,40 @@ function headline(l){
 const ICON_CHAT=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 20.5l1.5-4.6A8.4 8.4 0 0 1 3 11.5 8.6 8.6 0 0 1 12 3a8.6 8.6 0 0 1 9 8.5z"/><path d="M8 10h8M8 14h5"/></svg>`;
 const ICON_PIN=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`;
 function origLabel(l){ return l.listing_type==="flat_wanted" ? "View Original Message of the Occupancy Hunter" : "View Original Message from Occupancy Provider"; }
+// (09-Nov, owner) an update goes to the owner for approval; if the answer is AGAINST what the user filtered for when
+// unlocking, the lead becomes free (a free contact credit). Others keep seeing the old value until it is approved.
+function isAgainst(l,field,v){
+  const w=l.wanted||{};
+  if(field==="gender") return (w.gender==="female" && v==="Male") || (w.gender==="male" && v==="Female");
+  if(l.listing_type==="flat_wanted") return false;
+  return w.broker==="nobroker" && v==="yes";
+}
+function myUpdate(l,field){ return (l.myUpdates||[]).filter(u=>u.field===field).slice(-1)[0]; }
+function updNoteFor(l,field,v){
+  if(!v) return "";
+  return isAgainst(l,field,v) ? `<div class="updnote free">🎉 This lead will be free for you, as it was against your choice.</div>` : "";
+}
+function onUpdPick(id,field){
+  const l=pool.find(x=>String(x.id)===String(id)); if(!l) return;
+  const sel=document.getElementById((field==="gender"?"ug_":"ub_")+id), box=document.getElementById((field==="gender"?"ng_":"nb_")+id);
+  if(sel && box) box.innerHTML=updNoteFor(l,field,sel.value);
+}
+const UPD_LABEL={gender:{Female:"Female",Male:"Male",Any:"Anyone"},brokerage:{no:"No Brokerage",yes:"Brokerage Applicable"}};
+function updRow(l,field,select){
+  const u=myUpdate(l,field);
+  if(u && u.status==="pending") return `<div class="ur"><div class="updnote wait">⏳ Your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}) is under approval.${u.against?" This lead will be free for you once it is approved.":""}</div></div>`;
+  if(u && u.status==="rejected") return `<div class="ur"><div class="updnote no">Your update (${esc(UPD_LABEL[field][u.new_value]||u.new_value)}) was not approved.</div></div>`;
+  if(u && u.status==="approved") return "";
+  const id=esc(l.id), p=field==="gender"?"g":"b";
+  return `<div class="ur">${select.replace("<select ",`<select onchange="onUpdPick('${id}','${field}')" `)}
+     <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${id}','${field}')">Save</button><div id="n${p}_${id}" style="grid-column:1 / -1"></div></div>`;
+}
 function updateBox(l){
   const parts=[];
-  if(brokerageState(l)==="unknown") parts.push(`<div class="ur"><select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No Brokerage</option><option value="yes">Brokerage Applicable</option></select>
-     <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${esc(l.id)}','brokerage')">Save</button></div>`);
-  if(!genderKnown(l)) parts.push(`<div class="ur"><select class="inp" id="ug_${esc(l.id)}"><option value="">Gender?</option><option value="Female">Female</option><option value="Male">Male</option><option value="Any">Anyone</option></select>
-     <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${esc(l.id)}','gender')">Save</button></div>`);
-  return parts.length ? `<div class="upd"><b>After you talk to them, update this for the next person:</b>${parts.join("")}</div>` : "";
+  if(brokerageState(l)==="unknown") parts.push(updRow(l,"brokerage",`<select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No Brokerage</option><option value="yes">Brokerage Applicable</option></select>`));
+  if(!genderKnown(l)) parts.push(updRow(l,"gender",`<select class="inp" id="ug_${esc(l.id)}"><option value="">Gender?</option><option value="Female">Female</option><option value="Male">Male</option><option value="Any">Anyone</option></select>`));
+  const real=parts.filter(Boolean);
+  return real.length ? `<div class="upd"><b>After you talk to them, update this for the next person:</b>${real.join("")}</div>` : "";
 }
 function contactHtml(l){
   const ph=phones[String(l.id)];
@@ -976,18 +1011,20 @@ function unlock(id){
   if(!u||!u.sessionToken){ showLogin(()=>unlock(id)); return; }
   const l=pool.find(x=>String(x.id)===String(id));
   if(l && l.unlocked){ showContact(id); return; }   // already bought earlier on this account
-  if(freeFirst || freeLeft>0){ claimFree(id,l); return; }
+  if(freeFirst || freeLeft>0 || credits>0){ claimFree(id,l); return; }
   showPayOptions(id);
 }
+function currentWanted(){ return { gender:(document.getElementById("fGender")||{}).value||"", broker:(document.getElementById("fBroker")||{}).value||"" }; }
 let _claiming=false;
 async function claimFree(id,l){
   if(_claiming) return; _claiming=true;
   try{
-    const d=await fiy("claim",{listingId:id}); setPlan(d);
+    const d=await fiy("claim",{listingId:id,wanted:currentWanted()}); setPlan(d);
     if(!d.unlocked){ showPayOptions(id); return; }
-    pool.forEach(x=>{ if(String(x.id)===String(id)) x.unlocked=true; });
+    pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; } });
     await showContact(id);
-    toast(d.how==="pass499" ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass` : "Contact unlocked");
+    toast(d.how==="pass499" ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass`
+        : d.how==="credit" ? `Contact unlocked with a free contact you earned${credits?` · ${credits} left`:""}` : "Contact unlocked");
   }catch(e){ if(e.message!=="login") toast(e.message); }
   finally{ _claiming=false; }
 }
@@ -1043,7 +1080,7 @@ async function payContact(btn){
   const id=payFor; if(!id || _paying) return;
   payBusy(btn,true);
   try{
-    const d=await fiy("order",{kind:"contact",listingId:id});
+    const d=await fiy("order",{kind:"contact",listingId:id,wanted:currentWanted()});
     if(d.alreadyUnlocked){ payBusy(btn,false); closeSheets(); await showContact(id); return; }
     localStorage.setItem("fiy_scroll_to",id);
     await openCheckout(d.payment_session_id);
@@ -1054,7 +1091,7 @@ async function payPass(btn,kind){
   payBusy(btn,true);
   try{
     // Rs 499: this contact is the first of its 100. Rs 199: no free contact; they come back to this post to pay Rs 19.
-    const d=await fiy("order",{kind:kind==="pass499"?"pass499":"pass",listingId:(kind==="pass499"&&payFor)||undefined});
+    const d=await fiy("order",{kind:kind==="pass499"?"pass499":"pass",listingId:(kind==="pass499"&&payFor)||undefined,wanted:currentWanted()});
     if(payFor) localStorage.setItem("fiy_scroll_to",payFor);
     await openCheckout(d.payment_session_id);
   }catch(e){ payBusy(btn,false); if(e.message!=="login") toast(e.message); }
@@ -1098,14 +1135,12 @@ async function saveUpdate(id,field){
   const sel=document.getElementById((field==="gender"?"ug_":"ub_")+id); const v=sel&&sel.value;
   if(!v){ toast("Choose an option first."); return; }
   try{
-    await fiy("update",{listingId:id,field,value:v});
+    const d=await fiy("update",{listingId:id,field,value:v});
+    // nothing changes for other people until the owner approves -- this user just sees "under approval"
     const l=pool.find(x=>String(x.id)===String(id));
-    if(l){
-      if(field==="gender") l.gender_preference=v;
-      else if(l.listing_type==="flat_wanted") l.brokerage_preference=(v==="no"?"prefno":"yes");
-      else { l.brokerage_confirmed=true; l.has_brokerage=(v==="yes"); }
-    }
-    toast("Thank you — saved for everyone searching after you."); render();
+    if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,credit:d.credit||0}]); }
+    toast(d.against ? "Thanks! Sent for approval — this lead will be free for you once it's approved." : "Thanks! Sent for approval.",5000);
+    render();
   }catch(e){ if(e.message!=="login") toast(e.message); }
 }
 
