@@ -231,7 +231,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY34</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY35</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -361,6 +361,9 @@ const NO_INFO_BROKERAGE = "No information on brokerage yet; please confirm with 
 const NO_INFO_GENDER = "No information on gender preference yet; please confirm with them";
 // (07-Nov, owner) a SEEKER has a gender of their own, not a "preference"
 const FREEHINT='<span class="freehint">✨ This lead can be free for you if you update it correctly</span>';
+// the "can be free" line: only after the first free contact is used, and never on a contact that cannot earn one
+// (an unlocked contact that cost nothing -- e.g. the free first contact itself)
+function freeHintFor(l){ return creditTalk() && (!l.unlocked || l.paid) ? FREEHINT : ""; }
 const NO_INFO_SEEKER_GENDER = "No information on gender yet; please confirm with them";
 // (08-Nov, owner) popular list uses the whole area (East + West together) wherever the area has both sides
 let POPULAR = ["Andheri","Bandra","Powai","Goregaon","Jogeshwari","Malad","Kandivali","Borivali","Lower Parel","Worli","Dadar","Chembur","Ghatkopar","Santacruz","Vile Parle","Thane","Vashi"];
@@ -873,10 +876,10 @@ function brokerageHtml(l){
   }
   if(s==="no") return "No Brokerage";
   if(s==="yes") return "Brokerage Applicable";
-  return `<span class="ask">${NO_INFO_BROKERAGE}${creditTalk()?FREEHINT:""}</span>`;
+  return `<span class="ask">${NO_INFO_BROKERAGE}${freeHintFor(l)}</span>`;
 }
 function genderHtml(l){
-  if(!genderKnown(l)) return `<span class="ask">${l.listing_type==="flat_wanted" ? NO_INFO_SEEKER_GENDER : NO_INFO_GENDER}${creditTalk()?FREEHINT:""}</span>`;
+  if(!genderKnown(l)) return `<span class="ask">${l.listing_type==="flat_wanted" ? NO_INFO_SEEKER_GENDER : NO_INFO_GENDER}${freeHintFor(l)}</span>`;
   if(l.listing_type==="flat_wanted" && ["any","any gender","anyone"].includes(norm(l.gender_preference))) return "Male or Female";
   return ["any","any gender","anyone"].includes(norm(l.gender_preference)) ? "Anyone (Male or Female)" : esc(tc(l.gender_preference));
 }

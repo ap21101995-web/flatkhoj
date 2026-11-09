@@ -121,7 +121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
-      <div class="sidebar-sub">Admin Panel · build 09-Nov-AD39</div>
+      <div class="sidebar-sub">Admin Panel · build 09-Nov-AD40</div>
     </div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
@@ -717,6 +717,8 @@ async function loadFiyClients(){
   const tbl=document.getElementById("fiyClientsTable");
   tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--ink3)">Loading…</td></tr>';
   try{
+    // (2026-11-09) first settle any pending payment with Cashfree (someone who paid but never came back to the page)
+    try{ await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json","x-admin-token":authToken()},body:JSON.stringify({action:"admin_reconcile"})}); }catch(e){}
     let [orders,unlocks,passes]=await Promise.all([
       supaGet("fiy_orders?status=eq.paid&select=order_id,user_id,kind,listing_id,amount,paid_at,created_at&order=paid_at.desc"),
       supaGet("fiy_unlocks?select=user_id,listing_id,order_id,amount,created_at&order=created_at.desc"),
