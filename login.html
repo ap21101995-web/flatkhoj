@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="fk-session.js"></script>
+<script src="fk-ref.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Sign In — FlatKhoj Mumbai</title>
 <meta name="description" content="Sign in to FlatKhoj to post listings, unlock contacts and find your ideal flat or flatmate in Mumbai.">
@@ -706,7 +707,7 @@ async function verifyOtp() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
       },
-      body: JSON.stringify({ action: 'verify', phone: phoneNumber, otp })
+      body: JSON.stringify({ action: 'verify', phone: phoneNumber, otp, ref: (window.fkRef && window.fkRef()) || undefined })
     });
     const data = await res.json();
     btn.classList.remove('loading');

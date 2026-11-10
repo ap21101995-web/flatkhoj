@@ -17,6 +17,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FlatKhoj">
 <link rel="canonical" href="https://flatkhoj.com/">
+<script src="fk-ref.js"></script>
 <script>/* (09-Nov) old home-page links that need the old portal (admin "sign in as user") still reach it */
 if(new URLSearchParams(location.search).has("admin_signin")) location.replace("main.html"+location.search+location.hash);</script>
 <link rel="manifest" href="/manifest-fiy.json">
@@ -250,7 +251,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY41</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY42</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -545,7 +546,7 @@ async function verifyOtp(){
   if(otp.length<6){ err.textContent="Enter the 6-digit OTP."; return; }
   const btn=document.getElementById("lgVerify"); if(btn.disabled) return; btn.disabled=true; btn.textContent="Verifying…";
   try{
-    const r=await fetch(`${SUPA_URL}/functions/v1/otp`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPA_KEY}`},body:JSON.stringify({action:"verify",phone:lgPhone,otp})});
+    const r=await fetch(`${SUPA_URL}/functions/v1/otp`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPA_KEY}`},body:JSON.stringify({action:"verify",phone:lgPhone,otp,ref:(window.fkRef&&window.fkRef())||undefined})});
     const d=await r.json();
     if(!d.success){ err.textContent=d.error||"Wrong OTP. Please try again."; return; }
     saveUser({phone:lgPhone,name:"",coins:d.coinsBalance,userId:d.userId,sessionToken:d.sessionToken,joinedAt:Date.now()});

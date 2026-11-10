@@ -121,7 +121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
-      <div class="sidebar-sub">Admin Panel · build 10-Nov-AD42</div>
+      <div class="sidebar-sub">Admin Panel · build 10-Nov-AD43</div>
     </div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
@@ -129,6 +129,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="nav-item" onclick="go('tpclients',this)"><span>💰</span> PTP <span class="nav-badge" id="tpbadge" style="display:none">0</span></div>
     <div class="nav-item" onclick="go('fiyclients',this)"><span>🔎</span> FIY</div>
     <div class="nav-item" onclick="go('fiyupdates',this)"><span>✏️</span> FIY_Updates <span class="nav-badge" id="fiyupdbadge" style="display:none"></span></div>
+    <div class="nav-item" onclick="go('promoters',this)"><span>📣</span> Promoters</div>
     <div class="nav-item" onclick="go('listings',this)"><span>🏠</span> Listings</div>
     <div class="nav-item" onclick="go('users',this)"><span>👥</span> Users</div>
     <div class="nav-item" onclick="go('usermgmt',this)"><span>⚙️</span> User Management</div>
@@ -593,6 +594,62 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <!-- (2026-11-10, owner) Promoters: students / people who share their own link flatkhoj.com/?r=<code> and get a share of
+         the money their users pay. Weekly (Mon-Sun, India time), slab by slab on NET payments. Data: promoters_2026-11-10.sql -->
+    <div class="page" id="pg-promoters">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px">
+        <button class="btn btn-ghost" onclick="prShiftWeek(-1)">&larr; Previous week</button>
+        <div style="font-weight:800;font-size:15px" id="pr-week">—</div>
+        <button class="btn btn-ghost" id="pr-next" onclick="prShiftWeek(1)">Next week &rarr;</button>
+        <button class="btn btn-ghost" onclick="prShiftWeek(0)">This week</button>
+        <span style="flex:1"></span>
+        <label style="font-size:12px;color:var(--ink3)">Gateway fee taken off each payment
+          <input class="filter-input" id="pr-fee" type="number" min="0" max="10" step="0.01" style="width:80px;margin-left:6px" onchange="prSetFee(this.value)"> %</label>
+      </div>
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card"><div class="stat-label">Net sales by promoters' users</div><div class="stat-value" id="pr-net">—</div><div class="stat-sub" id="pr-net-sub">this week</div></div>
+        <div class="stat-card"><div class="stat-label">Commission this week</div><div class="stat-value" id="pr-com">—</div><div class="stat-sub" id="pr-com-sub">—</div></div>
+        <div class="stat-card"><div class="stat-label">New users via links</div><div class="stat-value" id="pr-sign">—</div><div class="stat-sub" id="pr-sign-sub">—</div></div>
+        <div class="stat-card"><div class="stat-label">Link visits</div><div class="stat-value" id="pr-vis">—</div><div class="stat-sub" id="pr-vis-sub">—</div></div>
+      </div>
+      <div class="table-card" style="padding:14px 16px;font-size:12.5px;line-height:1.6;color:var(--ink2)">
+        <b style="color:var(--ink)">Rules</b> — Each promoter shares their own link (<code>flatkhoj.com/?r=code</code>). Only accounts <b>created</b> after opening a
+        promoter's link count; the first link a person opened gets the credit; the promoter's own number never counts. Every payment that user makes in the
+        <b>30 days</b> after signing up counts, on the <b>net</b> amount (after the gateway fee). Paid <b>weekly</b> (Monday–Sunday), slab by slab, starting again each week:
+        <b>40%</b> of the first ₹1,000 · <b>50%</b> of the next ₹1,000 · <b>60%</b> of the next ₹1,000 · <b>70%</b> of everything above ₹3,000.
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="ttitle" id="pr-form-title">Add a promoter</div></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 16px;align-items:center">
+          <input class="filter-input" id="pr-name" placeholder="Name" style="width:170px" oninput="prSuggestCode()">
+          <input class="filter-input" id="pr-phone" placeholder="10-digit phone" maxlength="10" type="tel" style="width:140px">
+          <input class="filter-input" id="pr-code" placeholder="link code (a-z, 0-9)" style="width:160px" oninput="this.dataset.touched=1">
+          <input class="filter-input" id="pr-upi" placeholder="UPI ID" style="width:170px">
+          <input class="filter-input" id="pr-notes" placeholder="Notes (college, area…)" style="width:190px">
+          <label style="font-size:12px"><input type="checkbox" id="pr-active" checked> Active</label>
+          <button class="btn btn-teal" onclick="prSave()" id="pr-save">Add promoter</button>
+          <button class="btn btn-ghost" onclick="prResetForm()" id="pr-cancel" style="display:none">Cancel</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="ttitle">Promoters — click a name to see the payments that count in this week</div>
+          <button class="btn btn-ghost" onclick="loadPromoters()">Refresh</button>
+        </div>
+        <table id="promotersTable"></table>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="prModal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+      <div class="modal-box" style="max-width:720px">
+        <div class="modal-head">
+          <div><div class="modal-title" id="prModalTitle">Promoter</div><div class="modal-sub" id="prModalSub"></div></div>
+          <button class="modal-close" onclick="document.getElementById('prModal').style.display='none'">×</button>
+        </div>
+        <div id="prModalBody" style="padding:16px 20px"></div>
+      </div>
+    </div>
+
     <div class="modal-backdrop" id="fiyModal" style="display:none" onclick="if(event.target===this)closeFiyModal()">
       <div class="modal-box" style="max-width:760px">
         <div class="modal-head">
@@ -754,6 +811,148 @@ async function loadFiyClients(){
   }catch(t){console.error("loadFiyClients:",t);tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--red)">Could not load FIY clients.</td></tr>'}
 }
 const fiyT=t=>Date.parse(t||0)||0;
+// ---------- (2026-11-10, owner) Promoters ----------
+const PR_SITE="https://flatkhoj.com/?r=";
+let prWeek=null, prRows=[];
+function prMonday(d){   // Monday (India time) of the week containing d, as "YYYY-MM-DD"
+  const ist=new Date(d.getTime()+330*60000), day=(ist.getUTCDay()+6)%7;
+  return new Date(Date.UTC(ist.getUTCFullYear(),ist.getUTCMonth(),ist.getUTCDate()-day)).toISOString().slice(0,10);
+}
+function prAddDays(ymd,n){ const d=new Date(ymd+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function prFmt(ymd){ return new Date(ymd+"T00:00:00Z").toLocaleDateString("en-IN",{day:"numeric",month:"short",timeZone:"UTC"}); }
+function prRs(n){ return "₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2}); }
+function prSlab(net){ net=Number(net)||0; return net>3000?"70%":net>2000?"60%":net>1000?"50%":net>0?"40%":"—"; }
+function prNextSlab(net){ net=Number(net)||0; const nx=[[1000,"50%"],[2000,"60%"],[3000,"70%"]].find(x=>net<x[0]); return nx?`${prRs(nx[0]-net)} more for ${nx[1]}`:"top slab"; }
+function prShiftWeek(n){ const cur=prMonday(new Date()); prWeek=n===0?cur:prAddDays(prWeek||cur,7*n); if(prWeek>cur) prWeek=cur; loadPromoters(); }
+async function loadPromoters(){
+  const cur=prMonday(new Date()); if(!prWeek) prWeek=cur;
+  const tbl=document.getElementById("promotersTable");
+  document.getElementById("pr-week").textContent=`${prFmt(prWeek)} – ${prFmt(prAddDays(prWeek,6))}${prWeek===cur?" (this week, still running)":""}`;
+  document.getElementById("pr-next").disabled=prWeek>=cur;
+  if(!prRows.length) tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--ink3)">Loading…</td></tr>';
+  try{
+    const [rows,set]=await Promise.all([supaRpc("promoter_week_report",{p_week:prWeek}), supaGet("promoter_settings?select=fee_pct&id=eq.1")]);
+    prRows=rows||[];
+    const fee=document.getElementById("pr-fee"); if(document.activeElement!==fee && set && set[0]) fee.value=Number(set[0].fee_pct);
+    const sum=k=>prRows.reduce((a,r)=>a+Number(r[k]||0),0);
+    const unpaid=prRows.filter(r=>Number(r.commission_week)>0 && !r.paid_at).reduce((a,r)=>a+Number(r.commission_week),0);
+    document.getElementById("pr-net").textContent=prRs(sum("net_week"));
+    document.getElementById("pr-net-sub").textContent=`${sum("orders_week")} payment${sum("orders_week")===1?"":"s"} · gross ${prRs(sum("gross_week"))}`;
+    document.getElementById("pr-com").textContent=prRs(sum("commission_week"));
+    document.getElementById("pr-com-sub").textContent=unpaid?`${prRs(unpaid)} not marked paid yet`:"nothing waiting to be paid";
+    document.getElementById("pr-sign").textContent=sum("signups_week");
+    document.getElementById("pr-sign-sub").textContent=`${sum("signups_total")} in total · ${prRows.filter(r=>r.active).length} active promoter${prRows.filter(r=>r.active).length===1?"":"s"}`;
+    document.getElementById("pr-vis").textContent=sum("visits_week");
+    document.getElementById("pr-vis-sub").textContent=`${sum("visits_total")} in total`;
+    if(!prRows.length){ tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--ink3)">No promoters yet — add the first one above.</td></tr>'; return; }
+    const weekOver=prWeek<cur;
+    tbl.innerHTML='<tr><th>Promoter</th><th>Link</th><th>Visits</th><th>New users</th><th>Payments</th><th>Net sales</th><th>Slab</th><th>Commission</th><th>Payout</th><th></th></tr>'+
+      prRows.map((r,i)=>{
+        const com=Number(r.commission_week)||0;
+        const payout=r.paid_at
+          ? `<span class="badge b-ok">Paid ${prRs(r.paid_commission)}</span><div style="font-size:11px;color:var(--ink3)">${new Date(r.paid_at).toLocaleDateString("en-IN",{day:"numeric",month:"short"})}${r.paid_ref?" · "+tpEsc(r.paid_ref):""}</div>`
+            +(Math.abs(Number(r.paid_commission)-com)>0.009?`<div style="font-size:11px;color:var(--red)">now ${prRs(com)} — <a href="#" onclick="prPay(${i});return false">mark again</a></div>`:"")
+            +`<a href="#" style="font-size:11px;color:var(--ink3)" onclick="prUnpay(${i});return false">undo</a>`
+          : com>0 ? `<button class="btn btn-teal" onclick="prPay(${i})">${weekOver?"Mark paid":"Mark paid (week not over)"}</button>` : "—";
+        return `<tr style="${r.active?"":"opacity:.55"}">
+          <td><a href="#" onclick="prDetail(${i});return false" style="color:var(--teal-light);font-weight:800;text-decoration:underline">${tpEsc(r.name)}</a>${r.active?"":' <span class="badge b-warn">Paused</span>'}
+            <div style="font-size:12px;color:var(--ink3)">${tpEsc(r.phone)}${r.upi?" · UPI "+tpEsc(r.upi):' · <span style="color:var(--red)">no UPI</span>'}${r.notes?" · "+tpEsc(r.notes):""}</div></td>
+          <td style="white-space:nowrap"><code style="font-size:12px">?r=${tpEsc(r.code)}</code><div><a href="#" onclick="prCopy(${i});return false" style="font-size:12px;color:var(--teal-light)">Copy link</a> · <a href="#" onclick="prQr(${i});return false" style="font-size:12px;color:var(--teal-light)">QR</a></div></td>
+          <td>${r.visits_week}<div style="font-size:11px;color:var(--ink3)">${r.visits_total} total</div></td>
+          <td>${r.signups_week}<div style="font-size:11px;color:var(--ink3)">${r.signups_total} total</div></td>
+          <td>${r.orders_week}<div style="font-size:11px;color:var(--ink3)">gross ${prRs(r.gross_week)}</div></td>
+          <td><b>${prRs(r.net_week)}</b></td>
+          <td>${prSlab(r.net_week)}<div style="font-size:11px;color:var(--ink3)">${Number(r.net_week)>0?prNextSlab(r.net_week):""}</div></td>
+          <td><b style="color:var(--green)">${prRs(com)}</b></td>
+          <td>${payout}</td>
+          <td><button class="btn btn-ghost" onclick="prEdit(${i})">Edit</button></td></tr>`;
+      }).join("");
+  }catch(e){ console.error("loadPromoters:",e); tbl.innerHTML=`<tr><td style="text-align:center;padding:24px;color:var(--red)">Could not load promoters (${tpEsc(e.message)}).</td></tr>`; }
+}
+function prSuggestCode(){
+  const c=document.getElementById("pr-code"); if(c.dataset.touched) return;
+  c.value=(document.getElementById("pr-name").value.trim().split(/\s+/)[0]||"").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,12);
+}
+let prEditing=null;
+function prResetForm(){
+  prEditing=null;
+  ["pr-name","pr-phone","pr-code","pr-upi","pr-notes"].forEach(id=>{ const el=document.getElementById(id); el.value=""; delete el.dataset.touched; });
+  document.getElementById("pr-active").checked=true;
+  document.getElementById("pr-form-title").textContent="Add a promoter"; document.getElementById("pr-save").textContent="Add promoter";
+  document.getElementById("pr-cancel").style.display="none";
+}
+function prEdit(i){
+  const r=prRows[i]; prEditing=r.promoter_id;
+  document.getElementById("pr-name").value=r.name; document.getElementById("pr-phone").value=r.phone;
+  const c=document.getElementById("pr-code"); c.value=r.code; c.dataset.touched=1;
+  document.getElementById("pr-upi").value=r.upi||""; document.getElementById("pr-notes").value=r.notes||"";
+  document.getElementById("pr-active").checked=!!r.active;
+  document.getElementById("pr-form-title").textContent=`Edit ${r.name} (changing the link code stops the old link from counting)`;
+  document.getElementById("pr-save").textContent="Save changes"; document.getElementById("pr-cancel").style.display="";
+  document.getElementById("pr-name").scrollIntoView({behavior:"smooth",block:"center"});
+}
+async function prSave(){
+  const v=id=>document.getElementById(id).value.trim();
+  const name=v("pr-name"), phone=v("pr-phone").replace(/\D/g,"").slice(-10), code=v("pr-code").toLowerCase().replace(/[^a-z0-9]/g,"");
+  if(!name) return toast("Enter the promoter's name","err");
+  if(!/^[6-9]\d{9}$/.test(phone)) return toast("Enter a valid 10-digit phone","err");
+  if(code.length<3||code.length>20) return toast("Link code: 3 to 20 letters / digits","err");
+  try{
+    await supaRpc("promoter_save",{p_id:prEditing,p_name:name,p_phone:phone,p_code:code,p_upi:v("pr-upi"),p_active:document.getElementById("pr-active").checked,p_notes:v("pr-notes")});
+    toast(prEditing?"Promoter saved":`Added — link: ${PR_SITE}${code}`,"ok"); prResetForm(); loadPromoters();
+  }catch(e){ toast(/duplicate|unique/i.test(e.message)?"That phone or link code is already used by another promoter":"Not saved: "+e.message,"err"); }
+}
+function prCopy(i){
+  const l=PR_SITE+prRows[i].code;
+  (navigator.clipboard?navigator.clipboard.writeText(l):Promise.reject()).then(()=>toast("Link copied: "+l,"ok"),()=>prompt("Copy this link",l));
+}
+let _qrLib=null;
+function prLoadQr(){
+  if(window.qrcode) return Promise.resolve();
+  if(_qrLib) return _qrLib;
+  _qrLib=new Promise((ok,bad)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+    s.onload=ok; s.onerror=()=>{ _qrLib=null; bad(new Error("QR library did not load")); }; document.head.appendChild(s); });
+  return _qrLib;
+}
+async function prQr(i){
+  const r=prRows[i], link=PR_SITE+r.code;
+  try{ await prLoadQr(); }catch(e){ return toast(e.message,"err"); }
+  const q=qrcode(0,"M"); q.addData(link); q.make(); const src=q.createDataURL(8,16);
+  document.getElementById("prModalTitle").textContent=`${r.name} — QR code`;
+  document.getElementById("prModalSub").textContent=link;
+  document.getElementById("prModalBody").innerHTML=`<div style="text-align:center"><img src="${src}" alt="QR code for ${tpEsc(link)}" style="width:280px;max-width:100%;background:#fff;padding:8px;border-radius:12px">
+    <div style="margin-top:12px"><a class="btn btn-teal" href="${src}" download="flatkhoj-${tpEsc(r.code)}-qr.gif" style="text-decoration:none">Download QR</a></div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:10px">For posters, college notice boards, PG / hostel walls. Scanning opens ${tpEsc(link)}.</div></div>`;
+  document.getElementById("prModal").style.display="flex";
+}
+async function prDetail(i){
+  const r=prRows[i];
+  document.getElementById("prModalTitle").textContent=`${r.name} — ${prFmt(prWeek)} to ${prFmt(prAddDays(prWeek,6))}`;
+  document.getElementById("prModalSub").textContent=`Net ${prRs(r.net_week)} → commission ${prRs(r.commission_week)} · ${r.signups_total} user${Number(r.signups_total)===1?"":"s"} brought in total`;
+  const body=document.getElementById("prModalBody"); body.innerHTML="Loading…"; document.getElementById("prModal").style.display="flex";
+  try{
+    const rows=await supaRpc("promoter_sales",{p_week:prWeek,p_promoter:r.promoter_id});
+    const kind=k=>k==="pass499"?"₹499 pass":k==="pass"?"₹199 pass":"1 contact";
+    body.innerHTML=rows.length?`<table style="width:100%"><tr><th>When</th><th>User</th><th>Bought</th><th>Paid</th><th>Net</th><th>User joined</th></tr>`+
+      rows.map(x=>`<tr><td style="white-space:nowrap">${new Date(x.paid_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</td><td>${tpEsc(String(x.user_phone||"").slice(-10))}</td><td>${kind(x.kind)}</td><td>${prRs(x.amount)}</td><td>${prRs(x.net)}</td><td style="white-space:nowrap">${new Date(x.user_since).toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</td></tr>`).join("")+"</table>"
+      :'<div style="color:var(--ink3)">No payments that count in this week.</div>';
+  }catch(e){ body.innerHTML=`<div style="color:var(--red)">${tpEsc(e.message)}</div>`; }
+}
+async function prPay(i){
+  const r=prRows[i];
+  const ref=prompt(`Mark ${prRs(r.commission_week)} as paid to ${r.name}${r.upi?" (UPI "+r.upi+")":""} for ${prFmt(prWeek)} – ${prFmt(prAddDays(prWeek,6))}?\nUPI reference (optional):`,"");
+  if(ref===null) return;
+  try{ const c=await supaRpc("promoter_mark_paid",{p_promoter:r.promoter_id,p_week:prWeek,p_ref:ref}); toast(`Marked ${prRs(c)} paid`,"ok"); loadPromoters(); }
+  catch(e){ toast("Not saved: "+e.message,"err"); }
+}
+async function prUnpay(i){
+  const r=prRows[i]; if(!confirm(`Undo the payout record for ${r.name} for this week?`)) return;
+  try{ await supaRpc("promoter_unmark_paid",{p_promoter:r.promoter_id,p_week:prWeek}); loadPromoters(); }catch(e){ toast("Not saved: "+e.message,"err"); }
+}
+async function prSetFee(v){
+  const n=Number(v); if(!(n>=0&&n<50)) return toast("Fee must be between 0 and 50 %","err");
+  try{ await supaRpc("promoter_set_fee",{p_fee:n}); toast(`Gateway fee set to ${n}% — commissions recalculated`,"ok"); loadPromoters(); }catch(e){ toast("Not saved: "+e.message,"err"); }
+}
 // ---------- (2026-11-09, owner) FIY_Updates ----------
 async function supaRpc(fn,args){
   const go=()=>fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`,{method:"POST",cache:"no-store",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${authToken()}`,"Content-Type":"application/json"},body:JSON.stringify(args||{})});
@@ -976,7 +1175,7 @@ async function tryRestoreSession(){
   "helper"===role?go("listings",document.querySelector('.nav-item[onclick*="listings"]')):(loadDashboard(),refreshBadges());
 }
 tryRestoreSession();
-function applyRoleAccess(t){"helper"===t&&(document.querySelectorAll(".nav-item").forEach(t=>{(t.getAttribute("onclick")||"").includes("'listings'")||(t.style.display="none")}),document.querySelectorAll(".nav-section").forEach(t=>{t.style.display="none"}),document.querySelectorAll(".nav-divider").forEach(t=>{t.style.display="none"}))}function logout(){ADMIN_SESSION_TOKEN=null,ADMIN_REFRESH_TOKEN=null,sessionStorage.removeItem("fk_admin_session"),sessionStorage.removeItem("fk_admin_refresh"),document.getElementById("app").style.display="none",document.getElementById("loginScreen").style.display="flex",document.getElementById("pwInput").value="",document.getElementById("emailInput").value=""}let _currentPage="dashboard";function go(t,e){if("helper"===currentRole&&"listings"!==t)return;_currentPage=t,document.querySelectorAll(".nav-item").forEach(t=>t.classList.remove("active")),e&&e.classList.add("active"),document.querySelectorAll(".page").forEach(t=>t.classList.remove("active")),document.getElementById("pg-"+t).classList.add("active");document.getElementById("topbarTitle").textContent={dashboard:"Dashboard",listings:"All Listings",users:"All Users",coinpurchases:"Coin Purchases",unlocks:"Contact Unlocks",reports:"Reports",support:"Support",guaranteedtenant:"Guaranteed Tenant Applications",tpclients:"PTP Revenue",fiyclients:"FIY Clients",fiyupdates:"FIY_Updates"}[t]||t;const n={dashboard:loadDashboard,listings:loadListings,users:loadUsers,usermgmt:()=>{},unlookup:()=>{},useractivity:loadUserActivity,sold:loadSoldReports,coinpurchases:loadCoinPurchases,unlocks:loadUnlocks,reports:loadReports,support:loadSupport,brokers:loadBrokers,"broker-detail":()=>{},guaranteedtenant:loadGuaranteedTenantApplications,tpclients:loadTpClients,fiyclients:loadFiyClients,fiyupdates:loadFiyUpdates};n[t]&&n[t]()}// (08-Nov, owner) the admin showed old numbers until a section was clicked again. Read-only sections now reload by
+function applyRoleAccess(t){"helper"===t&&(document.querySelectorAll(".nav-item").forEach(t=>{(t.getAttribute("onclick")||"").includes("'listings'")||(t.style.display="none")}),document.querySelectorAll(".nav-section").forEach(t=>{t.style.display="none"}),document.querySelectorAll(".nav-divider").forEach(t=>{t.style.display="none"}))}function logout(){ADMIN_SESSION_TOKEN=null,ADMIN_REFRESH_TOKEN=null,sessionStorage.removeItem("fk_admin_session"),sessionStorage.removeItem("fk_admin_refresh"),document.getElementById("app").style.display="none",document.getElementById("loginScreen").style.display="flex",document.getElementById("pwInput").value="",document.getElementById("emailInput").value=""}let _currentPage="dashboard";function go(t,e){if("helper"===currentRole&&"listings"!==t)return;_currentPage=t,document.querySelectorAll(".nav-item").forEach(t=>t.classList.remove("active")),e&&e.classList.add("active"),document.querySelectorAll(".page").forEach(t=>t.classList.remove("active")),document.getElementById("pg-"+t).classList.add("active");document.getElementById("topbarTitle").textContent={dashboard:"Dashboard",listings:"All Listings",users:"All Users",coinpurchases:"Coin Purchases",unlocks:"Contact Unlocks",reports:"Reports",support:"Support",guaranteedtenant:"Guaranteed Tenant Applications",tpclients:"PTP Revenue",fiyclients:"FIY Clients",fiyupdates:"FIY_Updates",promoters:"Promoters"}[t]||t;const n={dashboard:loadDashboard,listings:loadListings,users:loadUsers,usermgmt:()=>{},unlookup:()=>{},useractivity:loadUserActivity,sold:loadSoldReports,coinpurchases:loadCoinPurchases,unlocks:loadUnlocks,reports:loadReports,support:loadSupport,brokers:loadBrokers,"broker-detail":()=>{},guaranteedtenant:loadGuaranteedTenantApplications,tpclients:loadTpClients,fiyclients:loadFiyClients,fiyupdates:loadFiyUpdates,promoters:loadPromoters};n[t]&&n[t]()}// (08-Nov, owner) the admin showed old numbers until a section was clicked again. Read-only sections now reload by
 // themselves every 30 s while the tab is open and visible, and straight away when you come back to the tab. Sections where
 // you edit things (listings, users...) are left alone so nothing you are typing gets wiped -- use the Refresh button there.
 const AUTO_PAGES={dashboard:1,fiyclients:1,fiyupdates:1,tpclients:1,unlocks:1,coinpurchases:1};
