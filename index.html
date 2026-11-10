@@ -199,6 +199,21 @@ select.inp option:disabled { color:#bbb; }
 .grab { width:42px; height:5px; border-radius:3px; background:var(--bg3); margin:0 auto 14px; }
 .sheet h2 { font-size:19px; font-weight:800; }
 .sheet p { font-size:13.5px; color:var(--ink2); margin:6px 0 16px; line-height:1.5; }
+/* (10-Nov, owner) "Select your city" when the portal is first opened in a tab -- like the main site */
+#cityPick { position:fixed; inset:0; z-index:70; background:rgba(20,20,20,.6); display:none; align-items:center; justify-content:center; padding:16px; }
+#cityPick.show { display:flex; }
+#cityPick .cp-box { background:var(--bg); border-radius:20px; padding:24px 18px 18px; width:100%; max-width:400px; max-height:88vh; overflow-y:auto; text-align:center; }
+#cityPick h2 { font-size:20px; font-weight:800; margin:4px 0 4px; }
+#cityPick p { font-size:13.5px; color:var(--ink2); margin:0 0 18px; }
+#cityPick .cp-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#cityPick .cp-city { border:2px solid var(--border); background:var(--bg); border-radius:14px; padding:14px 8px; cursor:pointer; font-family:var(--font); color:var(--ink); position:relative; }
+#cityPick .cp-city:hover { border-color:var(--pri); background:var(--pri-bg); }
+#cityPick .cp-city .cp-ic { font-size:30px; line-height:1; margin-bottom:6px; }
+#cityPick .cp-city b { font-size:15px; font-weight:800; display:block; }
+#cityPick .cp-city.soon { opacity:.45; cursor:not-allowed; background:var(--bg2); }
+#cityPick .cp-city.soon:hover { border-color:var(--border); background:var(--bg2); }
+#cityPick .cp-city.soon .cp-ic { filter:grayscale(1); }
+#cityPick .cp-city small { display:block; font-size:10.5px; font-weight:700; color:var(--ink3); margin-top:3px; }
 .plan { display:block; width:100%; text-align:left; border:1.5px solid var(--border); border-radius:14px; padding:14px; background:var(--bg); margin-bottom:10px; cursor:pointer; }
 .plan.best { border-color:var(--pri); background:var(--pri-bg); }
 .plan .pt { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:15px; font-weight:800; color:var(--ink); }
@@ -234,7 +249,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 09-Nov-FIY39</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY40</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -248,7 +263,7 @@ select.inp option:disabled { color:#bbb; }
 
   <div class="panel">
     <div class="field"><label class="lbl" for="fCity">City</label>
-      <select class="inp" id="fCity" onchange="reload()">
+      <select class="inp" id="fCity" onchange="cityChosen(this.value)">
         <option value="mumbai" selected>Mumbai</option>
         <option value="pune">Pune</option><option value="bengaluru">Bengaluru</option><option value="gurugram">Gurugram</option><option value="hyderabad">Hyderabad</option>
         <option disabled>Delhi — coming soon</option><option disabled>Noida — coming soon</option>
@@ -341,6 +356,14 @@ select.inp option:disabled { color:#bbb; }
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="cityPick" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
+  <div class="cp-box">
+    <div style="font-size:28px">🏠</div>
+    <h2 id="cpTitle">Select your city</h2>
+    <p>We'll show you posts from your city</p>
+    <div class="cp-grid" id="cpGrid"></div>
+  </div>
+</div>
 <div id="postWidget" role="button" aria-label="Post your own requirement" title="Post your own requirement" tabindex="0">
   <div class="pw">
     <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
@@ -604,7 +627,7 @@ function setMode(m){
   if(m===mode) return;
   mode=m;
   if(m==="people" && picked.length>1) picked=picked.slice(0,1);
-  setupMode(); renderPicked();
+  setupMode(); renderPicked(); saveState();
   reload();
 }
 
@@ -819,7 +842,8 @@ function missingPeople(o){
 }
 const posted=l=>Date.parse(l.posted_at||0)||0;
 function apply(){
-  if(_loading) return;   // the right list is still on its way; reload() filters it as soon as it lands
+  saveState();
+  if(_loading) return;  // the right list is still on its way; reload() filters it as soon as it lands
   const o=readFilters();
   const sum=document.getElementById("summary");
   if(mode==="people" && pool.length){
@@ -1192,28 +1216,111 @@ async function saveUpdate(id,field){
   }catch(e){ if(e.message!=="login") toast(e.message); }
 }
 
+// ---------- (10-Nov, owner) city first, and nothing lost while the tab stays open ----------
+// "Select your city" shows when the portal is opened in a new tab. The city, mode, areas, filters and scroll position
+// live in sessionStorage: switching tabs / apps, a phone reloading a background tab, a refresh or coming back from
+// another page keep everything; only closing the tab (or the browser) starts afresh. The City dropdown still switches.
+const ST_KEY="fiy_state_v1";
+const CITY_ICON={mumbai:"🌉",pune:"🏰",bengaluru:"🌆",gurugram:"🏙️",hyderabad:"🏛️",delhi:"🏯",noida:"🌇",chennai:"🛕",kolkata:"🌉",ahmedabad:"🕌",jaipur:"🏰",indore:"🏞️",nashik:"🍇"};
+let _restoring=false, _scrollBack=null;
+function loadState(){ try{ return JSON.parse(sessionStorage.getItem(ST_KEY))||null; }catch(e){ return null; } }
+function saveState(){
+  if(_restoring) return;
+  try{
+    const o=readFilters(), prev=loadState()||{};
+    sessionStorage.setItem(ST_KEY,JSON.stringify({city:document.getElementById("fCity").value, cityChosen:!!prev.cityChosen,
+      mode, areas:o.areas, sharing:o.sharing, bhk:o.bhk, broker:o.broker, gender:o.gender, mine:o.mine, nearby:o.nearby, y:prev.y||0}));
+  }catch(e){}
+}
+function saveScroll(){ try{ const s=loadState(); if(s){ s.y=Math.round(window.scrollY); sessionStorage.setItem(ST_KEY,JSON.stringify(s)); } }catch(e){} }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") saveScroll(); });
+window.addEventListener("pagehide",saveScroll);
+function cityOk(c){ return !!c && [...document.getElementById("fCity").options].some(o=>o.value===c && !o.disabled); }
+function restoreState(){
+  const s=loadState(); if(!s || !cityOk(s.city)) return false;
+  _restoring=true;
+  try{
+    document.getElementById("fCity").value=s.city;
+    if(CITY_DATA[s.city]) useCity(s.city);        // before reload(), so the restored areas are kept
+    mode=s.mode==="people"?"people":"place";
+    setupMode();
+    picked=Array.isArray(s.areas)?s.areas.slice(0, mode==="people"?1:50):[];
+    (s.sharing||[]).forEach(v=>{ const b=document.querySelector(`#fSharing .opt[data-v="${v}"]`); if(b) b.classList.add("on"); });
+    if((s.sharing||[]).includes("entire")) document.getElementById("bhkBox").classList.add("show");
+    (s.bhk||[]).forEach(v=>{ const b=document.querySelector(`#fBhk .opt[data-v="${v}"]`); if(b) b.classList.add("on"); });
+    const setSel=(id,v)=>{ const el=document.getElementById(id); if(v!=null && [...el.options].some(o=>o.value===v && !o.disabled)) el.value=v; };
+    setSel("fBroker",s.broker); setSel("fGender",s.gender);
+    document.getElementById("fMine").checked=!!s.mine;
+    const nb=document.getElementById("fNear"); if(nb && s.nearby!=null) nb.checked=!!s.nearby;
+    _scrollBack=s.y||0;
+  }finally{ _restoring=false; }
+  return !!s.cityChosen;
+}
+function cityChosen(c){
+  try{ const s=loadState()||{}; s.city=c; s.cityChosen=true; s.y=0; sessionStorage.setItem(ST_KEY,JSON.stringify(s)); }catch(e){}
+  reload();
+}
+function pickCity(){
+  return new Promise(done=>{
+    const sel=document.getElementById("fCity"), box=document.getElementById("cityPick");
+    document.getElementById("cpGrid").innerHTML=[...sel.options].map(o=>{
+      const soon=o.disabled, name=o.textContent.replace(/\s*—.*$/,"").trim(), v=soon?"":o.value, key=name.toLowerCase();
+      return `<button class="cp-city${soon?" soon":""}" ${soon?"disabled":`data-c="${esc(v)}"`}><div class="cp-ic">${CITY_ICON[key]||"📍"}</div><b>${esc(name)}</b>${soon?"<small>Coming soon</small>":""}</button>`;
+    }).join("");
+    document.getElementById("cpGrid").onclick=e=>{
+      const b=e.target.closest(".cp-city[data-c]"); if(!b) return;
+      const c=b.dataset.c; sel.value=c; if(CITY_DATA[c]) useCity(c);
+      picked=[]; renderPicked();
+      try{ const s=loadState()||{}; s.city=c; s.cityChosen=true; s.y=0; sessionStorage.setItem(ST_KEY,JSON.stringify(s)); }catch(e){}
+      box.classList.remove("show"); document.body.style.overflow="";
+      done(c);
+    };
+    box.classList.add("show"); document.body.style.overflow="hidden";
+  });
+}
+function restoreScroll(){
+  if(!_scrollBack) return; const y=_scrollBack; _scrollBack=null;
+  if(localStorage.getItem("fiy_scroll_to")) return;   // a return from payment scrolls to its own post
+  requestAnimationFrame(()=>window.scrollTo(0,y));
+}
+
 // ---------- start ----------
 let _urlPrefill=true;
 function prefillFromUrl(){
   // (09-Nov) the old home page's links (area pages: /?area=Andheri%20East&city=mumbai) open with that city + area picked
-  if(!_urlPrefill) return; _urlPrefill=false;
+  if(!_urlPrefill) return false; _urlPrefill=false;
   const q=new URLSearchParams(location.search), c=(q.get("city")||"").toLowerCase(), a=q.get("area");
   const sel=document.getElementById("fCity");
-  if(c && [...sel.options].some(o=>o.value===c && !o.disabled)) sel.value=c;
-  if(a){ const real=vocab.find(v=>norm(v)===norm(a)); if(real && !picked.some(x=>norm(x)===norm(real))) picked.push(real); }
+  let got=false;
+  if(c && cityOk(c)){
+    if(sel.value!==c){ sel.value=c; if(CITY_DATA[c]) useCity(c); picked=[]; }
+    got=true;
+    try{ const s=loadState()||{}; s.city=c; s.cityChosen=true; sessionStorage.setItem(ST_KEY,JSON.stringify(s)); }catch(e){}
+  }
+  // the link's own city's areas (vocab still holds the default city's list at this point)
+  if(a){ const real=AREA_LIST.find(v=>norm(v)===norm(a)); if(real && !picked.some(x=>norm(x)===norm(real))) picked.push(real); }
+  return got;
 }
 // (09-Nov, owner: coins retired) the main site's "Unlock contact" sends people here as /?unlock=<listing id>:
 // that listing is shown first and the FIY unlock / payment options open for it.
 let _wanted=null;
 async function loadWanted(){
   const id=new URLSearchParams(location.search).get("unlock");
-  if(!id) return;
+  if(!id) return false;
   try{ history.replaceState({},"",location.pathname); }catch(e){}
   try{
     const d=await fiy("one",{listingId:id}); _wanted=d.listing;
     const m=_wanted.listing_type==="flat_wanted" ? "people" : "place";
     if(m!==mode){ mode=m; setupMode(); renderPicked(); }
+    // (10-Nov) the post's own city is the city: no "Select your city" in front of it
+    const c=String(_wanted.city||"").toLowerCase(), sel=document.getElementById("fCity");
+    if(cityOk(c)){
+      if(sel.value!==c){ sel.value=c; if(CITY_DATA[c]) useCity(c); picked=[]; renderPicked(); }
+      try{ const s=loadState()||{}; s.city=c; s.cityChosen=true; sessionStorage.setItem(ST_KEY,JSON.stringify(s)); }catch(e){}
+      return true;
+    }
   }catch(e){ if(e.message!=="login") toast(e.message); }
+  return false;
 }
 function showWanted(){
   if(!_wanted) return;
@@ -1226,18 +1333,23 @@ function showWanted(){
   setTimeout(()=>unlock(id),400);
 }
 async function start(fromLogin){
-  prefillFromUrl();
-  if(!fromLogin) await loadWanted();
+  if(!fromLogin){
+    const had=restoreState();                       // same tab: everything as it was
+    const viaUrl=prefillFromUrl();                  // a link that names the city
+    const viaPost=await loadWanted();               // the main site's "Unlock contact" for one post
+    if(!had && !viaUrl && !viaPost) await pickCity();
+  } else prefillFromUrl();
   clearPoolCache();   // logged in / out: "unlocked" marks on the posts differ per account
   if(!document.getElementById("fBroker").options.length) setupMode();
   renderAccount(); renderPicked();
   const u=getUser();
-  if(!u||!u.sessionToken){ await reload(); showWanted(); return; }   // browse freely; login is asked for only on "Unlock contact"
+  if(!u||!u.sessionToken){ await reload(); showWanted(); restoreScroll(); return; }   // browse freely; login is asked for only on "Unlock contact"
   const ord=new URLSearchParams(location.search).get("fiy_order");
   try{ const st=await fiy("status"); setPlan(st); }catch(e){ return; }
   if(ord) await confirmReturn(ord);
   await reload();
   showWanted();
+  restoreScroll();
   const back=localStorage.getItem("fiy_scroll_to");
   if(back){
     localStorage.removeItem("fiy_scroll_to");
