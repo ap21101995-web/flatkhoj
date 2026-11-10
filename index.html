@@ -250,7 +250,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY42</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY43</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1002,7 +1002,7 @@ function updateBox(l){
 function contactHtml(l){
   const ph=phones[String(l.id)];
   if(l.unlocked && ph){
-    const msg=encodeURIComponent("Hi, I saw your post about "+(arr(l.areas).join(", ")||"the flat")+" on FlatKhoj. Is it still available?");
+    const msg=encodeURIComponent("Hi, I saw your post about "+(arr(l.areas).join(", ")||"the flat")+" on FlatKhoj.com. Is it still available?");
     return `<div class="contact">Contact: <span class="num">+91 ${esc(ph.replace(/(\d{5})(\d{5})/,"$1 $2"))}</span>
       <div class="acts"><a class="btn btn-solid" href="tel:+91${esc(ph)}">Call</a><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/91${esc(ph)}?text=${msg}">WhatsApp</a></div>
       ${updateBox(l)}</div>`;
