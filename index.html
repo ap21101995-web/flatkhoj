@@ -251,7 +251,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY45</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY46</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1395,7 +1395,8 @@ start();
   w.addEventListener("touchstart",e=>{ const t=e.touches[0]; startDrag(t.clientX,t.clientY); },{passive:true});
   w.addEventListener("touchmove",e=>{ const t=e.touches[0]; moveDrag(t.clientX,t.clientY,e); },{passive:false});
   w.addEventListener("touchend",()=>{ down=false; });
-  const go=()=>{ location.href="post_form.html"; };   // post_form asks for login itself when needed
+  // (2026-11-10) the post form takes its city (and area list) from fk_city -- give it the city chosen here
+  const go=()=>{ try{ localStorage.setItem("fk_city",(document.getElementById("fCity").value||"mumbai").toLowerCase()); }catch(e){} location.href="post_form.html"; };   // post_form asks for login itself when needed
   w.addEventListener("click",()=>{ if(moved){ moved=false; return; } go(); });
   w.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 })();
