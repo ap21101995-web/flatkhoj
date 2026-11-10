@@ -3,9 +3,9 @@
    - a shining strip right under the page's top bar (every page)
    - a short splash when FlatKhoj opens (home pages only, once per tab session; tap to skip)
    - any element with class "fk-brand-badge" gets the glittering line (used in the FIY payment sheet)
-   Build: B1 */
+   Build: B2 */
 (function(){
-  var TEXT_A = "India's biggest platform for", TEXT_B = "Shared Occupancies";
+  var TEXT_A = "India's Biggest Platform for", TEXT_B = "Shared Occupancies";
   var css = ""
   + ".fk-shine{font-weight:800;background:linear-gradient(100deg,#b8860b 0%,#ffd54a 18%,#fff6c8 26%,#ff4fa3 42%,#8b5cf6 58%,#ffd54a 74%,#fff6c8 82%,#b8860b 100%);"
   + "background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;"
