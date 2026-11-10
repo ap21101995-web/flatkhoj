@@ -251,7 +251,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY43</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY44</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1000,10 +1000,25 @@ function updateBox(l){
   const real=parts.filter(Boolean), cl=creditLine(l);
   return real.length||cl ? `<div class="upd">${real.length?"<b>After you talk to them, update this for the next person:</b>":""}${real.join("")}${cl}</div>` : "";
 }
+// (10-Nov, owner) the WhatsApp message depends on which side the user is on.
+// Unlocked a place on offer (they need a place):  "I saw your post on FlatKhoj.com about the single room in X. I'm looking for a place…"
+// Unlocked someone looking for a place (they have one): "I saw on FlatKhoj.com that you're looking for a place in X. I have … available there…"
+function waMsg(l){
+  const areas=arr(l.areas).slice(0,3).join(", ");
+  if(l.listing_type!=="flat_wanted"){
+    const k=kinds(l), b=[...k.bhk][0];
+    const what=l.listing_type==="flat_listing"||(k.entire&&!k.single&&!k.shared) ? (b?b+" flat":"flat")
+      : k.single&&!k.shared ? "single room" : k.shared&&!k.single ? "shared room" : "room";
+    return `Hi, I saw your post on FlatKhoj.com about the ${what}${areas?" in "+areas:""}. I'm looking for a place. Is it still available?`;
+  }
+  const o=readFilters(), sh=o.sharing[0], b=o.bhk[0];
+  const have=sh==="single" ? "a single room" : sh==="shared" ? "a shared room" : sh==="entire" ? (b?"a "+b+" flat":"a flat") : "a place";
+  return `Hi, I saw on FlatKhoj.com that you're looking for a place${areas?" in "+areas:""}. I have ${have} available${areas?" there":""}. Are you still looking?`;
+}
 function contactHtml(l){
   const ph=phones[String(l.id)];
   if(l.unlocked && ph){
-    const msg=encodeURIComponent("Hi, I saw your post about "+(arr(l.areas).join(", ")||"the flat")+" on FlatKhoj.com. Is it still available?");
+    const msg=encodeURIComponent(waMsg(l));
     return `<div class="contact">Contact: <span class="num">+91 ${esc(ph.replace(/(\d{5})(\d{5})/,"$1 $2"))}</span>
       <div class="acts"><a class="btn btn-solid" href="tel:+91${esc(ph)}">Call</a><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/91${esc(ph)}?text=${msg}">WhatsApp</a></div>
       ${updateBox(l)}</div>`;
