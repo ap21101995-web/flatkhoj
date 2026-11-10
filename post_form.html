@@ -169,7 +169,7 @@ body { font-family:var(--font); background:var(--bg2); color:var(--ink); max-wid
 <script src="fk-brand.js"></script>
 </head>
 <body>
-<div id="fkVersionBadge">post_form.html · build 2026-11-10 NC5</div>
+<div id="fkVersionBadge">post_form.html · build 2026-11-10 NC6</div>
 <script>
 // (2026-10-29) Owner-only file/date stamp in the corner, same pattern as listing_detail.html
 // and admin.html, so you can tell at a glance whether a deploy of THIS file actually went
@@ -2635,7 +2635,7 @@ async function submitListing() {
     formData.user_id = user.userId;
     formData.city = String(getPostCity() || 'mumbai').toLowerCase();   // (2026-11-10) was 'Mumbai' -- FIY never showed these posts
     formData.is_active = true;
-    formData.expires_at = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+    formData.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();   // (2026-11-10, owner) 30 days
     formData.created_at = new Date().toISOString();
     formData.updated_at = new Date().toISOString();
 
