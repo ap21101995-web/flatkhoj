@@ -140,7 +140,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 <div id="app" style="display:none">
   <div class="topbar">
-    <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-N5</span></div>
+    <div class="topbar-title">Flat<span>Khoj</span> — Broker Data Portal <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Nov-N6</span></div>
     <div style="display:flex;gap:10px;align-items:center">
       <select id="bpCity" class="filter-input" style="width:auto;flex:none;font-weight:700" onchange="bpCityChanged()" title="Which city's brokers and leads to show"><option value="mumbai">Mumbai</option><option value="pune">Pune</option><option value="bengaluru">Bengaluru</option><option value="hyderabad">Hyderabad</option><option value="delhi">Delhi</option><option value="gurugram">Gurugram</option><option value="noida">Noida</option><option value="jaipur">Jaipur</option><option value="kolkata">Kolkata</option><option value="chennai">Chennai</option><option value="indore">Indore</option><option value="nashik">Nashik</option><option value="ahmedabad">Ahmedabad</option></select>
       <button class="btn btn-ghost" onclick="logout()">Sign out</button>
@@ -214,7 +214,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="page" id="pg-allBrokers" style="display:none;max-width:1250px">
     <div class="page-head">
       <div>
-        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 30-Oct-N5 · click Gender / Requirement / Areas / Date to sort</span></div>
+        <div class="ptitle" style="color:var(--gold)">All Brokers <span style="font-size:11px;font-weight:600;color:var(--ink3)">· build 10-Nov-N6 · click Gender / Requirement / Areas / Date to sort</span></div>
         <div id="abNote" style="display:none;color:var(--red);font-size:12px;margin-bottom:6px"></div><div class="psub">Seekers still waiting for approval on the main site. "Brokers" shows who can get each one (area tagged, or already in their Potential Data, and not shared with them in the last 15 days) &mdash; remove anyone with &times;. Download Excel makes one file per broker and ticks the lead in their Potential Data. "Approve" approves the listing so that ONLY the brokers you kept receive it.</div>
       </div>
       <button class="btn btn-ghost" onclick="abBack()">&larr; Back to brokers</button>
@@ -1179,9 +1179,28 @@ async function sendSelectedWhatsApp(btn, only){
 // REACTIVATION_DAYS (a 'sent' row in their Potential Data).
 // =====================================================================
 const AB_WA_STATUS=["active","bank_approval_pending","authorized","initialized","pending"];
-const AB_LIST_COLS="id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold,brokerage_preference,pending_approval,rejected";
+// (10-Nov, owner) listing_type / has_brokerage / brokerage_confirmed are needed by abBrokerageBlocked(): without them an
+// offer with brokerage (e.g. a post edited from "flat required" to "flatmate required") still listed potential brokers
+const AB_LIST_COLS="id,custom_contact_phone,gender_preference,room_type,flat_type,areas,city,created_at,raw_whatsapp_text,whatsapp_group_name,on_hold,brokerage_preference,pending_approval,rejected,listing_type,has_brokerage,brokerage_confirmed";
 let abListings=[], abBrokers=[], abLeadIdx={}, abExcluded={}, abSelected=new Set(), abModalListingId=null, abBusy=false;
 let abPostedMap={}, abLoggedBy={}, abTargets={}, abReconciling=false, abSortField=null, abSortDir=1, abExtra={}, abTargetsErr=false;
+// (10-Nov, owner) the brokers added / left out by hand for a lead are kept: editing + saving the post, refreshing or
+// reopening this page no longer puts the list back to the area-matched brokers. Kept in this browser for 30 days.
+const AB_CHOICES_KEY="fk_ab_choices_v1";
+function abSaveChoices(){
+  try{
+    const old=JSON.parse(localStorage.getItem(AB_CHOICES_KEY)||"{}"), out={}, now=Date.now(), ids=new Set([...Object.keys(abExtra),...Object.keys(abExcluded)]);
+    Object.keys(old).forEach(k=>{ if(old[k] && now-(old[k].t||0)<30*864e5) out[k]=old[k]; });
+    ids.forEach(k=>{ const x=[...(abExtra[k]||[])], e=[...(abExcluded[k]||[])]; if(x.length||e.length) out[k]={x,e,t:now}; else delete out[k]; });
+    localStorage.setItem(AB_CHOICES_KEY,JSON.stringify(out));
+  }catch(e){}
+}
+(function abLoadChoices(){
+  try{ const o=JSON.parse(localStorage.getItem(AB_CHOICES_KEY)||"{}"), now=Date.now();
+    Object.keys(o).forEach(k=>{ const v=o[k]; if(!v || now-(v.t||0)>=30*864e5) return;
+      if(v.x&&v.x.length) abExtra[k]=new Set(v.x.map(String)); if(v.e&&v.e.length) abExcluded[k]=new Set(v.e.map(String)); });
+  }catch(e){}
+})();
 const AB_LS_KEY="fk_ab_approved";
 function abLocalApproved(){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); const cut=Date.now()-REACTIVATION_DAYS*864e5; return Object.keys(o).filter(k=>o[k]>cut); }catch(e){ return []; } }
 function abRememberApproved(id){ try{ const o=JSON.parse(localStorage.getItem(AB_LS_KEY)||"{}"); o[String(id)]=Date.now(); localStorage.setItem(AB_LS_KEY,JSON.stringify(o)); }catch(e){} }
@@ -1393,7 +1412,7 @@ async function abRefreshEdited(){
       // keep the Approved flag, the manual add/leave-out choices only for brokers still relevant
       r._approved=old._approved;
       abListings[i]=r;
-      delete abExtra[String(r.id)]; delete abExcluded[String(r.id)];
+      // (10-Nov, owner) the hand-made add / leave-out choices stay after an edit (they used to be wiped here)
     });
     abListings=abListings.filter(l=>bpCityListings([l]).length);
     abRender();
@@ -1467,9 +1486,9 @@ function abAddBroker(){
   if(abBrokerageBlocked(abListings.find(x=>String(x.id)===abModalListingId))) return;
   (abExtra[abModalListingId]=abExtra[abModalListingId]||new Set()).add(sel.value);
   const ex=abExcluded[abModalListingId]; if(ex) ex.delete(sel.value);
-  abRenderModal();
+  abSaveChoices(); abRenderModal();
 }
-function abRemoveExtra(listingId,brokerId){ if(abExtra[listingId]) abExtra[listingId].delete(brokerId); abRenderModal(); }
+function abRemoveExtra(listingId,brokerId){ if(abExtra[listingId]) abExtra[listingId].delete(brokerId); abSaveChoices(); abRenderModal(); }
 function abIncluded(l){
   const ex=abExcluded[String(l.id)]||new Set();
   return abCompute(l).eligible.filter(e=>!ex.has(String(e.b.id)));
@@ -1557,7 +1576,7 @@ function abCloseModal(){ document.getElementById("abBrokersModal").style.display
 function abToggleBroker(listingId, brokerId){
   const s=(abExcluded[listingId]=abExcluded[listingId]||new Set());
   if(s.has(brokerId)) s.delete(brokerId); else s.add(brokerId);
-  abRenderModal();
+  abSaveChoices(); abRenderModal();
 }
 function abQuotaFull(b){ const q=(!b.contacts_per_month||Number(b.contacts_per_month)<=0)?null:Number(b.contacts_per_month); return q!==null && (Number(b.contacts_sent_this_month)||0)>=q; }
 function abQuotaLabel(b){
