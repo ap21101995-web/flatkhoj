@@ -249,7 +249,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY40</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY41</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -572,7 +572,8 @@ async function fiy(action, extra){
 
 // ---------- state ----------
 let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked=[], phones={}, matched=[];
-// (08-Nov, owner) every account's first contact is free (login needed); a Rs 499 pass gives up to 100 free contacts
+// (08-Nov, owner) every account's first contact is free (login needed). (10-Nov, owner) Rs 79 per contact, or a pass:
+// Rs 199 = 10 contacts / Rs 499 = 50 contacts, each within 7 days (the server sets the prices)
 let freeFirst=false, freeLeft=0, freeLeftExpires=null, credits=0, pendingCredits=0, _planLoaded=false;
 // (09-Nov, owner) nothing about earning free contacts is shown until the user has used their first free contact
 const creditTalk=()=>{ const u=getUser(); return !!(u && u.sessionToken && _planLoaded && !freeFirst); };
@@ -595,8 +596,8 @@ function renderAccount(){
   const u=getUser(), a=document.getElementById("acct");
   if(!u){ a.innerHTML=`<button class="btn btn-solid btn-sm" onclick="showLogin()">Log in</button>`; return; }
   const pass=freeLeft>0
-    ? `<span class="pill" title="Your 30-day pass">${freeLeft} free contact${freeLeft===1?"":"s"} left · till ${esc(new Date(freeLeftExpires||passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`
-    : passExpires?`<span class="pill" title="Your 30-day pass">Pass till ${esc(new Date(passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`:"";
+    ? `<span class="pill" title="Your pass">${freeLeft} free contact${freeLeft===1?"":"s"} left · till ${esc(new Date(freeLeftExpires||passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`
+    : passExpires?`<span class="pill" title="Your pass">Pass till ${esc(new Date(passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`:"";
   const cr=(credits>0 ? `<span class="pill" title="Earned by correcting listings — used on your next unlock">${credits} free contact${credits===1?"":"s"}</span>` : "")
     +(pendingCredits>0 && creditTalk() ? `<span class="pill" title="You will get these once your edits are approved">🎁 ${pendingCredits} after approval</span>` : "");
   a.innerHTML=`${cr}${pass}<button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button>`;
@@ -1086,9 +1087,9 @@ async function claimFree(id,l){
   try{
     const d=await fiy("claim",{listingId:id,wanted:currentWanted()}); setPlan(d);
     if(!d.unlocked){ showPayOptions(id); return; }
-    pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; if(x.paid===undefined) x.paid=(d.how==="pass499"||d.how==="credit"); } });
+    pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; if(x.paid===undefined) x.paid=(d.how==="pass"||d.how==="pass499"||d.how==="credit"); } });
     await showContact(id);
-    toast(d.how==="pass499" ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass`
+    toast((d.how==="pass"||d.how==="pass499") ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass`
         : d.how==="credit" ? `Contact unlocked with a free contact you earned${credits?` · ${credits} left`:""}` : "Contact unlocked");
   }catch(e){ if(e.message!=="login") toast(e.message); }
   finally{ _claiming=false; }
@@ -1100,8 +1101,9 @@ function showPayOptions(id){
   const lt=((pool.find(x=>String(x.id)===payFor)||{}).listing_type)||"";
   const wantsPlace=lt ? lt!=="flat_wanted" : mode==="place";
   document.getElementById("payNudge").innerHTML=`<span class="nudge">${wantsPlace?"✨ Golden chance to skip brokerage<small>No-brokerage places are very hard to find here</small>":"⏳ Every empty day = Rent from your pocket<small>Pay a few bucks here instead, it's far cheaper</small>"}</span>`;
-  const big=`<button class="plan best" onclick="payPass(this,'pass499')"><span class="badge">Best value</span><div class="pt">100 Contacts Free <span class="pr">Free</span></div>
-      <div class="pd">Pay ₹499 once for a 30-day pass: up to 100 contacts free for 30 days, this one included.</div></button>`;
+  // (10-Nov, owner) two 7-day passes: 50 contacts for Rs 499 (best value, on top), 10 contacts for Rs 199, Rs 79 for one
+  const big=`<button class="plan best" onclick="payPass(this,'pass499')"><span class="badge">Best value</span><div class="pt">50 Contacts Free <span class="pr">₹499</span></div>
+      <div class="pd">Pay ₹499 once: up to 50 contacts free for 7 days, this one included — under ₹10 a contact.</div></button>`;
   if(passExpires){
     document.getElementById("payIntro").textContent=`Your 30-day pass is active until ${fmtDate(passExpires)}, so this contact is just ₹19.`;
     // (09-Nov, owner) with the Rs 199 pass active: ONLY the Rs 19 option (plus the yellow badge), nothing else to choose
@@ -1109,9 +1111,9 @@ function showPayOptions(id){
       <div class="pd">Your 30-day pass price (active till ${fmtDate(passExpires)}) — you'll see the number straight after paying.</div></button>`;
   }else{
     document.getElementById("payIntro").textContent="You've used your free contact. See this number and call or WhatsApp them directly — once unlocked, it stays in your account.";
-    // (09-Nov, owner) order: 100 contacts (Rs 499) on top, Rs 19 pass in the middle, Rs 79 single contact at the bottom
-    box.innerHTML=big+`<button class="plan" onclick="payPass(this,'pass')"><div class="pt">Every Contact <span class="pr">₹19</span></div>
-        <div class="pd">Pay ₹199 once for a 30-day pass, then every contact is just ₹19 for 30 days.</div></button>
+    // (10-Nov, owner) order: 50 contacts (Rs 499) on top, 10 contacts (Rs 199) in the middle, Rs 79 single contact at the bottom
+    box.innerHTML=big+`<button class="plan" onclick="payPass(this,'pass')"><div class="pt">10 Contacts Free <span class="pr">₹199</span></div>
+        <div class="pd">Pay ₹199 once: up to 10 contacts free for 7 days, this one included — under ₹20 a contact.</div></button>
       <button class="plan" onclick="payContact(this)"><div class="pt">Just this Contact <span class="pr">₹79</span></div>
         <div class="pd">One-time payment for this one contact.</div></button>`;
   }
@@ -1157,8 +1159,8 @@ async function payPass(btn,kind){
   if(_paying) return;
   payBusy(btn,true);
   try{
-    // Rs 499: this contact is the first of its 100. Rs 199: no free contact; they come back to this post to pay Rs 19.
-    const d=await fiy("order",{kind:kind==="pass499"?"pass499":"pass",listingId:(kind==="pass499"&&payFor)||undefined,wanted:currentWanted()});
+    // (10-Nov) either pass: the contact being unlocked is the pass's first
+    const d=await fiy("order",{kind:kind==="pass499"?"pass499":"pass",listingId:payFor||undefined,wanted:currentWanted()});
     if(payFor) localStorage.setItem("fiy_scroll_to",payFor);
     await openCheckout(d.payment_session_id);
   }catch(e){ payBusy(btn,false); if(e.message!=="login") toast(e.message); }
@@ -1170,20 +1172,18 @@ async function confirmReturn(orderId){
       const d=await fiy("confirm",{orderId});
       if(d.paid){
         history.replaceState(null,"",location.pathname);
-        if(d.kind==="pass499"){
+        if(d.kind==="pass499"||d.kind==="pass"){
           const st=await fiy("status"); setPlan(st);
+          const till=freeLeftExpires?` till ${fmtDate(freeLeftExpires)}`:"";
+          if(freeLeft<=0 && passExpires){   // an order started before 10-Nov: the old Rs 19-per-contact pass
+            toast("Your pass is active — every contact is now ₹19.",6000);
+          }else if(d.listingId){
+            toast(`Your pass is active — this contact is unlocked and ${freeLeft} more are free${till}.`,6000);
+          }else toast(`Your pass is active — ${freeLeft} contacts are free${till}.`,5000);
           if(d.listingId){
-            toast(`Your 30-day pass is active — this contact is unlocked and ${freeLeft} more are free.`,6000);
             try{ const c=await fiy("contact",{listingId:d.listingId}); phones[String(d.listingId)]=c.phone; }catch(e){}
             localStorage.setItem("fiy_scroll_to",String(d.listingId));
-          }else toast(`Your 30-day pass is active — ${freeLeft} contacts are free for 30 days.`,5000);
-        }else if(d.kind==="pass"){
-          const st=await fiy("status"); setPlan(st);
-          if(d.listingId){
-            toast("Your 30-day pass is active — this contact was free, and every other one is now ₹19.",6000);
-            try{ const c=await fiy("contact",{listingId:d.listingId}); phones[String(d.listingId)]=c.phone; }catch(e){}
-            localStorage.setItem("fiy_scroll_to",String(d.listingId));
-          }else toast("Your 30-day pass is active — every contact is now ₹19.",5000);
+          }
         }else{
           toast("Contact unlocked.");
           try{ const c=await fiy("contact",{listingId:d.listingId}); phones[String(d.listingId)]=c.phone; }catch(e){}
