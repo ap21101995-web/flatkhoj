@@ -8,7 +8,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#6d28d9">
-<title>FlatKhoj — Find Flatmates & Rooms for Rent — Mumbai & Pune</title>
+<title>FlatKhoj — Find Flatmates & Rooms for Rent — Mumbai</title>
 <meta name="description" content="Search every flat, room, PG and flatmate requirement FlatKhoj has found, filter it your way, and contact the poster directly. Or post your own requirement.">
 <meta property="og:title" content="FlatKhoj — Find Flatmates & Rooms for Rent">
 <meta property="og:description" content="Search every flat, room, PG and flatmate requirement FlatKhoj has found and contact the poster directly.">
@@ -252,7 +252,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 10-Nov-FIY46</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 11-Nov-FIY47</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -268,7 +268,9 @@ select.inp option:disabled { color:#bbb; }
     <div class="field"><label class="lbl" for="fCity">City</label>
       <select class="inp" id="fCity" onchange="cityChosen(this.value)">
         <option value="mumbai" selected>Mumbai</option>
-        <option value="pune">Pune</option><option value="bengaluru">Bengaluru</option><option value="gurugram">Gurugram</option><option value="hyderabad">Hyderabad</option>
+        <!-- (2026-11-11, owner) only Mumbai is open to users for now; the other cities keep loading data in the background
+             (pipelines unchanged) -- to open one again, give it back its value="..." and remove "disabled" -->
+        <option disabled>Pune — coming soon</option><option disabled>Bengaluru — coming soon</option><option disabled>Gurugram — coming soon</option><option disabled>Hyderabad — coming soon</option>
         <option disabled>Delhi — coming soon</option><option disabled>Noida — coming soon</option>
         <option disabled>Chennai — coming soon</option><option disabled>Kolkata — coming soon</option><option disabled>Ahmedabad — coming soon</option>
         <option disabled>Jaipur — coming soon</option><option disabled>Indore — coming soon</option><option disabled>Nashik — coming soon</option>
