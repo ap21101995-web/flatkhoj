@@ -251,7 +251,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 11-Nov-FIY47</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 12-Nov-FIY48</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1255,6 +1255,17 @@ function saveState(){
 function saveScroll(){ try{ const s=loadState(); if(s){ s.y=Math.round(window.scrollY); sessionStorage.setItem(ST_KEY,JSON.stringify(s)); } }catch(e){} }
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") saveScroll(); });
 window.addEventListener("pagehide",saveScroll);
+// (2026-11-12, owner) only Mumbai is open to users -- the owner's own login also sees the other live cities (same owner
+// numbers / isOwner flag as main.html's unlockPuneIfAdmin). Their data was always served; this only un-greys the choice.
+const OWNER_PHONES=["9538584612","9004325226"], OWNER_CITIES={pune:"Pune",bengaluru:"Bengaluru",gurugram:"Gurugram",hyderabad:"Hyderabad"};
+function isOwnerLogin(){ const u=getUser()||{}; const p=String(u.phone||"").replace(/\D/g,"").slice(-10); return OWNER_PHONES.includes(p)||u.isOwner===true||u.isOwner==="true"; }
+function ownerCities(){
+  if(!isOwnerLogin()) return;
+  [...document.getElementById("fCity").options].forEach(o=>{
+    const k=Object.keys(OWNER_CITIES).find(x=>o.textContent.trim().startsWith(OWNER_CITIES[x]));
+    if(k && o.disabled){ o.disabled=false; o.value=k; o.textContent=OWNER_CITIES[k]+" (owner only)"; }
+  });
+}
 function cityOk(c){ return !!c && [...document.getElementById("fCity").options].some(o=>o.value===c && !o.disabled); }
 function restoreState(){
   const s=loadState(); if(!s || !cityOk(s.city)) return false;
@@ -1353,6 +1364,7 @@ function showWanted(){
   setTimeout(()=>unlock(id),400);
 }
 async function start(fromLogin){
+  ownerCities();
   if(!fromLogin){
     const had=restoreState();                       // same tab: everything as it was
     const viaUrl=prefillFromUrl();                  // a link that names the city
