@@ -253,7 +253,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY52</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY53</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -551,7 +551,7 @@ async function sendOtp(resend){
   const err=document.getElementById("lgErr1"); err.textContent="";
   if(p.length!==10 || (!/^[6-9]/.test(p) && p!==TEST_PHONE)){ err.textContent="Please enter a valid 10-digit Indian mobile number."; return; }
   lgPhone=p;
-  const btn=document.getElementById("lgSend"); btn.disabled=true; btn.textContent="Sending…";
+  const btn=document.getElementById("lgSend"); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Sending OTP…';
   try{
     const r=await fetch(`${SUPA_URL}/functions/v1/otp`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPA_KEY}`},body:JSON.stringify({action:"send",phone:p})});
     const d=await r.json();
@@ -567,7 +567,7 @@ async function verifyOtp(){
   let otp=""; for(let i=0;i<6;i++) otp+=(document.getElementById("o"+i)||{}).value||"";
   const err=document.getElementById("lgErr2"); err.textContent="";
   if(otp.length<6){ err.textContent="Enter the 6-digit OTP."; return; }
-  const btn=document.getElementById("lgVerify"); if(btn.disabled) return; btn.disabled=true; btn.textContent="Verifying…";
+  const btn=document.getElementById("lgVerify"); if(btn.disabled) return; btn.disabled=true; btn.innerHTML='<span class="spin"></span>Verifying…';
   try{
     const r=await fetch(`${SUPA_URL}/functions/v1/otp`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPA_KEY}`},body:JSON.stringify({action:"verify",phone:lgPhone,otp,ref:(window.fkRef&&window.fkRef())||undefined})});
     const d=await r.json();
@@ -1248,28 +1248,42 @@ async function confirmReturn(orderId){
   toast("Your payment is still being confirmed. If money was deducted it will show here within a few minutes — just refresh.",8000);
   history.replaceState(null,"",location.pathname);
 }
+// (16-Nov, owner: "even save button while saving the update has to be quick. users shouldn't feel like nothing happened")
+// the saved state shows AT ONCE; the server confirms in the background, and a refusal puts everything back and says why
+function applyLocal(l,field,v){
+  if(field==="gender") l.gender_preference=v;
+  else if(l.listing_type==="flat_wanted") l.brokerage_preference=(v==="no"?"prefno":"yes");
+  else { l.has_brokerage=(v==="yes"); l.brokerage_confirmed=true; }
+}
 async function saveUpdate(id,field){
   const sel=document.getElementById((field==="gender"?"ug_":"ub_")+id); const v=sel&&sel.value;
   if(!v){ toast("Choose an option first."); return; }
+  const l=pool.find(x=>String(x.id)===String(id)); if(!l) return;
+  const btn=sel.parentElement && sel.parentElement.querySelector("button");
+  if(btn){ if(btn.disabled) return; btn.disabled=true; btn.classList.add("busy"); btn.innerHTML='<span class="spin"></span>Saving…'; }
+  sel.disabled=true;
+  const before={g:l.gender_preference,hb:l.has_brokerage,bc:l.brokerage_confirmed,bp:l.brokerage_preference,ups:(l.myUpdates||[]).slice()};
+  const mine={field,new_value:v,status:team?"approved":"pending",credit:earnsCredit()?1:0,needs:neededFields(l).join(",")};
+  l.myUpdates=(l.myUpdates||[]).concat([mine]);
+  if(team) applyLocal(l,field,v);         // the team's own update needs no approval: the listing changes right away
+  if(mine.credit) pendingCredits+=1;
+  renderAccount(); render();
+  toast(team ? "Updated for everyone — no approval needed for team accounts."
+       : mine.credit ? `Thanks! Sent for approval. Once approved, you'll get a free contact${pendingCredits>1?` — ${pendingCredits} free contacts waiting for approval`:""}.`
+       : "Thanks! Sent for approval.", team?4000:6000);
   try{
     const d=await fiy("update",{listingId:id,field,value:v});
-    // nothing changes for other people until the owner approves; the free contact comes only after approval
-    const l=pool.find(x=>String(x.id)===String(id));
-    if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,needs:(d.needs||[]).join(","),credit:d.credit||0}]); }
+    mine.against=!!d.against; mine.credit=d.credit||0; if(d.needs) mine.needs=(d.needs||[]).join(",");
+    if(d.approved){ mine.status="approved"; applyLocal(l,field,v); }
     if(typeof d.pendingCredits==="number") pendingCredits=d.pendingCredits;
-    renderAccount();
-    if(d.approved && l){
-      // (16-Nov, owner) the team's own update needs no approval: the listing shows the new value right away
-      l.myUpdates[l.myUpdates.length-1].status="approved";
-      if(field==="gender") l.gender_preference=v;
-      else if(l.listing_type==="flat_wanted") l.brokerage_preference=(v==="no"?"prefno":"yes");
-      else { l.has_brokerage=(v==="yes"); l.brokerage_confirmed=true; }
-      toast("Updated for everyone — no approval needed for team accounts.",4000);
-    }
-    else if(d.credit) toast(`Thanks! Sent for approval. Once approved, you'll get a free contact${pendingCredits>1?` — ${pendingCredits} free contacts waiting for approval`:""}.`,6000);
-    else toast("Thanks! Sent for approval.",4000);
-    render();
-  }catch(e){ if(e.message!=="login") toast(e.message); }
+    renderAccount(); render();
+  }catch(e){
+    // not saved: back to how it was
+    l.myUpdates=before.ups; l.gender_preference=before.g; l.has_brokerage=before.hb; l.brokerage_confirmed=before.bc; l.brokerage_preference=before.bp;
+    if(mine.credit) pendingCredits=Math.max(0,pendingCredits-1);
+    renderAccount(); render();
+    if(e.message!=="login") toast("Not saved: "+e.message,6000);
+  }
 }
 
 // ---------- (10-Nov, owner) city first, and nothing lost while the tab stays open ----------
