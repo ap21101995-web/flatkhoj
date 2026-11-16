@@ -252,7 +252,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 13-Nov-FIY49</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY50</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -598,6 +598,8 @@ let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked
 // (08-Nov, owner) every account's first contact is free (login needed). (10-Nov, owner) Rs 79 per contact, or a pass:
 // Rs 199 = 10 contacts / Rs 499 = 50 contacts, each within 7 days (the server sets the prices)
 let freeFirst=false, freeLeft=0, freeLeftExpires=null, credits=0, pendingCredits=0, _planLoaded=false;
+// (16-Nov, owner: "enable free contact unlock for me and pratika") the team's own accounts unlock every contact free
+let team=false;
 // (09-Nov, owner) nothing about earning free contacts is shown until the user has used their first free contact
 const creditTalk=()=>{ const u=getUser(); return !!(u && u.sessionToken && _planLoaded && !freeFirst); };
 function setPlan(d){
@@ -608,6 +610,7 @@ function setPlan(d){
   if("freeLeft" in d){ freeLeft=Number(d.freeLeft)||0; freeLeftExpires=d.freeLeftExpires||null; }
   if("credits" in d) credits=Number(d.credits)||0;
   if("pendingCredits" in d) pendingCredits=Number(d.pendingCredits)||0;
+  if("team" in d) team=!!d.team;
   if("freeFirst" in d) _planLoaded=true;
   renderAccount();
 }
@@ -1046,7 +1049,7 @@ function contactHtml(l){
   }
   if(l.unlocked) return `<button class="btn btn-solid unlock-btn" onclick="showContact('${esc(l.id)}')">Show contact</button>`;
   // (07-Nov, owner) the unlock button itself reminds people the original message is free to read via the green button above
-  return `<button class="btn btn-solid unlock-btn" onclick="unlock('${esc(l.id)}')">Unlock contact<span class="ub-hint">You can see the original message for free by tapping the green button above</span></button>`;
+  return `<button class="btn btn-solid unlock-btn" onclick="unlock('${esc(l.id)}')">Unlock Contact<span class="ub-hint">You can see the original message for free by tapping the green button above</span></button>`;
 }
 function card(l){
   const isSeeker=l.listing_type==="flat_wanted";
@@ -1086,7 +1089,7 @@ function openMsg(id){
   document.getElementById("msgText").innerHTML=esc(l.text||"(The original message is not available.)");
   document.getElementById("msgFoot").innerHTML = l.unlocked
     ? `<button class="btn btn-solid" onclick="closeMsg();${phones[msgFor]?"":`showContact('${esc(l.id)}');`}document.getElementById('r_${esc(l.id)}').scrollIntoView({behavior:'smooth',block:'center'})">Show their contact</button>`
-    : `<button class="btn btn-solid" onclick="closeMsg();unlock('${esc(l.id)}')">Unlock contact</button>`;
+    : `<button class="btn btn-solid" onclick="closeMsg();unlock('${esc(l.id)}')">Unlock Contact</button>`;
   document.getElementById("msgModal").classList.add("show");
   document.body.style.overflow="hidden";
   document.querySelector("#msgModal .msg-scroll").scrollTop=0;
@@ -1115,7 +1118,7 @@ function unlock(id){
   if(!u||!u.sessionToken){ showLogin(()=>unlock(id)); return; }
   const l=pool.find(x=>String(x.id)===String(id));
   if(l && l.unlocked){ showContact(id); return; }   // already bought earlier on this account
-  if(freeFirst || freeLeft>0 || credits>0){ claimFree(id,l); return; }
+  if(team || freeFirst || freeLeft>0 || credits>0){ claimFree(id,l); return; }
   showPayOptions(id);
 }
 function currentWanted(){ return { gender:(document.getElementById("fGender")||{}).value||"", broker:(document.getElementById("fBroker")||{}).value||"" }; }
@@ -1128,7 +1131,8 @@ async function claimFree(id,l){
     pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; if(x.paid===undefined) x.paid=(d.how==="pass"||d.how==="pass499"||d.how==="credit"); } });
     await showContact(id);
     toast((d.how==="pass"||d.how==="pass499") ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass`
-        : d.how==="credit" ? `Contact unlocked with a free contact you earned${credits?` · ${credits} left`:""}` : "Contact unlocked");
+        : d.how==="credit" ? `Contact unlocked with a free contact you earned${credits?` · ${credits} left`:""}`
+        : d.how==="team" ? "Contact unlocked · team account, free" : "Contact unlocked");
   }catch(e){ if(e.message!=="login") toast(e.message); }
   finally{ _claiming=false; }
 }
