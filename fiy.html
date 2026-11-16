@@ -246,13 +246,14 @@ select.inp option:disabled { color:#bbb; }
   animation:postPulse 2s ease-out infinite; pointer-events:none; }
 @keyframes postPulse { 0% { transform:scale(.95); opacity:.6; } 70%,100% { transform:scale(1.2); opacity:0; } }
 @media (prefers-reduced-motion: reduce) { #postWidget .pw-pulse { animation:none; } }
+.btn.busy{opacity:.8;cursor:progress}.spin{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spn .7s linear infinite}@keyframes spn{to{transform:rotate(360deg)}}
 </style>
 <script src="fk-brand.js"></script>
 </head>
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY51</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY52</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1105,31 +1106,42 @@ function showMore(){ shown+=PAGE; render(); }
 
 // ---------- unlocking & payments (the price choice appears only here) ----------
 let payFor=null;
+// (16-Nov, owner: "when i click on unlock contact, it doesn't immediately open. its not smooth") the button reacts the
+// moment it is tapped, and the unlock answers with the number itself (one request instead of two)
+function unlockBusy(id,on){
+  document.querySelectorAll(`button[onclick*="unlock('${String(id).replace(/'/g,"")}')"]`).forEach(b=>{
+    if(on){ if(!b.dataset.label) b.dataset.label=b.innerHTML; b.disabled=true; b.classList.add("busy"); b.innerHTML='<span class="spin"></span>Unlocking…'; }
+    else if(b.dataset.label){ b.disabled=false; b.classList.remove("busy"); b.innerHTML=b.dataset.label; delete b.dataset.label; }
+  });
+}
 async function showContact(id){
+  unlockBusy(id,true);
   try{ const d=await fiy("contact",{listingId:id}); phones[String(id)]=d.phone; render(); }
-  catch(e){ if(e.message!=="login") toast(e.message); }
+  catch(e){ if(e.message!=="login") toast(e.message); unlockBusy(id,false); }
 }
 function unlock(id){
   const u=getUser();
   if(!u||!u.sessionToken){ showLogin(()=>unlock(id)); return; }
   const l=pool.find(x=>String(x.id)===String(id));
   if(l && l.unlocked){ showContact(id); return; }   // already bought earlier on this account
-  if(team || freeFirst || freeLeft>0 || credits>0){ claimFree(id,l); return; }
+  // (16-Nov) also while the account's plan is still loading -- the server decides, the pay sheet opens only if needed
+  if(team || freeFirst || freeLeft>0 || credits>0 || !_planLoaded){ claimFree(id,l); return; }
   showPayOptions(id);
 }
 function currentWanted(){ return { gender:(document.getElementById("fGender")||{}).value||"", broker:(document.getElementById("fBroker")||{}).value||"" }; }
 let _claiming=false;
 async function claimFree(id,l){
   if(_claiming) return; _claiming=true;
+  unlockBusy(id,true);
   try{
     const d=await fiy("claim",{listingId:id,wanted:currentWanted()}); setPlan(d);
-    if(!d.unlocked){ showPayOptions(id); return; }
+    if(!d.unlocked){ unlockBusy(id,false); showPayOptions(id); return; }
     pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; if(x.paid===undefined) x.paid=(d.how==="pass"||d.how==="pass499"||d.how==="credit"); } });
-    await showContact(id);
+    if(d.phone!==undefined){ phones[String(id)]=d.phone; render(); } else await showContact(id);
     toast((d.how==="pass"||d.how==="pass499") ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass`
         : d.how==="credit" ? `Contact unlocked with a free contact you earned${credits?` · ${credits} left`:""}`
         : d.how==="team" ? "Contact unlocked · team account, free" : "Contact unlocked");
-  }catch(e){ if(e.message!=="login") toast(e.message); }
+  }catch(e){ unlockBusy(id,false); if(e.message!=="login") toast(e.message); }
   finally{ _claiming=false; }
 }
 function showPayOptions(id){
@@ -1246,7 +1258,15 @@ async function saveUpdate(id,field){
     if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,needs:(d.needs||[]).join(","),credit:d.credit||0}]); }
     if(typeof d.pendingCredits==="number") pendingCredits=d.pendingCredits;
     renderAccount();
-    if(d.credit) toast(`Thanks! Sent for approval. Once approved, you'll get a free contact${pendingCredits>1?` — ${pendingCredits} free contacts waiting for approval`:""}.`,6000);
+    if(d.approved && l){
+      // (16-Nov, owner) the team's own update needs no approval: the listing shows the new value right away
+      l.myUpdates[l.myUpdates.length-1].status="approved";
+      if(field==="gender") l.gender_preference=v;
+      else if(l.listing_type==="flat_wanted") l.brokerage_preference=(v==="no"?"prefno":"yes");
+      else { l.has_brokerage=(v==="yes"); l.brokerage_confirmed=true; }
+      toast("Updated for everyone — no approval needed for team accounts.",4000);
+    }
+    else if(d.credit) toast(`Thanks! Sent for approval. Once approved, you'll get a free contact${pendingCredits>1?` — ${pendingCredits} free contacts waiting for approval`:""}.`,6000);
     else toast("Thanks! Sent for approval.",4000);
     render();
   }catch(e){ if(e.message!=="login") toast(e.message); }
