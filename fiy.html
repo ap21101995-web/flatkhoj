@@ -252,7 +252,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY50</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY51</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -392,10 +392,11 @@ const PAGE = 60;
 const NO_INFO_BROKERAGE = "No information on brokerage yet; please confirm with them";
 const NO_INFO_GENDER = "No information on gender preference yet; please confirm with them";
 // (07-Nov, owner) a SEEKER has a gender of their own, not a "preference"
-const FREEHINT='<span class="freehint">✨ This lead can be free for you if you update it correctly</span>';
+const FREEHINT='<span class="freehint">✨ Please update this after you talk to them — each update gets you a free contact</span>';
 // the "can be free" line: only after the first free contact is used, and never on a contact that cannot earn one
 // (an unlocked contact that cost nothing -- e.g. the free first contact itself)
-function freeHintFor(l){ return creditTalk() && (!l.unlocked || l.paid) ? FREEHINT : ""; }
+// (16-Nov, owner) only for an account that has paid -- before that there is no update option at all
+function freeHintFor(l){ return earnsCredit() ? FREEHINT : ""; }
 const NO_INFO_SEEKER_GENDER = "No information on gender yet; please confirm with them";
 // (08-Nov, owner) popular list uses the whole area (East + West together) wherever the area has both sides
 let POPULAR = ["Andheri","Bandra","Powai","Goregaon","Jogeshwari","Malad","Kandivali","Borivali","Lower Parel","Worli","Dadar","Chembur","Ghatkopar","Santacruz","Vile Parle","Thane","Vashi"];
@@ -600,6 +601,9 @@ let mode="place", pool=[], shown=PAGE, passExpires=null, contactPrice=79, picked
 let freeFirst=false, freeLeft=0, freeLeftExpires=null, credits=0, pendingCredits=0, _planLoaded=false;
 // (16-Nov, owner: "enable free contact unlock for me and pratika") the team's own accounts unlock every contact free
 let team=false;
+// (16-Nov, owner: "they should see message to update and get free contact only once they have paid")
+let hasPaid=false;
+const earnsCredit=()=>{ const u=getUser(); return !!(u && u.sessionToken && hasPaid && !team); };
 // (09-Nov, owner) nothing about earning free contacts is shown until the user has used their first free contact
 const creditTalk=()=>{ const u=getUser(); return !!(u && u.sessionToken && _planLoaded && !freeFirst); };
 function setPlan(d){
@@ -611,6 +615,7 @@ function setPlan(d){
   if("credits" in d) credits=Number(d.credits)||0;
   if("pendingCredits" in d) pendingCredits=Number(d.pendingCredits)||0;
   if("team" in d) team=!!d.team;
+  if("hasPaid" in d) hasPaid=!!d.hasPaid;
   if("freeFirst" in d) _planLoaded=true;
   renderAccount();
 }
@@ -625,7 +630,7 @@ function renderAccount(){
     ? `<span class="pill" title="Your pass">${freeLeft} free contact${freeLeft===1?"":"s"} left · till ${esc(new Date(freeLeftExpires||passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`
     : passExpires?`<span class="pill" title="Your pass">Pass till ${esc(new Date(passExpires).toLocaleDateString("en-IN",{day:"numeric",month:"short"}))}</span>`:"";
   const cr=(credits>0 ? `<span class="pill" title="Earned by correcting listings — used on your next unlock">${credits} free contact${credits===1?"":"s"}</span>` : "")
-    +(pendingCredits>0 && creditTalk() ? `<span class="pill" title="You will get these once your edits are approved">🎁 ${pendingCredits} after approval</span>` : "");
+    +(pendingCredits>0 && earnsCredit() ? `<span class="pill" title="You will get these once your edits are approved">🎁 ${pendingCredits} after approval</span>` : "");
   a.innerHTML=`${cr}${pass}<button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button>`;
 }
 
@@ -976,24 +981,10 @@ function neededFields(l){
   if(first) return String(first.needs).split(",").filter(Boolean);
   const f=[]; if(brokerageState(l)==="unknown") f.push("brokerage"); if(!genderKnown(l)) f.push("gender"); return f;
 }
-// can this listing earn a free contact? (only paid unlocks, only after the first free contact, at least one answer
-// against the filter, every uncertain field edited, nothing rejected) -> none | incomplete | potential | done
-function creditState(l, extra){
-  if(!creditTalk() || !l.paid) return "none";
-  const ups=(l.myUpdates||[]).concat(extra?[extra]:[]);
-  if(ups.some(u=>u.status==="rejected")) return "none";
-  if(!ups.some(u=>u.against)) return "none";
-  const need=neededFields(l);
-  if(need.some(f=>!ups.some(u=>u.field===f))) return "incomplete";
-  return ups.some(u=>u.status==="pending") ? "potential" : "done";
-}
-function otherField(l,field){ return neededFields(l).find(f=>f!==field); }
+// (16-Nov, owner: "one extra free contact for each update they make ... once they have paid") every update of a paying
+// account earns one free contact, given once the update is approved (or not decided within 24 hours)
 function updNoteFor(l,field,v){
-  if(!v || !creditTalk() || !l.paid) return "";
-  const st=creditState(l,{field,new_value:v,status:"pending",against:isAgainst(l,field,v)});
-  if(st==="potential") return `<div class="updnote free">🎁 Once approved, you'll get a free contact — use it to unlock your next lead for free.</div>`;
-  if(st==="incomplete"){ const o=otherField(l,field); return `<div class="updnote free">🎁 Update the ${FIELD_NAME[o]||o} too — once both are approved, you'll get a free contact for your next lead.</div>`; }
-  return "";
+  return v && earnsCredit() ? `<div class="updnote free">🎁 You'll get a free contact once this update is approved — use it to unlock your next lead.</div>` : "";
 }
 function onUpdPick(id,field){
   const l=pool.find(x=>String(x.id)===String(id)); if(!l) return;
@@ -1011,18 +1002,23 @@ function updRow(l,field,select){
      <button class="btn btn-ghost btn-sm" onclick="saveUpdate('${id}','${field}')">Save</button><div id="n${p}_${id}" style="grid-column:1 / -1"></div></div>`;
 }
 function creditLine(l){
-  const st=creditState(l);
-  if(st==="potential") return `<div class="updnote free" style="margin-top:8px">🎁 Once approved, you'll get a free contact for your next lead.</div>`;
-  if(st==="done") return `<div class="updnote free" style="margin-top:8px">🎁 Thanks! A free contact for this lead was added to your account.</div>`;
-  if(st==="incomplete"){ const o=neededFields(l).find(f=>!myUpdate(l,f)); return o?`<div class="updnote free" style="margin-top:8px">🎁 Update the ${FIELD_NAME[o]||o} too to earn a free contact.</div>`:""; }
-  return "";
+  if(!earnsCredit()) return "";
+  const ups=(l.myUpdates||[]).filter(u=>Number(u.credit)>0);
+  const wait=ups.filter(u=>u.status==="pending").length, got=ups.filter(u=>u.status==="approved"||u.status==="expired").length;
+  const open=(brokerageState(l)==="unknown" && !myUpdate(l,"brokerage"))+(!genderKnown(l) && !myUpdate(l,"gender"));
+  const s=n=>n===1?"":"s";
+  if(got) return `<div class="updnote free" style="margin-top:8px">🎁 Thanks! ${got} free contact${s(got)} added to your account for your update${s(got)} here.</div>`;
+  if(wait) return `<div class="updnote free" style="margin-top:8px">🎁 Once approved, you'll get ${wait} free contact${s(wait)} for your update${s(wait)} here.</div>`;
+  return open ? `<div class="updnote free" style="margin-top:8px">🎁 Each update earns you a free contact.</div>` : "";
 }
 function updateBox(l){
+  // (16-Nov, owner) no update option until the account has paid once (the team can always update)
+  if(!(hasPaid || team)) return "";
   const parts=[];
   if(brokerageState(l)==="unknown" || myUpdate(l,"brokerage")) parts.push(updRow(l,"brokerage",`<select class="inp" id="ub_${esc(l.id)}"><option value="">Brokerage?</option><option value="no">No Brokerage</option><option value="yes">Brokerage Applicable</option></select>`));
   if(!genderKnown(l) || myUpdate(l,"gender")) parts.push(updRow(l,"gender",`<select class="inp" id="ug_${esc(l.id)}"><option value="">Gender?</option><option value="Female">Female</option><option value="Male">Male</option><option value="Any">Anyone</option></select>`));
   const real=parts.filter(Boolean), cl=creditLine(l);
-  return real.length||cl ? `<div class="upd">${real.length?"<b>After you talk to them, update this for the next person:</b>":""}${real.join("")}${cl}</div>` : "";
+  return real.length||cl ? `<div class="upd">${real.length?"<b>After you talk to them, please update this for the next person:</b>":""}${real.join("")}${cl}</div>` : "";
 }
 // (10-Nov, owner) the WhatsApp message depends on which side the user is on.
 // Unlocked a place on offer (they need a place):  "I saw your post on FlatKhoj.com about the single room in X. I'm looking for a place…"
@@ -1247,12 +1243,10 @@ async function saveUpdate(id,field){
     const d=await fiy("update",{listingId:id,field,value:v});
     // nothing changes for other people until the owner approves; the free contact comes only after approval
     const l=pool.find(x=>String(x.id)===String(id));
-    if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,needs:(d.needs||[]).join(",")}]); }
+    if(l){ l.myUpdates=(l.myUpdates||[]).concat([{field,new_value:v,status:"pending",against:!!d.against,needs:(d.needs||[]).join(","),credit:d.credit||0}]); }
     if(typeof d.pendingCredits==="number") pendingCredits=d.pendingCredits;
     renderAccount();
-    const st=l?creditState(l):"none";
-    if(st==="potential") toast(`Thanks! Sent for approval. Once approved, you'll get a free contact${pendingCredits>1?` — ${pendingCredits} free contacts waiting for approval`:""}.`,6000);
-    else if(st==="incomplete"){ const o=neededFields(l).find(f=>!myUpdate(l,f)); toast(`Thanks! Sent for approval. Update the ${FIELD_NAME[o]||o} too to earn a free contact.`,6000); }
+    if(d.credit) toast(`Thanks! Sent for approval. Once approved, you'll get a free contact${pendingCredits>1?` — ${pendingCredits} free contacts waiting for approval`:""}.`,6000);
     else toast("Thanks! Sent for approval.",4000);
     render();
   }catch(e){ if(e.message!=="login") toast(e.message); }
