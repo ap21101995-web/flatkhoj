@@ -253,7 +253,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 16-Nov-FIY53</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 18-Nov-FIY54</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -690,6 +690,8 @@ async function reload(){
     const d=await fetchPool(city,m);
     if(seq!==_reqSeq || m!==mode) return;   // the user has since toggled / changed city: a newer request owns the page
     pool=d.listings||[]; if(getUser()) setPlan(d); else renderAccount();
+    // (18-Nov, owner) a contact unlocked earlier arrives with its number -- shown straight away, no tap-and-wait
+    pool.forEach(x=>{ if(x.unlocked && x.phone) phones[String(x.id)]=x.phone; });
     vocab=AREA_LIST.slice();
     _loading=false; shown=PAGE; apply();
     fetchPool(city,m==="place"?"people":"place").catch(()=>{});   // get the other side ready so the toggle is instant
@@ -1044,6 +1046,8 @@ function contactHtml(l){
       <div class="acts"><a class="btn btn-solid" href="tel:+91${esc(ph)}">Call</a><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/91${esc(ph)}?text=${msg}">WhatsApp</a></div>
       ${updateBox(l)}</div>`;
   }
+  // (18-Nov, owner) while the number is on its way the button stays "Unlocking..." even if the list is redrawn
+  if(_unlocking.has(String(l.id))) return `<button class="btn btn-solid unlock-btn busy" disabled><span class="spin"></span>Unlocking…</button>`;
   if(l.unlocked) return `<button class="btn btn-solid unlock-btn" onclick="showContact('${esc(l.id)}')">Show contact</button>`;
   // (07-Nov, owner) the unlock button itself reminds people the original message is free to read via the green button above
   return `<button class="btn btn-solid unlock-btn" onclick="unlock('${esc(l.id)}')">Unlock Contact<span class="ub-hint">You can see the original message for free by tapping the green button above</span></button>`;
@@ -1108,15 +1112,18 @@ function showMore(){ shown+=PAGE; render(); }
 let payFor=null;
 // (16-Nov, owner: "when i click on unlock contact, it doesn't immediately open. its not smooth") the button reacts the
 // moment it is tapped, and the unlock answers with the number itself (one request instead of two)
+const _unlocking=new Set();
 function unlockBusy(id,on){
-  document.querySelectorAll(`button[onclick*="unlock('${String(id).replace(/'/g,"")}')"]`).forEach(b=>{
+  if(on) _unlocking.add(String(id)); else _unlocking.delete(String(id));
+  // the Unlock Contact AND the "Show contact" buttons of this card
+  document.querySelectorAll(`button[onclick*="unlock('${String(id).replace(/'/g,"")}')"],button[onclick*="showContact('${String(id).replace(/'/g,"")}')"]`).forEach(b=>{
     if(on){ if(!b.dataset.label) b.dataset.label=b.innerHTML; b.disabled=true; b.classList.add("busy"); b.innerHTML='<span class="spin"></span>Unlocking…'; }
     else if(b.dataset.label){ b.disabled=false; b.classList.remove("busy"); b.innerHTML=b.dataset.label; delete b.dataset.label; }
   });
 }
 async function showContact(id){
   unlockBusy(id,true);
-  try{ const d=await fiy("contact",{listingId:id}); phones[String(id)]=d.phone; render(); }
+  try{ const d=await fiy("contact",{listingId:id}); phones[String(id)]=d.phone; _unlocking.delete(String(id)); render(); }
   catch(e){ if(e.message!=="login") toast(e.message); unlockBusy(id,false); }
 }
 function unlock(id){
@@ -1137,7 +1144,7 @@ async function claimFree(id,l){
     const d=await fiy("claim",{listingId:id,wanted:currentWanted()}); setPlan(d);
     if(!d.unlocked){ unlockBusy(id,false); showPayOptions(id); return; }
     pool.forEach(x=>{ if(String(x.id)===String(id)){ x.unlocked=true; if(!x.wanted) x.wanted=currentWanted(); x.myUpdates=x.myUpdates||[]; if(x.paid===undefined) x.paid=(d.how==="pass"||d.how==="pass499"||d.how==="credit"); } });
-    if(d.phone!==undefined){ phones[String(id)]=d.phone; render(); } else await showContact(id);
+    if(d.phone){ phones[String(id)]=d.phone; _unlocking.delete(String(id)); render(); } else { _unlocking.delete(String(id)); await showContact(id); }
     toast((d.how==="pass"||d.how==="pass499") ? `Contact unlocked · ${freeLeft} free contact${freeLeft===1?"":"s"} left on your pass`
         : d.how==="credit" ? `Contact unlocked with a free contact you earned${credits?` · ${credits} left`:""}`
         : d.how==="team" ? "Contact unlocked · team account, free" : "Contact unlocked");
