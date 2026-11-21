@@ -253,7 +253,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 18-Nov-FIY54</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 21-Nov-FIY55</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -587,8 +587,14 @@ async function fiy(action, extra){
   const u=getUser();
   // browsing needs no login; only unlocking / paying / numbers do
   if((!u||!u.sessionToken) && action!=="search" && action!=="one"){ showLogin(); throw new Error("login"); }
-  const r=await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
+  // (21-Nov) a call that hangs must never freeze the page: give up after 30 s (the page then offers "Try again")
+  const _ac=(typeof AbortController!=="undefined")?new AbortController():null, _to=_ac?setTimeout(()=>_ac.abort(),30000):0;
+  let r;
+  try{
+  r=await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",signal:_ac?_ac.signal:undefined,headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
     body:JSON.stringify(Object.assign({action,sessionToken:(u&&u.sessionToken)||""},extra||{}))});
+  }catch(e){ throw new Error(e && e.name==="AbortError" ? "the server took too long -- please try again" : "network problem -- please check your connection"); }
+  finally{ if(_to) clearTimeout(_to); }
   const d=await r.json().catch(()=>({success:false,error:"Unexpected server response."}));
   if(r.status===401){ forgetUser(); renderAccount(); showLogin(); throw new Error("login"); }
   if(!d.success) throw new Error(d.error||"Something went wrong.");
@@ -1434,8 +1440,11 @@ async function start(fromLogin){
   const u=getUser();
   if(!u||!u.sessionToken){ await reload(); showWanted(); restoreScroll(); return; }   // browse freely; login is asked for only on "Unlock contact"
   const ord=new URLSearchParams(location.search).get("fiy_order");
-  try{ const st=await fiy("status"); setPlan(st); }catch(e){ return; }
-  if(ord) await confirmReturn(ord);
+  // (21-Nov, owner: a paying user saw "the site is down" -- it worked in incognito) a signed-in visit used to wait for the
+  // account status BEFORE loading any listing, and gave up silently if that failed: a blank page. Now the listings load
+  // straight away and the status comes in alongside; only a return from payment waits for its own confirmation first.
+  if(ord){ try{ const st=await fiy("status"); setPlan(st); }catch(e){} await confirmReturn(ord); }
+  else fiy("status").then(setPlan).catch(()=>{});
   await reload();
   showWanted();
   restoreScroll();
