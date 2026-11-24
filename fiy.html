@@ -253,7 +253,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 24-Nov-FIY56</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 24-Nov-FIY57</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -591,7 +591,8 @@ async function fiy(action, extra){
   const _ac=(typeof AbortController!=="undefined")?new AbortController():null, _to=_ac?setTimeout(()=>_ac.abort(),30000):0;
   let r;
   try{
-  r=await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",signal:_ac?_ac.signal:undefined,headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
+  // (24-Nov) run next to the database (Sydney): every listing read is local there; only the answer travels
+  r=await fetch(`${SUPA_URL}/functions/v1/fiy?forceFunctionRegion=ap-southeast-2`,{method:"POST",signal:_ac?_ac.signal:undefined,headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`},
     body:JSON.stringify(Object.assign({action,sessionToken:(u&&u.sessionToken)||""},extra||{}))});
   }catch(e){ throw new Error(e && e.name==="AbortError" ? "the server took too long -- please try again" : "network problem -- please check your connection"); }
   finally{ if(_to) clearTimeout(_to); }
