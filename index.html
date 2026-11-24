@@ -252,7 +252,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 21-Nov-FIY55</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 24-Nov-FIY56</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -585,7 +585,7 @@ function logout(){ forgetUser(); location.reload(); }
 async function fiy(action, extra){
   const u=getUser();
   // browsing needs no login; only unlocking / paying / numbers do
-  if((!u||!u.sessionToken) && action!=="search" && action!=="one"){ showLogin(); throw new Error("login"); }
+  if((!u||!u.sessionToken) && action!=="search" && action!=="one" && action!=="texts"){ showLogin(); throw new Error("login"); }
   // (21-Nov) a call that hangs must never freeze the page: give up after 30 s (the page then offers "Try again")
   const _ac=(typeof AbortController!=="undefined")?new AbortController():null, _to=_ac?setTimeout(()=>_ac.abort(),30000):0;
   let r;
@@ -1092,7 +1092,9 @@ function openMsg(id){
   const seeker=l.listing_type==="flat_wanted";
   document.getElementById("msgTitle").textContent=seeker?"Original Message of the Occupancy Hunter":"Original Message from Occupancy Provider";
   document.getElementById("msgSub").textContent=l.posted_at?fmtDate(l.posted_at):"";
-  document.getElementById("msgText").innerHTML=esc(l.text||"(The original message is not available.)");
+  // (24-Nov) not fetched yet (a card far down the list): show it the moment it arrives
+  if(l.text===undefined){ document.getElementById("msgText").innerHTML='<span class="spin"></span> Loading the message…'; _textAsked.delete(String(l.id)); loadTexts([l]); }
+  else document.getElementById("msgText").innerHTML=esc(l.text||"(The original message is not available.)");
   document.getElementById("msgFoot").innerHTML = l.unlocked
     ? `<button class="btn btn-solid" onclick="closeMsg();${phones[msgFor]?"":`showContact('${esc(l.id)}');`}document.getElementById('r_${esc(l.id)}').scrollIntoView({behavior:'smooth',block:'center'})">Show their contact</button>`
     : `<button class="btn btn-solid" onclick="closeMsg();unlock('${esc(l.id)}')">Unlock Contact</button>`;
@@ -1110,6 +1112,21 @@ function render(){
   }
   res.innerHTML=matched.slice(0,shown).map(card).join("");
   document.getElementById("moreBtn").style.display=matched.length>shown?"block":"none";
+  loadTexts(matched.slice(0,shown));
+}
+// (24-Nov, owner: the page was slow) the listings come WITHOUT their original message (that text was ~3 MB in Mumbai);
+// the messages of the cards on screen are fetched quietly in the background, so "View Original Message" still opens at once
+const _textAsked=new Set();
+function loadTexts(list){
+  const ids=list.filter(l=>l.text===undefined && !_textAsked.has(String(l.id))).map(l=>String(l.id));
+  for(let i=0;i<ids.length;i+=60){
+    const part=ids.slice(i,i+60); part.forEach(id=>_textAsked.add(id));
+    fiy("texts",{ids:part}).then(d=>{
+      const t=d.texts||{};
+      pool.forEach(x=>{ const v=t[String(x.id)]; if(v!==undefined) x.text=v; });
+      if(msgFor && t[msgFor]!==undefined && document.getElementById("msgModal").classList.contains("show")) document.getElementById("msgText").innerHTML=esc(t[msgFor]||"(The original message is not available.)");
+    }).catch(()=>{ part.forEach(id=>_textAsked.delete(id)); });
+  }
 }
 function showMore(){ shown+=PAGE; render(); }
 
