@@ -252,7 +252,7 @@ select.inp option:disabled { color:#bbb; }
 <body>
 
 <div class="topbar">
-  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 25-Nov-FIY59</small></a>
+  <a class="brand" href="./">Flat<span>Khoj</span> · Find it Yourself<small>build 26-Nov-FIY60</small></a>
   <div class="acct" id="acct"></div>
 </div>
 
@@ -1090,10 +1090,6 @@ function card(l){
   const price=rent
     ? `<div class="price">${isSeeker?`<small>Budget </small>`:""}${esc(rent)} <small>/ month</small></div>`
     : `<div class="price na">${isSeeker?"Budget Not Stated":"Rent Not Stated"}</div>`;
-  const chips=[`<span class="mc"><b>Move-In</b> ${esc(movein(l))}</span>`];
-  if(!isSeeker && known(l.furnishing)) chips.push(`<span class="mc">${esc(tc(l.furnishing))}</span>`);
-  if(!isSeeker && l.deposit_amount) chips.push(`<span class="mc"><b>Deposit</b> ${esc(money(l.deposit_amount))}</span>`);
-  if(l.food_preference && !/no veg\/non-veg/i.test(l.food_preference)) chips.push(`<span class="mc">${esc(tc(l.food_preference))}</span>`);
   return `<div class="res" id="r_${esc(l.id)}">
     <button class="orig-btn" onclick="openMsg('${esc(l.id)}')">${ICON_CHAT}<span>${esc(origLabel(l))}</span></button>
     <div class="res-body">
@@ -1102,7 +1098,6 @@ function card(l){
       <div class="head">${esc(headline(l))}</div>
       <div class="where">${ICON_PIN}<span>${esc(arr(l.areas).join(", ")||"Area Not Stated")}</span></div>
       ${price}
-      <div class="mchips">${chips.join("")}</div>
       <div class="info">
         <div class="ln"><b>Gender</b><span>${genderHtml(l)}</span></div>
         <div class="ln"><b>${l.listing_type==="flat_wanted"?"Brokerage Preference":"Brokerage"}</b><span>${brokerageHtml(l)}</span></div>
