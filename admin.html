@@ -121,7 +121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">Flat<span>Khoj</span></div>
-      <div class="sidebar-sub">Admin Panel · build 25-Nov-AD44</div>
+      <div class="sidebar-sub">Admin Panel · build 27-Nov-AD45</div>
     </div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span>📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('coinpurchases',this)"><span>🪙</span> Coin Purchases</div>
@@ -769,24 +769,25 @@ const fiyRs=n=>"₹"+(Number(n)||0).toLocaleString("en-IN");
 const fiyDate=d=>d?new Date(d).toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"}):"—";
 function fiyIn(ids){return ids.map(x=>'"'+String(x).replace(/"/g,"")+'"').join(",")}
 async function fiyChunks(table,cols,ids){
-  const out=[];for(let i=0;i<ids.length;i+=80){const r=await supaGet(`${table}?select=${cols}&id=in.(${encodeURIComponent(fiyIn(ids.slice(i,i+80)))})`);out.push(...(r||[]))}return out}
-async function loadFiyClients(){
+  // (2026-11-27) the batches are asked for all at once, not one after another
+  const parts=[];for(let i=0;i<ids.length;i+=80)parts.push(supaGet(`${table}?select=${cols}&id=in.(${encodeURIComponent(fiyIn(ids.slice(i,i+80)))})`));
+  return (await Promise.all(parts)).flatMap(r=>r||[])}
+async function loadFiyClients(_afterReconcile){
   const tbl=document.getElementById("fiyClientsTable");
-  tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--ink3)">Loading…</td></tr>';
+  if(!_afterReconcile) tbl.innerHTML='<tr><td style="text-align:center;padding:24px;color:var(--ink3)">Loading…</td></tr>';
   try{
-    // (2026-11-09) first settle any pending payment with Cashfree (someone who paid but never came back to the page)
-    try{ await fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json","x-admin-token":authToken()},body:JSON.stringify({action:"admin_reconcile"})}); }catch(e){}
-    let [orders,unlocks,passes]=await Promise.all([
-      supaGet("fiy_orders?status=eq.paid&select=order_id,user_id,kind,listing_id,amount,paid_at,created_at&order=paid_at.desc"),
-      supaGet("fiy_unlocks?select=user_id,listing_id,order_id,amount,created_at&order=created_at.desc"),
-      supaGet("fiy_passes?select=user_id,order_id,amount,starts_at,expires_at&order=expires_at.desc")]);
-    [orders,unlocks,passes]=await Promise.all([fiyNoTest(orders),fiyNoTest(unlocks),fiyNoTest(passes)]);
+    // (2026-11-09) settle any pending payment with Cashfree (someone who paid but never came back to the page).
+    // (2026-11-27, owner: "FIY section ... very slow to load") it now runs ALONGSIDE the load instead of before it, and the
+    // tab reloads once only if it actually settled a payment
+    if(!_afterReconcile) fetch(`${SUPA_URL}/functions/v1/fiy`,{method:"POST",headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,"Content-Type":"application/json","x-admin-token":authToken()},body:JSON.stringify({action:"admin_reconcile"})})
+      .then(r=>r.json()).then(d=>{ if(d&&Array.isArray(d.orders)&&d.orders.some(o=>o.cashfree==="PAID"||o.cashfree==="EXPIRED"||o.cashfree==="TERMINATED")&&_currentPage==="fiyclients") loadFiyClients(true); }).catch(()=>{});
+    // (2026-11-27) ONE database call (admin_fiy_clients) instead of ~8 one after another; the test login is already left out
+    const all=await supaRpc("admin_fiy_clients")||{};
+    const orders=all.orders||[], unlocks=all.unlocks||[], passes=all.passes||[], us=all.users||[], ls=all.listings||[];
     const by={};const u=id=>by[id]||(by[id]={id,paid:0,orders:[],unlocks:[],passes:[],last:null});
     (orders||[]).forEach(o=>{const c=u(o.user_id);c.paid+=Number(o.amount)||0;c.orders.push(o);const t=o.paid_at||o.created_at;if(!c.last||fiyT(t)>fiyT(c.last))c.last=t});
     (unlocks||[]).forEach(x=>{const c=u(x.user_id);c.unlocks.push(x);if(!c.last||fiyT(x.created_at)>fiyT(c.last))c.last=x.created_at});
     (passes||[]).forEach(x=>u(x.user_id).passes.push(x));
-    const uids=Object.keys(by), lids=[...new Set((unlocks||[]).map(x=>x.listing_id))];
-    const [us,ls]=await Promise.all([fiyChunks("users","id,name,phone",uids),fiyChunks("listings","id,listing_type,areas,room_type,flat_type,rent_amount,custom_contact_phone,poster_name,created_at",lids)]);
     _fiy={byUser:by,users:Object.fromEntries(us.map(x=>[x.id,x])),listings:Object.fromEntries(ls.map(x=>[String(x.id),x]))};
     const now=new Date().toISOString(), rows=Object.values(by).sort((a,b)=>fiyT(b.last)-fiyT(a.last));   // (08-Nov, owner) latest activity at the top
     const total=rows.reduce((t,r)=>t+r.paid,0), m=new Date();m.setDate(1);m.setHours(0,0,0,0);
@@ -975,10 +976,12 @@ function fuNow(l,u){
   if(l.listing_type==="flat_wanted") return tpEsc(l.brokerage_preference||"not said");
   return l.brokerage_confirmed?(l.has_brokerage?"Brokerage applicable":"No brokerage"):"Not confirmed";
 }
-async function loadFiyUpdates(){
+async function loadFiyUpdates(_afterSettle){
   const P=document.getElementById("fiyUpdPending"), D=document.getElementById("fiyUpdDone");
   try{
-    try{ await supaRpc("fiy_settle_overdue"); }catch(e){}
+    // (2026-11-27, owner: "FIY section ... very slow") settling overdue updates runs ALONGSIDE the load; the tab reloads once
+    // only if it actually settled something
+    if(!_afterSettle) supaRpc("fiy_settle_overdue").then(n=>{ if(Number(n)>0&&_currentPage==="fiyupdates") loadFiyUpdates(true); }).catch(()=>{});
     const rows=await supaGet("fiy_updates?select=*&order=created_at.desc&limit=300")||[];
     const uids=[...new Set(rows.map(r=>r.user_id))], lids=[...new Set(rows.map(r=>r.listing_id))];
     const [us,ls,cr]=await Promise.all([fiyChunks("users","id,name,phone",uids),
